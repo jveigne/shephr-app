@@ -70,7 +70,7 @@ export default function DonationDetailScreen() {
   const date = parseLocalDate(donation.donationDate);
   const hoursOld = (Date.now() - new Date(donation.createdAt).getTime()) / 36e5;
   const editable = hoursOld < 24;
-  const reference = 'CMCI-' + donation.id.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0');
+  const reference = 'CMCI-' + donation.id.replaceAll(/\D/g, '').slice(-4).padStart(4, '0');
 
   return (
     <ScreenShell withTabBar={false}>

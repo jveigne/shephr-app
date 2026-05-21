@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, Pressable, RefreshControl, Modal } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import type { ComponentProps } from 'react';
 import ScreenShell from '../../components/ScreenShell';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
@@ -9,11 +10,14 @@ import Label from '../../components/Label';
 import Amount from '../../components/Amount';
 import HandDivider from '../../components/HandDivider';
 import DonationRow from '../../components/DonationRow';
-import { colors, fonts } from '../../theme';
+import { colors, fonts, radii } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { getSummary, type DonationSummary } from '../../services/statsApi';
 import { listDonations, type DonationResponse } from '../../services/donationApi';
 import { fmtAmount, monthLabel } from '../../utils/format';
+
+type IoniconName = ComponentProps<typeof Ionicons>['name'];
+type ComingKind = 'cantique' | 'priere' | 'compte-rendu';
 
 const PRIMARY_CURRENCY = 'GBP';
 const YEAR_GOAL = 3000;
@@ -23,6 +27,7 @@ export default function HomeScreen() {
   const [summary, setSummary] = useState<DonationSummary | null>(null);
   const [recent, setRecent] = useState<DonationResponse[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [coming, setComing] = useState<ComingKind | null>(null);
 
   const load = useCallback(async () => {
     const [s, list] = await Promise.allSettled([
@@ -83,12 +88,20 @@ export default function HomeScreen() {
             {today.getDate()}, {today.getFullYear()}
           </Text>
           <Text style={styles.greeting}>
-            Bonsoir, <Text style={styles.greetingItalic}>{firstName || '…'}</Text>.
+            Bon retour,{'\n'}
+            <Text style={styles.greetingItalic}>{firstName || '…'}</Text>.
           </Text>
         </View>
         <Pressable onPress={() => router.push('/(tabs)/profile')} style={styles.avatar}>
           <Text style={styles.avatarText}>{initials || '·'}</Text>
         </Pressable>
+      </View>
+
+      <View style={styles.verseCard}>
+        <Text style={styles.verseText}>
+          « Que chacun donne comme il l'a résolu en son cœur. »
+        </Text>
+        <Text style={styles.verseRef}>2 Corinthiens 9:7</Text>
       </View>
 
       <Card style={styles.hero}>
@@ -126,14 +139,40 @@ export default function HomeScreen() {
         </View>
       </Card>
 
-      <Button
-        label="Déclarer un don"
-        onPress={() => router.push('/declare')}
-        fullWidth
-        height={60}
-        iconLeft={<Ionicons name="add" size={20} color={colors.white} />}
-        style={{ marginTop: 18 }}
-      />
+      <View style={styles.tileGrid}>
+        <Tile
+          label="Déclarer un don"
+          hint="Espèces, chèque, virement"
+          icon="add"
+          tone={colors.moss}
+          primary
+          onPress={() => router.push('/declare')}
+        />
+        <Tile
+          label="Cantique"
+          hint="Chants de l'assemblée"
+          icon="musical-notes-outline"
+          tone={colors.earth}
+          comingSoon
+          onPress={() => setComing('cantique')}
+        />
+        <Tile
+          label="Prière"
+          hint="Intentions & retraite"
+          icon="hand-left-outline"
+          tone="#7A8B6F"
+          comingSoon
+          onPress={() => setComing('priere')}
+        />
+        <Tile
+          label="Compte rendu"
+          hint="Notes d'assemblée"
+          icon="reader-outline"
+          tone={colors.earthDeep}
+          comingSoon
+          onPress={() => setComing('compte-rendu')}
+        />
+      </View>
 
       <View style={styles.sectionRow}>
         <Text style={styles.sectionTitle}>Dons récents</Text>
@@ -169,7 +208,127 @@ export default function HomeScreen() {
           <Ionicons name="chevron-forward" size={18} color={colors.white} />
         </Card>
       )}
+
+      <Text style={styles.footerMark}>CMCI · UK Pilot</Text>
+
+      <ComingSoonModal kind={coming} onClose={() => setComing(null)} />
     </ScreenShell>
+  );
+}
+
+function Tile({
+  label,
+  hint,
+  icon,
+  tone,
+  primary,
+  comingSoon,
+  onPress,
+}: {
+  label: string;
+  hint: string;
+  icon: IoniconName;
+  tone: string;
+  primary?: boolean;
+  comingSoon?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.tile,
+        primary ? styles.tilePrimary : styles.tileSurface,
+        { opacity: pressed ? 0.92 : 1 },
+      ]}
+    >
+      <View
+        style={[
+          styles.tileIcon,
+          primary
+            ? {
+                backgroundColor: 'rgba(232,220,196,0.14)',
+                borderColor: 'rgba(232,220,196,0.22)',
+                borderWidth: 1,
+              }
+            : { backgroundColor: tone + '1A' },
+        ]}
+      >
+        <Ionicons name={icon} size={22} color={primary ? colors.white : tone} />
+      </View>
+      <View>
+        <Text style={[styles.tileLabel, primary && { color: colors.white }]}>{label}</Text>
+        <Text
+          style={[
+            styles.tileHint,
+            primary && { color: 'rgba(242,233,210,0.65)' },
+          ]}
+        >
+          {hint}
+        </Text>
+      </View>
+      {comingSoon && (
+        <Text style={styles.comingPill}>Bientôt</Text>
+      )}
+    </Pressable>
+  );
+}
+
+const COMING_COPY: Record<ComingKind, { title: string; body: string; icon: IoniconName; tone: string }> = {
+  cantique: {
+    title: 'Cantique',
+    body:
+      "Bientôt — chaque dimanche, retrouvez ici les cantiques de l'assemblée avec paroles et accords, pour chanter et préparer à l'avance.",
+    icon: 'musical-notes-outline',
+    tone: colors.earth,
+  },
+  priere: {
+    title: 'Retraite & prière',
+    body:
+      "Bientôt — un espace pour partager vos intentions de prière, suivre les retraites de l'unité et prier en communion avec les fidèles.",
+    icon: 'hand-left-outline',
+    tone: '#7A8B6F',
+  },
+  'compte-rendu': {
+    title: "Compte rendu d'assemblée",
+    body:
+      'Bientôt — prenez et partagez les notes des cultes : enseignements, témoignages, décisions de l\'assemblée locale.',
+    icon: 'reader-outline',
+    tone: colors.earthDeep,
+  },
+};
+
+function ComingSoonModal({
+  kind,
+  onClose,
+}: {
+  kind: ComingKind | null;
+  onClose: () => void;
+}) {
+  if (!kind) return null;
+  const c = COMING_COPY[kind];
+  return (
+    <Modal transparent animationType="fade" visible={!!kind} onRequestClose={onClose}>
+      <Pressable style={styles.modalBackdrop} onPress={onClose}>
+        <Pressable style={styles.modalCard} onPress={() => {}}>
+          <View style={[styles.modalIcon, { backgroundColor: c.tone + '1A' }]}>
+            <Ionicons name={c.icon} size={28} color={c.tone} />
+          </View>
+          <Text style={styles.modalTitle}>{c.title}</Text>
+          <Text style={[styles.modalKicker, { color: c.tone }]}>Bientôt disponible</Text>
+          <HandDivider style={{ marginVertical: 14, alignSelf: 'center', width: '80%' }} />
+          <Text style={styles.modalBody}>{c.body}</Text>
+          <Button
+            label="D'accord"
+            variant="soft"
+            onPress={onClose}
+            fullWidth
+            height={46}
+            style={{ marginTop: 18 }}
+          />
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -187,13 +346,36 @@ const styles = StyleSheet.create({
   date: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
   greeting: {
     fontFamily: fonts.serif,
-    fontSize: 30,
-    lineHeight: 33,
+    fontSize: 28,
+    lineHeight: 32,
     marginTop: 4,
     color: colors.ink,
-    letterSpacing: -0.5,
+    letterSpacing: -0.45,
   },
   greetingItalic: { fontStyle: 'italic' },
+  verseCard: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 18,
+    borderRadius: 14,
+    backgroundColor: colors.parchmentDeep,
+    borderWidth: 1,
+    borderColor: 'rgba(42,38,32,0.06)',
+  },
+  verseText: {
+    fontFamily: fonts.serif,
+    fontStyle: 'italic',
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.mossDeep,
+  },
+  verseRef: {
+    marginTop: 4,
+    fontFamily: fonts.sans,
+    fontSize: 11.5,
+    color: colors.ink3,
+    letterSpacing: 0.5,
+  },
   avatar: {
     width: 42,
     height: 42,
@@ -257,4 +439,131 @@ const styles = StyleSheet.create({
   },
   scopeTitle: { fontFamily: fonts.serif, fontSize: 18, color: colors.white },
   scopeSub: { fontFamily: fonts.sans, fontSize: 12, color: colors.parchment, opacity: 0.85 },
+
+  tileGrid: {
+    marginTop: 18,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  tile: {
+    width: '48%',
+    minHeight: 138,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 14,
+    borderRadius: radii.lg,
+    justifyContent: 'space-between',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  tileSurface: {
+    backgroundColor: colors.paper,
+    borderWidth: 1,
+    borderColor: 'rgba(42,38,32,0.07)',
+  },
+  tilePrimary: {
+    backgroundColor: colors.mossSoft,
+    borderWidth: 0,
+    shadowColor: colors.mossDeep,
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  tileIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tileLabel: {
+    fontFamily: fonts.serif,
+    fontSize: 17,
+    lineHeight: 20,
+    color: colors.ink,
+    letterSpacing: -0.2,
+  },
+  tileHint: {
+    marginTop: 3,
+    fontFamily: fonts.sans,
+    fontSize: 11.5,
+    color: colors.ink3,
+  },
+  comingPill: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    fontFamily: fonts.mono,
+    fontSize: 9.5,
+    color: colors.ink3,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 99,
+    backgroundColor: 'rgba(42,38,32,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(42,38,32,0.07)',
+    overflow: 'hidden',
+  },
+
+  footerMark: {
+    textAlign: 'center',
+    marginTop: 24,
+    fontFamily: fonts.mono,
+    fontSize: 10.5,
+    color: colors.ink3,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(20,18,14,0.55)',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  modalCard: {
+    backgroundColor: colors.paper,
+    borderRadius: radii.lg,
+    paddingHorizontal: 22,
+    paddingTop: 26,
+    paddingBottom: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(42,38,32,0.07)',
+  },
+  modalIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignSelf: 'center',
+    marginBottom: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontFamily: fonts.serif,
+    fontSize: 24,
+    textAlign: 'center',
+    color: colors.ink,
+    letterSpacing: -0.3,
+  },
+  modalKicker: {
+    marginTop: 4,
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
+  modalBody: {
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    color: colors.ink2,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
 });
