@@ -1,0 +1,154 @@
+{
+  "tabs": {
+    "home": "Accueil",
+    "donations": "Mes dons",
+    "leader": "Périmètre",
+    "profile": "Profil"
+  },
+  "common": {
+    "today": "Aujourd'hui",
+    "back": "Retour",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "confirm": "Confirmer",
+    "loading": "Chargement…"
+  },
+  "auth": {
+    "welcome": "Bienvenue",
+    "loginTitle": "Connexion à votre journal",
+    "email": "Adresse e-mail",
+    "password": "Mot de passe",
+    "signIn": "Se connecter",
+    "forgotPassword": "Mot de passe oublié ?",
+    "newAccount": "Créer un compte",
+    "noAccount": "Nouveau dans shephr ?",
+    "alreadyAccount": "Déjà inscrit ?",
+    "tagline": "Suivez vos dons avec grâce."
+  },
+  "signup": {
+    "title1": "Créer votre compte",
+    "title2": "Rejoindre votre église",
+    "step1Hint": "Quelques informations pour démarrer votre journal de dons.",
+    "step2Hint": "Saisissez le code transmis par votre responsable.",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "continue": "Continuer",
+    "joinCode": "Code d'invitation",
+    "joinCodeHint": "Saisissez les 6 caractères du code transmis par votre responsable.",
+    "consent": "J'accepte que mes déclarations soient visibles par les responsables de mon unité.",
+    "join": "Rejoindre mon église",
+    "willJoin": "Vous allez rejoindre"
+  },
+  "dashboard": {
+    "greetingMorning": "Bonjour",
+    "greetingEvening": "Bonsoir",
+    "thisMonth": "Vos dons ce mois-ci",
+    "vsLastMonth": "vs. mois dernier",
+    "yearTotal": "Total de l'année",
+    "yearGoal": "objectif",
+    "declare": "Déclarer un don",
+    "recent": "Dons récents",
+    "seeAll": "Tout voir",
+    "scope": "Mon périmètre",
+    "scopeStats": "{{units}} unités · {{members}} fidèles"
+  },
+  "declare": {
+    "title": "Déclarer un don",
+    "intro": "Inscrivez un don déjà remis lors d'un culte — l'app ne traite aucun paiement.",
+    "amount": "Montant",
+    "date": "Date du don",
+    "category": "Catégorie",
+    "note": "Note (facultatif)",
+    "notePlaceholder": "Une intention, un détail à se rappeler…",
+    "submit": "Confirmer la déclaration",
+    "successTitle": "Don enregistré, avec gratitude.",
+    "successHint": "Votre déclaration figure désormais dans votre journal.",
+    "receipt": "Reçu",
+    "viewDonations": "Voir mes dons",
+    "finish": "Terminer",
+    "verseQuote": "« Que chacun donne comme il l'a résolu en son cœur. »"
+  },
+  "history": {
+    "title": "Mes dons",
+    "totalPeriod": "Total de la période",
+    "donations_one": "{{count}} don",
+    "donations_other": "{{count}} dons",
+    "periods": {
+      "month": "Ce mois",
+      "3m": "3 mois",
+      "6m": "6 mois",
+      "year": "Année",
+      "custom": "Personnalisé"
+    },
+    "categoriesAll": "Toutes",
+    "emptyState": "Aucun don encore — votre premier geste sera ici."
+  },
+  "detail": {
+    "title": "Détail du don",
+    "certificate": "ATTESTATION DE DON",
+    "amount": "Montant",
+    "date": "Date",
+    "reference": "Référence",
+    "unit": "Unité",
+    "means": "Moyen",
+    "meansDefault": "Espèces · enveloppe",
+    "note": "Note",
+    "locked": "Ce don est verrouillé (plus de 24 h). Contactez un responsable pour toute correction."
+  },
+  "profile": {
+    "title": "Profil",
+    "preferences": "Préférences",
+    "language": "Langue",
+    "notifications": "Notifications",
+    "receipts": "Reçus annuels",
+    "privacy": "Confidentialité",
+    "logout": "Se déconnecter",
+    "memberSince": "Membre depuis",
+    "donationsThisYear": "Dons cette année",
+    "regularity": "Régularité",
+    "roleFaithful": "Fidèle",
+    "roleLeader": "Responsable",
+    "roleLeaderSenior": "Responsable senior"
+  },
+  "leader": {
+    "title": "Mon périmètre",
+    "overview": "Vue d'ensemble pour {{month}}",
+    "yourDonations": "Vos dons ce mois",
+    "detail": "Détail",
+    "receivedMonth": "Reçu ce mois",
+    "vsLastMonth": "vs. mois passé",
+    "activeMembers": "Fidèles actifs",
+    "activeMembersHint": "ont donné au cours des 3 derniers mois",
+    "topCategories": "Top catégories",
+    "myUnits": "Mes unités",
+    "unitsCount": "{{count}} unités",
+    "stats": "Statistiques"
+  },
+  "unit": {
+    "members": "Fidèles",
+    "average": "Moy.",
+    "total": "Total",
+    "invite": "Inviter",
+    "pendingInvites": "Invitations en attente",
+    "newCode": "Nouveau code",
+    "privacyNote": "Les totaux par membre ne sont visibles que par les responsables.",
+    "shownMembers": "{{count}} affichés"
+  },
+  "stats": {
+    "title": "Statistiques",
+    "subtitle": "Tendances de générosité sur votre périmètre.",
+    "donationsReceived": "Dons reçus",
+    "rolling6m": "cumul sur 6 mois",
+    "categorySplit": "Répartition par catégorie"
+  },
+  "invite": {
+    "title": "Inviter un fidèle",
+    "to": "vers {{unit}}",
+    "code": "Code d'invitation",
+    "validity": "Valide 7 jours · à usage unique",
+    "copy": "Copier le code",
+    "copied": "Code copié"
+  }
+}

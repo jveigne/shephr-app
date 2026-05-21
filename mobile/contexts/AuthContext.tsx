@@ -1,0 +1,112 @@
+import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+import {
+  fetchMe,
+  login as loginRequest,
+  register as registerRequest,
+  type LoginRequest,
+  type MeResponse,
+  type RegisterRequest,
+  type UserDTO,
+} from '../services/authApi';
+import { getAuthToken, setAuthToken } from '../services/apiClient';
+
+interface AuthState {
+  ready: boolean;
+  token: string | null;
+  user: UserDTO | null;
+  me: MeResponse | null;
+}
+
+interface AuthContextValue extends AuthState {
+  isAuthenticated: boolean;
+  isLeader: boolean;
+  hasUnit: boolean;
+  login: (payload: LoginRequest) => Promise<void>;
+  register: (payload: RegisterRequest) => Promise<void>;
+  refreshMe: () => Promise<void>;
+  logout: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<AuthState>({
+    ready: false,
+    token: null,
+    user: null,
+    me: null,
+  });
+
+  const refreshMe = useCallback(async () => {
+    try {
+      const me = await fetchMe();
+      setState((s) => ({ ...s, me }));
+    } catch {
+      setState((s) => ({ ...s, me: null }));
+    }
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const token = await getAuthToken();
+      if (token) {
+        try {
+          const me = await fetchMe();
+          setState({ ready: true, token, user: null, me });
+          return;
+        } catch {
+          await setAuthToken(null);
+        }
+      }
+      setState({ ready: true, token: null, user: null, me: null });
+    })();
+  }, []);
+
+  const login = useCallback(async (payload: LoginRequest) => {
+    const res = await loginRequest(payload);
+    await setAuthToken(res.token);
+    let me: MeResponse | null = null;
+    try {
+      me = await fetchMe();
+    } catch {
+      me = null;
+    }
+    setState({ ready: true, token: res.token, user: res.user, me });
+  }, []);
+
+  const register = useCallback(async (payload: RegisterRequest) => {
+    const res = await registerRequest(payload);
+    await setAuthToken(res.token);
+    let me: MeResponse | null = null;
+    try {
+      me = await fetchMe();
+    } catch {
+      me = null;
+    }
+    setState({ ready: true, token: res.token, user: res.user, me });
+  }, []);
+
+  const logout = useCallback(async () => {
+    await setAuthToken(null);
+    setState({ ready: true, token: null, user: null, me: null });
+  }, []);
+
+  const value: AuthContextValue = {
+    ...state,
+    isAuthenticated: !!state.token,
+    isLeader: state.me?.role === 'LEADER' || state.me?.role === 'ADMIN',
+    hasUnit: !!state.me?.unitId,
+    login,
+    register,
+    refreshMe,
+    logout,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+}

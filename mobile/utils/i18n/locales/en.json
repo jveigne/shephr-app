@@ -1,0 +1,30 @@
+{
+  "tabs": {
+    "home": "Home",
+    "donations": "My giving",
+    "leader": "Scope",
+    "profile": "Profile"
+  },
+  "common": {
+    "today": "Today",
+    "back": "Back",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "confirm": "Confirm",
+    "loading": "Loading…"
+  },
+  "auth": {
+    "welcome": "Welcome",
+    "loginTitle": "Sign in to your journal",
+    "email": "Email address",
+    "password": "Password",
+    "signIn": "Sign in",
+    "forgotPassword": "Forgot password?",
+    "newAccount": "Create account",
+    "noAccount": "New to shephr?",
+    "alreadyAccount": "Already have an account?",
+    "tagline": "Track your giving with grace."
+  }
+}
