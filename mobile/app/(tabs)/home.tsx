@@ -15,6 +15,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getSummary, type DonationSummary } from '../../services/statsApi';
 import { listDonations, type DonationResponse } from '../../services/donationApi';
 import { fmtAmount, monthLabel } from '../../utils/format';
+import { FEATURES } from '../../constants/features';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 type ComingKind = 'cantique' | 'priere' | 'compte-rendu';
@@ -23,13 +24,14 @@ const PRIMARY_CURRENCY = 'GBP';
 const YEAR_GOAL = 3000;
 
 export default function HomeScreen() {
-  const { me, isLeader } = useAuth();
+  const { me, isLeader, hasGoals } = useAuth();
   const [summary, setSummary] = useState<DonationSummary | null>(null);
   const [recent, setRecent] = useState<DonationResponse[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [coming, setComing] = useState<ComingKind | null>(null);
 
   const load = useCallback(async () => {
+    if (!FEATURES.donations) return; // livraison « Goals only » : pas de données dons
     const [s, list] = await Promise.allSettled([
       getSummary(),
       listDonations({ size: 5 }),
@@ -104,6 +106,18 @@ export default function HomeScreen() {
         <Text style={styles.verseRef}>2 Corinthiens 9:7</Text>
       </View>
 
+      {!FEATURES.donations && hasGoals && (
+        <Card onPress={() => router.push('/(tabs)/goals')} style={styles.scopeCta}>
+          <Ionicons name="flag" size={26} color={colors.white} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.scopeTitle}>Mes objectifs</Text>
+            <Text style={styles.scopeSub}>But Quinquennal — engagements & avancements</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.white} />
+        </Card>
+      )}
+
+      {FEATURES.donations && (
       <Card style={styles.hero}>
         <Label style={{ color: colors.mossSoft }}>Vos dons ce mois-ci</Label>
         <Amount value={thisMonth} currency={PRIMARY_CURRENCY} size={54} showDecimals />
@@ -138,8 +152,10 @@ export default function HomeScreen() {
           <View style={[styles.progressFill, { width: `${pct}%` }]} />
         </View>
       </Card>
+      )}
 
       <View style={styles.tileGrid}>
+        {FEATURES.donations && (
         <Tile
           label="Déclarer un don"
           hint="Espèces, chèque, virement"
@@ -148,6 +164,7 @@ export default function HomeScreen() {
           primary
           onPress={() => router.push('/declare')}
         />
+        )}
         <Tile
           label="Cantique"
           hint="Chants de l'assemblée"
@@ -174,6 +191,8 @@ export default function HomeScreen() {
         />
       </View>
 
+      {FEATURES.donations && (
+      <>
       <View style={styles.sectionRow}>
         <Text style={styles.sectionTitle}>Dons récents</Text>
         <Pressable onPress={() => router.push('/(tabs)/donations')}>
@@ -194,8 +213,10 @@ export default function HomeScreen() {
           ))
         )}
       </View>
+      </>
+      )}
 
-      {isLeader && (
+      {FEATURES.donations && isLeader && (
         <Card
           onPress={() => router.push('/(tabs)/leader')}
           style={styles.scopeCta}

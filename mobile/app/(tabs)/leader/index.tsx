@@ -9,6 +9,7 @@ import Amount from '../../../components/Amount';
 import HandDivider from '../../../components/HandDivider';
 import { colors, fonts } from '../../../theme';
 import { useAuth } from '../../../contexts/AuthContext';
+import { canManageStructure } from '../../../services/authApi';
 import { listMyUnits, type LeaderUnitView } from '../../../services/leaderApi';
 import {
   getByCategory,
@@ -85,6 +86,12 @@ export default function LeaderHomeScreen() {
     >
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }} />
+        {canManageStructure(me) && (
+          <Pressable onPress={() => router.push('/structure')} style={styles.statsBtn}>
+            <Ionicons name="git-branch-outline" size={15} color={colors.mossSoft} />
+            <Text style={styles.statsBtnText}>Structure</Text>
+          </Pressable>
+        )}
         <Pressable
           onPress={() => router.push('/(tabs)/leader/stats')}
           style={styles.statsBtn}
@@ -218,7 +225,7 @@ export default function LeaderHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  headerRow: { flexDirection: 'row', alignItems: 'center' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   statsBtn: {
     flexDirection: 'row',
     alignItems: 'center',

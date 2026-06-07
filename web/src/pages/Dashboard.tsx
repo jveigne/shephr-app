@@ -5,10 +5,10 @@ import { Badge, Button, TopBar } from '../components/ui';
 import { AreaChart, HorizontalBars, monthIndexToLabel } from '../components/charts';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../components/Toast';
-import { getByMonth, getByUnit, getSummary } from '../services/statsApi';
+import { downloadDonationsCsv, getByCategory, getByMonth, getByUnit, getSummary } from '../services/statsApi';
 import { listDonations } from '../services/donationApi';
-import { listLocalities, listUnits } from '../services/adminApi';
-import { fmtAmount, fmtDateLabel, monthLong } from '../utils/format';
+import { fmtAmount, fmtDateLabel, monthLong, startOfMonthISO, todayISO } from '../utils/format';
+import { saveBlob } from '../utils/download';
 import { categoryLabel } from '../constants/categories';
 
 const PRIMARY = 'GBP';
@@ -20,8 +20,7 @@ export function DashboardPage() {
   const summaryQ = useQuery({ queryKey: ['stats', 'summary'], queryFn: () => getSummary() });
   const monthsQ = useQuery({ queryKey: ['stats', 'by-month'], queryFn: () => getByMonth() });
   const unitsStatsQ = useQuery({ queryKey: ['stats', 'by-unit'], queryFn: () => getByUnit() });
-  const unitsListQ = useQuery({ queryKey: ['admin', 'units'], queryFn: listUnits });
-  const localitiesQ = useQuery({ queryKey: ['admin', 'localities'], queryFn: listLocalities });
+  const categoryStatsQ = useQuery({ queryKey: ['stats', 'by-category'], queryFn: () => getByCategory() });
   const recentQ = useQuery({
     queryKey: ['donations', 'recent'],
     queryFn: () => listDonations({ size: 10 }),
@@ -41,15 +40,15 @@ export function DashboardPage() {
     .slice(-12)
     .map((m) => ({ label: monthIndexToLabel(m.year, m.month), value: m.total }));
 
-  const localityTotals = aggregateByLocality(
-    unitsStatsQ.data ?? [],
-    unitsListQ.data ?? [],
-  );
+  const categoryTotals = (categoryStatsQ.data ?? [])
+    .filter((c) => c.currency === PRIMARY)
+    .map((c) => ({ name: categoryLabel(c.category), total: c.total }))
+    .sort((a, b) => b.total - a.total);
 
-  const topUnits = (unitsStatsQ.data ?? [])
-    .filter((s) => s.currency === PRIMARY)
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 5);
+  const unitStats = (unitsStatsQ.data ?? []).filter((s) => s.currency === PRIMARY);
+  const distinctUnits = new Set(unitStats.map((s) => s.unitId)).size;
+
+  const topUnits = [...unitStats].sort((a, b) => b.total - a.total).slice(0, 5);
 
   const recent = recentQ.data?.content ?? [];
 
@@ -67,13 +66,18 @@ export function DashboardPage() {
             <Button
               variant="secondary"
               iconL={<Icon name="download" size={15} />}
-              onClick={() =>
-                push({
-                  kind: 'ok',
-                  title: 'Export demandé',
-                  msg: 'Le rapport sera téléchargé sous peu.',
-                })
-              }
+              onClick={async () => {
+                try {
+                  const blob = await downloadDonationsCsv({
+                    from: startOfMonthISO(),
+                    to: todayISO(),
+                  });
+                  saveBlob(blob, `dons-${todayISO()}.csv`);
+                  push({ kind: 'ok', title: 'Export téléchargé', msg: 'Fichier CSV prêt.' });
+                } catch {
+                  push({ kind: 'error', title: 'Export impossible', msg: 'Réessayez plus tard.' });
+                }
+              }}
             >
               Exporter le mois
             </Button>
@@ -124,9 +128,9 @@ export function DashboardPage() {
           <KpiCard label="Mois précédent" value={fmtAmount(prev, PRIMARY)} sub="vs. n-1" />
           <KpiCard label="Année en cours" value={fmtAmount(ytd, PRIMARY)} sub="Cumul YTD" />
           <KpiCard
-            label="Unités"
-            value={String(unitsListQ.data?.length ?? '—')}
-            sub={`${localitiesQ.data?.length ?? 0} localités`}
+            label="Unités actives"
+            value={String(distinctUnits)}
+            sub="avec des dons sur la période"
           />
         </div>
 
@@ -160,15 +164,15 @@ export function DashboardPage() {
           <div className="card">
             <div className="card-head">
               <div>
-                <h3 className="ttl">Répartition par localité</h3>
+                <h3 className="ttl">Répartition par catégorie</h3>
                 <div className="sub">Période courante</div>
               </div>
             </div>
             <div className="card-body">
-              {localityTotals.length === 0 ? (
-                <div className="muted" style={{ padding: '8px 0' }}>Pas de localité avec dons.</div>
+              {categoryTotals.length === 0 ? (
+                <div className="muted" style={{ padding: '8px 0' }}>Pas encore de dons catégorisés.</div>
               ) : (
-                <HorizontalBars data={localityTotals} />
+                <HorizontalBars data={categoryTotals} />
               )}
             </div>
           </div>
@@ -270,26 +274,6 @@ export function DashboardPage() {
       </div>
     </>
   );
-}
-
-interface UnitLite { id: string; localityName: string }
-
-function aggregateByLocality(
-  stats: { unitId: string; unitName: string; currency: string; total: number; count: number }[],
-  units: UnitLite[],
-): { name: string; total: number }[] {
-  const unitToLocality = new Map(units.map((u) => [u.id, u.localityName]));
-  const acc = new Map<string, number>();
-  stats
-    .filter((s) => s.currency === PRIMARY)
-    .forEach((s) => {
-      const loc = unitToLocality.get(s.unitId);
-      if (!loc) return;
-      acc.set(loc, (acc.get(loc) ?? 0) + s.total);
-    });
-  return Array.from(acc.entries())
-    .map(([name, total]) => ({ name, total }))
-    .sort((a, b) => b.total - a.total);
 }
 
 function KpiCard({

@@ -5,7 +5,7 @@
     "version": "0.1.0",
     "sdkVersion": "54.0.0",
     "extra": {
-      "API_URL": "http://localhost:8080",
+      "API_URL": "http://192.168.8.108:8080",
       "router": {
         "origin": false
       },

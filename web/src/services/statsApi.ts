@@ -67,10 +67,21 @@ export async function getByCategory(params: { from?: string; to?: string; unitId
   return data;
 }
 
-export function buildExportUrl(params: { from?: string; to?: string; unitId?: string } = {}): string {
-  const q = new URLSearchParams({ format: 'csv' });
-  if (params.from) q.set('from', params.from);
-  if (params.to) q.set('to', params.to);
-  if (params.unitId) q.set('unitId', params.unitId);
-  return `/api/church/donations/export?${q.toString()}`;
+export interface ExportParams {
+  from?: string;
+  to?: string;
+  unitId?: string;
+}
+
+/**
+ * Downloads the donations CSV. Uses apiClient so the Bearer token is attached
+ * (the endpoint is LEADER+SUPER_ADMIN — a plain <a href> can't carry the header).
+ * `GET /api/church/donations/export` (module DONATIONS).
+ */
+export async function downloadDonationsCsv(params: ExportParams = {}): Promise<Blob> {
+  const { data } = await apiClient.get('/api/church/donations/export', {
+    params: { format: 'csv', ...params },
+    responseType: 'blob',
+  });
+  return data as Blob;
 }

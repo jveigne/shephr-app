@@ -4,10 +4,18 @@ import { AuthProvider } from './hooks/useAuth';
 import { ToastProvider } from './components/Toast';
 import { AppShell } from './AppShell';
 import { LoginPage } from './pages/Login';
+import { AcceptInvitationPage } from './pages/AcceptInvitation';
 import { DashboardPage } from './pages/Dashboard';
 import { DonationsPage } from './pages/Donations';
+import { GoalsPage } from './pages/Goals';
 import { UsersPage } from './pages/Users';
+import { MonMinisterePage } from './pages/MonMinistere';
+import { ZonesPage } from './pages/Zones';
+import { LocalitesPage } from './pages/Localites';
+import { UnitesPage } from './pages/Unites';
+import { ExportsPage } from './pages/Exports';
 import { Placeholder } from './pages/Placeholder';
+import { FEATURES } from './config/features';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,44 +35,30 @@ export function App() {
           <ToastProvider>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/invitation/:token" element={<AcceptInvitationPage />} />
               <Route element={<AppShell />}>
-                <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/donations" element={<DonationsPage />} />
+                {/* Livraison « Goals only » : la home et les pages Dons basculent sur /goals. */}
+                <Route
+                  index
+                  element={<Navigate to={FEATURES.donations ? '/dashboard' : '/goals'} replace />}
+                />
+                {FEATURES.donations ? (
+                  <>
+                    <Route path="/dashboard" element={<DashboardPage />} />
+                    <Route path="/donations" element={<DonationsPage />} />
+                  </>
+                ) : (
+                  <>
+                    <Route path="/dashboard" element={<Navigate to="/goals" replace />} />
+                    <Route path="/donations" element={<Navigate to="/goals" replace />} />
+                  </>
+                )}
+                <Route path="/goals" element={<GoalsPage />} />
                 <Route path="/users" element={<UsersPage />} />
-                <Route
-                  path="/structure/ministeres"
-                  element={
-                    <Placeholder
-                      title="Ministères"
-                      crumbs={['shephr', 'Structure', 'Ministères']}
-                      description="Gestion des ministères (CMCI UK, etc.) à venir."
-                      endpointHint="GET /api/church/admin/ministries"
-                    />
-                  }
-                />
-                <Route
-                  path="/structure/localites"
-                  element={
-                    <Placeholder
-                      title="Localités"
-                      crumbs={['shephr', 'Structure', 'Localités']}
-                      description="Londres, Birmingham, Édimbourg… à venir."
-                      endpointHint="GET /api/church/admin/localities"
-                    />
-                  }
-                />
-                <Route
-                  path="/structure/unites"
-                  element={
-                    <Placeholder
-                      title="Unités"
-                      crumbs={['shephr', 'Structure', 'Unités']}
-                      description="Centres et assemblées par localité — à venir."
-                      endpointHint="GET /api/church/admin/units"
-                    />
-                  }
-                />
+                <Route path="/structure/ministeres" element={<MonMinisterePage />} />
+                <Route path="/structure/zones" element={<ZonesPage />} />
+                <Route path="/structure/localites" element={<LocalitesPage />} />
+                <Route path="/structure/unites" element={<UnitesPage />} />
                 <Route
                   path="/hierarchy"
                   element={
@@ -76,17 +70,11 @@ export function App() {
                     />
                   }
                 />
-                <Route
-                  path="/exports"
-                  element={
-                    <Placeholder
-                      title="Exports"
-                      crumbs={['shephr', 'Exports']}
-                      description="Génération de CSV par période, localité, unité, catégorie."
-                      endpointHint="GET /api/church/donations/export?format=csv"
-                    />
-                  }
-                />
+                {FEATURES.donations ? (
+                  <Route path="/exports" element={<ExportsPage />} />
+                ) : (
+                  <Route path="/exports" element={<Navigate to="/goals" replace />} />
+                )}
                 <Route
                   path="/settings"
                   element={

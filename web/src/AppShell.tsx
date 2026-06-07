@@ -5,16 +5,14 @@ import { useAuth } from './hooks/useAuth';
 
 export function AppShell() {
   const navigate = useNavigate();
-  const { ready, isAuthenticated, isAdmin } = useAuth();
+  const { ready, isAuthenticated, canAccessWeb } = useAuth();
 
   useEffect(() => {
     if (!ready) return;
-    if (!isAuthenticated) {
-      navigate('/login', { replace: true });
-    } else if (!isAdmin) {
+    if (!isAuthenticated || !canAccessWeb) {
       navigate('/login', { replace: true });
     }
-  }, [ready, isAuthenticated, isAdmin, navigate]);
+  }, [ready, isAuthenticated, canAccessWeb, navigate]);
 
   if (!ready) {
     return (
@@ -32,7 +30,7 @@ export function AppShell() {
     );
   }
 
-  if (!isAuthenticated || !isAdmin) return null;
+  if (!isAuthenticated || !canAccessWeb) return null;
 
   return (
     <div className="app-shell">

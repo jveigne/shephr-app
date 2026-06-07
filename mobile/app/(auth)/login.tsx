@@ -6,7 +6,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
@@ -18,6 +17,7 @@ import Field from '../../components/Field';
 import Label from '../../components/Label';
 import Button from '../../components/Button';
 import { colors, fonts } from '../../theme';
+import { notify } from '../../utils/dialogs';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function LoginScreen() {
@@ -29,7 +29,7 @@ export default function LoginScreen() {
 
   const onSubmit = async () => {
     if (!email.includes('@') || password.length < 6) {
-      Alert.alert('shephr', 'Vérifiez votre adresse e-mail et votre mot de passe.');
+      notify('shephr', 'Vérifiez votre adresse e-mail et votre mot de passe.');
       return;
     }
     setLoading(true);
@@ -37,7 +37,11 @@ export default function LoginScreen() {
       await login({ email: email.trim(), password });
       router.replace('/(tabs)/home');
     } catch (e: any) {
-      Alert.alert('Connexion impossible', e?.response?.data?.message ?? 'Vérifiez vos identifiants.');
+      // Sans e.response, la requête n'a pas atteint le backend (URL/réseau), ce n'est pas un 401.
+      const msg = e?.response
+        ? e.response.data?.message ?? 'Vérifiez vos identifiants.'
+        : 'Serveur injoignable — vérifiez que le backend tourne et que le téléphone est sur le même réseau que le Mac.';
+      notify('Connexion impossible', msg);
     } finally {
       setLoading(false);
     }
@@ -58,7 +62,6 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Wordmark size={40} color={colors.mossDeep} />
-          <Text style={styles.tagline}>« Suivez vos dons avec grâce. »</Text>
 
           <View style={{ flex: 1, minHeight: 40 }} />
 
@@ -99,7 +102,9 @@ export default function LoginScreen() {
 
             <View style={styles.linksRow}>
               <Text style={styles.linkSub}>Mot de passe oublié ?</Text>
-              <Text style={styles.linkAccent}>Inviter une église</Text>
+              <Text style={styles.linkAccent} onPress={() => router.push('/(auth)/activate')}>
+                J'ai un code d'activation
+              </Text>
             </View>
 
             <View style={styles.divider} />

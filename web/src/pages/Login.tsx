@@ -4,6 +4,7 @@ import { Icon } from '../components/Icon';
 import { Button, Checkbox, Field, Input } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../components/Toast';
+import { hasMinistryAccess } from '../services/authApi';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -26,8 +27,8 @@ export function LoginPage() {
     setLoading(true);
     try {
       const me = await login({ email: email.trim(), password });
-      if (me.role !== 'ADMIN') {
-        setError("Accès réservé aux administrateurs. Utilisez l'application mobile shephr.");
+      if (!hasMinistryAccess(me)) {
+        setError("Accès réservé aux dirigeants. Les membres utilisent l'application mobile shephr.");
         return;
       }
       push({ kind: 'ok', title: 'Bienvenue', msg: 'Vous êtes connecté à shephr.' });
@@ -177,8 +178,7 @@ export function LoginPage() {
           <div className="reserved">
             <Icon name="shield" size={16} />
             <span>
-              Accès réservé aux administrateurs. Les membres et dirigeants utilisent l'application
-              mobile shephr.
+              Accès réservé aux dirigeants. Les membres utilisent l'application mobile shephr.
             </span>
           </div>
         </div>

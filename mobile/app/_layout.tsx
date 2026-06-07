@@ -75,6 +75,7 @@ export default function RootLayout() {
                 options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
               />
               <Stack.Screen name="donation/[id]" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="structure" options={{ animation: 'slide_from_right' }} />
             </Stack>
           </AuthProvider>
         </LanguageProvider>

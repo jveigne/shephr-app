@@ -5,13 +5,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, fonts } from '../../theme';
+import { FEATURES } from '../../constants/features';
+import NotificationGate from '../../components/NotificationGate';
 
 export default function TabLayout() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { isLeader } = useAuth();
+  const { isLeader, hasGoals } = useAuth();
 
   return (
+    <>
+    <NotificationGate />
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -50,6 +54,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="donations"
         options={{
+          // Livraison « Goals only » : onglet Dons masqué (FEATURES.donations).
+          href: FEATURES.donations ? '/(tabs)/donations' : null,
           title: t('tabs.donations'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="list-outline" size={size} color={color} />
@@ -57,9 +63,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="goals"
+        options={{
+          href: hasGoals ? '/(tabs)/goals' : null,
+          title: t('tabs.goals'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="flag-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="leader"
         options={{
-          href: isLeader ? '/(tabs)/leader' : null,
+          // « Périmètre » = vues de lecture des DONS → masqué avec le flag donations.
+          href: FEATURES.donations && isLeader ? '/(tabs)/leader' : null,
           title: t('tabs.leader'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
@@ -76,5 +93,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </>
   );
 }

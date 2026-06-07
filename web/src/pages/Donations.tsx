@@ -11,32 +11,23 @@ import {
   Select,
   Table,
   TopBar,
-  UnitTypeBadge,
   type Column,
 } from '../components/ui';
 import { useToast } from '../components/Toast';
-import {
-  listDonations,
-  type DonationResponse,
-} from '../services/donationApi';
-import { listLocalities, listUnits } from '../services/adminApi';
-import { buildExportUrl } from '../services/statsApi';
-import {
-  fmtAmount,
-  fmtDateShort,
-  startOfMonthISO,
-  todayISO,
-} from '../utils/format';
+import { listDonations, type DonationResponse } from '../services/donationApi';
+import { downloadDonationsCsv, getByUnit } from '../services/statsApi';
+import { fmtAmount, fmtDateShort, startOfMonthISO, todayISO } from '../utils/format';
 import { CATEGORY_ORDER, CATEGORIES, categoryLabel } from '../constants/categories';
-import { getAuthToken } from '../services/apiClient';
+import { saveBlob } from '../utils/download';
 
 const PER_PAGE = 14;
 
+// NB: Localité / Type filters need the admin structure endpoints (/api/church/admin/*),
+// which are SUPER_ADMIN-only today. They return in Phase 4 (Lot 4.2 — délégation scopée).
+// Units for the filter are sourced from the LEADER-accessible by-unit stats instead.
 interface Filters {
   period: 'month' | '30d' | 'ytd' | 'all';
-  localityId: string | 'all';
   unitId: string | 'all';
-  type: 'all' | 'CENTER' | 'ASSEMBLY';
   category: string | 'all';
   member: string;
   minAmount: string;
@@ -45,9 +36,7 @@ interface Filters {
 
 const DEFAULT_FILTERS: Filters = {
   period: 'month',
-  localityId: 'all',
   unitId: 'all',
-  type: 'all',
   category: 'all',
   member: '',
   minAmount: '',
@@ -62,17 +51,15 @@ export function DonationsPage() {
 
   const { from, to } = useMemo(() => computeRange(filters.period), [filters.period]);
 
-  const localitiesQ = useQuery({ queryKey: ['admin', 'localities'], queryFn: listLocalities });
-  const unitsQ = useQuery({ queryKey: ['admin', 'units'], queryFn: listUnits });
-
-  const filteredUnits = useMemo(() => {
-    const units = unitsQ.data ?? [];
-    return units.filter((u) => {
-      if (filters.localityId !== 'all' && u.localityId !== filters.localityId) return false;
-      if (filters.type !== 'all' && u.type !== filters.type) return false;
-      return true;
-    });
-  }, [unitsQ.data, filters.localityId, filters.type]);
+  // Units the current user can see, derived from the (scoped) by-unit stats.
+  const unitsStatsQ = useQuery({ queryKey: ['stats', 'by-unit'], queryFn: () => getByUnit() });
+  const units = useMemo(() => {
+    const map = new Map<string, string>();
+    (unitsStatsQ.data ?? []).forEach((s) => map.set(s.unitId, s.unitName));
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  }, [unitsStatsQ.data]);
 
   const donationsQ = useQuery({
     queryKey: ['donations', { from, to, unitId: filters.unitId, category: filters.category, page }],
@@ -89,17 +76,13 @@ export function DonationsPage() {
 
   const allRows = donationsQ.data?.content ?? [];
 
-  // Client-side narrowing for fields not supported by API (member name, amount, type)
+  // Client-side narrowing for fields not yet supported by the API (member name, amount range)
   const rows = allRows.filter((d) => {
     if (filters.member && !d.userFullName.toLowerCase().includes(filters.member.toLowerCase())) {
       return false;
     }
     if (filters.minAmount && d.amount < Number(filters.minAmount)) return false;
     if (filters.maxAmount && d.amount > Number(filters.maxAmount)) return false;
-    if (filters.type !== 'all') {
-      const unit = unitsQ.data?.find((u) => u.id === d.unitId);
-      if (!unit || unit.type !== filters.type) return false;
-    }
     return true;
   });
 
@@ -109,15 +92,10 @@ export function DonationsPage() {
 
   const chips: { key: keyof Filters; label: string; value: string }[] = [];
   if (filters.period !== 'all') chips.push({ key: 'period', label: 'Période', value: periodLabel(filters.period) });
-  if (filters.localityId !== 'all') {
-    const loc = localitiesQ.data?.find((l) => l.id === filters.localityId);
-    chips.push({ key: 'localityId', label: 'Localité', value: loc?.name ?? '—' });
-  }
   if (filters.unitId !== 'all') {
-    const u = unitsQ.data?.find((x) => x.id === filters.unitId);
+    const u = units.find((x) => x.id === filters.unitId);
     chips.push({ key: 'unitId', label: 'Unité', value: u?.name ?? '—' });
   }
-  if (filters.type !== 'all') chips.push({ key: 'type', label: 'Type', value: filters.type === 'CENTER' ? 'Centre' : 'Assemblée' });
   if (filters.category !== 'all') chips.push({ key: 'category', label: 'Catégorie', value: categoryLabel(filters.category) });
   if (filters.member) chips.push({ key: 'member', label: 'Membre', value: filters.member });
   if (filters.minAmount) chips.push({ key: 'minAmount', label: 'Min', value: `£${filters.minAmount}` });
@@ -134,21 +112,13 @@ export function DonationsPage() {
   };
 
   const onExport = async () => {
-    const url = buildExportUrl({
-      from,
-      to,
-      unitId: filters.unitId === 'all' ? undefined : filters.unitId,
-    });
     try {
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${getAuthToken() ?? ''}` },
+      const blob = await downloadDonationsCsv({
+        from,
+        to,
+        unitId: filters.unitId === 'all' ? undefined : filters.unitId,
       });
-      if (!res.ok) throw new Error('export failed');
-      const blob = await res.blob();
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `donations-${todayISO()}.csv`;
-      link.click();
+      saveBlob(blob, `dons-${todayISO()}.csv`);
       push({ kind: 'ok', title: 'Export téléchargé', msg: 'Fichier CSV prêt.' });
     } catch {
       push({ kind: 'error', title: 'Export impossible', msg: 'Réessayez plus tard.' });
@@ -163,13 +133,6 @@ export function DonationsPage() {
     {
       label: 'Unité',
       render: (r) => r.unitName ?? <span className="muted">—</span>,
-    },
-    {
-      label: 'Type',
-      render: (r) => {
-        const u = unitsQ.data?.find((x) => x.id === r.unitId);
-        return u ? <UnitTypeBadge type={u.type} /> : <span className="muted">—</span>;
-      },
     },
     { label: 'Membre', render: (r) => r.userFullName },
     { label: 'Catégorie', render: (r) => <Badge tone="gray">{categoryLabel(r.category)}</Badge> },
@@ -195,14 +158,9 @@ export function DonationsPage() {
         title="Dons"
         crumbs={['shephr', 'Dons']}
         actions={
-          <>
-            <Button variant="ghost" iconL={<Icon name="filter" size={15} />}>
-              Filtres avancés
-            </Button>
-            <Button variant="primary" iconL={<Icon name="download" size={15} />} onClick={onExport}>
-              Exporter CSV
-            </Button>
-          </>
+          <Button variant="primary" iconL={<Icon name="download" size={15} />} onClick={onExport}>
+            Exporter CSV
+          </Button>
         }
       />
 
@@ -222,20 +180,6 @@ export function DonationsPage() {
               <option value="all">Tout</option>
             </Select>
           </Field>
-          <Field label="Localité">
-            <Select
-              value={filters.localityId}
-              onChange={(e) => {
-                setFilters({ ...filters, localityId: e.target.value, unitId: 'all' });
-                setPage(0);
-              }}
-            >
-              <option value="all">Toutes</option>
-              {(localitiesQ.data ?? []).map((l) => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </Select>
-          </Field>
           <Field label="Unité">
             <Select
               value={filters.unitId}
@@ -245,22 +189,9 @@ export function DonationsPage() {
               }}
             >
               <option value="all">Toutes</option>
-              {filteredUnits.map((u) => (
+              {units.map((u) => (
                 <option key={u.id} value={u.id}>{u.name}</option>
               ))}
-            </Select>
-          </Field>
-          <Field label="Type">
-            <Select
-              value={filters.type}
-              onChange={(e) => {
-                setFilters({ ...filters, type: e.target.value as Filters['type'] });
-                setPage(0);
-              }}
-            >
-              <option value="all">Tous</option>
-              <option value="CENTER">Centre</option>
-              <option value="ASSEMBLY">Assemblée</option>
             </Select>
           </Field>
           <Field label="Catégorie">
