@@ -5,6 +5,7 @@ import Card from './Card';
 import Button from './Button';
 import { colors, fonts } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import {
   getUnreadNotifications,
   markNotificationRead,
@@ -17,6 +18,7 @@ import {
  * (ne réapparaît plus) ; « Plus tard » referme tout (réapparaît à la prochaine session).
  */
 export default function NotificationGate() {
+  const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
   const [queue, setQueue] = useState<UserNotification[]>([]);
   const [dismissed, setDismissed] = useState(false);
@@ -62,11 +64,11 @@ export default function NotificationGate() {
           <Text style={styles.title}>{current.title}</Text>
           <Text style={styles.message}>{current.message}</Text>
           {queue.length > 1 && (
-            <Text style={styles.counter}>{queue.length - 1} autre(s) rappel(s) en attente</Text>
+            <Text style={styles.counter}>{t('notifications.morePending', { count: queue.length - 1 })}</Text>
           )}
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
-            <Button label="Plus tard" variant="ghost" onPress={onLater} style={{ flex: 1 }} height={48} />
-            <Button label="OK" onPress={onAck} style={{ flex: 1 }} height={48} />
+            <Button label={t('notifications.later')} variant="ghost" onPress={onLater} style={{ flex: 1 }} height={48} />
+            <Button label={t('common.ok')} onPress={onAck} style={{ flex: 1 }} height={48} />
           </View>
         </Card>
       </View>

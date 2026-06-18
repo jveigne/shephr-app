@@ -5,5 +5,6 @@
  * Réactivation = passer `donations` à true.
  */
 export const FEATURES = {
-  donations: false,
+  // Phase 6 (MVP Donations Londres) — activé. Repasser à false pour masquer les Dons.
+  donations: true,
 } as const;

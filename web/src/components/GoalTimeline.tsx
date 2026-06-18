@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { CategoryTimeline } from '../services/goalsApi';
 import { monthShort } from '../utils/format';
 
@@ -16,6 +17,7 @@ function CategoryCurve({
   format: (v: number) => string;
   height?: number;
 }) {
+  const { t } = useTranslation();
   const currency = timeline.unitType === 'CURRENCY';
   const pts = timeline.points.map((p) => ({
     label: p.period,
@@ -76,7 +78,7 @@ function CategoryCurve({
         <g>
           <line x1={padL} x2={w - padR} y1={y(target)} y2={y(target)} stroke="#C9956B" strokeWidth="1.5" strokeDasharray="5 4" />
           <text x={w - padR} y={y(target) - 5} textAnchor="end" fontSize="11" fill="#C9956B" fontFamily="Inter">
-            cible {format(target)}
+            {t('goals.targetLabel', { value: format(target) })}
           </text>
         </g>
       )}
@@ -103,6 +105,7 @@ export function GoalTimeline({
   /** Formate une valeur pour une catégorie donnée (id → fonction). */
   format: (categoryId: string, unitType: string) => (v: number) => string;
 }) {
+  const { t } = useTranslation();
   const withPoints = data.filter((d) => d.points.length > 0);
   const [selected, setSelected] = useState<string | null>(null);
   const current = withPoints.find((d) => d.categoryId === selected) ?? withPoints[0] ?? null;
@@ -110,7 +113,7 @@ export function GoalTimeline({
   if (withPoints.length === 0) {
     return (
       <p style={{ color: 'var(--ink-400)', fontSize: 13, fontStyle: 'italic' }}>
-        Aucun versement enregistré pour cette année — pas encore d'évolution à afficher.
+        {t('goals.noEvolution')}
       </p>
     );
   }

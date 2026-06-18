@@ -15,6 +15,7 @@ import {
   type UserDTO,
 } from '../services/authApi';
 import { getAuthToken, setAuthToken } from '../services/apiClient';
+import { applyUserLanguage } from '../i18n';
 
 interface AuthState {
   ready: boolean;
@@ -50,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (token) {
         try {
           const me = await fetchMe();
+          applyUserLanguage(me.language);
           setState({ ready: true, token, user: null, me });
           return;
         } catch {
@@ -66,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.clear();
     setAuthToken(token);
     const me = await fetchMe();
+    applyUserLanguage(me.language);
     setState({ ready: true, token, user: null, me });
     return me;
   }, [queryClient]);

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import {
@@ -18,7 +19,6 @@ import {
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
 import {
-  MODULE_ROLE_LABELS,
   assignableRoles,
   canManageUsers,
   type MeResponse,
@@ -49,7 +49,6 @@ const errMsg = (err: unknown, fallback: string) =>
 // FEATURES.donations contrôle uniquement la VISIBILITÉ du module Dons dans l'UI
 // (livraison « Goals only »), pas la sémantique de Goals.
 type ModuleKind = 'goal' | 'donation';
-const MODULE_LABELS: Record<ModuleKind, string> = { goal: 'Objectifs', donation: 'Dons' };
 const VISIBLE_MODULES: ModuleKind[] = FEATURES.donations ? ['goal', 'donation'] : ['goal'];
 
 const roleOf = (u: AdminUserResponse, m: ModuleKind) => (m === 'goal' ? u.goalRole : u.donationRole);
@@ -66,10 +65,12 @@ const ROLE_FILTER_OPTIONS: ModuleRole[] = [
 ];
 
 export function UsersPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { push } = useToast();
   const { me } = useAuth();
   const canWrite = canManageUsers(me);
+  const moduleLabel = (m: ModuleKind) => t(m === 'goal' ? 'users.moduleGoals' : 'users.moduleDonations');
 
   const [filters, setFilters] = useState<Filters>(DEFAULT);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -103,7 +104,7 @@ export function UsersPage() {
         code: data.invitationShortCode,
       });
     },
-    onError: (err) => push({ kind: 'error', title: 'Invitation refusée', msg: errMsg(err, 'Création impossible.') }),
+    onError: (err) => push({ kind: 'error', title: t('users.inviteRefused'), msg: errMsg(err, t('users.createFailed')) }),
   });
 
   const updateMutation = useMutation({
@@ -111,9 +112,9 @@ export function UsersPage() {
     onSuccess: () => {
       invalidate();
       setEditing(null);
-      push({ kind: 'ok', title: 'Utilisateur mis à jour' });
+      push({ kind: 'ok', title: t('users.updated') });
     },
-    onError: (err) => push({ kind: 'error', title: 'Mise à jour refusée', msg: errMsg(err, 'Mise à jour impossible.') }),
+    onError: (err) => push({ kind: 'error', title: t('users.updateRefused'), msg: errMsg(err, t('users.updateFailed')) }),
   });
 
   const units = unitsQ.data ?? [];
@@ -134,15 +135,15 @@ export function UsersPage() {
 
   const perimeterLabel = (u: AdminUserResponse, m: ModuleKind): string => {
     const cIds = countryIdsOf(u, m);
-    if (cIds?.length) return countries.filter((c) => cIds.includes(c.id)).map((c) => c.name).join(', ') || 'Pays';
-    if (zoneIdOf(u, m)) return `Zone : ${zoneName(zoneIdOf(u, m))}`;
+    if (cIds?.length) return countries.filter((c) => cIds.includes(c.id)).map((c) => c.name).join(', ') || t('users.perimeterCountry');
+    if (zoneIdOf(u, m)) return t('users.perimeterZone', { name: zoneName(zoneIdOf(u, m)) });
     if (unitIdOf(u, m)) return unitName(unitIdOf(u, m)) ?? '—';
     return '—';
   };
 
   const cols: Column<AdminUserResponse>[] = [
     {
-      label: 'Nom',
+      label: t('users.colName'),
       render: (r) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div className="avatar md">
@@ -156,13 +157,16 @@ export function UsersPage() {
       ),
     },
     {
-      label: VISIBLE_MODULES.length > 1 ? 'Rôles (par module)' : `Rôle (${MODULE_LABELS[VISIBLE_MODULES[0]]})`,
+      label: VISIBLE_MODULES.length > 1
+        ? t('users.colRoles')
+        : t('users.colRoleSingle', { module: moduleLabel(VISIBLE_MODULES[0]) }),
       render: (r) => {
-        if (r.superAdmin) return <Badge tone="green">Super Admin</Badge>;
+        if (r.superAdmin) return <Badge tone="green">{t('roles.superAdmin')}</Badge>;
         const badges = VISIBLE_MODULES.filter((m) => roleOf(r, m)).map((m) => (
           <Badge key={m} tone="earth">
-            {VISIBLE_MODULES.length > 1 ? `${MODULE_LABELS[m]} : ` : ''}
-            {MODULE_ROLE_LABELS[roleOf(r, m)!]}
+            {VISIBLE_MODULES.length > 1
+              ? t('users.roleWithModule', { module: moduleLabel(m), role: t(`roles.${roleOf(r, m)!}`) })
+              : t(`roles.${roleOf(r, m)!}`)}
           </Badge>
         ));
         return badges.length > 0 ? (
@@ -173,17 +177,17 @@ export function UsersPage() {
       },
     },
     {
-      label: 'Périmètre',
+      label: t('users.colPerimeter'),
       render: (r) => {
         const parts = VISIBLE_MODULES.filter((m) => roleOf(r, m)).map((m) =>
           VISIBLE_MODULES.length > 1
-            ? `${MODULE_LABELS[m]} : ${perimeterLabel(r, m)}`
+            ? t('users.roleWithModule', { module: moduleLabel(m), role: perimeterLabel(r, m) })
             : perimeterLabel(r, m),
         );
         return <span style={{ color: 'var(--ink-600)' }}>{parts.join(' · ') || '—'}</span>;
       },
     },
-    { label: 'Statut', render: (r) => <StatusBadge active={r.active} /> },
+    { label: t('common.status'), render: (r) => <StatusBadge active={r.active} /> },
     ...(canWrite
       ? [{
           label: '',
@@ -191,7 +195,7 @@ export function UsersPage() {
           render: (r: AdminUserResponse) =>
             r.superAdmin ? null : (
               <div className="row-actions">
-                <IconButton icon={<Icon name="edit" size={15} />} title="Gérer" onClick={() => setEditing(r)} />
+                <IconButton icon={<Icon name="edit" size={15} />} title={t('users.manage')} onClick={() => setEditing(r)} />
               </div>
             ),
         } as Column<AdminUserResponse>]
@@ -201,12 +205,12 @@ export function UsersPage() {
   return (
     <>
       <TopBar
-        title="Utilisateurs"
-        crumbs={['shephr', 'Utilisateurs']}
+        title={t('users.title')}
+        crumbs={[t('common.brand'), t('users.title')]}
         actions={
           canWrite ? (
             <Button variant="primary" iconL={<Icon name="plus" size={15} />} onClick={() => { setInviteResult(null); setInviteOpen(true); }}>
-              Inviter un utilisateur
+              {t('users.invite')}
             </Button>
           ) : undefined
         }
@@ -214,36 +218,35 @@ export function UsersPage() {
 
       <div className="content">
         <p className="section-sub">
-          Dirigeants et membres de votre périmètre. Les invitations sont partagées par lien ; les rôles que vous
-          pouvez conférer sont limités à ceux strictement inférieurs au vôtre.
+          {t('users.intro')}
         </p>
 
         <div className="filters">
-          <Field label="Recherche" style={{ minWidth: 260, flex: 1 }}>
+          <Field label={t('common.searchLabel')} style={{ minWidth: 260, flex: 1 }}>
             <Input
-              placeholder="Nom ou email…"
+              placeholder={t('users.searchPlaceholder')}
               icon={<Icon name="search" size={14} />}
               value={filters.search}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
             />
           </Field>
-          <Field label="Rôle">
+          <Field label={t('users.roleFilter')}>
             <Select value={filters.role} onChange={(e) => setFilters({ ...filters, role: e.target.value as Filters['role'] })}>
-              <option value="all">Tous</option>
-              {ROLE_FILTER_OPTIONS.map((r) => <option key={r} value={r}>{MODULE_ROLE_LABELS[r]}</option>)}
+              <option value="all">{t('common.all')}</option>
+              {ROLE_FILTER_OPTIONS.map((r) => <option key={r} value={r}>{t(`roles.${r}`)}</option>)}
             </Select>
           </Field>
-          <Field label="Statut">
+          <Field label={t('common.status')}>
             <Select value={filters.active} onChange={(e) => setFilters({ ...filters, active: e.target.value as Filters['active'] })}>
-              <option value="all">Tous</option>
-              <option value="true">Actif</option>
-              <option value="false">Inactif</option>
+              <option value="all">{t('common.all')}</option>
+              <option value="true">{t('common.active')}</option>
+              <option value="false">{t('common.inactive')}</option>
             </Select>
           </Field>
         </div>
 
         <div style={{ color: 'var(--ink-500)', fontSize: 13, marginBottom: 10 }}>
-          <strong style={{ color: 'var(--ink-800)' }}>{rows.length}</strong> utilisateur(s)
+          {t('users.count', { count: rows.length })}
         </div>
 
         <div className="card" style={{ padding: 0 }}>
@@ -262,7 +265,7 @@ export function UsersPage() {
         result={inviteResult}
         submitting={inviteMutation.isPending}
         onSubmit={(payload) => inviteMutation.mutate({ ...payload, ministryId: me?.ministryId ?? undefined })}
-        onCopied={() => push({ kind: 'ok', title: 'Lien copié' })}
+        onCopied={() => push({ kind: 'ok', title: t('users.linkCopied') })}
       />
 
       <EditModal
@@ -298,11 +301,12 @@ function PerimeterFields({
   countries: CountryResponse[];
   set: (patch: { unitId?: string; unitIds?: string[]; zoneId?: string; countryIds?: string[] }) => void;
 }) {
+  const { t } = useTranslation();
   if (role === 'MEMBRE' || role === 'DIRIGEANT_UNITE') {
     return (
-      <Field label="Unité de rattachement">
+      <Field label={t('users.unitAttachment')}>
         <Select value={unitId} onChange={(e) => set({ unitId: e.target.value })}>
-          <option value="">— Choisir —</option>
+          <option value="">{t('common.choose')}</option>
           {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
         </Select>
       </Field>
@@ -310,7 +314,7 @@ function PerimeterFields({
   }
   if (role === 'DIRIGEANT') {
     return (
-      <Field label="Unités dirigées" hint="Un dirigeant peut gérer plusieurs unités.">
+      <Field label={t('users.managedUnits')} hint={t('users.managedUnitsHint')}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {units.map((u) => {
             const checked = unitIds.includes(u.id);
@@ -331,10 +335,10 @@ function PerimeterFields({
   }
   if (role === 'DIRIGEANT_SENIOR') {
     return (
-      <Field label="Zone (référentiel / engagements de foi)"
-        hint="Sa visibilité vient de son sous-arbre ; la zone sert à déclarer ses engagements de foi.">
+      <Field label={t('users.zoneFaith')}
+        hint={t('users.zoneFaithHint')}>
         <Select value={zoneId} onChange={(e) => set({ zoneId: e.target.value })}>
-          <option value="">— Choisir —</option>
+          <option value="">{t('common.choose')}</option>
           {zones.map((z) => <option key={z.id} value={z.id}>{z.name} — {z.countryName}</option>)}
         </Select>
       </Field>
@@ -342,7 +346,7 @@ function PerimeterFields({
   }
   if (role === 'DIRIGEANT_COORDINATEUR') {
     return (
-      <Field label="Pays coordonnés">
+      <Field label={t('users.coordinatedCountries')}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {countries.map((c) => {
             const checked = countryIds.includes(c.id);
@@ -375,11 +379,12 @@ function SupervisorField({
   onChange: (id: string) => void;
   excludeId?: string;
 }) {
+  const { t } = useTranslation();
   return (
-    <Field label="Superviseur" hint="La personne à qui ce compte rend compte (organigramme).">
+    <Field label={t('users.supervisor')} hint={t('users.supervisorHint')}>
       <Select value={value} onChange={(e) => onChange(e.target.value)}>
-        {me?.superAdmin && <option value="">— Aucun (racine) —</option>}
-        {me && <option value={me.id}>Moi ({me.fullName})</option>}
+        {me?.superAdmin && <option value="">{t('users.supervisorRoot')}</option>}
+        {me && <option value={me.id}>{t('users.supervisorMe', { name: me.fullName })}</option>}
         {people
           .filter((p) => p.id !== me?.id && p.id !== excludeId)
           .map((p) => (
@@ -412,12 +417,14 @@ function buildAttachment(module: ModuleKind, role: ModuleRole | '', unitId: stri
 
 /** Sélecteur de module (affiché seulement si plusieurs modules sont visibles). */
 function ModuleField({ module, onChange }: { module: ModuleKind; onChange: (m: ModuleKind) => void }) {
+  const { t } = useTranslation();
+  const moduleLabel = (m: ModuleKind) => t(m === 'goal' ? 'users.moduleGoals' : 'users.moduleDonations');
   if (VISIBLE_MODULES.length < 2) return null;
   return (
-    <Field label="Module">
+    <Field label={t('users.module')}>
       <Select value={module} onChange={(e) => onChange(e.target.value as ModuleKind)}>
         {VISIBLE_MODULES.map((m) => (
-          <option key={m} value={m}>{MODULE_LABELS[m]}</option>
+          <option key={m} value={m}>{moduleLabel(m)}</option>
         ))}
       </Select>
     </Field>
@@ -447,6 +454,8 @@ function InviteModal({
   onSubmit: (payload: InviteUserRequest) => void;
   onCopied: () => void;
 }) {
+  const { t } = useTranslation();
+  const moduleLabel = (m: ModuleKind) => t(m === 'goal' ? 'users.moduleGoals' : 'users.moduleDonations');
   const roles = assignableRoles(me);
   const defaultSupervisor = me && !me.superAdmin ? me.id : '';
   const [module, setModule] = useState<ModuleKind>(VISIBLE_MODULES[0]);
@@ -472,15 +481,15 @@ function InviteModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={result ? 'Invitation prête' : 'Inviter un utilisateur'}
-      sub={result ? 'Partagez ce lien avec la personne invitée.' : 'Rôle, superviseur et périmètre dans votre organisation.'}
+      title={result ? t('users.invitationReady') : t('users.invite')}
+      sub={result ? t('users.shareLink') : t('users.inviteSub')}
       size="lg"
       footer={
         result ? (
-          <Button variant="primary" onClick={onClose}>Terminé</Button>
+          <Button variant="primary" onClick={onClose}>{t('common.done')}</Button>
         ) : (
           <>
-            <Button variant="ghost" onClick={onClose}>Annuler</Button>
+            <Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
             <Button
               variant="primary"
               disabled={!valid || submitting}
@@ -490,7 +499,7 @@ function InviteModal({
                 ...buildAttachment(module, role, unitId, unitIds, zoneId, countryIds),
               })}
             >
-              {submitting ? 'Création…' : "Générer l'invitation"}
+              {submitting ? t('users.creating') : t('users.generateInvitation')}
             </Button>
           </>
         )
@@ -498,20 +507,20 @@ function InviteModal({
     >
       {result ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Field label="Lien d'invitation" hint={`Pour ${result.email}`}>
+          <Field label={t('users.invitationLink')} hint={t('users.invitationLinkHint', { email: result.email })}>
             <div style={{ display: 'flex', gap: 8 }}>
               <Input value={result.link} readOnly style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }} />
               <Button variant="secondary" iconL={<Icon name="copy" size={14} />} onClick={() => { navigator.clipboard?.writeText(result.link); onCopied(); }}>
-                Copier
+                {t('common.copy')}
               </Button>
             </div>
           </Field>
           {result.code && (
-            <Field label="Code d'activation (mobile)" hint="À transmettre à l'invité pour activer depuis l'app mobile.">
+            <Field label={t('users.activationCode')} hint={t('users.activationCodeHint')}>
               <div style={{ display: 'flex', gap: 8 }}>
                 <Input value={result.code} readOnly style={{ fontFamily: 'var(--font-mono)', fontSize: 18, letterSpacing: 2, fontWeight: 700 }} />
                 <Button variant="secondary" iconL={<Icon name="copy" size={14} />} onClick={() => { navigator.clipboard?.writeText(result.code!); onCopied(); }}>
-                  Copier
+                  {t('common.copy')}
                 </Button>
               </div>
             </Field>
@@ -520,15 +529,15 @@ function InviteModal({
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Field label="Nom complet"><Input placeholder="Prénom Nom" value={fullName} onChange={(e) => setFullName(e.target.value)} /></Field>
-            <Field label="Adresse e-mail"><Input type="email" placeholder="email@exemple.com" value={email} onChange={(e) => setEmail(e.target.value)} icon={<Icon name="mail" size={14} />} /></Field>
+            <Field label={t('users.fullName')}><Input placeholder={t('users.fullNamePlaceholder')} value={fullName} onChange={(e) => setFullName(e.target.value)} /></Field>
+            <Field label={t('users.emailLabel')}><Input type="email" placeholder={t('users.emailPlaceholder')} value={email} onChange={(e) => setEmail(e.target.value)} icon={<Icon name="mail" size={14} />} /></Field>
           </div>
           <SupervisorField me={me} people={people} value={supervisorId} onChange={setSupervisorId} />
           <ModuleField module={module} onChange={(m) => { setModule(m); setRole(''); setUnitId(''); setUnitIds([]); setZoneId(''); setCountryIds([]); }} />
-          <Field label={`Rôle conféré (${MODULE_LABELS[module]})`}>
+          <Field label={t('users.roleConferred', { module: moduleLabel(module) })}>
             <Select value={role} onChange={(e) => { setRole(e.target.value as ModuleRole | ''); setUnitId(''); setUnitIds([]); setZoneId(''); setCountryIds([]); }}>
-              <option value="">— Choisir —</option>
-              {roles.map((r) => <option key={r} value={r}>{MODULE_ROLE_LABELS[r]}</option>)}
+              <option value="">{t('common.choose')}</option>
+              {roles.map((r) => <option key={r} value={r}>{t(`roles.${r}`)}</option>)}
             </Select>
           </Field>
           <PerimeterFields role={role} unitId={unitId} unitIds={unitIds} zoneId={zoneId} countryIds={countryIds} units={units} zones={zones} countries={countries}
@@ -553,6 +562,8 @@ function EditModal({
   submitting: boolean;
   onSubmit: (payload: UpdateUserRequest) => void;
 }) {
+  const { t } = useTranslation();
+  const moduleLabel = (m: ModuleKind) => t(m === 'goal' ? 'users.moduleGoals' : 'users.moduleDonations');
   const roles = assignableRoles(me);
   const [module, setModule] = useState<ModuleKind>(VISIBLE_MODULES[0]);
   const [role, setRole] = useState<ModuleRole | ''>('');
@@ -592,18 +603,18 @@ function EditModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={user ? `Gérer ${user.fullName}` : 'Gérer'}
-      sub="Promouvoir / superviseur / rattacher / (dés)activer dans votre périmètre."
+      title={user ? t('users.manageUser', { name: user.fullName }) : t('users.manageDefault')}
+      sub={t('users.manageSub')}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Annuler</Button>
+          <Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
           <Button variant="primary" disabled={!valid || submitting} onClick={() => onSubmit({
             supervisorId: supervisorId || undefined,
             ...buildAttachment(module, role, unitId, unitIds, zoneId, countryIds),
             ...(me?.superAdmin ? { coordinatedCountryIds: showCoordinated ? coordinatedCountryIds : [] } : {}),
             active,
           })}>
-            {submitting ? 'Enregistrement…' : 'Enregistrer'}
+            {submitting ? t('common.saving') : t('common.save')}
           </Button>
         </>
       }
@@ -611,16 +622,16 @@ function EditModal({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <SupervisorField me={me} people={people} value={supervisorId} onChange={setSupervisorId} excludeId={user?.id} />
         <ModuleField module={module} onChange={(m) => { setModule(m); if (user) initFromUser(user, m); }} />
-        <Field label={`Rôle conféré (${MODULE_LABELS[module]})`}>
+        <Field label={t('users.roleConferred', { module: moduleLabel(module) })}>
           <Select value={role} onChange={(e) => { setRole(e.target.value as ModuleRole | ''); setUnitId(''); setUnitIds([]); setZoneId(''); setCountryIds([]); }}>
-            <option value="">— Aucun —</option>
-            {roles.map((r) => <option key={r} value={r}>{MODULE_ROLE_LABELS[r]}</option>)}
+            <option value="">{t('common.noneOption')}</option>
+            {roles.map((r) => <option key={r} value={r}>{t(`roles.${r}`)}</option>)}
           </Select>
         </Field>
         <PerimeterFields role={role} unitId={unitId} unitIds={unitIds} zoneId={zoneId} countryIds={countryIds} units={units} zones={zones} countries={countries}
           set={(p) => { if (p.unitId !== undefined) setUnitId(p.unitId); if (p.unitIds !== undefined) setUnitIds(p.unitIds); if (p.zoneId !== undefined) setZoneId(p.zoneId); if (p.countryIds !== undefined) setCountryIds(p.countryIds); }} />
         {showCoordinated && (
-          <Field label="Pays coordonnés (nation sans coordinateur)" hint="Le secrétariat agira comme coordinateur Goals sur ces pays (lecture + foi pays).">
+          <Field label={t('users.coordinatedCountriesNation')} hint={t('users.coordinatedCountriesHint')}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {countries.map((c) => {
                 const checked = coordinatedCountryIds.includes(c.id);
@@ -642,13 +653,13 @@ function EditModal({
                 );
               })}
               {countries.length === 0 && (
-                <span style={{ color: 'var(--ink-400)', fontStyle: 'italic', fontSize: 13 }}>Aucun pays.</span>
+                <span style={{ color: 'var(--ink-400)', fontStyle: 'italic', fontSize: 13 }}>{t('users.noCountry')}</span>
               )}
             </div>
           </Field>
         )}
-        <Field label="Statut">
-          <Toggle checked={active} onChange={setActive} label={active ? 'Actif' : 'Inactif'} />
+        <Field label={t('common.status')}>
+          <Toggle checked={active} onChange={setActive} label={active ? t('users.statusActive') : t('users.statusInactive')} />
         </Field>
       </div>
     </Modal>

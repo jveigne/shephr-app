@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
 import { Button, Field, Input } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
@@ -22,6 +23,7 @@ export function AcceptInvitationPage() {
   const { establishSession } = useAuth();
   const { push } = useToast();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState<InvitationPreview | null>(null);
@@ -40,7 +42,7 @@ export function AcceptInvitationPage() {
         const p = await previewInvitation(token);
         if (active) setPreview(p);
       } catch (e) {
-        if (active) setLoadError(errMessage(e, 'Cette invitation est invalide ou a expiré.'));
+        if (active) setLoadError(errMessage(e, t('invitation.invalidExpired')));
       } finally {
         if (active) setLoading(false);
       }
@@ -54,11 +56,11 @@ export function AcceptInvitationPage() {
     e.preventDefault();
     setError(null);
     if (password.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères.');
+      setError(t('invitation.tooShort'));
       return;
     }
     if (password !== confirm) {
-      setError('Les deux mots de passe ne correspondent pas.');
+      setError(t('invitation.mismatch'));
       return;
     }
     setSubmitting(true);
@@ -66,13 +68,13 @@ export function AcceptInvitationPage() {
       const res = await acceptInvitation({ token, password });
       const me = await establishSession(res.token);
       if (!hasMinistryAccess(me)) {
-        setError("Votre compte n'a pas accès au Web Espace ministère.");
+        setError(t('invitation.noAccess'));
         return;
       }
-      push({ kind: 'ok', title: 'Compte activé', msg: 'Bienvenue sur shephr.' });
+      push({ kind: 'ok', title: t('invitation.activatedToast'), msg: t('invitation.activatedMsg') });
       navigate('/dashboard', { replace: true });
     } catch (err: unknown) {
-      setError(errMessage(err, "Impossible d'activer le compte."));
+      setError(errMessage(err, t('invitation.activateFailed')));
     } finally {
       setSubmitting(false);
     }
@@ -88,33 +90,35 @@ export function AcceptInvitationPage() {
           </div>
 
           {loading ? (
-            <div className="sub">Chargement de l'invitation…</div>
+            <div className="sub">{t('invitation.loadingInvitation')}</div>
           ) : loadError ? (
             <>
-              <h1>Invitation indisponible</h1>
+              <h1>{t('invitation.unavailable')}</h1>
               <div className="err" style={{ marginTop: 12 }}>{loadError}</div>
               <Button
                 variant="secondary"
                 onClick={() => navigate('/login', { replace: true })}
                 style={{ marginTop: 16, justifyContent: 'center' }}
               >
-                Aller à la connexion
+                {t('invitation.goToLogin')}
               </Button>
             </>
           ) : (
             <>
-              <h1>Activez votre compte</h1>
+              <h1>{t('invitation.activateAccount')}</h1>
               <div className="sub">
-                Bonjour {preview?.fullName}, définissez votre mot de passe pour rejoindre
-                {preview?.ministryName ? ` ${preview.ministryName}` : ' votre ministère'} sur shephr.
+                {t('invitation.greeting', {
+                  name: preview?.fullName ?? '',
+                  ministry: preview?.ministryName ?? t('invitation.yourMinistry'),
+                })}
               </div>
 
               <form className="form" onSubmit={submit}>
-                <Field label="Adresse e-mail">
+                <Field label={t('invitation.emailLabel')}>
                   <Input type="email" value={preview?.email ?? ''} readOnly icon={<Icon name="mail" size={15} />} />
                 </Field>
 
-                <Field label="Mot de passe" hint="8 caractères minimum">
+                <Field label={t('invitation.passwordLabel')} hint={t('invitation.passwordHint')}>
                   <div className="input-wrap">
                     <span className="ico-left">
                       <Icon name="lock" size={15} />
@@ -150,7 +154,7 @@ export function AcceptInvitationPage() {
                   </div>
                 </Field>
 
-                <Field label="Confirmer le mot de passe">
+                <Field label={t('invitation.confirmPasswordLabel')}>
                   <Input
                     type={showPw ? 'text' : 'password'}
                     value={confirm}
@@ -167,7 +171,7 @@ export function AcceptInvitationPage() {
                   disabled={submitting}
                   style={{ justifyContent: 'center', marginTop: 6, padding: '12px 14px' }}
                 >
-                  {submitting ? 'Activation…' : 'Activer mon compte'}
+                  {submitting ? t('invitation.activating') : t('invitation.activate')}
                 </Button>
 
                 {error && <div className="err">{error}</div>}

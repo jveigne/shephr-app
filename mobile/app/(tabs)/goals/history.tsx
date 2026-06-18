@@ -19,6 +19,7 @@ import Button from '../../../components/Button';
 import Chip from '../../../components/Chip';
 import { colors, fonts } from '../../../theme';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useLanguage } from '../../../contexts/LanguageContext';
 import { useGoalsData } from '../../../hooks/useGoalsData';
 import { goalCategoryMeta } from '../../../constants/goalCategories';
 import { currencySymbol, fmtAmount, fmtDate, parseLocalDate } from '../../../utils/format';
@@ -39,6 +40,7 @@ interface HistoryEntry {
 }
 
 export default function HistoryScreen() {
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const { me } = useAuth();
   const { year: yearParam } = useLocalSearchParams<{ year?: string }>();
@@ -77,13 +79,13 @@ export default function HistoryScreen() {
   };
 
   const onDelete = async (entry: HistoryEntry) => {
-    const ok = await confirmDialog('Supprimer', 'Supprimer cet avancement ?', 'Supprimer', true);
+    const ok = await confirmDialog(t('historyScreen.deleteTitle'), t('historyScreen.deleteConfirm'), t('common.delete'), true);
     if (!ok) return;
     try {
       await deleteProgress(entry.progress.id);
       await reload();
     } catch (e: any) {
-      notify('shephr', errMsg(e, 'La suppression a échoué.'));
+      notify(t('common.appName'), errMsg(e, t('errors.deleteFailed')));
     }
   };
 
@@ -101,14 +103,14 @@ export default function HistoryScreen() {
         </Pressable>
       </View>
 
-      <Text style={styles.title}>Avancements</Text>
+      <Text style={styles.title}>{t('historyScreen.title')}</Text>
       <Text style={styles.intro}>
-        Historique des versements et progressions de votre unité.
+        {t('historyScreen.intro')}
       </Text>
 
       {categoriesWithEntries.length > 1 && (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
-          <Chip label="Tous" selected={filter == null} onPress={() => setFilter(null)} />
+          <Chip label={t('common.all')} selected={filter == null} onPress={() => setFilter(null)} />
           {categoriesWithEntries.map((c) => (
             <Chip
               key={c.id}
@@ -123,7 +125,7 @@ export default function HistoryScreen() {
       {loading ? (
         <ActivityIndicator color={colors.moss} style={{ marginTop: 40 }} />
       ) : visible.length === 0 ? (
-        <Text style={styles.emptyText}>Aucun avancement enregistré.</Text>
+        <Text style={styles.emptyText}>{t('historyScreen.empty')}</Text>
       ) : (
         <View style={{ gap: 8, marginTop: 16 }}>
           {visible.map((entry) => {
@@ -170,7 +172,7 @@ export default function HistoryScreen() {
       )}
 
       <Text style={styles.footnote}>
-        Un avancement reste modifiable 24 h par la personne qui l'a enregistré.
+        {t('historyScreen.footnote')}
       </Text>
 
       <EditProgressModal
@@ -197,6 +199,7 @@ function EditProgressModal({
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
+  const { t } = useLanguage();
   const [value, setValue] = useState('');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
@@ -215,7 +218,7 @@ function EditProgressModal({
     if (!entry) return;
     const num = Number.parseFloat(value.replace(',', '.'));
     if (!Number.isFinite(num) || num <= 0) {
-      notify('shephr', 'Saisissez une valeur supérieure à 0.');
+      notify(t('common.appName'), t('historyScreen.valuePositive'));
       return;
     }
     setSaving(true);
@@ -226,7 +229,7 @@ function EditProgressModal({
       });
       await onSaved();
     } catch (e: any) {
-      notify('shephr', errMsg(e, 'La modification a échoué.'));
+      notify(t('common.appName'), errMsg(e, t('errors.updateFailed')));
     } finally {
       setSaving(false);
     }
@@ -236,12 +239,12 @@ function EditProgressModal({
     <Modal visible={entry != null} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
         <Card style={styles.modalCard}>
-          <Text style={styles.modalTitle}>Modifier l'avancement</Text>
+          <Text style={styles.modalTitle}>{t('historyScreen.editTitle')}</Text>
 
           <Label style={{ marginTop: 14, marginBottom: 6 }}>
             {isCurrency
-              ? `Montant (${currencySymbol(currency)})`
-              : `Valeur (${entry?.category.unitLabel ?? 'nombre'})`}
+              ? t('historyScreen.amountLabel', { symbol: currencySymbol(currency) })
+              : t('historyScreen.valueLabel', { unit: entry?.category.unitLabel ?? t('historyScreen.unitFallback') })}
           </Label>
           <Field
             value={value}
@@ -249,7 +252,7 @@ function EditProgressModal({
             keyboardType={isCurrency ? 'decimal-pad' : 'number-pad'}
           />
 
-          <Label style={{ marginTop: 12, marginBottom: 6 }}>Note (facultatif)</Label>
+          <Label style={{ marginTop: 12, marginBottom: 6 }}>{t('historyScreen.note')}</Label>
           <Field
             value={note}
             onChangeText={setNote}
@@ -260,9 +263,9 @@ function EditProgressModal({
           />
 
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
-            <Button label="Annuler" variant="ghost" onPress={onClose} style={{ flex: 1 }} height={48} />
+            <Button label={t('common.cancel')} variant="ghost" onPress={onClose} style={{ flex: 1 }} height={48} />
             <Button
-              label="Enregistrer"
+              label={t('common.save')}
               onPress={onSubmit}
               loading={saving}
               style={{ flex: 1 }}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import {
@@ -95,6 +96,7 @@ function fmtTarget(line: GoalLine, value: number, currency: string): string {
 }
 
 export function GoalsPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { push } = useToast();
   const { me } = useAuth();
@@ -183,12 +185,12 @@ export function GoalsPage() {
       setSubmitOpen(false);
       push({
         kind: 'ok',
-        title: 'Engagements soumis',
-        msg: `${res.lockedPledges} engagement(s) verrouillé(s).`,
+        title: t('goals.pledgesSubmittedToast'),
+        msg: t('goals.lockedPledges', { count: res.lockedPledges }),
       });
     },
     onError: (err) =>
-      push({ kind: 'error', title: 'Soumission refusée', msg: errMsg(err, 'Impossible de soumettre, réessayez.') }),
+      push({ kind: 'error', title: t('goals.submitRefused'), msg: errMsg(err, t('goals.submitFailed')) }),
   });
 
   const deleteProgressM = useMutation({
@@ -196,10 +198,10 @@ export function GoalsPage() {
     onSuccess: () => {
       invalidate();
       setToDeleteProgress(null);
-      push({ kind: 'ok', title: 'Avancement supprimé' });
+      push({ kind: 'ok', title: t('goals.progressDeleted') });
     },
     onError: (err) =>
-      push({ kind: 'error', title: 'Suppression refusée', msg: errMsg(err, 'Suppression impossible.') }),
+      push({ kind: 'error', title: t('goals.deleteRefused'), msg: errMsg(err, t('goals.deleteFailed')) }),
   });
 
   // ---- Empty / error states (UC-DIR-08 A1) ----
@@ -221,30 +223,30 @@ export function GoalsPage() {
 
   const lineCols: Column<GoalLine & { id: string }>[] = [
     {
-      label: 'Catégorie',
+      label: t('goals.colCategory'),
       render: (l) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <strong>{l.category.name}</strong>
           <span style={{ fontSize: 12, color: 'var(--ink-400)' }}>
             {l.category.unitType === 'CURRENCY'
-              ? `Montant (${currencySymbol(currency)})`
+              ? t('goals.amountUnit', { symbol: currencySymbol(currency) })
               : l.category.unitType === 'COUNT'
-              ? `Nombre (${l.category.unitLabel ?? '—'})`
-              : 'Liste nominative'}
+              ? t('goals.countUnit', { label: l.category.unitLabel ?? '—' })
+              : t('goals.nominativeList')}
           </span>
         </div>
       ),
     },
     {
-      label: 'Engagé',
+      label: t('goals.colPledged'),
       render: (l) => (l.target != null ? <strong>{fmtTarget(l, l.target, currency)}</strong> : '—'),
     },
     {
-      label: 'Versé',
+      label: t('goals.colPaid'),
       render: (l) => (l.pledge ? fmtTarget(l, l.achieved, currency) : '—'),
     },
     {
-      label: 'Avancement',
+      label: t('goals.colProgress'),
       style: { width: 160 },
       render: (l) => {
         if (!l.pledge || l.target == null || l.target <= 0) return '—';
@@ -313,14 +315,14 @@ export function GoalsPage() {
       },
     },
     {
-      label: 'Statut',
+      label: t('goals.colStatus'),
       render: (l) =>
         l.pledge == null ? (
-          <Badge tone="gray">À compléter</Badge>
+          <Badge tone="gray">{t('goals.toComplete')}</Badge>
         ) : l.pledge.locked ? (
-          <Badge tone="ok" dot>Soumis</Badge>
+          <Badge tone="ok" dot>{t('goals.submitted')}</Badge>
         ) : (
-          <Badge tone="warn" dot>Brouillon</Badge>
+          <Badge tone="warn" dot>{t('goals.draft')}</Badge>
         ),
     },
     {
@@ -330,7 +332,7 @@ export function GoalsPage() {
       render: (l) => (
         <IconButton
           icon={<Icon name={l.pledge?.locked ? 'eye' : 'edit'} size={15} />}
-          title={l.pledge?.locked ? 'Consulter' : 'Modifier'}
+          title={l.pledge?.locked ? t('goals.consult') : t('goals.editTooltip')}
           onClick={() => setEditLine(l)}
         />
       ),
@@ -338,10 +340,10 @@ export function GoalsPage() {
   ];
 
   const historyCols: Column<{ id: string; progress: ProgressResponse; line: GoalLine }>[] = [
-    { label: 'Date', render: (r) => fmtDateLabel(r.progress.progressDate) },
-    { label: 'Catégorie', render: (r) => r.line.category.name },
+    { label: t('common.date'), render: (r) => fmtDateLabel(r.progress.progressDate) },
+    { label: t('goals.colCategory'), render: (r) => r.line.category.name },
     {
-      label: 'Valeur',
+      label: t('goals.colValue'),
       render: (r) => (
         <strong>
           {r.progress.amount != null && r.line.category.unitType === 'CURRENCY'
@@ -351,7 +353,7 @@ export function GoalsPage() {
       ),
     },
     {
-      label: 'Note',
+      label: t('goals.colNote'),
       render: (r) =>
         r.progress.note ? <span style={{ fontStyle: 'italic' }}>{r.progress.note}</span> : '—',
     },
@@ -364,13 +366,13 @@ export function GoalsPage() {
           <span style={{ display: 'inline-flex', gap: 6 }}>
             <IconButton
               icon={<Icon name="edit" size={15} />}
-              title="Modifier (moins de 24 h)"
+              title={t('goals.editProgress24h')}
               onClick={() => setEditProgress(r)}
             />
             <IconButton
               danger
               icon={<Icon name="trash" size={15} />}
-              title="Supprimer (moins de 24 h)"
+              title={t('goals.deleteProgress24h')}
               onClick={() => setToDeleteProgress(r.progress)}
             />
           </span>
@@ -381,13 +383,13 @@ export function GoalsPage() {
   return (
     <>
       <TopBar
-        title="Objectifs"
-        crumbs={['shephr', 'Objectifs']}
+        title={t('goals.title')}
+        crumbs={[t('common.brand'), t('goals.title')]}
         actions={
           <>
             {goal && (goal.openYears?.length ?? 0) > 0 && year != null && (
               <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ink-400)' }}>
-                Année
+                {t('goals.year')}
                 <select
                   value={year}
                   onChange={(e) => setSelectedYear(Number(e.target.value))}
@@ -413,7 +415,7 @@ export function GoalsPage() {
             {hasPledges && (
               <>
                 <Button iconL={<Icon name="plus" size={15} />} onClick={() => setProgressOpen(true)}>
-                  Saisir un avancement
+                  {t('goals.addProgress')}
                 </Button>
                 {!submitted && (
                   <Button
@@ -421,7 +423,7 @@ export function GoalsPage() {
                     iconL={<Icon name="lock" size={15} />}
                     onClick={() => setSubmitOpen(true)}
                   >
-                    Soumettre mes engagements
+                    {t('goals.submitMyPledges')}
                   </Button>
                 )}
               </>
@@ -432,19 +434,19 @@ export function GoalsPage() {
 
       <div className="content">
         {goalQ.isLoading || (hasUnit && unitQ.isLoading) ? (
-          <p style={{ color: 'var(--ink-400)' }}>Chargement…</p>
+          <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
         ) : noGoal ? (
           <EmptyNote
-            title="Aucun objectif actif"
-            text="Aucun objectif quinquennal n'est actif pour le moment. Contactez votre coordinateur."
+            title={t('goals.noActiveGoal')}
+            text={t('goals.noActiveGoalText')}
           />
         ) : noScope ? (
           <EmptyNote
-            title="Compte non rattaché"
-            text="Votre compte n'est rattaché à aucun périmètre pour le module Objectifs (unité, zone ou pays). Contactez votre responsable."
+            title={t('goals.notAttached')}
+            text={t('goals.notAttachedText')}
           />
         ) : goalQ.isError || unitQ.isError ? (
-          <EmptyNote title="Erreur" text={errMsg(error, 'Impossible de charger vos engagements.')} />
+          <EmptyNote title={t('goals.errorTitle')} text={errMsg(error, t('goals.loadPledgesFailed'))} />
         ) : (
           <>
             <div style={{ marginBottom: 14 }}>
@@ -452,17 +454,15 @@ export function GoalsPage() {
               <p style={{ margin: 0, color: 'var(--ink-400)', fontSize: 13 }}>
                 {!hasUnit ? null : submitted ? (
                   <>
-                    <Icon name="lock" size={12} /> Engagements soumis — montants verrouillés, les
-                    avancements restent ouverts.
+                    <Icon name="lock" size={12} /> {t('goals.pledgesSubmitted')}
                   </>
                 ) : goal?.submissionDeadline ? (
                   new Date(goal.submissionDeadline).getTime() < Date.now() ? (
                     <span style={{ color: 'var(--err, #B86A4A)' }}>
-                      Échéance dépassée ({fmtDateLabel(goal.submissionDeadline.slice(0, 10))}) —
-                      soumettez vos engagements dès que possible.
+                      {t('goals.deadlinePast', { date: fmtDateLabel(goal.submissionDeadline.slice(0, 10)) })}
                     </span>
                   ) : (
-                    <>À soumettre avant le {fmtDateLabel(goal.submissionDeadline.slice(0, 10))}.</>
+                    <>{t('goals.submitBefore', { date: fmtDateLabel(goal.submissionDeadline.slice(0, 10)) })}</>
                   )
                 ) : null}
               </p>
@@ -477,14 +477,14 @@ export function GoalsPage() {
                 />
 
                 <div style={{ marginTop: 28 }}>
-                  <h3 style={{ margin: '0 0 10px' }}>Historique des avancements</h3>
+                  <h3 style={{ margin: '0 0 10px' }}>{t('goals.historyTitle')}</h3>
                   <Table
                     columns={historyCols}
                     rows={historyEntries.map((e) => ({ ...e, id: e.progress.id }))}
                     zebra
                     empty={
                       <p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>
-                        Aucun avancement enregistré.
+                        {t('goals.noProgressRecorded')}
                       </p>
                     }
                   />
@@ -510,7 +510,7 @@ export function GoalsPage() {
                   level="countries"
                   entityId={id}
                   year={year}
-                  title={countryName(id) ? `Mon pays — ${countryName(id)}` : 'Mon pays'}
+                  title={countryName(id) ? t('goals.myCountryNamed', { name: countryName(id) }) : t('goals.myCountry')}
                   goal={goal}
                   currency={currency}
                   meId={me?.id ?? null}
@@ -528,7 +528,7 @@ export function GoalsPage() {
                     level="countries"
                     entityId={id}
                     year={year}
-                    title={countryName(id) ? `Pays coordonné — ${countryName(id)}` : 'Pays coordonné'}
+                    title={countryName(id) ? t('goals.coordinatedCountryNamed', { name: countryName(id) }) : t('goals.coordinatedCountry')}
                     goal={goal}
                     currency={currency}
                     meId={me?.id ?? null}
@@ -555,18 +555,18 @@ export function GoalsPage() {
       <Modal
         open={submitOpen}
         onClose={() => setSubmitOpen(false)}
-        title="Soumettre mes engagements"
-        sub="Après soumission, les engagements sont verrouillés définitivement (acte unique). Seuls les avancements resteront modifiables."
+        title={t('goals.submitModalTitle')}
+        sub={t('goals.submitModalSub')}
         footer={
           <>
-            <Button onClick={() => setSubmitOpen(false)}>Annuler</Button>
+            <Button onClick={() => setSubmitOpen(false)}>{t('common.cancel')}</Button>
             <Button
               variant="primary"
               disabled={submitM.isPending}
               onClick={() => submitM.mutate()}
               iconL={<Icon name="lock" size={15} />}
             >
-              {submitM.isPending ? 'Soumission…' : 'Confirmer et soumettre'}
+              {submitM.isPending ? t('goals.submitting') : t('goals.confirmAndSubmit')}
             </Button>
           </>
         }
@@ -609,21 +609,21 @@ export function GoalsPage() {
       <Modal
         open={toDeleteProgress != null}
         onClose={() => setToDeleteProgress(null)}
-        title="Confirmer la suppression"
+        title={t('common.deleteTitle')}
         footer={
           <>
-            <Button onClick={() => setToDeleteProgress(null)}>Annuler</Button>
+            <Button onClick={() => setToDeleteProgress(null)}>{t('common.cancel')}</Button>
             <Button
               variant="danger"
               disabled={deleteProgressM.isPending}
               onClick={() => toDeleteProgress && deleteProgressM.mutate(toDeleteProgress.id)}
             >
-              Supprimer
+              {t('common.delete')}
             </Button>
           </>
         }
       >
-        <p>Voulez-vous vraiment supprimer cet avancement ?</p>
+        <p>{t('goals.deleteProgressConfirm')}</p>
       </Modal>
     </>
   );
@@ -655,6 +655,7 @@ function PledgeFormModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const { push } = useToast();
   const [value, setValue] = useState('');
   const isCurrency = line?.category.unitType === 'CURRENCY';
@@ -676,16 +677,16 @@ function PledgeFormModal({
       return createPledge({ categoryId: line!.category.id, year, ...payload });
     },
     onSuccess: () => {
-      push({ kind: 'ok', title: 'Engagement enregistré' });
+      push({ kind: 'ok', title: t('goals.pledgeSaved') });
       onSaved();
     },
     onError: (err) =>
       push({
         kind: 'error',
-        title: 'Enregistrement refusé',
+        title: t('goals.saveRefused'),
         msg: (err as Error).message === 'invalid'
-          ? 'Saisissez une valeur valide (0 autorisé).'
-          : errMsg(err, 'Enregistrement impossible.'),
+          ? t('goals.invalidValue')
+          : errMsg(err, t('goals.saveFailed')),
       }),
   });
 
@@ -697,17 +698,17 @@ function PledgeFormModal({
       title={line.category.name}
       sub={
         locked
-          ? 'Engagement soumis et verrouillé — lecture seule.'
-          : "L'engagement reste modifiable jusqu'à la soumission."
+          ? t('goals.pledgeLockedSub')
+          : t('goals.pledgeEditableSub')
       }
       footer={
         locked ? (
-          <Button onClick={onClose}>Fermer</Button>
+          <Button onClick={onClose}>{t('common.close')}</Button>
         ) : (
           <>
-            <Button onClick={onClose}>Annuler</Button>
+            <Button onClick={onClose}>{t('common.cancel')}</Button>
             <Button variant="primary" disabled={saveM.isPending} onClick={() => saveM.mutate()}>
-              {saveM.isPending ? 'Enregistrement…' : 'Enregistrer'}
+              {saveM.isPending ? t('common.saving') : t('common.save')}
             </Button>
           </>
         )
@@ -716,10 +717,10 @@ function PledgeFormModal({
       <Field
         label={
           isCurrency
-            ? `Montant engagé (${currencySymbol(currency)})`
-            : `Engagement (${line.category.unitLabel ?? 'nombre'})`
+            ? t('goals.pledgedAmount', { symbol: currencySymbol(currency) })
+            : t('goals.pledgeCount', { label: line.category.unitLabel ?? t('goals.labelNumber') })
         }
-        hint={locked ? undefined : 'Saisir 0 signifie « pas d’engagement » sur cette catégorie.'}
+        hint={locked ? undefined : t('goals.zeroMeansNoPledge')}
       >
         <Input
           value={value}
@@ -746,6 +747,7 @@ function ProgressFormModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const { push } = useToast();
   const [categoryId, setCategoryId] = useState('');
   const [value, setValue] = useState('');
@@ -773,16 +775,16 @@ function ProgressFormModal({
       });
     },
     onSuccess: () => {
-      push({ kind: 'ok', title: 'Avancement enregistré' });
+      push({ kind: 'ok', title: t('goals.progressSaved') });
       onSaved();
     },
     onError: (err) =>
       push({
         kind: 'error',
-        title: 'Enregistrement refusé',
+        title: t('goals.saveRefused'),
         msg: (err as Error).message === 'invalid'
-          ? 'Saisissez une valeur supérieure à 0.'
-          : errMsg(err, 'Enregistrement impossible.'),
+          ? t('goals.valueAbove0')
+          : errMsg(err, t('goals.saveFailed')),
       }),
   });
 
@@ -790,23 +792,23 @@ function ProgressFormModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="Saisir un avancement"
-      sub="Enregistrez un versement ou une progression déjà réalisée. Modifiable pendant 24 h."
+      title={t('goals.progressModalTitle')}
+      sub={t('goals.progressModalSub')}
       footer={
         <>
-          <Button onClick={onClose}>Annuler</Button>
+          <Button onClick={onClose}>{t('common.cancel')}</Button>
           <Button
             variant="primary"
             disabled={!selected || saveM.isPending}
             onClick={() => saveM.mutate()}
           >
-            {saveM.isPending ? 'Enregistrement…' : 'Enregistrer'}
+            {saveM.isPending ? t('common.saving') : t('common.save')}
           </Button>
         </>
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <Field label="Catégorie">
+        <Field label={t('goals.colCategory')}>
           <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
             {lines.map((l) => (
               <option key={l.category.id} value={l.category.id}>
@@ -817,18 +819,21 @@ function ProgressFormModal({
         </Field>
         {selected && (
           <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-400)' }}>
-            Engagé : {selected.target != null ? fmtTarget(selected, selected.target, currency) : '—'} ·
-            Versé : {fmtTarget(selected, selected.achieved, currency)} · Reste :{' '}
-            {selected.target != null
-              ? fmtTarget(selected, Math.max(0, selected.target - selected.achieved), currency)
-              : '—'}
+            {t('goals.pledgedPaidRemaining', {
+              pledged: selected.target != null ? fmtTarget(selected, selected.target, currency) : t('common.none'),
+              paid: fmtTarget(selected, selected.achieved, currency),
+              remaining:
+                selected.target != null
+                  ? fmtTarget(selected, Math.max(0, selected.target - selected.achieved), currency)
+                  : t('common.none'),
+            })}
           </p>
         )}
         <Field
           label={
             isCurrency
-              ? `Montant versé (${currencySymbol(currency)})`
-              : `Progression (${selected?.category.unitLabel ?? 'nombre'})`
+              ? t('goals.paidAmount', { symbol: currencySymbol(currency) })
+              : t('goals.progressValue', { label: selected?.category.unitLabel ?? t('goals.labelNumber') })
           }
         >
           <Input
@@ -837,7 +842,7 @@ function ProgressFormModal({
             onChange={(e) => setValue(e.target.value.replace(/[^0-9.,]/g, ''))}
           />
         </Field>
-        <Field label="Note (facultatif)">
+        <Field label={t('goals.noteOptional')}>
           <Input value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} />
         </Field>
       </div>
@@ -857,6 +862,7 @@ function EditProgressModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const { push } = useToast();
   const [value, setValue] = useState('');
   const [note, setNote] = useState('');
@@ -880,16 +886,16 @@ function EditProgressModal({
       });
     },
     onSuccess: () => {
-      push({ kind: 'ok', title: 'Avancement modifié' });
+      push({ kind: 'ok', title: t('goals.progressEdited') });
       onSaved();
     },
     onError: (err) =>
       push({
         kind: 'error',
-        title: 'Modification refusée',
+        title: t('goals.editRefused'),
         msg: (err as Error).message === 'invalid'
-          ? 'Saisissez une valeur supérieure à 0.'
-          : errMsg(err, 'Modification impossible (fenêtre de 24 h dépassée ?).'),
+          ? t('goals.valueAbove0')
+          : errMsg(err, t('goals.editFailed')),
       }),
   });
 
@@ -898,12 +904,12 @@ function EditProgressModal({
     <Modal
       open
       onClose={onClose}
-      title="Modifier l'avancement"
+      title={t('goals.editProgressTitle')}
       footer={
         <>
-          <Button onClick={onClose}>Annuler</Button>
+          <Button onClick={onClose}>{t('common.cancel')}</Button>
           <Button variant="primary" disabled={saveM.isPending} onClick={() => saveM.mutate()}>
-            {saveM.isPending ? 'Enregistrement…' : 'Enregistrer'}
+            {saveM.isPending ? t('common.saving') : t('common.save')}
           </Button>
         </>
       }
@@ -912,8 +918,8 @@ function EditProgressModal({
         <Field
           label={
             isCurrency
-              ? `Montant (${currencySymbol(currency)})`
-              : `Valeur (${entry.line.category.unitLabel ?? 'nombre'})`
+              ? t('goals.amountLabel', { symbol: currencySymbol(currency) })
+              : t('goals.valueLabel', { label: entry.line.category.unitLabel ?? t('goals.labelNumber') })
           }
         >
           <Input
@@ -922,7 +928,7 @@ function EditProgressModal({
             onChange={(e) => setValue(e.target.value.replace(/[^0-9.,]/g, ''))}
           />
         </Field>
-        <Field label="Note (facultatif)">
+        <Field label={t('goals.noteOptional')}>
           <Input value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} />
         </Field>
       </div>
@@ -950,6 +956,7 @@ function MyPerimeterSection({
   zoneId: string | null;
   zoneName: string | null;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { push } = useToast();
   const [faithCategory, setFaithCategory] = useState<GoalCategory | null>(null);
@@ -970,8 +977,8 @@ function MyPerimeterSection({
 
   const deleteM = useMutation({
     mutationFn: (id: string) => deleteFaithPledge(id),
-    onSuccess: () => { refresh(); setFaithToDelete(null); push({ kind: 'ok', title: 'Engagement de foi retiré' }); },
-    onError: (err) => push({ kind: 'error', title: 'Suppression refusée', msg: errMsg(err, 'Suppression impossible.') }),
+    onSuccess: () => { refresh(); setFaithToDelete(null); push({ kind: 'ok', title: t('goals.faithRemoved') }); },
+    onError: (err) => push({ kind: 'error', title: t('goals.deleteRefused'), msg: errMsg(err, t('goals.deleteFailed')) }),
   });
 
   const categories = [...goal.categories].sort((a, b) => a.displayOrder - b.displayOrder);
@@ -981,13 +988,13 @@ function MyPerimeterSection({
 
   type AggRow = { id: string; category: GoalCategory };
   const aggCols: Column<AggRow>[] = [
-    { label: 'Catégorie', render: (r) => <strong>{r.category.name}</strong> },
+    { label: t('goals.colCategory'), render: (r) => <strong>{r.category.name}</strong> },
     {
-      label: 'Mon sous-arbre',
+      label: t('goals.colMySubtree'),
       render: (r) => fmtCatValue(r.category, lineByCat.get(r.category.id)?.aggregateOfChildren ?? 0, currency),
     },
     ...(canFaith ? [{
-      label: 'Mon engagement de foi',
+      label: t('goals.colMyFaith'),
       render: (r: AggRow) => {
         const mine = myFaithFor(r.category.id);
         return mine
@@ -996,7 +1003,7 @@ function MyPerimeterSection({
       },
     } as Column<AggRow>] : []),
     {
-      label: 'Effectif retenu',
+      label: t('goals.colEffective'),
       render: (r) => {
         const line = lineByCat.get(r.category.id);
         const eff = line?.effectiveAmount ?? line?.effectiveCount ?? 0;
@@ -1005,7 +1012,7 @@ function MyPerimeterSection({
             <strong>{fmtCatValue(r.category, eff, currency)}</strong>
             {line && (
               <Badge tone={line.source === 'FAITH' ? 'earth' : 'gray'}>
-                {line.source === 'FAITH' ? 'Foi' : 'Agrégat'}
+                {line.source === 'FAITH' ? t('goals.sourceFaith') : t('goals.sourceAggregate')}
               </Badge>
             )}
           </span>
@@ -1018,7 +1025,7 @@ function MyPerimeterSection({
       cellStyle: { textAlign: 'right' },
       render: (r: AggRow) => (
         <Button size="sm" onClick={() => setFaithCategory(r.category)}>
-          {myFaithFor(r.category.id) ? 'Modifier ma foi' : 'Déclarer ma foi'}
+          {myFaithFor(r.category.id) ? t('goals.editMyFaith') : t('goals.declareMyFaith')}
         </Button>
       ),
     } as Column<AggRow>] : []),
@@ -1026,31 +1033,31 @@ function MyPerimeterSection({
 
   return (
     <div style={{ marginTop: 32 }}>
-      <h3 style={{ margin: '0 0 4px' }}>Mon périmètre{zoneName ? ` — ${zoneName}` : ''}</h3>
+      <h3 style={{ margin: '0 0 4px' }}>{zoneName ? t('goals.myPerimeterNamed', { name: zoneName }) : t('goals.myPerimeter')}</h3>
       <p style={{ margin: '0 0 10px', color: 'var(--ink-400)', fontSize: 13 }}>
-        Votre hiérarchie descendante (vos unités et celles de vos subordonnés).
-        {canFaith && ' Effectif retenu = MAX(somme de votre sous-arbre, votre engagement de foi).'}
+        {t('goals.myPerimeterIntro')}
+        {canFaith && t('goals.myPerimeterFaithRule')}
       </p>
       {aggQ.isLoading ? (
-        <p style={{ color: 'var(--ink-400)' }}>Chargement…</p>
+        <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
       ) : aggQ.isError ? (
-        <p style={{ color: 'var(--ink-400)' }}>{errMsg(aggQ.error, 'Périmètre inaccessible.')}</p>
+        <p style={{ color: 'var(--ink-400)' }}>{errMsg(aggQ.error, t('goals.perimeterInaccessible'))}</p>
       ) : (
         <Table columns={aggCols} rows={categories.map((c) => ({ id: c.id, category: c }))} zebra />
       )}
 
       {canFaith && myFaiths.length > 0 && (
         <div style={{ marginTop: 14 }}>
-          <h4 style={{ margin: '0 0 8px' }}>Mes engagements de foi</h4>
+          <h4 style={{ margin: '0 0 8px' }}>{t('goals.myFaithPledges')}</h4>
           <Table
             columns={[
               {
-                label: 'Catégorie',
+                label: t('goals.colCategory'),
                 render: (f: FaithPledgeResponse) =>
                   goal.categories.find((c) => c.id === f.categoryId)?.name ?? f.categoryCode,
               },
               {
-                label: 'Valeur',
+                label: t('goals.colValue'),
                 render: (f) => {
                   const cat = goal.categories.find((c) => c.id === f.categoryId);
                   return cat
@@ -1064,7 +1071,7 @@ function MyPerimeterSection({
                 cellStyle: { textAlign: 'right' },
                 render: (f) =>
                   f.createdById === meId || isSuperAdmin ? (
-                    <IconButton danger icon={<Icon name="trash" size={15} />} title="Retirer"
+                    <IconButton danger icon={<Icon name="trash" size={15} />} title={t('goals.remove')}
                       onClick={() => setFaithToDelete(f)} />
                   ) : null,
               },
@@ -1093,18 +1100,18 @@ function MyPerimeterSection({
       <Modal
         open={faithToDelete != null}
         onClose={() => setFaithToDelete(null)}
-        title="Retirer l'engagement de foi"
+        title={t('goals.removeFaithTitle')}
         footer={
           <>
-            <Button onClick={() => setFaithToDelete(null)}>Annuler</Button>
+            <Button onClick={() => setFaithToDelete(null)}>{t('common.cancel')}</Button>
             <Button variant="danger" disabled={deleteM.isPending}
               onClick={() => faithToDelete && deleteM.mutate(faithToDelete.id)}>
-              Retirer
+              {t('goals.remove')}
             </Button>
           </>
         }
       >
-        <p>Voulez-vous vraiment retirer cet engagement de foi ? L'effectif retombera sur la somme de votre sous-arbre.</p>
+        <p>{t('goals.removeFaithSubtree')}</p>
       </Modal>
     </div>
   );
@@ -1129,6 +1136,7 @@ function AggregateSection({
   meId: string | null;
   isSuperAdmin: boolean;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { push } = useToast();
   const [faithCategory, setFaithCategory] = useState<GoalCategory | null>(null);
@@ -1153,10 +1161,10 @@ function AggregateSection({
     onSuccess: () => {
       refresh();
       setFaithToDelete(null);
-      push({ kind: 'ok', title: 'Engagement de foi retiré' });
+      push({ kind: 'ok', title: t('goals.faithRemoved') });
     },
     onError: (err) =>
-      push({ kind: 'error', title: 'Suppression refusée', msg: errMsg(err, 'Suppression impossible.') }),
+      push({ kind: 'error', title: t('goals.deleteRefused'), msg: errMsg(err, t('goals.deleteFailed')) }),
   });
 
   const categories = [...goal.categories].sort((a, b) => a.displayOrder - b.displayOrder);
@@ -1167,16 +1175,16 @@ function AggregateSection({
 
   type AggRow = { id: string; category: GoalCategory };
   const aggCols: Column<AggRow>[] = [
-    { label: 'Catégorie', render: (r) => <strong>{r.category.name}</strong> },
+    { label: t('goals.colCategory'), render: (r) => <strong>{r.category.name}</strong> },
     {
-      label: 'Agrégat des sous-niveaux',
+      label: t('goals.colAggregate'),
       render: (r) => {
         const line = lineByCat.get(r.category.id);
         return fmtCatValue(r.category, line?.aggregateOfChildren ?? 0, currency);
       },
     },
     {
-      label: 'Mon engagement de foi',
+      label: t('goals.colMyFaith'),
       render: (r) => {
         const mine = myFaithFor(r.category.id);
         if (!mine) return <span style={{ color: 'var(--ink-400)' }}>—</span>;
@@ -1184,7 +1192,7 @@ function AggregateSection({
       },
     },
     {
-      label: 'Effectif retenu',
+      label: t('goals.colEffective'),
       render: (r) => {
         const line = lineByCat.get(r.category.id);
         const eff = line?.effectiveAmount ?? line?.effectiveCount ?? 0;
@@ -1193,7 +1201,7 @@ function AggregateSection({
             <strong>{fmtCatValue(r.category, eff, currency)}</strong>
             {line && (
               <Badge tone={line.source === 'FAITH' ? 'earth' : 'gray'}>
-                {line.source === 'FAITH' ? 'Foi' : 'Agrégat'}
+                {line.source === 'FAITH' ? t('goals.sourceFaith') : t('goals.sourceAggregate')}
               </Badge>
             )}
           </span>
@@ -1206,7 +1214,7 @@ function AggregateSection({
       cellStyle: { textAlign: 'right' },
       render: (r) => (
         <Button size="sm" onClick={() => setFaithCategory(r.category)}>
-          {myFaithFor(r.category.id) ? 'Modifier ma foi' : 'Déclarer ma foi'}
+          {myFaithFor(r.category.id) ? t('goals.editMyFaith') : t('goals.declareMyFaith')}
         </Button>
       ),
     },
@@ -1216,29 +1224,28 @@ function AggregateSection({
     <div style={{ marginTop: 32 }}>
       <h3 style={{ margin: '0 0 4px' }}>{title}</h3>
       <p style={{ margin: '0 0 10px', color: 'var(--ink-400)', fontSize: 13 }}>
-        Engagement effectif = MAX(agrégat des sous-niveaux, engagement de foi) — un engagement de
-        foi inférieur à l'agrégat n'est pas appliqué.
+        {t('goals.aggregateRule')}
       </p>
       {aggQ.isLoading ? (
-        <p style={{ color: 'var(--ink-400)' }}>Chargement…</p>
+        <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
       ) : aggQ.isError ? (
-        <p style={{ color: 'var(--ink-400)' }}>{errMsg(aggQ.error, "Agrégat inaccessible (périmètre ?).")}</p>
+        <p style={{ color: 'var(--ink-400)' }}>{errMsg(aggQ.error, t('goals.aggregateInaccessible'))}</p>
       ) : (
         <Table columns={aggCols} rows={categories.map((c) => ({ id: c.id, category: c }))} zebra />
       )}
 
       {faiths.length > 0 && (
         <div style={{ marginTop: 14 }}>
-          <h4 style={{ margin: '0 0 8px' }}>Engagements de foi déclarés</h4>
+          <h4 style={{ margin: '0 0 8px' }}>{t('goals.faithDeclared')}</h4>
           <Table
             columns={[
               {
-                label: 'Catégorie',
+                label: t('goals.colCategory'),
                 render: (f: FaithPledgeResponse) =>
                   goal.categories.find((c) => c.id === f.categoryId)?.name ?? f.categoryCode,
               },
               {
-                label: 'Valeur',
+                label: t('goals.colValue'),
                 render: (f) => {
                   const cat = goal.categories.find((c) => c.id === f.categoryId);
                   return cat ? (
@@ -1249,11 +1256,11 @@ function AggregateSection({
                 },
               },
               {
-                label: 'Déclaré par',
+                label: t('goals.colDeclaredBy'),
                 render: (f) => (
                   <span>
                     {f.createdByName ?? '—'}
-                    {f.createdById === meId && <Badge tone="green"> moi</Badge>}
+                    {f.createdById === meId && <Badge tone="green">{t('goals.me')}</Badge>}
                   </span>
                 ),
               },
@@ -1266,7 +1273,7 @@ function AggregateSection({
                     <IconButton
                       danger
                       icon={<Icon name="trash" size={15} />}
-                      title="Retirer cet engagement de foi"
+                      title={t('goals.removeFaithTooltip')}
                       onClick={() => setFaithToDelete(f)}
                     />
                   ) : null,
@@ -1299,23 +1306,22 @@ function AggregateSection({
       <Modal
         open={faithToDelete != null}
         onClose={() => setFaithToDelete(null)}
-        title="Retirer l'engagement de foi"
+        title={t('goals.removeFaithTitle')}
         footer={
           <>
-            <Button onClick={() => setFaithToDelete(null)}>Annuler</Button>
+            <Button onClick={() => setFaithToDelete(null)}>{t('common.cancel')}</Button>
             <Button
               variant="danger"
               disabled={deleteM.isPending}
               onClick={() => faithToDelete && deleteM.mutate(faithToDelete.id)}
             >
-              Retirer
+              {t('goals.remove')}
             </Button>
           </>
         }
       >
         <p>
-          Voulez-vous vraiment retirer cet engagement de foi ? L'effectif retombera sur l'agrégat
-          des sous-niveaux.
+          {t('goals.removeFaithAggregate')}
         </p>
       </Modal>
     </div>
@@ -1344,6 +1350,7 @@ function FaithFormModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const { push } = useToast();
   const [value, setValue] = useState('');
   const isCurrency = category?.unitType === 'CURRENCY';
@@ -1365,11 +1372,11 @@ function FaithFormModal({
       return createFaithPledge(level, entityId, { categoryId: category!.id, year, ...payload });
     },
     onSuccess: () => {
-      push({ kind: 'ok', title: 'Engagement de foi enregistré' });
+      push({ kind: 'ok', title: t('goals.faithSaved') });
       onSaved();
     },
     onError: (err) =>
-      push({ kind: 'error', title: 'Enregistrement refusé', msg: errMsg(err, 'Enregistrement impossible.') }),
+      push({ kind: 'error', title: t('goals.saveRefused'), msg: errMsg(err, t('goals.saveFailed')) }),
   });
 
   if (!category) return null;
@@ -1377,13 +1384,13 @@ function FaithFormModal({
     <Modal
       open
       onClose={onClose}
-      title={`Engagement de foi — ${category.name}`}
-      sub={`Agrégat actuel des sous-niveaux : ${fmtCatValue(category, aggregate, currency)}`}
+      title={t('goals.faithModalTitle', { category: category.name })}
+      sub={t('goals.faithModalSub', { aggregate: fmtCatValue(category, aggregate, currency) })}
       footer={
         <>
-          <Button onClick={onClose}>Annuler</Button>
+          <Button onClick={onClose}>{t('common.cancel')}</Button>
           <Button variant="primary" disabled={!valid || saveM.isPending} onClick={() => saveM.mutate()}>
-            {saveM.isPending ? 'Enregistrement…' : existing ? 'Modifier' : 'Déclarer'}
+            {saveM.isPending ? t('common.saving') : existing ? t('common.edit') : t('goals.declare')}
           </Button>
         </>
       }
@@ -1391,14 +1398,14 @@ function FaithFormModal({
       <Field
         label={
           isCurrency
-            ? `Montant de foi (${currencySymbol(currency)})`
-            : `Engagement de foi (${category.unitLabel ?? 'nombre'})`
+            ? t('goals.faithAmount', { symbol: currencySymbol(currency) })
+            : t('goals.faithCount', { label: category.unitLabel ?? t('goals.labelNumber') })
         }
         hint={
           valid
             ? num > aggregate
-              ? `Vous vous engagez par la foi à dépasser l'agrégat de ${fmtCatValue(category, num - aggregate, currency)}.`
-              : "Votre engagement de foi est inférieur ou égal à l'agrégat — il ne sera pas appliqué (règle du MAX)."
+              ? t('goals.faithAbove', { value: fmtCatValue(category, num - aggregate, currency) })
+              : t('goals.faithBelowOrEqual')
             : undefined
         }
       >
@@ -1416,6 +1423,7 @@ function FaithFormModal({
 function ZoneUnitsBlock({
   zoneId, goal, year, perimeterScoped = false,
 }: { zoneId: string | null; goal: ActiveGoal; year: number; perimeterScoped?: boolean }) {
+  const { t } = useTranslation();
   const { push } = useToast();
   const unitsQ = useQuery({
     queryKey: perimeterScoped ? ['goals', 'me-units', year] : ['goals', 'zone-units', zoneId, year],
@@ -1439,10 +1447,10 @@ function ZoneUnitsBlock({
 
   const openReminder = (u: ZoneUnitStatus) => {
     const deadline = goal.submissionDeadline
-      ? ` avant le ${fmtDateLabel(goal.submissionDeadline.slice(0, 10))}`
+      ? t('goals.reminderDeadline', { date: fmtDateLabel(goal.submissionDeadline.slice(0, 10)) })
       : '';
     setReminderMsg(
-      `Bonjour, n'oubliez pas de soumettre les engagements de votre unité${deadline}. Que Dieu vous bénisse.`,
+      t('goals.reminderDefaultMessage', { deadline }),
     );
     setReminderUnit(u);
   };
@@ -1451,49 +1459,49 @@ function ZoneUnitsBlock({
     mutationFn: () => sendReminder(reminderUnit!.unitId, reminderMsg.trim() || undefined),
     onSuccess: (res) => {
       setReminderUnit(null);
-      push({ kind: 'ok', title: 'Rappel envoyé', msg: res.sentToName ? `À ${res.sentToName}.` : undefined });
+      push({ kind: 'ok', title: t('goals.reminderSent'), msg: res.sentToName ? t('goals.reminderSentTo', { name: res.sentToName }) : undefined });
     },
     onError: (err) => {
       const raw = errMsg(err, '');
       const msg = /already sent|24 hours/i.test(raw)
-        ? 'Un rappel a déjà été envoyé à cette unité il y a moins de 24 h.'
+        ? t('goals.reminderAlreadySent')
         : /no DIRIGEANT|NO_LEADER/i.test(raw)
-        ? "Cette unité n'a pas de dirigeant rattaché au module Objectifs."
+        ? t('goals.reminderNoLeader')
         : /already submitted/i.test(raw)
-        ? 'Cette unité a déjà soumis ses engagements.'
-        : raw || 'Envoi impossible.';
-      push({ kind: 'error', title: 'Rappel non envoyé', msg });
+        ? t('goals.reminderAlreadySubmitted')
+        : raw || t('goals.reminderSendFailed');
+      push({ kind: 'error', title: t('goals.reminderNotSent'), msg });
     },
   });
 
   const statusBadge = (u: ZoneUnitStatus) => {
-    if (u.submitted) return <Badge tone="ok" dot>Soumis</Badge>;
-    if (u.late) return <Badge tone="err" dot>En retard</Badge>;
-    if (u.pledgeCount > 0) return <Badge tone="warn" dot>Brouillon</Badge>;
-    return <Badge tone="gray" dot>Non démarré</Badge>;
+    if (u.submitted) return <Badge tone="ok" dot>{t('goals.submitted')}</Badge>;
+    if (u.late) return <Badge tone="err" dot>{t('goals.late')}</Badge>;
+    if (u.pledgeCount > 0) return <Badge tone="warn" dot>{t('goals.draft')}</Badge>;
+    return <Badge tone="gray" dot>{t('goals.statusNotStarted')}</Badge>;
   };
 
   return (
     <div style={{ marginTop: 14 }}>
-      <h4 style={{ margin: '0 0 8px' }}>Mes unités — statut de soumission</h4>
+      <h4 style={{ margin: '0 0 8px' }}>{t('goals.myUnitsStatus')}</h4>
       {allSubmitted && (
         <p style={{ margin: '0 0 8px', color: 'var(--green-600, #2E5142)', fontSize: 13 }}>
-          Toutes vos unités ont soumis !
+          {t('goals.allUnitsSubmitted')}
         </p>
       )}
       {unitsQ.isLoading ? (
-        <p style={{ color: 'var(--ink-400)' }}>Chargement…</p>
+        <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
       ) : (
         <Table
           columns={[
             {
-              label: 'Unité',
+              label: t('common.unit'),
               render: (u: ZoneUnitStatus & { id: string }) => (
                 <span>
                   <button
                     type="button"
                     onClick={() => setDetailUnit(u)}
-                    title="Voir le détail des engagements (lecture seule)"
+                    title={t('goals.viewDetailTooltip')}
                     style={{
                       background: 'none',
                       border: 'none',
@@ -1510,19 +1518,19 @@ function ZoneUnitsBlock({
                 </span>
               ),
             },
-            { label: 'Localité', render: (u) => u.localityName ?? '—' },
+            { label: t('common.locality'), render: (u) => u.localityName ?? '—' },
             {
-              label: 'Engagements saisis',
-              render: (u) => `${u.pledgeCount} / 5`,
+              label: t('goals.colPledgesEntered'),
+              render: (u) => t('goals.pledgesCount5', { count: u.pledgeCount }),
             },
             {
-              label: 'Statut',
+              label: t('goals.colStatus'),
               render: (u) => (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                   {statusBadge(u)}
                   {u.submittedAt && (
                     <span style={{ fontSize: 12, color: 'var(--ink-400)' }}>
-                      le {fmtDateLabel(u.submittedAt.slice(0, 10))}
+                      {t('goals.submittedOn', { date: fmtDateLabel(u.submittedAt.slice(0, 10)) })}
                     </span>
                   )}
                 </span>
@@ -1535,14 +1543,14 @@ function ZoneUnitsBlock({
               render: (u) =>
                 u.submitted ? null : u.hasLeader ? (
                   <Button size="sm" iconL={<Icon name="bell" size={14} />} onClick={() => openReminder(u)}>
-                    Envoyer un rappel
+                    {t('goals.sendReminder')}
                   </Button>
                 ) : (
                   <span
                     style={{ fontSize: 12, color: 'var(--ink-400)', fontStyle: 'italic' }}
-                    title="Rattachez un DIRIGEANT à cette unité (module Objectifs) pour pouvoir la relancer."
+                    title={t('goals.attachLeaderTooltip')}
                   >
-                    Sans dirigeant
+                    {t('goals.noLeader')}
                   </span>
                 ),
             },
@@ -1551,7 +1559,7 @@ function ZoneUnitsBlock({
           zebra
           empty={
             <p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>
-              Aucune unité dans cette zone.
+              {t('goals.noUnitInZone')}
             </p>
           }
         />
@@ -1560,23 +1568,23 @@ function ZoneUnitsBlock({
       <Modal
         open={reminderUnit != null}
         onClose={() => setReminderUnit(null)}
-        title={`Envoyer un rappel — ${reminderUnit?.unitName ?? ''}`}
-        sub="Le rappel apparaîtra in-app pour le dirigeant de l'unité (pas d'email). Au plus un rappel par unité par 24 h."
+        title={t('goals.reminderModalTitle', { name: reminderUnit?.unitName ?? '' })}
+        sub={t('goals.reminderModalSub')}
         footer={
           <>
-            <Button onClick={() => setReminderUnit(null)}>Annuler</Button>
+            <Button onClick={() => setReminderUnit(null)}>{t('common.cancel')}</Button>
             <Button
               variant="primary"
               disabled={reminderM.isPending || reminderMsg.trim().length === 0}
               onClick={() => reminderM.mutate()}
               iconL={<Icon name="bell" size={14} />}
             >
-              {reminderM.isPending ? 'Envoi…' : 'Envoyer'}
+              {reminderM.isPending ? t('goals.sending') : t('goals.send')}
             </Button>
           </>
         }
       >
-        <Field label="Message">
+        <Field label={t('goals.message')}>
           <textarea
             className="input"
             rows={4}
@@ -1591,19 +1599,19 @@ function ZoneUnitsBlock({
       <Modal
         open={detailUnit != null}
         onClose={() => setDetailUnit(null)}
-        title={`Engagements — ${detailUnit?.unitName ?? ''}`}
-        sub={`Détail des engagements de l'unité pour ${year} (lecture seule).`}
-        footer={<Button onClick={() => setDetailUnit(null)}>Fermer</Button>}
+        title={t('goals.unitPledgesTitle', { name: detailUnit?.unitName ?? '' })}
+        sub={t('goals.unitPledgesSub', { year })}
+        footer={<Button onClick={() => setDetailUnit(null)}>{t('common.close')}</Button>}
       >
         {detailQ.isLoading ? (
-          <p style={{ color: 'var(--ink-400)' }}>Chargement…</p>
+          <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
         ) : (
           <table style={{ width: '100%', fontSize: 14, borderSpacing: 0 }}>
             <thead>
               <tr style={{ textAlign: 'left', color: 'var(--ink-400)', fontSize: 12 }}>
-                <th style={{ padding: '4px 8px' }}>Catégorie</th>
-                <th style={{ padding: '4px 8px', textAlign: 'right' }}>Engagé</th>
-                <th style={{ padding: '4px 8px', textAlign: 'right' }}>Versé</th>
+                <th style={{ padding: '4px 8px' }}>{t('goals.colCategory')}</th>
+                <th style={{ padding: '4px 8px', textAlign: 'right' }}>{t('goals.colPledged')}</th>
+                <th style={{ padding: '4px 8px', textAlign: 'right' }}>{t('goals.colPaid')}</th>
               </tr>
             </thead>
             <tbody>
@@ -1652,6 +1660,7 @@ interface DrillStep {
 }
 
 function GlobalSummarySection({ goal, currency, year }: { goal: ActiveGoal; currency: string; year: number }) {
+  const { t } = useTranslation();
   const summaryQ = useQuery({
     queryKey: ['goals', 'global', 'summary', year],
     queryFn: () => getGlobalSummary(year),
@@ -1678,7 +1687,7 @@ function GlobalSummarySection({ goal, currency, year }: { goal: ActiveGoal; curr
   if (path.length > 0) {
     return (
       <div style={{ marginTop: 32 }}>
-        <h3 style={{ margin: '0 0 4px' }}>Vue globale du ministère</h3>
+        <h3 style={{ margin: '0 0 4px' }}>{t('goals.globalView')}</h3>
         <DrillView goal={goal} currency={currency} year={year} path={path} setPath={setPath} />
       </div>
     );
@@ -1686,7 +1695,7 @@ function GlobalSummarySection({ goal, currency, year }: { goal: ActiveGoal; curr
 
   return (
     <div style={{ marginTop: 32 }}>
-      <h3 style={{ margin: '0 0 4px' }}>Vue globale du ministère</h3>
+      <h3 style={{ margin: '0 0 4px' }}>{t('goals.globalView')}</h3>
 
       {/* Lot 7.1 — carte du monde + nations en retard (cliquer un pays = drill-down). */}
       {nationsQ.data && nationsQ.data.nations.length > 0 && (
@@ -1700,33 +1709,36 @@ function GlobalSummarySection({ goal, currency, year }: { goal: ActiveGoal; curr
       )}
 
       {summaryQ.isLoading ? (
-        <p style={{ color: 'var(--ink-400)' }}>Chargement…</p>
+        <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
       ) : summaryQ.isError ? (
         <p style={{ color: 'var(--ink-400)' }}>
-          {errMsg(summaryQ.error, 'Résumé global inaccessible.')}
+          {errMsg(summaryQ.error, t('goals.globalSummaryInaccessible'))}
         </p>
       ) : summary ? (
         <>
           <p style={{ margin: '0 0 10px', color: 'var(--ink-400)', fontSize: 13 }}>
-            {summary.submittedUnits} / {summary.totalUnits} unité(s) ont soumis
-            {summary.totalUnits > 0
-              ? ` (${Math.round((summary.submittedUnits / summary.totalUnits) * 100)} %)`
-              : ''}
-            .
+            {t('goals.unitsSubmittedRatio', {
+              submitted: summary.submittedUnits,
+              total: summary.totalUnits,
+              percent:
+                summary.totalUnits > 0
+                  ? t('goals.percent', { value: Math.round((summary.submittedUnits / summary.totalUnits) * 100) })
+                  : '',
+            })}
           </p>
           <Table
             columns={[
               {
-                label: 'Catégorie',
+                label: t('goals.colCategory'),
                 render: (l: GlobalSummary['totals'][number] & { id: string }) => (
                   <strong>{catById.get(l.categoryId)?.name ?? l.categoryCode}</strong>
                 ),
               },
               {
-                label: 'Engagé (effectif)',
+                label: t('goals.colEffectivePledged'),
                 render: (l) => fmtLine(l.categoryId, l.effectiveAmount ?? l.effectiveCount),
               },
-              { label: 'Versé', render: (l) => fmtLine(l.categoryId, l.achieved) },
+              { label: t('goals.colPaid'), render: (l) => fmtLine(l.categoryId, l.achieved) },
             ]}
             rows={summary.totals.map((l) => ({ ...l, id: l.categoryId }))}
             zebra
@@ -1736,7 +1748,7 @@ function GlobalSummarySection({ goal, currency, year }: { goal: ActiveGoal; curr
               <h4 style={{ margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 10 }}>
                 {continent.name}{' '}
                 <span style={{ fontWeight: 400, fontSize: 13, color: 'var(--ink-400)' }}>
-                  — {continent.submittedUnits} / {continent.totalUnits} unité(s) soumise(s)
+                  {t('goals.continentSubmitted', { submitted: continent.submittedUnits, total: continent.totalUnits })}
                 </span>
                 <Button
                   size="sm"
@@ -1745,21 +1757,21 @@ function GlobalSummarySection({ goal, currency, year }: { goal: ActiveGoal; curr
                     setPath([{ level: 'continents', id: continent.continentId, name: continent.name }])
                   }
                 >
-                  Explorer
+                  {t('goals.explore')}
                 </Button>
               </h4>
               <Table
                 columns={[
                   {
-                    label: 'Catégorie',
+                    label: t('goals.colCategory'),
                     render: (l: GlobalSummary['totals'][number] & { id: string }) =>
                       catById.get(l.categoryId)?.name ?? l.categoryCode,
                   },
                   {
-                    label: 'Engagé (effectif)',
+                    label: t('goals.colEffectivePledged'),
                     render: (l) => fmtLine(l.categoryId, l.effectiveAmount ?? l.effectiveCount),
                   },
-                  { label: 'Versé', render: (l) => fmtLine(l.categoryId, l.achieved) },
+                  { label: t('goals.colPaid'), render: (l) => fmtLine(l.categoryId, l.achieved) },
                 ]}
                 rows={continent.lines.map((l) => ({ ...l, id: l.categoryId }))}
               />
@@ -1785,6 +1797,7 @@ function DrillView({
   path: DrillStep[];
   setPath: (p: DrillStep[]) => void;
 }) {
+  const { t } = useTranslation();
   const current = path[path.length - 1];
 
   const crumbStyle: CSSProperties = {
@@ -1801,7 +1814,7 @@ function DrillView({
     <>
       <p style={{ margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <button type="button" style={crumbStyle} onClick={() => setPath([])}>
-          Vue globale
+          {t('goals.globalViewLink')}
         </button>
         {path.map((step, i) => (
           <span key={step.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -1819,16 +1832,16 @@ function DrillView({
 
       {current.level === 'units' && current.unitStatus && (
         <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--ink-400)' }}>
-          {current.unitStatus.localityName ? `${current.unitStatus.localityName} · ` : ''}
-          {current.unitStatus.pledgeCount}/5 engagements saisis ·{' '}
+          {current.unitStatus.localityName ? t('goals.localityPrefix', { name: current.unitStatus.localityName }) : ''}
+          {t('goals.pledgesEnteredInline', { count: current.unitStatus.pledgeCount })}
           {current.unitStatus.submitted ? (
-            <Badge tone="ok" dot>Soumis</Badge>
+            <Badge tone="ok" dot>{t('goals.submitted')}</Badge>
           ) : current.unitStatus.late ? (
-            <Badge tone="err" dot>En retard</Badge>
+            <Badge tone="err" dot>{t('goals.late')}</Badge>
           ) : current.unitStatus.pledgeCount > 0 ? (
-            <Badge tone="warn" dot>Brouillon</Badge>
+            <Badge tone="warn" dot>{t('goals.draft')}</Badge>
           ) : (
-            <Badge tone="gray" dot>Non démarré</Badge>
+            <Badge tone="gray" dot>{t('goals.statusNotStarted')}</Badge>
           )}
         </p>
       )}
@@ -1866,6 +1879,7 @@ function LevelAggregateBlock({
   level: AggregateLevelPath;
   entityId: string;
 }) {
+  const { t } = useTranslation();
   const aggQ = useQuery({
     queryKey: ['goals', 'aggregate', level, entityId, year],
     queryFn: () => getAggregate(level, entityId, year),
@@ -1885,9 +1899,9 @@ function LevelAggregateBlock({
   const lineByCat = new Map((aggQ.data ?? []).map((l) => [l.categoryId, l]));
   const faiths = faithQ.data ?? [];
 
-  if (aggQ.isLoading) return <p style={{ color: 'var(--ink-400)' }}>Chargement…</p>;
+  if (aggQ.isLoading) return <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>;
   if (aggQ.isError) {
-    return <p style={{ color: 'var(--ink-400)' }}>{errMsg(aggQ.error, 'Agrégat inaccessible.')}</p>;
+    return <p style={{ color: 'var(--ink-400)' }}>{errMsg(aggQ.error, t('goals.aggregateInaccessible'))}</p>;
   }
 
   return (
@@ -1895,16 +1909,16 @@ function LevelAggregateBlock({
       <Table
         columns={[
           {
-            label: 'Catégorie',
+            label: t('goals.colCategory'),
             render: (r: { id: string; category: GoalCategory }) => <strong>{r.category.name}</strong>,
           },
           {
-            label: level === 'units' ? 'Engagé (DIRECT)' : 'Agrégat des sous-niveaux',
+            label: level === 'units' ? t('goals.colDirectPledged') : t('goals.colAggregate'),
             render: (r) =>
               fmtCatValue(r.category, lineByCat.get(r.category.id)?.aggregateOfChildren ?? 0, currency),
           },
           {
-            label: 'Effectif retenu',
+            label: t('goals.colEffective'),
             render: (r) => {
               const line = lineByCat.get(r.category.id);
               const eff = line?.effectiveAmount ?? line?.effectiveCount ?? 0;
@@ -1913,7 +1927,7 @@ function LevelAggregateBlock({
                   <strong>{fmtCatValue(r.category, eff, currency)}</strong>
                   {line && level !== 'units' && (
                     <Badge tone={line.source === 'FAITH' ? 'earth' : 'gray'}>
-                      {line.source === 'FAITH' ? 'Foi' : 'Agrégat'}
+                      {line.source === 'FAITH' ? t('goals.sourceFaith') : t('goals.sourceAggregate')}
                     </Badge>
                   )}
                 </span>
@@ -1926,7 +1940,7 @@ function LevelAggregateBlock({
       />
       {faiths.length > 0 && (
         <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--ink-600)' }}>
-          Engagements de foi :{' '}
+          {t('goals.faithPledgesInline')}
           {faiths
             .map((f) => {
               const cat = goal.categories.find((c) => c.id === f.categoryId);
@@ -1940,7 +1954,7 @@ function LevelAggregateBlock({
       {/* Lot 7.1 — courbe d'évolution cumulée du versé, par catégorie, à ce niveau. */}
       {timelineQ.data && timelineQ.data.length > 0 && (
         <div style={{ marginTop: 18 }}>
-          <h4 style={{ margin: '0 0 8px' }}>Évolution du versé (cumulé par mois)</h4>
+          <h4 style={{ margin: '0 0 8px' }}>{t('goals.paidEvolution')}</h4>
           <GoalTimeline
             data={timelineQ.data}
             format={(categoryId, unitType) => {
@@ -1960,15 +1974,16 @@ function LevelAggregateBlock({
 }
 
 function DrillCountries({ continentId, onOpen }: { continentId: string; onOpen: (id: string, name: string) => void }) {
+  const { t } = useTranslation();
   const countriesQ = useQuery({ queryKey: ['admin', 'countries'], queryFn: listCountries });
   const rows = (countriesQ.data ?? []).filter((c) => c.continentId === continentId);
   return (
     <div style={{ marginTop: 16 }}>
-      <h4 style={{ margin: '0 0 8px' }}>Pays</h4>
+      <h4 style={{ margin: '0 0 8px' }}>{t('goals.pays')}</h4>
       <Table
         columns={[
-          { label: 'Pays', render: (c: (typeof rows)[number]) => <strong>{c.name}</strong> },
-          { label: 'Code', render: (c) => c.code },
+          { label: t('goals.pays'), render: (c: (typeof rows)[number]) => <strong>{c.name}</strong> },
+          { label: t('goals.code'), render: (c) => c.code },
           {
             label: '',
             style: { width: 40 },
@@ -1979,22 +1994,23 @@ function DrillCountries({ continentId, onOpen }: { continentId: string; onOpen: 
         rows={rows}
         onRowClick={(c) => onOpen(c.id, c.name)}
         zebra
-        empty={<p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>Aucun pays sur ce continent.</p>}
+        empty={<p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>{t('goals.noCountryOnContinent')}</p>}
       />
     </div>
   );
 }
 
 function DrillZones({ countryId, onOpen }: { countryId: string; onOpen: (id: string, name: string) => void }) {
+  const { t } = useTranslation();
   const zonesQ = useQuery({ queryKey: ['admin', 'zones', countryId], queryFn: () => listZones(countryId) });
   const rows = zonesQ.data ?? [];
   return (
     <div style={{ marginTop: 16 }}>
-      <h4 style={{ margin: '0 0 8px' }}>Zones</h4>
+      <h4 style={{ margin: '0 0 8px' }}>{t('goals.zonesHeading')}</h4>
       <Table
         columns={[
-          { label: 'Zone', render: (z: (typeof rows)[number]) => <strong>{z.name}</strong> },
-          { label: 'Pays', render: (z) => z.countryName },
+          { label: t('common.zone'), render: (z: (typeof rows)[number]) => <strong>{z.name}</strong> },
+          { label: t('goals.pays'), render: (z) => z.countryName },
           {
             label: '',
             style: { width: 40 },
@@ -2005,22 +2021,23 @@ function DrillZones({ countryId, onOpen }: { countryId: string; onOpen: (id: str
         rows={rows}
         onRowClick={(z) => onOpen(z.id, z.name)}
         zebra
-        empty={<p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>Aucune zone dans ce pays.</p>}
+        empty={<p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>{t('goals.noZoneInCountry')}</p>}
       />
     </div>
   );
 }
 
 function DrillUnits({ zoneId, year, onOpen }: { zoneId: string; year: number; onOpen: (u: ZoneUnitStatus) => void }) {
+  const { t } = useTranslation();
   const unitsQ = useQuery({ queryKey: ['goals', 'zone-units', zoneId, year], queryFn: () => getZoneUnits(zoneId, year) });
   const rows = unitsQ.data ?? [];
   return (
     <div style={{ marginTop: 16 }}>
-      <h4 style={{ margin: '0 0 8px' }}>Unités — statut de soumission</h4>
+      <h4 style={{ margin: '0 0 8px' }}>{t('goals.unitsStatusHeading')}</h4>
       <Table
         columns={[
           {
-            label: 'Unité',
+            label: t('common.unit'),
             render: (u: ZoneUnitStatus & { id: string }) => (
               <span>
                 <strong>{u.unitName}</strong>
@@ -2028,19 +2045,19 @@ function DrillUnits({ zoneId, year, onOpen }: { zoneId: string; year: number; on
               </span>
             ),
           },
-          { label: 'Localité', render: (u) => u.localityName ?? '—' },
-          { label: 'Engagements saisis', render: (u) => `${u.pledgeCount} / 5` },
+          { label: t('common.locality'), render: (u) => u.localityName ?? '—' },
+          { label: t('goals.colPledgesEntered'), render: (u) => t('goals.pledgesCount5', { count: u.pledgeCount }) },
           {
-            label: 'Statut',
+            label: t('goals.colStatus'),
             render: (u) =>
               u.submitted ? (
-                <Badge tone="ok" dot>Soumis</Badge>
+                <Badge tone="ok" dot>{t('goals.submitted')}</Badge>
               ) : u.late ? (
-                <Badge tone="err" dot>En retard</Badge>
+                <Badge tone="err" dot>{t('goals.late')}</Badge>
               ) : u.pledgeCount > 0 ? (
-                <Badge tone="warn" dot>Brouillon</Badge>
+                <Badge tone="warn" dot>{t('goals.draft')}</Badge>
               ) : (
-                <Badge tone="gray" dot>Non démarré</Badge>
+                <Badge tone="gray" dot>{t('goals.statusNotStarted')}</Badge>
               ),
           },
           {
@@ -2053,7 +2070,7 @@ function DrillUnits({ zoneId, year, onOpen }: { zoneId: string; year: number; on
         rows={rows.map((u) => ({ ...u, id: u.unitId }))}
         onRowClick={(u) => onOpen(u)}
         zebra
-        empty={<p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>Aucune unité dans cette zone.</p>}
+        empty={<p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>{t('goals.noUnitInZone')}</p>}
       />
     </div>
   );

@@ -31,6 +31,12 @@ export interface ListDonationsParams {
   category?: string;
   unitId?: string;
   userId?: string;
+  // Lot 6.2 — filtres avancés (résolus côté serveur)
+  localityId?: string;
+  unitType?: 'CENTER' | 'ASSEMBLY';
+  minAmount?: number;
+  maxAmount?: number;
+  search?: string;
   page?: number;
   size?: number;
 }

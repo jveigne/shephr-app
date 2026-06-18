@@ -8,6 +8,7 @@ import Card from '../../../components/Card';
 import Button from '../../../components/Button';
 import HandDivider from '../../../components/HandDivider';
 import { colors, fonts } from '../../../theme';
+import { useLanguage } from '../../../contexts/LanguageContext';
 import { useGoalsData } from '../../../hooks/useGoalsData';
 import { goalCategoryMeta } from '../../../constants/goalCategories';
 import { fmtAmount, fmtDate } from '../../../utils/format';
@@ -17,6 +18,7 @@ import { submitMyPledges, type SubmitResponse } from '../../../services/goalsApi
 const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallback;
 
 export default function SubmitScreen() {
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const { year: yearParam } = useLocalSearchParams<{ year?: string }>();
   const year = yearParam ? Number(yearParam) : null;
@@ -30,9 +32,9 @@ export default function SubmitScreen() {
   const confirmSubmit = async () => {
     // UC-DIR-11 : confirmation à 2 étapes — le verrouillage est irréversible.
     const ok = await confirmDialog(
-      'Êtes-vous sûr ?',
-      'Une fois soumis, vos engagements seront verrouillés définitivement. Seuls les avancements resteront modifiables.',
-      'Soumettre',
+      t('submit.confirmTitle'),
+      t('submit.confirmBody'),
+      t('submit.confirmCta'),
       true,
     );
     if (ok) await doSubmit();
@@ -45,8 +47,8 @@ export default function SubmitScreen() {
       setDone(res);
       await reload();
     } catch (e: any) {
-      const message = errMsg(e, 'Impossible de soumettre, réessayez.');
-      notify('shephr', /already/i.test(message) ? 'Vos engagements ont déjà été soumis.' : message);
+      const message = errMsg(e, t('submit.failed'));
+      notify(t('common.appName'), /already/i.test(message) ? t('submit.alreadySubmitted') : message);
     } finally {
       setSubmitting(false);
     }
@@ -59,15 +61,13 @@ export default function SubmitScreen() {
           <View style={styles.checkBubble}>
             <Ionicons name="lock-closed" size={34} color={colors.white} />
           </View>
-          <Text style={styles.successTitle}>Engagements soumis.</Text>
+          <Text style={styles.successTitle}>{t('submit.successTitle')}</Text>
           <Text style={styles.successHint}>
-            {done.lockedPledges} engagement{done.lockedPledges > 1 ? 's' : ''} verrouillé
-            {done.lockedPledges > 1 ? 's' : ''} le {fmtDate(new Date(done.submittedAt))}. Vous
-            pouvez désormais enregistrer vos avancements au fil du temps.
+            {t('submit.successHint', { count: done.lockedPledges, date: fmtDate(new Date(done.submittedAt)) })}
           </Text>
         </View>
         <Button
-          label="Retour aux objectifs"
+          label={t('submit.backToGoals')}
           onPress={() => router.back()}
           fullWidth
           style={{ marginTop: 32 }}
@@ -84,10 +84,9 @@ export default function SubmitScreen() {
         </Pressable>
       </View>
 
-      <Text style={styles.title}>Soumettre mes engagements</Text>
+      <Text style={styles.title}>{t('submit.title')}</Text>
       <Text style={styles.intro}>
-        Relisez le récapitulatif : après soumission, les engagements sont verrouillés et ne pourront
-        plus être modifiés.
+        {t('submit.intro')}
       </Text>
 
       {loading ? (
@@ -118,23 +117,22 @@ export default function SubmitScreen() {
             })}
             <HandDivider style={{ marginVertical: 12 }} />
             <Text style={styles.verse}>
-              « Lorsque tu fais un vœu à Dieu, ne tarde pas à l'accomplir. »
+              {t('submit.verse')}
             </Text>
           </Card>
 
           <Card variant="tinted" style={styles.warnCard}>
             <Ionicons name="alert-circle-outline" size={18} color={colors.moss} />
             <Text style={styles.warnText}>
-              La soumission est un acte unique et irréversible. Seul un administrateur pourra
-              déverrouiller vos engagements.
+              {t('submit.warning')}
             </Text>
           </Card>
 
           {submitted ? (
-            <Text style={styles.alreadyText}>Vos engagements ont déjà été soumis.</Text>
+            <Text style={styles.alreadyText}>{t('submit.alreadySubmitted')}</Text>
           ) : (
             <Button
-              label="Confirmer et soumettre"
+              label={t('submit.confirmBtn')}
               onPress={confirmSubmit}
               loading={submitting}
               disabled={pledges.length === 0 || declaredLines.length === 0}

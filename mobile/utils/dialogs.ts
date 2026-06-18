@@ -1,4 +1,5 @@
 import { Alert, Platform } from 'react-native';
+import i18n from './i18n/i18n';
 
 /**
  * Confirmation cross-platform : react-native-web ne supporte pas les boutons
@@ -8,7 +9,7 @@ import { Alert, Platform } from 'react-native';
 export function confirmDialog(
   title: string,
   message: string,
-  confirmLabel = 'Confirmer',
+  confirmLabel = i18n.t('common.confirm'),
   destructive = false,
 ): Promise<boolean> {
   if (Platform.OS === 'web') {
@@ -18,7 +19,7 @@ export function confirmDialog(
   }
   return new Promise((resolve) => {
     Alert.alert(title, message, [
-      { text: 'Annuler', style: 'cancel', onPress: () => resolve(false) },
+      { text: i18n.t('common.cancel'), style: 'cancel', onPress: () => resolve(false) },
       {
         text: confirmLabel,
         style: destructive ? 'destructive' : 'default',

@@ -173,6 +173,20 @@ export function primaryRoleLabel(me: MeResponse | null): string {
   return role ? MODULE_ROLE_LABELS[role] : '';
 }
 
+/**
+ * i18n key suffix for the user's most significant role (sidebar footer).
+ * Returns 'superAdmin' or a ModuleRole code, to be looked up under `roles.*`. '' if none.
+ */
+export function primaryRoleKey(me: MeResponse | null): 'superAdmin' | ModuleRole | '' {
+  if (!me) return '';
+  if (me.superAdmin) return 'superAdmin';
+  const elevated =
+    (isElevated(me.donationRole) ? me.donationRole : null) ??
+    (isElevated(me.goalRole) ? me.goalRole : null);
+  const role = elevated ?? me.donationRole ?? me.goalRole;
+  return role ?? '';
+}
+
 export async function login(payload: { email: string; password: string }) {
   const { data } = await apiClient.post<AuthResponse>(
     '/api/cmfipraise/auth/login',
@@ -206,4 +220,10 @@ export async function acceptInvitation(payload: { token: string; password: strin
     payload,
   );
   return data;
+}
+
+/** Modules accessibles à l'utilisateur courant (gratuit/activé OU abonnement actif). */
+export async function getAccessibleModules(): Promise<string[]> {
+  const { data } = await apiClient.get<{ moduleCodes: string[] }>('/api/me/accessible-modules');
+  return data.moduleCodes ?? [];
 }

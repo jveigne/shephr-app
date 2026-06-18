@@ -73,6 +73,8 @@ export interface MeResponse {
   id: string;
   email: string;
   fullName: string;
+  /** Langue préférée du compte ('FR' | 'EN' | …) ; null si non définie côté backend. */
+  language?: string | null;
   superAdmin: boolean;
   donationRole: ModuleRole | null;
   goalRole: ModuleRole | null;

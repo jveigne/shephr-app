@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from 'react-simple-maps';
 import type { Nation } from '../services/goalsApi';
 import { ALPHA2_TO_NUMERIC } from '../utils/isoNumeric';
@@ -41,6 +42,7 @@ export function NationsMap({
   deadlinePast: boolean;
   onSelectCountry?: (countryId: string, name: string) => void;
 }) {
+  const { t } = useTranslation();
   // Index par code numérique (correspondance avec les géométries).
   const byNumeric = useMemo(() => {
     const m = new Map<string, Nation>();
@@ -138,12 +140,15 @@ export function NationsMap({
           >
             <div style={{ fontWeight: 600 }}>{hover.nation.name}</div>
             <div style={{ opacity: 0.85, marginTop: 2 }}>
-              {hover.nation.submittedUnits} / {hover.nation.totalUnits} unité(s) soumise(s) (
-              {Math.round(hover.nation.submissionRate * 100)} %)
+              {t('map.unitsSubmittedPercent', {
+                submitted: hover.nation.submittedUnits,
+                total: hover.nation.totalUnits,
+                percent: Math.round(hover.nation.submissionRate * 100),
+              })}
             </div>
             {hover.nation.late && (
               <div style={{ color: '#F0B6A6', marginTop: 2 }}>
-                {hover.nation.lateUnits} en retard
+                {t('map.lateUnits', { count: hover.nation.lateUnits })}
               </div>
             )}
           </div>
@@ -155,7 +160,7 @@ export function NationsMap({
         <input
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          placeholder="Rechercher un pays…"
+          placeholder={t('map.searchCountry')}
           style={{
             width: '100%',
             boxSizing: 'border-box',
@@ -176,7 +181,7 @@ export function NationsMap({
         >
           {filteredNations.length === 0 ? (
             <p style={{ margin: 0, padding: '12px 14px', fontSize: 13, color: 'var(--ink-400)', fontStyle: 'italic' }}>
-              Aucun pays.
+              {t('map.noCountry')}
             </p>
           ) : (
             filteredNations.map((n, i) => (
@@ -215,7 +220,7 @@ export function NationsMap({
                   {n.name}
                 </span>
                 {n.late && (
-                  <span style={{ fontSize: 11, color: 'var(--err, #B23A2E)', flexShrink: 0 }}>retard</span>
+                  <span style={{ fontSize: 11, color: 'var(--err, #B23A2E)', flexShrink: 0 }}>{t('map.lateShort')}</span>
                 )}
                 <span style={{ color: 'var(--ink-400)', flexShrink: 0 }}>
                   {Math.round(n.submissionRate * 100)} %
@@ -231,11 +236,11 @@ export function NationsMap({
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8, fontSize: 12, color: 'var(--ink-400)', flexWrap: 'wrap' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <i style={{ width: 60, height: 10, borderRadius: 5, display: 'inline-block', background: 'linear-gradient(90deg, rgb(192,73,47), rgb(217,164,65), rgb(47,143,91))' }} />
-          taux de soumission 0 → 100 %
+          {t('map.legendRate')}
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <i style={{ width: 14, height: 10, borderRadius: 3, display: 'inline-block', background: OUTSIDE }} />
-          hors ministère
+          {t('map.legendOutside')}
         </span>
       </div>
 
@@ -243,7 +248,7 @@ export function NationsMap({
       {deadlinePast && lateNations.length > 0 && (
         <div style={{ marginTop: 14 }}>
           <h4 style={{ margin: '0 0 8px', color: 'var(--err, #B23A2E)' }}>
-            Nations en retard ({lateNations.length})
+            {t('map.lateNations', { count: lateNations.length })}
           </h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {lateNations.map((n) => (
@@ -266,7 +271,7 @@ export function NationsMap({
               >
                 <strong>{n.name}</strong>
                 <span style={{ color: 'var(--err, #B23A2E)' }}>
-                  {n.lateUnits} / {n.totalUnits} non soumise(s)
+                  {t('map.notSubmittedRatio', { late: n.lateUnits, total: n.totalUnits })}
                 </span>
               </button>
             ))}
@@ -275,7 +280,7 @@ export function NationsMap({
       )}
       {deadlinePast && lateNations.length === 0 && (
         <p style={{ marginTop: 12, fontSize: 13, color: 'var(--ok, #2F8F5B)' }}>
-          Aucune nation en retard — toutes les unités attendues ont soumis. ✓
+          {t('map.noLateNation')}
         </p>
       )}
     </div>

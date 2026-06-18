@@ -11,6 +11,7 @@ import Button from '../../components/Button';
 import { colors, fonts } from '../../theme';
 import { notify } from '../../utils/dialogs';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import {
   acceptInvitationByCode,
   previewInvitationByCode,
@@ -21,6 +22,7 @@ import {
 export default function ActivateScreen() {
   const insets = useSafeAreaInsets();
   const { establishSession } = useAuth();
+  const { t } = useLanguage();
 
   const [code, setCode] = useState('');
   const [preview, setPreview] = useState<InvitationPreview | null>(null);
@@ -30,19 +32,19 @@ export default function ActivateScreen() {
 
   const errMsg = (e: any, fallback: string) =>
     e?.response ? e.response.data?.message ?? fallback
-      : 'Serveur injoignable — vérifiez le backend et le réseau.';
+      : t('activate.serverUnreachable');
 
   const onCheckCode = async () => {
     const c = code.trim().toUpperCase();
     if (c.length < 6) {
-      notify('shephr', 'Saisissez le code reçu (au moins 6 caractères).');
+      notify(t('common.appName'), t('activate.codeMinLength'));
       return;
     }
     setLoading(true);
     try {
       setPreview(await previewInvitationByCode(c));
     } catch (e: any) {
-      notify('Code invalide', errMsg(e, 'Code inconnu, expiré ou déjà utilisé.'));
+      notify(t('activate.invalidCodeTitle'), errMsg(e, t('activate.invalidCodeBody')));
     } finally {
       setLoading(false);
     }
@@ -50,11 +52,11 @@ export default function ActivateScreen() {
 
   const onActivate = async () => {
     if (password.length < 8) {
-      notify('shephr', 'Le mot de passe doit faire au moins 8 caractères.');
+      notify(t('common.appName'), t('activate.passwordMinLength'));
       return;
     }
     if (password !== confirm) {
-      notify('shephr', 'Les deux mots de passe ne correspondent pas.');
+      notify(t('common.appName'), t('activate.passwordsMismatch'));
       return;
     }
     setLoading(true);
@@ -63,7 +65,7 @@ export default function ActivateScreen() {
       await establishSession(res);
       router.replace('/(tabs)/home');
     } catch (e: any) {
-      notify('Activation impossible', errMsg(e, "L'activation a échoué."));
+      notify(t('activate.activationFailedTitle'), errMsg(e, t('activate.activationFailedBody')));
     } finally {
       setLoading(false);
     }
@@ -80,20 +82,20 @@ export default function ActivateScreen() {
           <View style={{ flex: 1, minHeight: 40 }} />
 
           <Card style={styles.card}>
-            <Label style={{ marginBottom: 6 }}>Activation</Label>
-            <Text style={styles.heading}>J'ai un code d'activation</Text>
+            <Label style={{ marginBottom: 6 }}>{t('activate.kicker')}</Label>
+            <Text style={styles.heading}>{t('activate.title')}</Text>
 
             {preview == null ? (
               <>
-                <Label style={{ marginBottom: 6 }}>Votre code</Label>
+                <Label style={{ marginBottom: 6 }}>{t('activate.yourCode')}</Label>
                 <Field
                   value={code}
                   onChangeText={(v) => setCode(v.toUpperCase())}
                   autoCapitalize="characters"
-                  placeholder="ex. ABCD2345"
+                  placeholder={t('activate.codePlaceholder')}
                 />
                 <Button
-                  label="Vérifier le code"
+                  label={t('activate.checkCode')}
                   onPress={onCheckCode}
                   loading={loading}
                   fullWidth
@@ -112,16 +114,16 @@ export default function ActivateScreen() {
                 </Card>
                 <View style={{ gap: 12, marginTop: 14 }}>
                   <View>
-                    <Label style={{ marginBottom: 6 }}>Choisissez un mot de passe</Label>
-                    <Field value={password} onChangeText={setPassword} secureTextEntry placeholder="Au moins 8 caractères" />
+                    <Label style={{ marginBottom: 6 }}>{t('activate.choosePassword')}</Label>
+                    <Field value={password} onChangeText={setPassword} secureTextEntry placeholder={t('activate.passwordPlaceholder')} />
                   </View>
                   <View>
-                    <Label style={{ marginBottom: 6 }}>Confirmez le mot de passe</Label>
-                    <Field value={confirm} onChangeText={setConfirm} secureTextEntry placeholder="Retapez le mot de passe" />
+                    <Label style={{ marginBottom: 6 }}>{t('activate.confirmPassword')}</Label>
+                    <Field value={confirm} onChangeText={setConfirm} secureTextEntry placeholder={t('activate.confirmPasswordPlaceholder')} />
                   </View>
                 </View>
                 <Button
-                  label="Activer mon compte"
+                  label={t('activate.activateAccount')}
                   onPress={onActivate}
                   loading={loading}
                   fullWidth
@@ -129,7 +131,7 @@ export default function ActivateScreen() {
                   iconRight={<Ionicons name="checkmark" size={18} color={colors.white} />}
                 />
                 <Text style={styles.changeCode} onPress={() => { setPreview(null); setPassword(''); setConfirm(''); }}>
-                  Ce n'est pas vous ? Changer de code
+                  {t('activate.notYou')}
                 </Text>
               </>
             )}
@@ -137,7 +139,7 @@ export default function ActivateScreen() {
             <View style={styles.divider} />
             <View style={styles.backRow}>
               <Text style={styles.backLink} onPress={() => router.replace('/(auth)/login')}>
-                <Ionicons name="arrow-back" size={14} color={colors.moss} /> Retour à la connexion
+                <Ionicons name="arrow-back" size={14} color={colors.moss} /> {t('activate.backToLogin')}
               </Text>
             </View>
           </Card>

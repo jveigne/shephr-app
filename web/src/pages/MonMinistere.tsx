@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
 import { TopBar } from '../components/ui';
 import { listMinistries, type MinistryResponse } from '../services/adminApi';
@@ -9,26 +10,27 @@ import { listMinistries, type MinistryResponse } from '../services/adminApi';
  * La gestion multi-tenant des ministères reste au back-office SUPER_ADMIN (shephr-webapp).
  */
 export function MonMinisterePage() {
+  const { t } = useTranslation();
   const ministriesQ = useQuery({ queryKey: ['admin', 'ministries'], queryFn: listMinistries });
   const ministries = ministriesQ.data ?? [];
 
   return (
     <>
-      <TopBar title="Mon ministère" crumbs={['shephr', 'Structure', 'Mon ministère']} />
+      <TopBar title={t('ministry.title')} crumbs={[t('common.brand'), t('nav.structure'), t('ministry.title')]} />
 
       <div className="content">
         <p className="section-sub">
-          Le ministère auquel vous êtes rattaché. Sa gestion (création, abonnements) relève du back-office.
+          {t('ministry.intro')}
         </p>
 
         {ministriesQ.isLoading ? (
-          <div className="card"><p style={{ color: 'var(--ink-500)' }}>Chargement…</p></div>
+          <div className="card"><p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p></div>
         ) : ministries.length === 0 ? (
           <div className="card" style={{ padding: 0 }}>
             <div className="empty">
               <div className="icon-wrap"><Icon name="building" size={26} /></div>
-              <h4>Aucun ministère</h4>
-              <p>Votre compte n'est rattaché à aucun ministère.</p>
+              <h4>{t('ministry.noMinistry')}</h4>
+              <p>{t('ministry.notAttached')}</p>
             </div>
           </div>
         ) : (

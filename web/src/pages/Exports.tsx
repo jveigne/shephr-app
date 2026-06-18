@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
 import { Button, Field, Select, TopBar } from '../components/ui';
 import { useToast } from '../components/Toast';
@@ -9,8 +10,8 @@ import { startOfMonthISO, startOfYearISO, todayISO, toLocalDate } from '../utils
 
 interface Preset {
   key: string;
-  title: string;
-  desc: string;
+  titleKey: string;
+  descKey: string;
   range: () => { from?: string; to?: string };
 }
 
@@ -24,31 +25,32 @@ const lastMonthRange = () => {
 const PRESETS: Preset[] = [
   {
     key: 'month',
-    title: 'Ce mois-ci',
-    desc: 'Tous les dons déclarés depuis le 1er du mois courant.',
+    titleKey: 'presetMonthTitle',
+    descKey: 'presetMonthDesc',
     range: () => ({ from: startOfMonthISO(), to: todayISO() }),
   },
   {
     key: 'lastMonth',
-    title: 'Mois dernier',
-    desc: 'Le mois civil précédent, du 1er au dernier jour.',
+    titleKey: 'presetLastMonthTitle',
+    descKey: 'presetLastMonthDesc',
     range: lastMonthRange,
   },
   {
     key: 'ytd',
-    title: 'Année en cours',
-    desc: 'Cumul depuis le 1er janvier (year-to-date).',
+    titleKey: 'presetYtdTitle',
+    descKey: 'presetYtdDesc',
     range: () => ({ from: startOfYearISO(), to: todayISO() }),
   },
   {
     key: 'all',
-    title: 'Tout l’historique',
-    desc: 'L’intégralité des dons de votre périmètre.',
+    titleKey: 'presetAllTitle',
+    descKey: 'presetAllDesc',
     range: () => ({}),
   },
 ];
 
 export function ExportsPage() {
+  const { t } = useTranslation();
   const { push } = useToast();
   const [unitId, setUnitId] = useState<string>('all');
   const [busy, setBusy] = useState<string | null>(null);
@@ -71,9 +73,13 @@ export function ExportsPage() {
       };
       const blob = await downloadDonationsCsv(params);
       saveBlob(blob, `dons-${preset.key}-${todayISO()}.csv`);
-      push({ kind: 'ok', title: 'Export téléchargé', msg: `${preset.title} · fichier CSV prêt.` });
+      push({
+        kind: 'ok',
+        title: t('exports.exportDownloaded'),
+        msg: t('exports.presetReady', { title: t(`exports.${preset.titleKey}`) }),
+      });
     } catch {
-      push({ kind: 'error', title: 'Export impossible', msg: 'Réessayez plus tard.' });
+      push({ kind: 'error', title: t('exports.exportFailed'), msg: t('common.retryLater') });
     } finally {
       setBusy(null);
     }
@@ -81,21 +87,21 @@ export function ExportsPage() {
 
   return (
     <>
-      <TopBar title="Exports" crumbs={['shephr', 'Exports']} />
+      <TopBar title={t('exports.title')} crumbs={[t('common.brand'), t('exports.title')]} />
 
       <div className="content narrow">
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="card-head">
             <div>
-              <h3 className="ttl">Périmètre de l’export</h3>
-              <div className="sub">Filtrez les dons à inclure dans le fichier CSV.</div>
+              <h3 className="ttl">{t('exports.scope')}</h3>
+              <div className="sub">{t('exports.scopeSub')}</div>
             </div>
           </div>
           <div className="card-body">
             <div className="filters" style={{ marginBottom: 0 }}>
-              <Field label="Unité">
+              <Field label={t('donations.unit')}>
                 <Select value={unitId} onChange={(e) => setUnitId(e.target.value)}>
-                  <option value="all">Toutes mes unités</option>
+                  <option value="all">{t('exports.allMyUnits')}</option>
                   {units.map((u) => (
                     <option key={u.id} value={u.id}>{u.name}</option>
                   ))}
@@ -105,8 +111,8 @@ export function ExportsPage() {
           </div>
         </div>
 
-        <h4 className="section-title">Choisir une période</h4>
-        <div className="section-sub">Le fichier est généré au format CSV (UTF-8), prêt pour Excel.</div>
+        <h4 className="section-title">{t('exports.choosePeriod')}</h4>
+        <div className="section-sub">{t('exports.chooseSub')}</div>
 
         <div className="preset-grid">
           {PRESETS.map((p) => (
@@ -121,8 +127,8 @@ export function ExportsPage() {
                 <Icon name={busy === p.key ? 'download' : 'export'} size={20} />
               </div>
               <div>
-                <div className="tt">{p.title}</div>
-                <div className="ds">{busy === p.key ? 'Génération en cours…' : p.desc}</div>
+                <div className="tt">{t(`exports.${p.titleKey}`)}</div>
+                <div className="ds">{busy === p.key ? t('exports.generating') : t(`exports.${p.descKey}`)}</div>
               </div>
             </button>
           ))}
@@ -133,8 +139,7 @@ export function ExportsPage() {
             <Icon name="info" size={16} />
           </div>
           <div style={{ fontSize: 12.5, color: 'var(--ink-700)' }}>
-            Colonnes : Date, Membre, Unité, Catégorie, Montant, Devise, Note. Les dons sont limités à
-            votre périmètre de visibilité.
+            {t('exports.columnsInfo')}
           </div>
         </div>
       </div>

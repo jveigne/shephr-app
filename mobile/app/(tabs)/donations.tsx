@@ -15,6 +15,7 @@ import {
   type DonationResponse,
 } from '../../services/donationApi';
 import { fmtAmount, monthLabel, parseLocalDate, toLocalDate } from '../../utils/format';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 type Period = 'month' | '3m' | '6m' | 'year' | 'all';
 
@@ -27,6 +28,8 @@ const PERIODS: { key: Period; label: string }[] = [
 ];
 
 export default function DonationsScreen() {
+  const { t } = useLanguage();
+  const periodLabel = (k: Period) => t('history.periods.' + k);
   const [period, setPeriod] = useState<Period>('month');
   const [catFilter, setCatFilter] = useState<string>('all');
   const [donations, setDonations] = useState<DonationResponse[]>([]);
@@ -75,14 +78,14 @@ export default function DonationsScreen() {
         <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <Text style={styles.title}>Mes dons</Text>
+      <Text style={styles.title}>{t('history.title')}</Text>
 
       <Card style={styles.totalCard}>
-        <Label style={{ color: colors.mossSoft }}>Total de la période</Label>
+        <Label style={{ color: colors.mossSoft }}>{t('history.totalPeriod')}</Label>
         <View style={styles.totalRow}>
           <Amount value={total} currency="GBP" size={32} showDecimals />
           <Text style={styles.count}>
-            {donations.length} don{donations.length > 1 ? 's' : ''}
+            {t('history.donations', { count: donations.length })}
           </Text>
         </View>
       </Card>
@@ -96,7 +99,7 @@ export default function DonationsScreen() {
         {PERIODS.map((p) => (
           <Chip
             key={p.key}
-            label={p.label}
+            label={periodLabel(p.key)}
             selected={period === p.key}
             onPress={() => setPeriod(p.key)}
           />
@@ -110,7 +113,7 @@ export default function DonationsScreen() {
         style={{ marginTop: 4 }}
       >
         <Chip
-          label="Toutes"
+          label={t('history.categoriesAll')}
           accent
           selected={catFilter === 'all'}
           onPress={() => setCatFilter('all')}
@@ -121,7 +124,7 @@ export default function DonationsScreen() {
             <Chip
               key={k}
               accent
-              label={c.fr}
+              label={t('categories.' + c.key)}
               selected={catFilter === k}
               onPress={() => setCatFilter(k)}
               iconLeft={
@@ -167,10 +170,11 @@ export default function DonationsScreen() {
 }
 
 function EmptyState() {
+  const { t } = useLanguage();
   return (
     <View style={{ alignItems: 'center', paddingVertical: 48 }}>
       <Ionicons name="leaf-outline" size={36} color={colors.mossSoft} />
-      <Text style={styles.emptyText}>Aucun don encore — votre premier geste sera ici.</Text>
+      <Text style={styles.emptyText}>{t('history.emptyState')}</Text>
     </View>
   );
 }

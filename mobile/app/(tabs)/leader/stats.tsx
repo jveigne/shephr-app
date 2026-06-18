@@ -16,6 +16,7 @@ import {
   type DonationByMonthStat,
 } from '../../../services/statsApi';
 import { CATEGORIES, type DonationCategory } from '../../../constants/categories';
+import { useLanguage } from '../../../contexts/LanguageContext';
 import { monthLabel } from '../../../utils/format';
 
 type Period = '3m' | '6m' | 'year';
@@ -28,6 +29,8 @@ const PERIODS: { key: Period; label: string }[] = [
 ];
 
 export default function StatsScreen() {
+  const { t } = useLanguage();
+  const periodLabel = (k: Period) => t('stats.periods.' + k);
   const [period, setPeriod] = useState<Period>('6m');
   const [monthStats, setMonthStats] = useState<DonationByMonthStat[]>([]);
   const [catStats, setCatStats] = useState<DonationByCategoryStat[]>([]);
@@ -76,18 +79,18 @@ export default function StatsScreen() {
         <Pressable onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="chevron-back" size={22} color={colors.ink2} />
         </Pressable>
-        <Text style={styles.headerTitle}>Statistiques</Text>
+        <Text style={styles.headerTitle}>{t('stats.headerTitle')}</Text>
         <View style={{ width: 22 }} />
       </View>
 
-      <Text style={styles.title}>Vue d'ensemble</Text>
-      <Text style={styles.subtitle}>Tendances de générosité sur votre périmètre.</Text>
+      <Text style={styles.title}>{t('stats.title')}</Text>
+      <Text style={styles.subtitle}>{t('stats.subtitle')}</Text>
 
       <View style={{ flexDirection: 'row', gap: 6, marginTop: 18 }}>
         {PERIODS.map((p) => (
           <Chip
             key={p.key}
-            label={p.label}
+            label={periodLabel(p.key)}
             selected={period === p.key}
             onPress={() => setPeriod(p.key)}
           />
@@ -103,16 +106,16 @@ export default function StatsScreen() {
           <Card style={styles.chartCard}>
             <View style={styles.chartHeader}>
               <View>
-                <Label style={{ color: colors.mossSoft }}>Dons reçus</Label>
+                <Label style={{ color: colors.mossSoft }}>{t('stats.donationsReceived')}</Label>
                 <Amount value={totalWindow} currency={PRIMARY} size={28} />
-                <Text style={styles.chartHint}>cumul sur {months.length} mois</Text>
+                <Text style={styles.chartHint}>{t('stats.rolling', { count: months.length })}</Text>
               </View>
             </View>
             <BarChart months={months} max={max} />
           </Card>
 
           <Card style={styles.donutCard}>
-            <Label style={{ color: colors.mossSoft }}>Répartition par catégorie</Label>
+            <Label style={{ color: colors.mossSoft }}>{t('stats.categorySplit')}</Label>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18, marginTop: 14 }}>
               <Donut segments={splits} />
               <View style={{ flex: 1, gap: 9 }}>
@@ -122,7 +125,7 @@ export default function StatsScreen() {
                   return (
                     <View key={s.key} style={styles.legendRow}>
                       <View style={[styles.legendDot, { backgroundColor: cat.tone }]} />
-                      <Text style={styles.legendLabel}>{cat.fr}</Text>
+                      <Text style={styles.legendLabel}>{t('categories.' + cat.key)}</Text>
                       <Text style={styles.legendPct}>{s.pct}%</Text>
                     </View>
                   );

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import {
@@ -31,6 +32,7 @@ const errMsg = (err: unknown, fallback: string) =>
   (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
 
 export function ZonesPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { push } = useToast();
   const { me } = useAuth();
@@ -50,9 +52,9 @@ export function ZonesPage() {
     onSuccess: () => {
       invalidate();
       setCreating(false);
-      push({ kind: 'ok', title: 'Zone créée' });
+      push({ kind: 'ok', title: t('zones.created') });
     },
-    onError: (err) => push({ kind: 'error', title: 'Création refusée', msg: errMsg(err, 'Création impossible.') }),
+    onError: (err) => push({ kind: 'error', title: t('zones.createRefused'), msg: errMsg(err, t('zones.createFailed')) }),
   });
 
   const updateM = useMutation({
@@ -61,9 +63,9 @@ export function ZonesPage() {
     onSuccess: () => {
       invalidate();
       setEditing(null);
-      push({ kind: 'ok', title: 'Zone mise à jour' });
+      push({ kind: 'ok', title: t('zones.updated') });
     },
-    onError: (err) => push({ kind: 'error', title: 'Mise à jour refusée', msg: errMsg(err, 'Mise à jour impossible.') }),
+    onError: (err) => push({ kind: 'error', title: t('zones.updateRefused'), msg: errMsg(err, t('zones.updateFailed')) }),
   });
 
   const deleteM = useMutation({
@@ -71,9 +73,9 @@ export function ZonesPage() {
     onSuccess: () => {
       invalidate();
       setToDelete(null);
-      push({ kind: 'ok', title: 'Zone supprimée' });
+      push({ kind: 'ok', title: t('zones.deleted') });
     },
-    onError: (err) => push({ kind: 'error', title: 'Suppression refusée', msg: errMsg(err, 'Suppression impossible.') }),
+    onError: (err) => push({ kind: 'error', title: t('zones.deleteRefused'), msg: errMsg(err, t('zones.deleteFailed')) }),
   });
 
   const rows = useMemo(() => {
@@ -87,9 +89,9 @@ export function ZonesPage() {
   const canCreate = canWrite && countries.length > 0;
 
   const cols: Column<ZoneResponse>[] = [
-    { label: 'Zone', render: (z) => <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{z.name}</span> },
+    { label: t('zones.colZone'), render: (z) => <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{z.name}</span> },
     {
-      label: 'Pays',
+      label: t('zones.colCountry'),
       render: (z) => (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           {z.countryName}
@@ -98,18 +100,18 @@ export function ZonesPage() {
       ),
     },
     {
-      label: 'Description',
+      label: t('zones.colDescription'),
       render: (z) => z.description ? z.description : <span style={{ color: 'var(--ink-400)' }}>—</span>,
     },
-    { label: 'Statut', render: (z) => <StatusBadge active={z.active} /> },
+    { label: t('common.status'), render: (z) => <StatusBadge active={z.active} /> },
     ...(canWrite
       ? [{
           label: '',
           style: { width: 90 },
           render: (z: ZoneResponse) => (
             <div className="row-actions">
-              <IconButton icon={<Icon name="edit" size={15} />} title="Modifier" onClick={() => setEditing(z)} />
-              <IconButton icon={<Icon name="trash" size={15} />} danger title="Supprimer" onClick={() => setToDelete(z)} />
+              <IconButton icon={<Icon name="edit" size={15} />} title={t('common.edit')} onClick={() => setEditing(z)} />
+              <IconButton icon={<Icon name="trash" size={15} />} danger title={t('common.delete')} onClick={() => setToDelete(z)} />
             </div>
           ),
         } as Column<ZoneResponse>]
@@ -119,30 +121,30 @@ export function ZonesPage() {
   return (
     <>
       <TopBar
-        title="Zones"
-        crumbs={['shephr', 'Structure', 'Zones']}
+        title={t('zones.title')}
+        crumbs={[t('common.brand'), t('nav.structure'), t('zones.title')]}
         actions={
           <Button
             variant="primary"
             iconL={<Icon name="plus" size={15} />}
             disabled={!canCreate}
-            title={canCreate ? undefined : "Aucun pays dans votre périmètre (réservé aux coordinateurs)."}
+            title={canCreate ? undefined : t('zones.noCountryHint')}
             onClick={() => setCreating(true)}
           >
-            Nouvelle zone
+            {t('zones.newZone')}
           </Button>
         }
       />
 
       <div className="content">
         <p className="section-sub">
-          Subdivisions d'un pays. Une zone regroupe des localités. Réservé aux coordinateurs de pays.
+          {t('zones.intro')}
         </p>
 
         <div className="filters">
-          <Field label="Recherche" style={{ minWidth: 260, flex: 1 }}>
+          <Field label={t('common.searchLabel')} style={{ minWidth: 260, flex: 1 }}>
             <Input
-              placeholder="Nom de zone ou pays…"
+              placeholder={t('zones.searchPlaceholder')}
               icon={<Icon name="search" size={14} />}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -151,7 +153,7 @@ export function ZonesPage() {
         </div>
 
         <div style={{ color: 'var(--ink-500)', fontSize: 13, marginBottom: 10 }}>
-          <strong style={{ color: 'var(--ink-800)' }}>{rows.length}</strong> zone(s)
+          {t('zones.count', { count: rows.length })}
         </div>
 
         <div className="card" style={{ padding: 0 }}>
@@ -162,8 +164,8 @@ export function ZonesPage() {
             empty={
               <div className="empty">
                 <div className="icon-wrap"><Icon name="building" size={26} /></div>
-                <h4>Aucune zone</h4>
-                <p>{canCreate ? 'Créez votre première zone.' : 'Aucune zone dans votre périmètre.'}</p>
+                <h4>{t('zones.noZone')}</h4>
+                <p>{canCreate ? t('zones.createFirst') : t('zones.noneInScope')}</p>
               </div>
             }
           />
@@ -191,7 +193,7 @@ export function ZonesPage() {
 
       <ConfirmDelete
         open={toDelete != null}
-        label={toDelete ? `la zone « ${toDelete.name} »` : ''}
+        label={toDelete ? t('zones.deleteLabel', { name: toDelete.name }) : ''}
         submitting={deleteM.isPending}
         onClose={() => setToDelete(null)}
         onConfirm={() => toDelete && deleteM.mutate(toDelete.id)}
@@ -215,6 +217,7 @@ function ZoneFormModal({
   submitting: boolean;
   onSubmit: (v: { countryId: string; name: string; description: string; active: boolean }) => void;
 }) {
+  const { t } = useTranslation();
   const isEdit = zone != null;
   const [countryId, setCountryId] = useState('');
   const [name, setName] = useState('');
@@ -237,24 +240,24 @@ function ZoneFormModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? 'Modifier la zone' : 'Nouvelle zone'}
-      sub={isEdit ? undefined : 'Rattachez la zone à un pays de votre périmètre.'}
+      title={isEdit ? t('zones.editTitle') : t('zones.newTitle')}
+      sub={isEdit ? undefined : t('zones.newSub')}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Annuler</Button>
+          <Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
           <Button
             variant="primary"
             disabled={!valid || submitting}
             onClick={() => onSubmit({ countryId, name: name.trim(), description: description.trim(), active })}
           >
-            {submitting ? 'Enregistrement…' : isEdit ? 'Enregistrer' : 'Créer'}
+            {submitting ? t('common.saving') : isEdit ? t('common.save') : t('common.create')}
           </Button>
         </>
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {!isEdit && (
-          <Field label="Pays">
+          <Field label={t('common.country')}>
             <Select value={countryId} onChange={(e) => setCountryId(e.target.value)}>
               {countries.map((c) => (
                 <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
@@ -262,15 +265,15 @@ function ZoneFormModal({
             </Select>
           </Field>
         )}
-        <Field label="Nom de la zone">
-          <Input placeholder="Zone Sud…" value={name} onChange={(e) => setName(e.target.value)} />
+        <Field label={t('zones.nameLabel')}>
+          <Input placeholder={t('zones.namePlaceholder')} value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label="Description" hint="Optionnel">
-          <Input placeholder="Description…" value={description} onChange={(e) => setDescription(e.target.value)} />
+        <Field label={t('common.description')} hint={t('common.optional')}>
+          <Input placeholder={t('zones.descPlaceholder')} value={description} onChange={(e) => setDescription(e.target.value)} />
         </Field>
         {isEdit && (
-          <Field label="Statut">
-            <Toggle checked={active} onChange={setActive} label={active ? 'Active' : 'Inactive'} />
+          <Field label={t('common.status')}>
+            <Toggle checked={active} onChange={setActive} label={active ? t('common.activeFem') : t('common.inactiveFem')} />
           </Field>
         )}
       </div>
@@ -291,22 +294,23 @@ export function ConfirmDelete({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Confirmer la suppression"
+      title={t('common.deleteTitle')}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Annuler</Button>
+          <Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
           <Button variant="danger" disabled={submitting} onClick={onConfirm}>
-            {submitting ? 'Suppression…' : 'Supprimer'}
+            {submitting ? t('common.deleting') : t('common.delete')}
           </Button>
         </>
       }
     >
       <p style={{ color: 'var(--ink-600)' }}>
-        Voulez-vous vraiment supprimer {label} ? Cette action est irréversible.
+        {t('common.deleteConfirm', { label })}
       </p>
     </Modal>
   );

@@ -10,6 +10,7 @@ import HandDivider from '../../../components/HandDivider';
 import GoalAggregatesScreen from '../../../components/GoalAggregates';
 import { colors, fonts } from '../../../theme';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useLanguage } from '../../../contexts/LanguageContext';
 import { useGoalsData, type GoalLine } from '../../../hooks/useGoalsData';
 import { goalCategoryMeta } from '../../../constants/goalCategories';
 import { fmtAmount, fmtDate } from '../../../utils/format';
@@ -29,6 +30,7 @@ export default function GoalsOverviewScreen() {
 }
 
 function UnitGoalsScreen() {
+  const { t } = useLanguage();
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const { goal, lines, submitted, pledges, loading, error, reload } = useGoalsData(selectedYear);
   const [refreshing, setRefreshing] = useState(false);
@@ -54,16 +56,16 @@ function UnitGoalsScreen() {
   }
 
   if (error === 'NO_GOAL') {
-    return <EmptyState icon="flag-outline" title="Aucun objectif actif"
-      hint="Aucun objectif quinquennal n'est actif pour le moment. Contactez votre coordinateur." />;
+    return <EmptyState icon="flag-outline" title={t('goals.noGoalTitle')}
+      hint={t('goals.noGoalHint')} />;
   }
   if (error === 'NO_UNIT') {
-    return <EmptyState icon="link-outline" title="Compte non rattaché"
-      hint="Votre compte n'est rattaché à aucune unité pour le module Objectifs. Contactez votre responsable." />;
+    return <EmptyState icon="link-outline" title={t('goals.noUnitTitle')}
+      hint={t('goals.noUnitHint')} />;
   }
   if (error) {
-    return <EmptyState icon="cloud-offline-outline" title="Erreur de chargement"
-      hint="Impossible de charger vos engagements. Tirez pour réessayer." onRetry={onRefresh} />;
+    return <EmptyState icon="cloud-offline-outline" title={t('goals.loadingError')}
+      hint={t('goals.loadingErrorHint')} onRetry={onRefresh} />;
   }
 
   const deadline = goal?.submissionDeadline ? new Date(goal.submissionDeadline) : null;
@@ -79,7 +81,7 @@ function UnitGoalsScreen() {
     >
       <View style={styles.titleRow}>
         <Ionicons name="flag-outline" size={22} color={colors.mossSoft} />
-        <Text style={styles.title}>Objectifs</Text>
+        <Text style={styles.title}>{t('goals.title')}</Text>
       </View>
       <Text style={styles.subtitle}>
         {goal?.name} · {goal ? `${new Date(goal.startDate).getFullYear()}–${new Date(goal.endDate).getFullYear()}` : ''}
@@ -93,8 +95,7 @@ function UnitGoalsScreen() {
         <Card variant="tinted" style={styles.banner}>
           <Ionicons name="lock-closed" size={18} color={colors.moss} />
           <Text style={styles.bannerText}>
-            Engagements soumis{lockedAt ? ` le ${fmtDate(new Date(lockedAt))}` : ''}. Les montants sont
-            verrouillés ; les avancements restent ouverts.
+            {t('goals.submittedBanner', { when: lockedAt ? t('goals.submittedWhen', { date: fmtDate(new Date(lockedAt)) }) : '' })}
           </Text>
         </Card>
       ) : deadline ? (
@@ -106,14 +107,14 @@ function UnitGoalsScreen() {
           />
           <Text style={[styles.bannerText, deadlinePast && { color: colors.clay }]}>
             {deadlinePast
-              ? `Échéance dépassée (${fmtDate(deadline)}) — soumettez vos engagements dès que possible.`
-              : `À soumettre avant le ${fmtDate(deadline)}.`}
+              ? t('goals.deadlinePast', { date: fmtDate(deadline) })
+              : t('goals.deadlineFuture', { date: fmtDate(deadline) })}
           </Text>
         </Card>
       ) : null}
 
       <View style={styles.sectionRow}>
-        <Text style={styles.sectionTitle}>Engagements de mon unité</Text>
+        <Text style={styles.sectionTitle}>{t('goals.myUnitPledges')}</Text>
       </View>
 
       <View style={{ gap: 8, marginTop: 10 }}>
@@ -129,7 +130,7 @@ function UnitGoalsScreen() {
 
       {!submitted && (
         <Button
-          label="Soumettre mes engagements"
+          label={t('goals.submitPledges')}
           onPress={() => router.push(`/(tabs)/goals/submit?year=${year ?? ''}`)}
           disabled={!hasPledges}
           fullWidth
@@ -139,21 +140,21 @@ function UnitGoalsScreen() {
       )}
       {!submitted && !hasPledges && (
         <Text style={styles.footnote}>
-          Saisissez au moins un engagement avant de soumettre.
+          {t('goals.noPledgeYet')}
         </Text>
       )}
 
       {hasPledges && (
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
           <Button
-            label="Saisir un avancement"
+            label={t('goals.addProgress')}
             variant="soft"
             onPress={() => router.push(`/(tabs)/goals/progress?year=${year ?? ''}`)}
             style={{ flex: 1 }}
             iconLeft={<Ionicons name="trending-up-outline" size={17} color={colors.mossDeep} />}
           />
           <Button
-            label="Historique"
+            label={t('goals.historyBtn')}
             variant="ghost"
             onPress={() => router.push(`/(tabs)/goals/history?year=${year ?? ''}`)}
             style={{ flex: 1 }}
@@ -204,6 +205,7 @@ function GoalLineCard({
   currency: string;
   onPress: () => void;
 }) {
+  const { t } = useLanguage();
   const meta = goalCategoryMeta(line.category.code);
   const { pledge, achieved, target } = line;
   const isCurrency = line.category.unitType === 'CURRENCY';
@@ -228,10 +230,10 @@ function GoalLineCard({
           <Text style={styles.lineName}>{line.category.name}</Text>
           <Text style={styles.lineMeta}>
             {pledge == null
-              ? 'À compléter'
+              ? t('goals.lineToComplete')
               : pledge.locked
-              ? 'Soumis'
-              : 'Brouillon'}
+              ? t('goals.lineSubmitted')
+              : t('goals.lineDraft')}
           </Text>
         </View>
         {pledge?.locked && <Ionicons name="lock-closed" size={14} color={colors.ink3} />}
@@ -242,11 +244,11 @@ function GoalLineCard({
           <HandDivider style={{ marginVertical: 10 }} />
           <View style={styles.lineFooter}>
             <View>
-              <Label>Engagé</Label>
+              <Label>{t('goals.pledged')}</Label>
               <Text style={styles.lineValue}>{target != null ? fmtValue(target) : '—'}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Label>Versé</Label>
+              <Label>{t('goals.given')}</Label>
               <Text style={styles.lineValue}>{fmtValue(achieved)}</Text>
             </View>
           </View>
@@ -275,6 +277,7 @@ function EmptyState({
   hint: string;
   onRetry?: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <ScreenShell>
       <View style={styles.centerBox}>
@@ -284,7 +287,7 @@ function EmptyState({
         <Text style={styles.emptyTitle}>{title}</Text>
         <Text style={styles.emptyHint}>{hint}</Text>
         {onRetry && (
-          <Button label="Réessayer" variant="ghost" onPress={onRetry} style={{ marginTop: 18 }} />
+          <Button label={t('common.retry')} variant="ghost" onPress={onRetry} style={{ marginTop: 18 }} />
         )}
       </View>
     </ScreenShell>

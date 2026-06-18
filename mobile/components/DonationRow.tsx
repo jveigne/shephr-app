@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CATEGORIES, DonationCategory } from '../constants/categories';
 import { colors, fonts } from '../theme';
 import { fmtDate, parseLocalDate } from '../utils/format';
+import { useLanguage } from '../contexts/LanguageContext';
 import Amount from './Amount';
 import Card from './Card';
 
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export default function DonationRow({ donation, onPress, compact }: Props) {
+  const { t } = useLanguage();
   const cat = CATEGORIES[donation.category as DonationCategory] ?? CATEGORIES.autre;
   const dateLabel = fmtDate(parseLocalDate(donation.donationDate));
   return (
@@ -32,7 +34,7 @@ export default function DonationRow({ donation, onPress, compact }: Props) {
       </View>
       <View style={styles.body}>
         <Text style={styles.title} numberOfLines={1}>
-          {cat.fr}
+          {t('categories.' + cat.key)}
         </Text>
         <Text style={styles.sub} numberOfLines={1}>
           {dateLabel}

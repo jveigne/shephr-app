@@ -20,11 +20,13 @@ import Button from '../../components/Button';
 import Wordmark from '../../components/Wordmark';
 import { colors, fonts } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { joinUnit, type MyUnitResponse } from '../../services/unitApi';
 
 export default function SignupScreen() {
   const insets = useSafeAreaInsets();
   const { register } = useAuth();
+  const { t } = useLanguage();
   const [step, setStep] = useState<1 | 2>(1);
 
   const [firstName, setFirstName] = useState('');
@@ -61,8 +63,8 @@ export default function SignupScreen() {
       setStep(2);
     } catch (e: any) {
       Alert.alert(
-        "Inscription impossible",
-        e?.response?.data?.message ?? 'Veuillez réessayer.',
+        t('signup.signupFailedTitle'),
+        e?.response?.data?.message ?? t('errors.tryAgain'),
       );
     } finally {
       setLoading(false);
@@ -78,8 +80,8 @@ export default function SignupScreen() {
       router.replace('/(tabs)/home');
     } catch (e: any) {
       Alert.alert(
-        'Code invalide',
-        e?.response?.data?.message ?? 'Ce code ne correspond à aucune unité.',
+        t('signup.invalidCodeTitle'),
+        e?.response?.data?.message ?? t('signup.invalidCodeBody'),
       );
     } finally {
       setLoading(false);
@@ -129,48 +131,48 @@ export default function SignupScreen() {
           </View>
 
           <Text style={styles.title}>
-            {step === 1 ? 'Créer votre compte' : 'Rejoindre votre église'}
+            {step === 1 ? t('signup.title1') : t('signup.title2')}
           </Text>
           <Text style={styles.subtitle}>
             {step === 1
-              ? 'Quelques informations pour démarrer votre journal de dons.'
-              : `Bonjour ${firstName} — saisissez le code transmis par votre responsable.`}
+              ? t('signup.step1Hint')
+              : t('signup.step2Hint', { name: firstName })}
           </Text>
 
           {step === 1 ? (
             <View style={{ gap: 14, marginTop: 22 }}>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1 }}>
-                  <Label style={{ marginBottom: 6 }}>Prénom</Label>
-                  <Field value={firstName} onChangeText={setFirstName} placeholder="Esther" />
+                  <Label style={{ marginBottom: 6 }}>{t('signup.firstName')}</Label>
+                  <Field value={firstName} onChangeText={setFirstName} placeholder={t('signup.firstNamePlaceholder')} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Label style={{ marginBottom: 6 }}>Nom</Label>
-                  <Field value={lastName} onChangeText={setLastName} placeholder="Mbeki" />
+                  <Label style={{ marginBottom: 6 }}>{t('signup.lastName')}</Label>
+                  <Field value={lastName} onChangeText={setLastName} placeholder={t('signup.lastNamePlaceholder')} />
                 </View>
               </View>
               <View>
-                <Label style={{ marginBottom: 6 }}>Adresse e-mail</Label>
+                <Label style={{ marginBottom: 6 }}>{t('auth.email')}</Label>
                 <Field
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
-                  placeholder="vous@exemple.com"
+                  placeholder={t('auth.emailPlaceholder')}
                 />
               </View>
               <View>
-                <Label style={{ marginBottom: 6 }}>Mot de passe</Label>
+                <Label style={{ marginBottom: 6 }}>{t('auth.password')}</Label>
                 <Field
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
-                  placeholder="Au moins 6 caractères"
+                  placeholder={t('auth.passwordPlaceholder')}
                 />
               </View>
 
               <Button
-                label="Continuer"
+                label={t('signup.continue')}
                 onPress={handleStep1}
                 fullWidth
                 disabled={!step1Valid}
@@ -180,16 +182,15 @@ export default function SignupScreen() {
               />
 
               <View style={styles.hint}>
-                <Text style={styles.hintTitle}>Étape suivante</Text>
+                <Text style={styles.hintTitle}>{t('signup.nextStepTitle')}</Text>
                 <Text style={styles.hintBody}>
-                  Vous saisirez un code d'invitation pour rejoindre votre église. Sans ce code, votre compte
-                  restera inactif.
+                  {t('signup.nextStepBody')}
                 </Text>
               </View>
             </View>
           ) : (
             <View style={{ marginTop: 22 }}>
-              <Label style={{ marginBottom: 8 }}>Code d'invitation</Label>
+              <Label style={{ marginBottom: 8 }}>{t('signup.joinCode')}</Label>
               <Card style={{ paddingVertical: 18, paddingHorizontal: 18 }}>
                 <Field
                   value={codeDisplay}
@@ -210,7 +211,7 @@ export default function SignupScreen() {
               </Card>
 
               <Text style={styles.codeHint}>
-                Saisissez les 6 caractères du code transmis par votre responsable.
+                {t('signup.joinCodeHint')}
               </Text>
 
               {resolved && (
@@ -220,10 +221,10 @@ export default function SignupScreen() {
                       <Ionicons name="checkmark" size={18} color={colors.white} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Label>Vous allez rejoindre</Label>
+                      <Label>{t('signup.willJoin')}</Label>
                       <Text style={styles.resolvedUnit}>{resolved.unitName}</Text>
                       <Text style={styles.resolvedMeta}>
-                        {resolved.type === 'CENTER' ? 'Centre' : 'Assemblée'} ·{' '}
+                        {resolved.type === 'CENTER' ? t('unit.center') : t('unit.assembly')} ·{' '}
                         {resolved.localityName} · {resolved.ministryName}
                       </Text>
                     </View>
@@ -244,12 +245,12 @@ export default function SignupScreen() {
                   {accept && <Ionicons name="checkmark" size={12} color={colors.white} />}
                 </View>
                 <Text style={styles.consentText}>
-                  J'accepte que mes déclarations soient visibles par les responsables de mon unité.
+                  {t('signup.consent')}
                 </Text>
               </Pressable>
 
               <Button
-                label="Rejoindre mon église"
+                label={t('signup.join')}
                 onPress={handleJoin}
                 fullWidth
                 disabled={codeNormalized.length !== 6 || !accept}
@@ -264,12 +265,12 @@ export default function SignupScreen() {
           <View style={{ flex: 1 }} />
 
           <View style={styles.bottomRow}>
-            <Text style={styles.bottomHint}>Déjà inscrit ?</Text>
+            <Text style={styles.bottomHint}>{t('auth.alreadyAccount')}</Text>
             <Text
               onPress={() => router.replace('/(auth)/login')}
               style={styles.bottomLink}
             >
-              Se connecter
+              {t('auth.signIn')}
             </Text>
           </View>
         </ScrollView>

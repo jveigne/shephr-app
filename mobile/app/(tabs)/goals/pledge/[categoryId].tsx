@@ -17,6 +17,7 @@ import Card from '../../../../components/Card';
 import Label from '../../../../components/Label';
 import Button from '../../../../components/Button';
 import { colors, fonts } from '../../../../theme';
+import { useLanguage } from '../../../../contexts/LanguageContext';
 import { goalCategoryMeta } from '../../../../constants/goalCategories';
 import { useGoalsData } from '../../../../hooks/useGoalsData';
 import { currencySymbol } from '../../../../utils/format';
@@ -30,6 +31,7 @@ import {
 const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallback;
 
 export default function PledgeEditScreen() {
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const { categoryId, year: yearParam } = useLocalSearchParams<{ categoryId: string; year?: string }>();
   const year = yearParam ? Number(yearParam) : null;
@@ -72,7 +74,7 @@ export default function PledgeEditScreen() {
           <Card variant="tinted" style={styles.lockBanner}>
             <Ionicons name="lock-closed" size={16} color={colors.moss} />
             <Text style={styles.lockText}>
-              Engagement soumis et verrouillé — lecture seule. Les avancements restent ouverts.
+              {t('pledge.lockedBanner')}
             </Text>
           </Card>
         )}
@@ -115,6 +117,7 @@ function TargetSection({
   locked: boolean;
   onSaved: () => Promise<void>;
 }) {
+  const { t } = useLanguage();
   const isCurrency = unitType === 'CURRENCY';
   const initial = pledge ? (isCurrency ? pledge.targetAmount : pledge.targetCount) : null;
   const [value, setValue] = useState(initial != null ? String(initial) : '');
@@ -123,7 +126,7 @@ function TargetSection({
   const onSubmit = async () => {
     const num = Number.parseFloat(value.replace(',', '.'));
     if (!Number.isFinite(num) || num < 0) {
-      notify('shephr', 'Saisissez une valeur valide (0 autorisé).');
+      notify(t('common.appName'), t('pledge.invalidValue'));
       return;
     }
     setSaving(true);
@@ -136,7 +139,7 @@ function TargetSection({
       }
       await onSaved();
     } catch (e: any) {
-      notify('shephr', errMsg(e, "L'enregistrement a échoué."));
+      notify(t('common.appName'), errMsg(e, t('errors.saveFailed')));
     } finally {
       setSaving(false);
     }
@@ -146,7 +149,7 @@ function TargetSection({
     <>
       <Card style={styles.amountCard}>
         <Label style={{ color: colors.mossSoft, textAlign: 'center' }}>
-          {isCurrency ? 'Montant engagé' : `Engagement (${unitLabel ?? 'nombre'})`}
+          {isCurrency ? t('pledge.amountPledged') : t('pledge.pledgeLabel', { unit: unitLabel ?? t('pledge.unitFallback') })}
         </Label>
         <View style={styles.amountRow}>
           {isCurrency && <Text style={styles.cur}>{currencySymbol(currency)}</Text>}
@@ -165,7 +168,7 @@ function TargetSection({
 
       {!locked && (
         <Button
-          label={pledge ? 'Enregistrer' : "Déclarer l'engagement"}
+          label={pledge ? t('pledge.save') : t('pledge.declarePledge')}
           onPress={onSubmit}
           loading={saving}
           fullWidth
@@ -175,8 +178,7 @@ function TargetSection({
         />
       )}
       <Text style={styles.footnote}>
-        L'engagement reste modifiable jusqu'à la soumission. Saisir 0 signifie « pas d'engagement »
-        sur cette catégorie.
+        {t('pledge.footnote')}
       </Text>
     </>
   );

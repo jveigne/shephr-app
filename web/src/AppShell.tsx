@@ -1,11 +1,13 @@
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Sidebar } from './components/Sidebar';
 import { useAuth } from './hooks/useAuth';
 
 export function AppShell() {
   const navigate = useNavigate();
   const { ready, isAuthenticated, canAccessWeb } = useAuth();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!ready) return;
@@ -25,7 +27,7 @@ export function AppShell() {
           fontFamily: 'var(--font-sans)',
         }}
       >
-        Chargement…
+        {t('common.loading')}
       </div>
     );
   }

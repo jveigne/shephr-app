@@ -19,17 +19,19 @@ import Button from '../../components/Button';
 import { colors, fonts } from '../../theme';
 import { notify } from '../../utils/dialogs';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { login } = useAuth();
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async () => {
     if (!email.includes('@') || password.length < 6) {
-      notify('shephr', 'Vérifiez votre adresse e-mail et votre mot de passe.');
+      notify(t('common.appName'), t('auth.checkEmailPassword'));
       return;
     }
     setLoading(true);
@@ -39,9 +41,9 @@ export default function LoginScreen() {
     } catch (e: any) {
       // Sans e.response, la requête n'a pas atteint le backend (URL/réseau), ce n'est pas un 401.
       const msg = e?.response
-        ? e.response.data?.message ?? 'Vérifiez vos identifiants.'
-        : 'Serveur injoignable — vérifiez que le backend tourne et que le téléphone est sur le même réseau que le Mac.';
-      notify('Connexion impossible', msg);
+        ? e.response.data?.message ?? t('auth.invalidCredentials')
+        : t('errors.serverUnreachable');
+      notify(t('auth.loginFailedTitle'), msg);
     } finally {
       setLoading(false);
     }
@@ -66,33 +68,33 @@ export default function LoginScreen() {
           <View style={{ flex: 1, minHeight: 40 }} />
 
           <Card style={styles.card}>
-            <Label style={{ marginBottom: 6 }}>Bienvenue</Label>
-            <Text style={styles.heading}>Connexion à votre journal</Text>
+            <Label style={{ marginBottom: 6 }}>{t('auth.welcome')}</Label>
+            <Text style={styles.heading}>{t('auth.loginTitle')}</Text>
 
             <View style={{ gap: 12 }}>
               <View>
-                <Label style={{ marginBottom: 6 }}>Adresse e-mail</Label>
+                <Label style={{ marginBottom: 6 }}>{t('auth.email')}</Label>
                 <Field
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
                   keyboardType="email-address"
-                  placeholder="vous@exemple.com"
+                  placeholder={t('auth.emailPlaceholder')}
                 />
               </View>
               <View>
-                <Label style={{ marginBottom: 6 }}>Mot de passe</Label>
+                <Label style={{ marginBottom: 6 }}>{t('auth.password')}</Label>
                 <Field
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
-                  placeholder="Au moins 6 caractères"
+                  placeholder={t('auth.passwordPlaceholder')}
                 />
               </View>
             </View>
 
             <Button
-              label="Se connecter"
+              label={t('auth.signIn')}
               onPress={onSubmit}
               loading={loading}
               fullWidth
@@ -101,27 +103,27 @@ export default function LoginScreen() {
             />
 
             <View style={styles.linksRow}>
-              <Text style={styles.linkSub}>Mot de passe oublié ?</Text>
+              <Text style={styles.linkSub}>{t('auth.forgotPassword')}</Text>
               <Text style={styles.linkAccent} onPress={() => router.push('/(auth)/activate')}>
-                J'ai un code d'activation
+                {t('auth.haveActivationCode')}
               </Text>
             </View>
 
             <View style={styles.divider} />
             <View style={styles.signupRow}>
-              <Text style={styles.signupHint}>Nouveau dans shephr ?</Text>
+              <Text style={styles.signupHint}>{t('auth.noAccount')}</Text>
               <Text
                 style={styles.signupLink}
                 onPress={() => router.push('/(auth)/signup')}
               >
-                Créer un compte
+                {t('auth.newAccount')}
                 <Ionicons name="arrow-forward" size={14} color={colors.moss} />
               </Text>
             </View>
           </Card>
 
           <Text style={styles.footer}>
-            CMCI · Communauté Missionnaire Chrétienne Internationale
+            {t('auth.footer')}
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -19,6 +19,7 @@ import Field from '../../../components/Field';
 import Button from '../../../components/Button';
 import Chip from '../../../components/Chip';
 import { colors, fonts } from '../../../theme';
+import { useLanguage } from '../../../contexts/LanguageContext';
 import { useGoalsData } from '../../../hooks/useGoalsData';
 import { goalCategoryMeta } from '../../../constants/goalCategories';
 import { currencySymbol, fmtAmount, fmtDateLong, toLocalDate } from '../../../utils/format';
@@ -28,6 +29,7 @@ import { addProgress } from '../../../services/goalsApi';
 const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallback;
 
 export default function AddProgressScreen() {
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const { year: yearParam } = useLocalSearchParams<{ year?: string }>();
   const { goal, lines, loading, reload } = useGoalsData(yearParam ? Number(yearParam) : null);
@@ -55,10 +57,10 @@ export default function AddProgressScreen() {
         note: note.trim() || undefined,
       });
       await reload();
-      notify('shephr', 'Avancement enregistré, avec gratitude.');
+      notify(t('common.appName'), t('progress.saved'));
       router.back();
     } catch (e: any) {
-      notify('shephr', errMsg(e, "L'enregistrement a échoué."));
+      notify(t('common.appName'), errMsg(e, t('errors.saveFailed')));
     } finally {
       setSaving(false);
     }
@@ -69,15 +71,15 @@ export default function AddProgressScreen() {
     const num = Number.parseFloat(value.replace(',', '.'));
     // UC-DIR-12 A2 : montant 0 ou négatif refusé.
     if (!Number.isFinite(num) || num <= 0) {
-      notify('shephr', 'Saisissez une valeur supérieure à 0.');
+      notify(t('common.appName'), t('progress.valuePositive'));
       return;
     }
     // UC-DIR-12 A1 : dépassement permis, mais confirmé.
     const remaining = (selected.target ?? 0) - selected.achieved;
     if (selected.target != null && num > remaining) {
       const ok = await confirmDialog(
-        'Dépassement',
-        `Vous dépasserez l'engagement de ${fmtValue(num - Math.max(0, remaining))}. Confirmer ?`,
+        t('progress.overTitle'),
+        t('progress.overConfirm', { value: fmtValue(num - Math.max(0, remaining)) }),
       );
       if (!ok) return;
     }
@@ -93,20 +95,20 @@ export default function AddProgressScreen() {
           </Pressable>
         </View>
 
-        <Text style={styles.title}>Saisir un avancement</Text>
+        <Text style={styles.title}>{t('progress.title')}</Text>
         <Text style={styles.intro}>
-          Enregistrez un versement ou une progression déjà réalisée sur l'une de vos catégories.
+          {t('progress.intro')}
         </Text>
 
         {loading ? (
           <ActivityIndicator color={colors.moss} style={{ marginTop: 40 }} />
         ) : declared.length === 0 ? (
           <Text style={styles.emptyText}>
-            Aucun engagement déclaré : commencez par saisir un engagement depuis l'écran Objectifs.
+            {t('progress.noPledge')}
           </Text>
         ) : (
           <>
-            <Label style={{ marginTop: 22, marginBottom: 8 }}>Catégorie</Label>
+            <Label style={{ marginTop: 22, marginBottom: 8 }}>{t('progress.category')}</Label>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {declared.map((l) => {
                 const meta = goalCategoryMeta(l.category.code);
@@ -131,17 +133,17 @@ export default function AddProgressScreen() {
             {selected && (
               <Card variant="paper2" style={styles.ctxCard}>
                 <View style={styles.ctxCol}>
-                  <Label>Engagé</Label>
+                  <Label>{t('progress.pledged')}</Label>
                   <Text style={styles.ctxValue}>
                     {selected.target != null ? fmtValue(selected.target) : '—'}
                   </Text>
                 </View>
                 <View style={styles.ctxCol}>
-                  <Label>Versé</Label>
+                  <Label>{t('progress.given')}</Label>
                   <Text style={styles.ctxValue}>{fmtValue(selected.achieved)}</Text>
                 </View>
                 <View style={styles.ctxCol}>
-                  <Label>Reste</Label>
+                  <Label>{t('progress.remaining')}</Label>
                   <Text style={styles.ctxValue}>
                     {selected.target != null
                       ? fmtValue(Math.max(0, selected.target - selected.achieved))
@@ -154,8 +156,8 @@ export default function AddProgressScreen() {
             <Card style={styles.amountCard}>
               <Label style={{ color: colors.mossSoft, textAlign: 'center' }}>
                 {isCurrency
-                  ? 'Montant versé'
-                  : `Progression (${selected?.category.unitLabel ?? 'nombre'})`}
+                  ? t('progress.amountGiven')
+                  : t('progress.progressLabel', { unit: selected?.category.unitLabel ?? t('progress.unitFallback') })}
               </Label>
               <View style={styles.amountRow}>
                 {isCurrency && <Text style={styles.cur}>{currencySymbol(currency)}</Text>}
@@ -172,29 +174,29 @@ export default function AddProgressScreen() {
             </Card>
 
             <View style={{ marginTop: 16 }}>
-              <Label style={{ marginBottom: 8 }}>Date</Label>
+              <Label style={{ marginBottom: 8 }}>{t('progress.date')}</Label>
               <Card style={styles.dateRow}>
                 <Ionicons name="calendar-outline" size={20} color={colors.mossSoft} />
                 <Text style={styles.dateText}>{fmtDateLong(date)}</Text>
-                <Text style={styles.dateChip}>Aujourd'hui</Text>
+                <Text style={styles.dateChip}>{t('common.today')}</Text>
               </Card>
             </View>
 
             <View style={{ marginTop: 16 }}>
-              <Label style={{ marginBottom: 8 }}>Note (facultatif)</Label>
+              <Label style={{ marginBottom: 8 }}>{t('progress.note')}</Label>
               <Field
                 value={note}
                 onChangeText={setNote}
                 multiline
                 numberOfLines={2}
                 maxLength={500}
-                placeholder="Ex. collecte du mois de juin…"
+                placeholder={t('progress.notePlaceholder')}
                 style={{ minHeight: 70, textAlignVertical: 'top' }}
               />
             </View>
 
             <Button
-              label="Enregistrer l'avancement"
+              label={t('progress.submit')}
               onPress={onSubmit}
               loading={saving}
               fullWidth
@@ -203,7 +205,7 @@ export default function AddProgressScreen() {
               iconLeft={<Ionicons name="checkmark" size={20} color={colors.white} />}
             />
             <Text style={styles.footnote}>
-              Modifiable ou supprimable pendant 24 h après l'enregistrement.
+              {t('progress.footnote')}
             </Text>
           </>
         )}

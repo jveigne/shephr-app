@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
 import { Badge, Button, TopBar } from '../components/ui';
 import { AreaChart, HorizontalBars, monthIndexToLabel } from '../components/charts';
@@ -9,13 +10,14 @@ import { downloadDonationsCsv, getByCategory, getByMonth, getByUnit, getSummary 
 import { listDonations } from '../services/donationApi';
 import { fmtAmount, fmtDateLabel, monthLong, startOfMonthISO, todayISO } from '../utils/format';
 import { saveBlob } from '../utils/download';
-import { categoryLabel } from '../constants/categories';
+import { categoryKey } from '../constants/categories';
 
 const PRIMARY = 'GBP';
 
 export function DashboardPage() {
   const { me } = useAuth();
   const { push } = useToast();
+  const { t } = useTranslation();
 
   const summaryQ = useQuery({ queryKey: ['stats', 'summary'], queryFn: () => getSummary() });
   const monthsQ = useQuery({ queryKey: ['stats', 'by-month'], queryFn: () => getByMonth() });
@@ -42,7 +44,7 @@ export function DashboardPage() {
 
   const categoryTotals = (categoryStatsQ.data ?? [])
     .filter((c) => c.currency === PRIMARY)
-    .map((c) => ({ name: categoryLabel(c.category), total: c.total }))
+    .map((c) => ({ name: t(categoryKey(c.category)), total: c.total }))
     .sort((a, b) => b.total - a.total);
 
   const unitStats = (unitsStatsQ.data ?? []).filter((s) => s.currency === PRIMARY);
@@ -58,11 +60,11 @@ export function DashboardPage() {
   return (
     <>
       <TopBar
-        title="Tableau de bord"
-        crumbs={['shephr', 'Tableau de bord']}
+        title={t('dashboard.title')}
+        crumbs={[t('common.brand'), t('dashboard.title')]}
         actions={
           <>
-            <Button variant="ghost" iconL={<Icon name="calendar" size={15} />}>Ce mois-ci</Button>
+            <Button variant="ghost" iconL={<Icon name="calendar" size={15} />}>{t('dashboard.thisMonth')}</Button>
             <Button
               variant="secondary"
               iconL={<Icon name="download" size={15} />}
@@ -73,13 +75,13 @@ export function DashboardPage() {
                     to: todayISO(),
                   });
                   saveBlob(blob, `dons-${todayISO()}.csv`);
-                  push({ kind: 'ok', title: 'Export téléchargé', msg: 'Fichier CSV prêt.' });
+                  push({ kind: 'ok', title: t('dashboard.exportDownloaded'), msg: t('dashboard.csvReady') });
                 } catch {
-                  push({ kind: 'error', title: 'Export impossible', msg: 'Réessayez plus tard.' });
+                  push({ kind: 'error', title: t('dashboard.exportFailed'), msg: t('common.retryLater') });
                 }
               }}
             >
-              Exporter le mois
+              {t('dashboard.exportMonth')}
             </Button>
           </>
         }
@@ -105,17 +107,17 @@ export function DashboardPage() {
                 lineHeight: 1.1,
               }}
             >
-              Bonjour,{' '}
+              {t('dashboard.greeting')}{' '}
               <em style={{ fontStyle: 'italic', color: 'var(--earth-600)' }}>{firstName || '…'}</em>.
             </div>
             <div style={{ color: 'var(--ink-500)', marginTop: 6, fontSize: 13.5 }}>
-              {dateLong} · Voici un aperçu de la générosité dans votre ministère.
+              {t('dashboard.overview', { date: dateLong })}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 16, color: 'var(--ink-500)', fontSize: 12.5 }}>
             <div style={{ textAlign: 'right' }}>
               <div className="muted" style={{ fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase' }}>
-                Devise
+                {t('dashboard.currency')}
               </div>
               <div style={{ color: 'var(--ink-800)', fontWeight: 500, marginTop: 2 }}>{PRIMARY} £</div>
             </div>
@@ -124,26 +126,26 @@ export function DashboardPage() {
 
         {/* KPI row */}
         <div className="kpi-grid" style={{ marginBottom: 20 }}>
-          <KpiCard label="Total ce mois" value={fmtAmount(cur, PRIMARY)} delta={delta} />
-          <KpiCard label="Mois précédent" value={fmtAmount(prev, PRIMARY)} sub="vs. n-1" />
-          <KpiCard label="Année en cours" value={fmtAmount(ytd, PRIMARY)} sub="Cumul YTD" />
+          <KpiCard label={t('dashboard.kpiTotalMonth')} value={fmtAmount(cur, PRIMARY)} delta={delta} />
+          <KpiCard label={t('dashboard.kpiPrevMonth')} value={fmtAmount(prev, PRIMARY)} sub={t('dashboard.kpiVsPrev')} />
+          <KpiCard label={t('dashboard.kpiYtd')} value={fmtAmount(ytd, PRIMARY)} sub={t('dashboard.kpiYtdSub')} />
           <KpiCard
-            label="Unités actives"
+            label={t('dashboard.kpiActiveUnits')}
             value={String(distinctUnits)}
-            sub="avec des dons sur la période"
+            sub={t('dashboard.kpiActiveUnitsSub')}
           />
         </div>
 
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="card-head">
             <div>
-              <h3 className="ttl">Évolution mensuelle des dons</h3>
-              <div className="sub">12 derniers mois · toutes localités confondues</div>
+              <h3 className="ttl">{t('dashboard.monthlyEvolution')}</h3>
+              <div className="sub">{t('dashboard.last12Months')}</div>
             </div>
             <div className="right chart-legend">
               <span>
                 <span className="swatch" style={{ background: 'var(--green-700)' }} />
-                Total mensuel
+                {t('dashboard.monthlyTotal')}
               </span>
             </div>
           </div>
@@ -151,8 +153,8 @@ export function DashboardPage() {
             {monthsSeries.length === 0 ? (
               <div className="empty">
                 <div className="icon-wrap"><Icon name="inbox" size={26} /></div>
-                <h4>Aucune donnée encore</h4>
-                <p>Les dons enregistrés apparaîtront ici dès leur saisie depuis l'app mobile.</p>
+                <h4>{t('dashboard.noDataYet')}</h4>
+                <p>{t('dashboard.noDataYetText')}</p>
               </div>
             ) : (
               <AreaChart data={monthsSeries} />
@@ -164,13 +166,13 @@ export function DashboardPage() {
           <div className="card">
             <div className="card-head">
               <div>
-                <h3 className="ttl">Répartition par catégorie</h3>
-                <div className="sub">Période courante</div>
+                <h3 className="ttl">{t('dashboard.byCategory')}</h3>
+                <div className="sub">{t('dashboard.currentPeriod')}</div>
               </div>
             </div>
             <div className="card-body">
               {categoryTotals.length === 0 ? (
-                <div className="muted" style={{ padding: '8px 0' }}>Pas encore de dons catégorisés.</div>
+                <div className="muted" style={{ padding: '8px 0' }}>{t('dashboard.noCategorized')}</div>
               ) : (
                 <HorizontalBars data={categoryTotals} />
               )}
@@ -180,18 +182,18 @@ export function DashboardPage() {
           <div className="card">
             <div className="card-head">
               <div>
-                <h3 className="ttl">Top 5 unités</h3>
-                <div className="sub">Par volume cumulé</div>
+                <h3 className="ttl">{t('dashboard.top5Units')}</h3>
+                <div className="sub">{t('dashboard.byVolume')}</div>
               </div>
               <div className="right">
                 <Link to="/structure/unites">
-                  <Button variant="ghost" size="sm">Tout voir</Button>
+                  <Button variant="ghost" size="sm">{t('dashboard.seeAll')}</Button>
                 </Link>
               </div>
             </div>
             <div className="card-body" style={{ padding: 0 }}>
               {topUnits.length === 0 ? (
-                <div className="muted" style={{ padding: 22 }}>Pas encore de classement.</div>
+                <div className="muted" style={{ padding: 22 }}>{t('dashboard.noRanking')}</div>
               ) : (
                 topUnits.map((u, i) => {
                   const max = topUnits[0].total;
@@ -200,7 +202,7 @@ export function DashboardPage() {
                       <div className="rank">{i + 1}</div>
                       <div className="label">
                         <div className="nm">{u.unitName}</div>
-                        <div className="sub">{u.count} don{u.count > 1 ? 's' : ''}</div>
+                        <div className="sub">{t('dashboard.donationsCount', { count: u.count })}</div>
                       </div>
                       <div className="meter">
                         <div className="fill" style={{ width: `${(u.total / max) * 100}%` }} />
@@ -217,13 +219,13 @@ export function DashboardPage() {
         <div className="card">
           <div className="card-head">
             <div>
-              <h3 className="ttl">Derniers dons</h3>
-              <div className="sub">10 entrées les plus récentes</div>
+              <h3 className="ttl">{t('dashboard.latestDonations')}</h3>
+              <div className="sub">{t('dashboard.last10')}</div>
             </div>
             <div className="right">
               <Link to="/donations">
                 <Button variant="ghost" size="sm" iconR={<Icon name="arrowRight" size={13} />}>
-                  Voir tous les dons
+                  {t('dashboard.seeAllDonations')}
                 </Button>
               </Link>
             </div>
@@ -241,17 +243,17 @@ export function DashboardPage() {
                 color: 'var(--ink-500)',
               }}
             >
-              <div>Date</div>
-              <div>Membre</div>
-              <div>Unité</div>
-              <div>Catégorie</div>
-              <div style={{ textAlign: 'right' }}>Montant</div>
+              <div>{t('dashboard.colDate')}</div>
+              <div>{t('dashboard.colMember')}</div>
+              <div>{t('dashboard.colUnit')}</div>
+              <div>{t('dashboard.colCategory')}</div>
+              <div style={{ textAlign: 'right' }}>{t('dashboard.colAmount')}</div>
             </div>
             {recent.length === 0 && !recentQ.isLoading && (
               <div className="empty">
                 <div className="icon-wrap"><Icon name="inbox" size={26} /></div>
-                <h4>Aucun don encore</h4>
-                <p>Les déclarations apparaîtront ici en temps réel.</p>
+                <h4>{t('dashboard.noDonationYet')}</h4>
+                <p>{t('dashboard.noDonationYetText')}</p>
               </div>
             )}
             {recent.map((d) => (
@@ -262,7 +264,7 @@ export function DashboardPage() {
                   {d.unitName ?? '—'}
                 </div>
                 <div>
-                  <Badge tone="gray">{categoryLabel(d.category)}</Badge>
+                  <Badge tone="gray">{t(categoryKey(d.category))}</Badge>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <span className="amount">{fmtAmount(d.amount, d.currency)}</span>
@@ -287,6 +289,7 @@ function KpiCard({
   delta?: number;
   sub?: string;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="kpi">
       <div className="deco" />
@@ -295,7 +298,7 @@ function KpiCard({
       {delta !== undefined ? (
         <div className={`delta ${delta >= 0 ? 'up' : 'down'}`}>
           <Icon name={delta >= 0 ? 'arrowUp' : 'arrowDown'} size={13} />
-          {Math.abs(delta).toFixed(1)} %<span className="vs">vs mois dernier</span>
+          {Math.abs(delta).toFixed(1)} %<span className="vs">{t('dashboard.vsLastMonth')}</span>
         </div>
       ) : (
         <div style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 10 }}>{sub}</div>

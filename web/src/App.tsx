@@ -8,6 +8,7 @@ import { AcceptInvitationPage } from './pages/AcceptInvitation';
 import { DashboardPage } from './pages/Dashboard';
 import { DonationsPage } from './pages/Donations';
 import { GoalsPage } from './pages/Goals';
+import { MemberCarePage } from './pages/MemberCare';
 import { UsersPage } from './pages/Users';
 import { MonMinisterePage } from './pages/MonMinistere';
 import { ZonesPage } from './pages/Zones';
@@ -54,6 +55,7 @@ export function App() {
                   </>
                 )}
                 <Route path="/goals" element={<GoalsPage />} />
+                <Route path="/member-care" element={<MemberCarePage />} />
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/structure/ministeres" element={<MonMinisterePage />} />
                 <Route path="/structure/zones" element={<ZonesPage />} />
@@ -63,9 +65,9 @@ export function App() {
                   path="/hierarchy"
                   element={
                     <Placeholder
-                      title="Hiérarchie des dirigeants"
-                      crumbs={['shephr', 'Hiérarchie']}
-                      description="Attributions dirigeant ↔ unité et supervision senior-junior."
+                      titleKey="placeholder.hierarchyTitle"
+                      crumbKeys={['common.brand', 'placeholder.hierarchyTitle']}
+                      descriptionKey="placeholder.hierarchyDescription"
                       endpointHint="GET /api/church/admin/leaders/{assignment|hierarchy}"
                     />
                   }
@@ -79,9 +81,9 @@ export function App() {
                   path="/settings"
                   element={
                     <Placeholder
-                      title="Paramètres"
-                      crumbs={['shephr', 'Paramètres']}
-                      description="Profil, notifications, sécurité, devises et catégories."
+                      titleKey="placeholder.settingsTitle"
+                      crumbKeys={['common.brand', 'placeholder.settingsTitle']}
+                      descriptionKey="placeholder.settingsDescription"
                     />
                   }
                 />

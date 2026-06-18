@@ -9,9 +9,15 @@ import { FEATURES } from '../../constants/features';
 import NotificationGate from '../../components/NotificationGate';
 
 export default function TabLayout() {
-  const { t } = useLanguage();
+  const { t, applyAccountLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { isLeader, hasGoals } = useAuth();
+  const { isLeader, hasGoals, me } = useAuth();
+
+  // Initialise la langue depuis le compte (me.language) tant que l'utilisateur
+  // n'a pas choisi explicitement une langue dans l'app (cf. LanguageContext).
+  React.useEffect(() => {
+    applyAccountLanguage(me?.language);
+  }, [me?.language, applyAccountLanguage]);
 
   return (
     <>

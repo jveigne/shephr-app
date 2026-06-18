@@ -13,7 +13,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function ProfileScreen() {
   const { me, isLeader, logout } = useAuth();
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
 
   const initials = (me?.fullName ?? '')
     .split(' ')
@@ -32,19 +32,19 @@ export default function ProfileScreen() {
     // déclenche jamais. On bascule sur window.confirm sur le web, Alert sur natif.
     if (Platform.OS === 'web') {
       const ok =
-        typeof window === 'undefined' || window.confirm('Se déconnecter ?');
+        typeof window === 'undefined' || window.confirm(t('profile.logoutConfirm'));
       if (ok) void doLogout();
       return;
     }
-    Alert.alert('shephr', 'Se déconnecter ?', [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Se déconnecter', style: 'destructive', onPress: () => void doLogout() },
+    Alert.alert(t('common.appName'), t('profile.logoutConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('profile.logout'), style: 'destructive', onPress: () => void doLogout() },
     ]);
   };
 
   return (
     <ScreenShell>
-      <Text style={styles.title}>Profil</Text>
+      <Text style={styles.title}>{t('profile.title')}</Text>
 
       <Card style={styles.idCard}>
         <View style={styles.avatar}>
@@ -74,7 +74,7 @@ export default function ProfileScreen() {
           </View>
           {me?.donationUnitId && (
             <View style={[styles.pill, { backgroundColor: 'rgba(201,149,107,0.18)' }]}>
-              <Text style={[styles.pillText, { color: colors.earthDeep }]}>Mon unité</Text>
+              <Text style={[styles.pillText, { color: colors.earthDeep }]}>{t('profile.myUnit')}</Text>
             </View>
           )}
         </View>
@@ -82,34 +82,34 @@ export default function ProfileScreen() {
         <HandDivider style={{ marginVertical: 18 }} />
 
         <View style={styles.statsRow}>
-          <Stat label="Statut" value={me?.active ? 'Actif' : '—'} />
+          <Stat label={t('profile.status')} value={me?.active ? t('profile.active') : '—'} />
           <View style={styles.statsDivider} />
-          <Stat label="Rôle" value={roleLabel(me)} />
+          <Stat label={t('profile.role')} value={roleLabel(me)} />
         </View>
       </Card>
 
       {(me?.unitNames?.length || me?.zoneNames?.length || me?.countryNames?.length) ? (
         <>
           <Label style={{ marginTop: 26, marginBottom: 8, paddingHorizontal: 4 }}>
-            Mon périmètre
+            {t('profile.perimeter')}
           </Label>
           <Card style={{ paddingVertical: 4 }}>
             {me?.unitNames?.length ? (
               <InfoRow
                 icon="business-outline"
-                label={me.unitNames.length > 1 ? 'Unités' : 'Unité'}
+                label={me.unitNames.length > 1 ? t('profile.units') : t('profile.unit')}
                 value={me.unitNames.join(', ')}
               />
             ) : null}
             {me?.zoneNames?.length ? (
               <InfoRow
                 icon="map-outline"
-                label={me.zoneNames.length > 1 ? 'Zones' : 'Zone'}
+                label={me.zoneNames.length > 1 ? t('profile.zones') : t('profile.zone')}
                 value={me.zoneNames.join(', ')}
               />
             ) : null}
             {me?.countryNames?.length ? (
-              <InfoRow icon="flag-outline" label="Pays" value={me.countryNames.join(', ')} />
+              <InfoRow icon="flag-outline" label={t('profile.countries')} value={me.countryNames.join(', ')} />
             ) : null}
           </Card>
         </>
@@ -117,12 +117,12 @@ export default function ProfileScreen() {
 
       {canManageStructure(me) && (
         <>
-          <Label style={{ marginTop: 26, marginBottom: 8, paddingHorizontal: 4 }}>Gestion</Label>
+          <Label style={{ marginTop: 26, marginBottom: 8, paddingHorizontal: 4 }}>{t('profile.management')}</Label>
           <Card style={{ paddingVertical: 0 }}>
             <Row
               icon="git-branch-outline"
-              label="Gérer la structure"
-              value="Zones · Localités · Unités"
+              label={t('profile.manageStructure')}
+              value={t('profile.manageStructureValue')}
               onPress={() => router.push('/structure')}
               last
             />
@@ -131,26 +131,26 @@ export default function ProfileScreen() {
       )}
 
       <Label style={{ marginTop: 26, marginBottom: 8, paddingHorizontal: 4 }}>
-        Préférences
+        {t('profile.preferences')}
       </Label>
       <Card style={{ paddingVertical: 0 }}>
         <Row
           icon="globe-outline"
-          label="Langue"
+          label={t('profile.language')}
           value={language === 'fr' ? 'Français' : 'English'}
           onPress={() => setLanguage(language === 'fr' ? 'en' : 'fr')}
         />
-        <Row icon="notifications-outline" label="Notifications" value="Rappels" />
-        <Row icon="receipt-outline" label="Reçus annuels" value="Activés" />
-        <Row icon="shield-outline" label="Confidentialité" value="Standard" last />
+        <Row icon="notifications-outline" label={t('profile.notifications')} value={t('profile.notificationsValue')} />
+        <Row icon="receipt-outline" label={t('profile.receipts')} value={t('profile.receiptsValue')} />
+        <Row icon="shield-outline" label={t('profile.privacy')} value={t('profile.privacyValue')} last />
       </Card>
 
       <Pressable onPress={confirmLogout} style={styles.logout}>
         <Ionicons name="log-out-outline" size={18} color={colors.ink3} />
-        <Text style={styles.logoutText}>Se déconnecter</Text>
+        <Text style={styles.logoutText}>{t('profile.logout')}</Text>
       </Pressable>
 
-      <Text style={styles.version}>SHEPHR · CMCI UK</Text>
+      <Text style={styles.version}>{t('profile.version')}</Text>
     </ScreenShell>
   );
 }

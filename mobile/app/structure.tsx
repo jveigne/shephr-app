@@ -19,8 +19,10 @@ import Label from '../components/Label';
 import Button from '../components/Button';
 import { colors, fonts } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { canManageStructure, canManageZones } from '../services/authApi';
 import { confirmDialog, notify } from '../utils/dialogs';
+import i18n from '../utils/i18n/i18n';
 import {
   createLocality, createUnit, createZone,
   deleteLocality, deleteUnit, deleteZone,
@@ -32,11 +34,12 @@ import {
 type Level = 'zones' | 'localities' | 'units';
 
 const errMsg = (e: any, fb: string) =>
-  e?.response ? e.response.data?.message ?? fb : 'Serveur injoignable.';
+  e?.response ? e.response.data?.message ?? fb : i18n.t('errors.serverUnreachableShort');
 
 export default function StructureScreen() {
   const insets = useSafeAreaInsets();
   const { me } = useAuth();
+  const { t } = useLanguage();
   const [level, setLevel] = useState<Level>('zones');
   const [countries, setCountries] = useState<CountryResponse[]>([]);
   const [zones, setZones] = useState<ZoneResponse[]>([]);
@@ -67,7 +70,7 @@ export default function StructureScreen() {
   const canAdd = level === 'zones' ? canManageZones(me) : canManageStructure(me);
 
   const onDelete = async (lvl: Level, id: string, name: string) => {
-    const ok = await confirmDialog('Supprimer', `Supprimer « ${name} » ?`, 'Supprimer', true);
+    const ok = await confirmDialog(t('structure.deleteTitle'), t('structure.deleteConfirm', { name }), t('common.delete'), true);
     if (!ok) return;
     try {
       if (lvl === 'zones') await deleteZone(id);
@@ -75,7 +78,7 @@ export default function StructureScreen() {
       else await deleteUnit(id);
       await load();
     } catch (e: any) {
-      notify('Suppression impossible', errMsg(e, 'Hors de votre périmètre ou élément non vide.'));
+      notify(t('structure.deleteFailedTitle'), errMsg(e, t('structure.deleteFailedBody')));
     }
   };
 
@@ -101,15 +104,15 @@ export default function StructureScreen() {
         <Pressable onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={colors.ink2} />
         </Pressable>
-        <Text style={styles.title}>Structure</Text>
+        <Text style={styles.title}>{t('structure.title')}</Text>
       </View>
-      <Text style={styles.subtitle}>Gérez votre périmètre (création scopée — refus hors périmètre).</Text>
+      <Text style={styles.subtitle}>{t('structure.subtitle')}</Text>
 
       <View style={styles.segmentRow}>
         {(['zones', 'localities', 'units'] as Level[]).map((lv) => (
           <Pressable key={lv} onPress={() => setLevel(lv)} style={[styles.segment, level === lv && styles.segmentActive]}>
             <Text style={[styles.segmentText, level === lv && styles.segmentTextActive]}>
-              {lv === 'zones' ? 'Zones' : lv === 'localities' ? 'Localités' : 'Unités'}
+              {lv === 'zones' ? t('structure.zones') : lv === 'localities' ? t('structure.localities') : t('structure.units')}
             </Text>
           </Pressable>
         ))}
@@ -117,7 +120,7 @@ export default function StructureScreen() {
 
       {canAdd && (
         <Button
-          label={`Ajouter ${level === 'zones' ? 'une zone' : level === 'localities' ? 'une localité' : 'une unité'}`}
+          label={level === 'zones' ? t('structure.addZone') : level === 'localities' ? t('structure.addLocality') : t('structure.addUnit')}
           variant="soft"
           onPress={() => setEditing({ level, item: null })}
           style={{ marginTop: 12 }}
@@ -132,15 +135,15 @@ export default function StructureScreen() {
               <Text style={styles.itemName}>{r.name}</Text>
               <Text style={styles.itemMeta}>
                 {level === 'zones' && (r.countryName ?? '')}
-                {level === 'localities' && (r.zoneName ?? 'Sans zone')}
-                {level === 'units' && `${r.type === 'CENTER' ? 'Centre' : 'Assemblée'} · ${r.localityName} · code ${r.joinCode}`}
+                {level === 'localities' && (r.zoneName ?? t('structure.noZone'))}
+                {level === 'units' && t('structure.unitMeta', { type: r.type === 'CENTER' ? t('structure.center') : t('structure.assembly'), locality: r.localityName, code: r.joinCode })}
               </Text>
             </View>
             {canAdd && <Ionicons name="chevron-forward" size={16} color={colors.ink3} />}
           </Card>
         ))}
         {rows.length === 0 && (
-          <Text style={styles.empty}>Aucun élément dans votre périmètre.</Text>
+          <Text style={styles.empty}>{t('structure.emptyPerimeter')}</Text>
         )}
       </View>
 
@@ -170,6 +173,7 @@ function StructureFormModal({
   onSaved: () => Promise<void>;
   onDelete: (lvl: Level, id: string, name: string) => Promise<void>;
 }) {
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState('');
   const [unitType, setUnitType] = useState<UnitType>('CENTER');
@@ -190,7 +194,7 @@ function StructureFormModal({
     }
   }, [open, editing]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const parentLabel = level === 'zones' ? 'Pays' : level === 'localities' ? 'Zone' : 'Localité';
+  const parentLabel = level === 'zones' ? t('structure.parentCountry') : level === 'localities' ? t('structure.parentZone') : t('structure.parentLocality');
   const parents = level === 'zones'
     ? countries.map((c) => ({ id: c.id, name: c.name }))
     : level === 'localities'
@@ -201,7 +205,7 @@ function StructureFormModal({
     && (level === 'localities' /* zone optionnelle */ ? true : parentId !== '');
 
   const onSave = async () => {
-    if (!valid) { notify('shephr', 'Renseignez le nom et le rattachement.'); return; }
+    if (!valid) { notify(t('common.appName'), t('structure.fillFields')); return; }
     setSaving(true);
     try {
       if (level === 'zones') {
@@ -216,7 +220,7 @@ function StructureFormModal({
       }
       await onSaved();
     } catch (e: any) {
-      notify('Enregistrement refusé', errMsg(e, 'Hors de votre périmètre.'));
+      notify(t('structure.saveRefusedTitle'), errMsg(e, t('structure.saveRefusedBody')));
     } finally {
       setSaving(false);
     }
@@ -227,14 +231,14 @@ function StructureFormModal({
       <View style={styles.backdrop}>
         <Card style={styles.modalCard}>
           <Text style={styles.modalTitle}>
-            {item ? 'Modifier' : 'Ajouter'} — {level === 'zones' ? 'zone' : level === 'localities' ? 'localité' : 'unité'}
+            {item ? (level === 'zones' ? t('structure.modalEditZone') : level === 'localities' ? t('structure.modalEditLocality') : t('structure.modalEditUnit')) : (level === 'zones' ? t('structure.modalAddZone') : level === 'localities' ? t('structure.modalAddLocality') : t('structure.modalAddUnit'))}
           </Text>
 
-          <Label style={{ marginTop: 14, marginBottom: 6 }}>Nom</Label>
-          <TextInput value={name} onChangeText={setName} style={styles.input} placeholder="Nom" placeholderTextColor={colors.ink3} />
+          <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.name')}</Label>
+          <TextInput value={name} onChangeText={setName} style={styles.input} placeholder={t('structure.namePlaceholder')} placeholderTextColor={colors.ink3} />
 
           <Label style={{ marginTop: 14, marginBottom: 6 }}>
-            {parentLabel}{level === 'localities' ? ' (optionnel)' : ''}
+            {parentLabel}{level === 'localities' ? t('structure.optional') : ''}
           </Label>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
             {parents.map((p) => (
@@ -242,17 +246,17 @@ function StructureFormModal({
                 <Text style={[styles.chipText, parentId === p.id && styles.chipTextActive]}>{p.name}</Text>
               </Pressable>
             ))}
-            {parents.length === 0 && <Text style={styles.empty}>Aucun {parentLabel.toLowerCase()} disponible.</Text>}
+            {parents.length === 0 && <Text style={styles.empty}>{t('structure.noParent', { parent: parentLabel.toLowerCase() })}</Text>}
           </ScrollView>
 
           {level === 'units' && (
             <>
-              <Label style={{ marginTop: 14, marginBottom: 6 }}>Type</Label>
+              <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.type')}</Label>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                {(['CENTER', 'ASSEMBLY'] as UnitType[]).map((t) => (
-                  <Pressable key={t} onPress={() => setUnitType(t)} style={[styles.chip, unitType === t && styles.chipActive]}>
-                    <Text style={[styles.chipText, unitType === t && styles.chipTextActive]}>
-                      {t === 'CENTER' ? 'Centre' : 'Assemblée'}
+                {(['CENTER', 'ASSEMBLY'] as UnitType[]).map((ut) => (
+                  <Pressable key={ut} onPress={() => setUnitType(ut)} style={[styles.chip, unitType === ut && styles.chipActive]}>
+                    <Text style={[styles.chipText, unitType === ut && styles.chipTextActive]}>
+                      {ut === 'CENTER' ? t('structure.center') : t('structure.assembly')}
                     </Text>
                   </Pressable>
                 ))}
@@ -260,14 +264,14 @@ function StructureFormModal({
             </>
           )}
 
-          <Button label={item ? 'Enregistrer' : 'Créer'} onPress={onSave} loading={saving} fullWidth style={{ marginTop: 18 }} />
+          <Button label={item ? t('common.save') : t('common.create')} onPress={onSave} loading={saving} fullWidth style={{ marginTop: 18 }} />
           {item && (
             <Pressable onPress={() => { onClose(); onDelete(level, item.id, item.name); }} style={{ marginTop: 12, alignItems: 'center' }}>
-              <Text style={styles.deleteLink}>Supprimer</Text>
+              <Text style={styles.deleteLink}>{t('common.delete')}</Text>
             </Pressable>
           )}
           <Pressable onPress={onClose} style={{ marginTop: 10, alignItems: 'center' }}>
-            <Text style={styles.cancelLink}>Annuler</Text>
+            <Text style={styles.cancelLink}>{t('common.cancel')}</Text>
           </Pressable>
         </Card>
       </View>

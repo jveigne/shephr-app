@@ -19,6 +19,7 @@ import HandDivider from './HandDivider';
 import { colors, fonts } from '../theme';
 import { goalCategoryMeta } from '../constants/goalCategories';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { currencySymbol, fmtAmount } from '../utils/format';
 import { confirmDialog, notify } from '../utils/dialogs';
 import {
@@ -57,6 +58,7 @@ export default function GoalAggregatesScreen({
   zoneId: string | null;
   countryIds: string[];
 }) {
+  const { t } = useLanguage();
   const [goal, setGoal] = useState<ActiveGoal | null>(null);
   const [perimeters, setPerimeters] = useState<Perimeter[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,11 +82,11 @@ export default function GoalAggregatesScreen({
       const list: Perimeter[] = [];
       if (zoneId) {
         const name = zones.find((z) => z.id === zoneId)?.name;
-        list.push({ level: 'zones', entityId: zoneId, title: name ? `Ma zone — ${name}` : 'Ma zone' });
+        list.push({ level: 'zones', entityId: zoneId, title: name ? t('goalsAgg.myZoneNamed', { name }) : t('goalsAgg.myZone') });
       }
       for (const id of countryIds) {
         const name = countries.find((c) => c.id === id)?.name;
-        list.push({ level: 'countries', entityId: id, title: name ? `Mon pays — ${name}` : 'Mon pays' });
+        list.push({ level: 'countries', entityId: id, title: name ? t('goalsAgg.myCountryNamed', { name }) : t('goalsAgg.myCountry') });
       }
       setPerimeters(list);
     } catch (e: any) {
@@ -92,7 +94,7 @@ export default function GoalAggregatesScreen({
     } finally {
       setLoading(false);
     }
-  }, [zoneId, countryIds.join(',')]);
+  }, [zoneId, countryIds.join(','), t]);
 
   useEffect(() => {
     load();
@@ -128,9 +130,9 @@ export default function GoalAggregatesScreen({
     return (
       <ScreenShell>
         <View style={{ alignItems: 'center', paddingTop: 80, paddingHorizontal: 24 }}>
-          <Text style={styles.emptyTitle}>Aucun objectif actif</Text>
+          <Text style={styles.emptyTitle}>{t('goalsAgg.noGoalTitle')}</Text>
           <Text style={styles.emptyHint}>
-            Aucun objectif quinquennal n'est actif pour le moment.
+            {t('goalsAgg.noGoalHint')}
           </Text>
         </View>
       </ScreenShell>
@@ -145,10 +147,10 @@ export default function GoalAggregatesScreen({
     >
       <View style={styles.titleRow}>
         <Ionicons name="flag-outline" size={22} color={colors.mossSoft} />
-        <Text style={styles.title}>Objectifs</Text>
+        <Text style={styles.title}>{t('goals.title')}</Text>
       </View>
       <Text style={styles.subtitle}>
-        {goal.name} · effectif = MAX(agrégat, engagement de foi)
+        {t('goalsAgg.subtitle', { name: goal.name })}
       </Text>
 
       {(goal.openYears?.length ?? 0) > 0 && year != null && (
@@ -185,6 +187,7 @@ export default function GoalAggregatesScreen({
 
 function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goal: ActiveGoal; year: number }) {
   const { me } = useAuth();
+  const { t } = useLanguage();
   const [lines, setLines] = useState<AggregateLine[]>([]);
   const [faiths, setFaiths] = useState<FaithPledgeResponse[]>([]);
   const [units, setUnits] = useState<ZoneUnitStatus[]>([]);
@@ -253,31 +256,31 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
                   <Text style={styles.lineName}>{category.name}</Text>
                   {line?.source === 'FAITH' && (
                     <View style={styles.faithBadge}>
-                      <Text style={styles.faithBadgeText}>Foi</Text>
+                      <Text style={styles.faithBadgeText}>{t('goalsAgg.faithBadge')}</Text>
                     </View>
                   )}
                 </View>
                 <HandDivider style={{ marginVertical: 10 }} />
                 <View style={styles.lineFooter}>
                   <View>
-                    <Label>Agrégat</Label>
+                    <Label>{t('goalsAgg.aggregate')}</Label>
                     <Text style={styles.lineValue}>{fmtValue(category, agg)}</Text>
                   </View>
                   <View style={{ alignItems: 'center' }}>
-                    <Label>Ma foi</Label>
+                    <Label>{t('goalsAgg.myFaith')}</Label>
                     <Text style={[styles.lineValue, faithValue == null && { color: colors.ink3 }]}>
                       {faithValue != null ? fmtValue(category, faithValue) : '—'}
                     </Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Label>Effectif</Label>
+                    <Label>{t('goalsAgg.effective')}</Label>
                     <Text style={[styles.lineValue, { fontWeight: '600' }]}>
                       {fmtValue(category, eff)}
                     </Text>
                   </View>
                 </View>
                 <Button
-                  label={mine ? 'Modifier mon engagement de foi' : 'Déclarer un engagement de foi'}
+                  label={mine ? t('goalsAgg.editFaith') : t('goalsAgg.declareFaith')}
                   variant="soft"
                   height={42}
                   onPress={() => setFaithCategory(category)}
@@ -289,7 +292,7 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
 
           {faiths.length > 0 && (
             <Card variant="paper2" style={styles.faithListCard}>
-              <Label style={{ marginBottom: 8 }}>Engagements de foi déclarés</Label>
+              <Label style={{ marginBottom: 8 }}>{t('goalsAgg.declaredFaith')}</Label>
               {faiths.map((f) => {
                 const category = goal.categories.find((c) => c.id === f.categoryId);
                 return (
@@ -297,7 +300,7 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
                     {category?.name ?? f.categoryCode} ·{' '}
                     {category ? fmtValue(category, f.targetAmount ?? f.targetCount ?? 0) : ''} —{' '}
                     {f.createdByName ?? '—'}
-                    {f.createdById === me?.id ? ' (moi)' : ''}
+                    {f.createdById === me?.id ? t('goalsAgg.me') : ''}
                   </Text>
                 );
               })}
@@ -306,10 +309,10 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
 
           {perimeter.level === 'zones' && units.length > 0 && (
             <Card variant="paper2" style={styles.faithListCard}>
-              <Label style={{ marginBottom: 8 }}>Mes unités — soumission</Label>
+              <Label style={{ marginBottom: 8 }}>{t('goalsAgg.myUnitsSubmission')}</Label>
               {units.every((u) => u.submitted) && (
                 <Text style={[styles.faithListItem, { color: colors.mossSoft, fontWeight: '600' }]}>
-                  Toutes vos unités ont soumis !
+                  {t('goalsAgg.allUnitsSubmitted')}
                 </Text>
               )}
               {units.map((u) => (
@@ -317,7 +320,7 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.unitName}>{u.unitName}</Text>
                     <Text style={styles.unitMeta}>
-                      {u.localityName ?? ''} · {u.pledgeCount}/5 engagements
+                      {t('goalsAgg.pledgeCount', { name: u.localityName ?? '', count: u.pledgeCount })}
                     </Text>
                   </View>
                   <UnitStatusBadge unit={u} />
@@ -347,13 +350,14 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
 
 /** Badge de statut de soumission (UC-LDR-06) : Soumis / En retard / Brouillon / Non démarré. */
 function UnitStatusBadge({ unit }: { unit: ZoneUnitStatus }) {
+  const { t } = useLanguage();
   const [label, tone] = unit.submitted
-    ? ['Soumis', colors.moss]
+    ? [t('goalsAgg.statusSubmitted'), colors.moss]
     : unit.late
-    ? ['En retard', colors.clay]
+    ? [t('goalsAgg.statusLate'), colors.clay]
     : unit.pledgeCount > 0
-    ? ['Brouillon', colors.earthDeep]
-    : ['Non démarré', colors.ink3];
+    ? [t('goalsAgg.statusDraft'), colors.earthDeep]
+    : [t('goalsAgg.statusNotStarted'), colors.ink3];
   return (
     <View style={[styles.statusBadge, { backgroundColor: tone + '22' }]}>
       <Text style={[styles.statusBadgeText, { color: tone }]}>{label}</Text>
@@ -381,6 +385,7 @@ function FaithFormModal({
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
+  const { t } = useLanguage();
   const [value, setValue] = useState('');
   const [saving, setSaving] = useState(false);
   const isCurrency = category?.unitType === 'CURRENCY';
@@ -414,7 +419,7 @@ function FaithFormModal({
       }
       await onSaved();
     } catch (e: any) {
-      notify('shephr', errMsg(e, "L'enregistrement a échoué."));
+      notify(t('common.appName'), errMsg(e, t('errors.saveFailed')));
     } finally {
       setSaving(false);
     }
@@ -423,9 +428,9 @@ function FaithFormModal({
   const onRemove = async () => {
     if (!existing) return;
     const ok = await confirmDialog(
-      'Retirer',
-      "Retirer votre engagement de foi ? L'effectif retombera sur l'agrégat.",
-      'Retirer',
+      t('goalsAgg.removeTitle'),
+      t('goalsAgg.removeConfirm'),
+      t('goalsAgg.remove'),
       true,
     );
     if (!ok) return;
@@ -434,7 +439,7 @@ function FaithFormModal({
       await deleteFaithPledge(existing.id);
       await onSaved();
     } catch (e: any) {
-      notify('shephr', errMsg(e, 'La suppression a échoué.'));
+      notify(t('common.appName'), errMsg(e, t('errors.deleteFailed')));
     } finally {
       setSaving(false);
     }
@@ -445,9 +450,9 @@ function FaithFormModal({
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
         <Card style={styles.modalCard}>
-          <Text style={styles.modalTitle}>Engagement de foi — {category.name}</Text>
+          <Text style={styles.modalTitle}>{t('goalsAgg.faithModalTitle', { name: category.name })}</Text>
           <Text style={styles.modalSub}>
-            Agrégat actuel des sous-niveaux : {fmtValue(aggregate)}
+            {t('goalsAgg.faithModalSub', { value: fmtValue(aggregate) })}
           </Text>
 
           <View style={styles.amountRow}>
@@ -466,15 +471,15 @@ function FaithFormModal({
           {valid && (
             <Text style={[styles.hint, num <= aggregate && { color: colors.clay }]}>
               {num > aggregate
-                ? `Vous vous engagez par la foi à dépasser l'agrégat de ${fmtValue(num - aggregate)}.`
-                : "Votre engagement de foi est inférieur ou égal à l'agrégat — il ne sera pas appliqué (règle du MAX)."}
+                ? t('goalsAgg.faithAbove', { value: fmtValue(num - aggregate) })
+                : t('goalsAgg.faithBelow')}
             </Text>
           )}
 
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
-            <Button label="Annuler" variant="ghost" onPress={onClose} style={{ flex: 1 }} height={48} />
+            <Button label={t('common.cancel')} variant="ghost" onPress={onClose} style={{ flex: 1 }} height={48} />
             <Button
-              label={existing ? 'Modifier' : 'Déclarer'}
+              label={existing ? t('common.edit') : t('goalsAgg.declare')}
               onPress={onSubmit}
               disabled={!valid}
               loading={saving}
@@ -484,7 +489,7 @@ function FaithFormModal({
           </View>
           {existing && (
             <Button
-              label="Retirer mon engagement de foi"
+              label={t('goalsAgg.removeFaith')}
               variant="danger"
               onPress={onRemove}
               fullWidth
