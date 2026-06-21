@@ -1,4 +1,51 @@
 {
+  "landing": {
+    "nav": { "login": "Se connecter", "account": "Mon espace" },
+    "hero": {
+      "badge": "Plateforme de gestion d'église",
+      "title": "Pilotez la vie de votre église, en un seul endroit",
+      "subtitle": "Shephr réunit les objectifs, les dons, le suivi pastoral et les recueils de votre ministère — du membre jusqu'au secrétariat international.",
+      "ctaPrimary": "Se connecter",
+      "ctaSecondary": "Nous contacter",
+      "note": "L'activation se fait avec notre accompagnement — écrivez-nous pour démarrer."
+    },
+    "features": {
+      "title": "Tout ce dont votre ministère a besoin",
+      "subtitle": "Des modules activables à la carte, pensés pour chaque niveau de responsabilité.",
+      "goals": { "title": "Objectifs", "desc": "Déclarez et suivez les engagements (buts quinquennaux, engagements de foi) à chaque niveau hiérarchique, avec agrégation automatique." },
+      "donations": { "title": "Dons", "desc": "Chaque membre déclare ses dons ; les dirigeants consultent, filtrent et exportent les contributions de leur périmètre." },
+      "memberCare": { "title": "Suivi pastoral", "desc": "Gardez le fil du cheminement spirituel de chaque personne et veillez à la redevabilité des dirigeants." },
+      "songbooks": { "title": "Recueils", "desc": "Accédez aux recueils de cantiques et aux setlists, intégrés et disponibles pour tous." },
+      "hierarchy": { "title": "Organisation multi-niveaux", "desc": "Du centre local au continent : structure, rôles par module et délégation scopée par périmètre." },
+      "reports": { "title": "Rapports & exports", "desc": "Tableaux de bord, cartes, évolution dans le temps et exports CSV/PDF pour le pilotage et la consolidation." }
+    },
+    "pricing": {
+      "title": "Une tarification simple, à votre échelle",
+      "subtitle": "Les modules essentiels sont gratuits. Les modules avancés sont payants à la carte, au prix juste pour la taille de votre église.",
+      "freeBadge": "Inclus & gratuit",
+      "freeTitle": "Objectifs & Recueils",
+      "freeDesc": "Le suivi des objectifs et les recueils de cantiques sont toujours actifs, sans frais, pour tous les ministères.",
+      "donations": { "name": "Dons", "price": "dès 150 €", "unit": "/ an", "desc": "Déclaration et pilotage des dons sur tout votre périmètre. Tarif selon la taille de l'église." },
+      "memberCare": { "name": "Suivi pastoral", "price": "dès 29 €", "unit": "/ mois", "desc": "Fiches de suivi, statuts spirituels et redevabilité. Activable indépendamment des dons." },
+      "factorsTitle": "Le prix s'adapte à votre situation",
+      "factors": {
+        "size": "La taille de votre église (paliers selon le nombre de membres)",
+        "zone": "Votre zone géographique",
+        "cmci": "Une remise mission pour les églises CMCI",
+        "bundle": "Un tarif dégressif si vous activez plusieurs modules"
+      },
+      "quoteNote": "Grandes structures ou besoin particulier ? Nous établissons un devis adapté.",
+      "cta": "Demander un devis"
+    },
+    "contact": {
+      "title": "Activez votre espace Shephr",
+      "desc": "Shephr se déploie avec accompagnement : pas d'inscription en libre-service. Contactez-nous et nous configurons votre ministère, créons votre premier accès et activons les modules dont vous avez besoin.",
+      "cta": "Nous contacter pour activer",
+      "or": "ou écrivez-nous à",
+      "mailSubject": "Activation d'un espace Shephr"
+    },
+    "footer": { "tagline": "La plateforme de gestion pour votre ministère." }
+  },
   "common": {
     "brand": "shephr",
     "administration": "Administration",
@@ -111,6 +158,7 @@
     "autre": "Autre"
   },
   "login": {
+    "backToHome": "Accueil",
     "welcome": "Bienvenue",
     "subtitle": "Connectez-vous à votre espace d'administration shephr.",
     "quote": "« Donner avec joie, recevoir avec gratitude. »",

@@ -50,10 +50,16 @@ export function LoginPage() {
       <div className="login-side">
         <div className="deco-1" />
         <div className="deco-2" />
-        <div className="top">
+        <button
+          type="button"
+          className="top"
+          onClick={() => navigate('/')}
+          title={t('login.backToHome')}
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
           <div className="brand-mark">S</div>
           <span className="word">shephr</span>
-        </div>
+        </button>
 
         <svg
           viewBox="0 0 360 220"
@@ -94,7 +100,19 @@ export function LoginPage() {
         </div>
       </div>
 
-      <div className="login-main">
+      <div className="login-main" style={{ position: 'relative' }}>
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          style={{
+            position: 'absolute', top: 24, left: 24, display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--ink-500)',
+            fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, padding: 6,
+          }}
+        >
+          <Icon name="chevRight" size={14} style={{ transform: 'rotate(180deg)' }} />
+          {t('login.backToHome')}
+        </button>
         <div className="login-card">
           <h1>{t('login.welcome')}</h1>
           <div className="sub">{t('login.subtitle')}</div>

@@ -1,4 +1,51 @@
 {
+  "landing": {
+    "nav": { "login": "Sign in", "account": "My account" },
+    "hero": {
+      "badge": "Church management platform",
+      "title": "Run your church's life, all in one place",
+      "subtitle": "Shephr brings together your ministry's goals, giving, pastoral care and songbooks — from the member to the international secretariat.",
+      "ctaPrimary": "Sign in",
+      "ctaSecondary": "Contact us",
+      "note": "Activation is done with our support — write to us to get started."
+    },
+    "features": {
+      "title": "Everything your ministry needs",
+      "subtitle": "Modules you can turn on à la carte, designed for every level of responsibility.",
+      "goals": { "title": "Goals", "desc": "Declare and track commitments (five-year goals, faith pledges) at every level of the hierarchy, with automatic aggregation." },
+      "donations": { "title": "Giving", "desc": "Every member records their gifts; leaders view, filter and export the contributions within their scope." },
+      "memberCare": { "title": "Member Care", "desc": "Keep track of each person's spiritual journey and make sure leaders stay accountable." },
+      "songbooks": { "title": "Songbooks", "desc": "Access hymn books and setlists, built in and available to everyone." },
+      "hierarchy": { "title": "Multi-level organisation", "desc": "From the local centre to the continent: structure, per-module roles and scoped delegation." },
+      "reports": { "title": "Reports & exports", "desc": "Dashboards, maps, trends over time and CSV/PDF exports for oversight and consolidation." }
+    },
+    "pricing": {
+      "title": "Simple pricing, at your scale",
+      "subtitle": "The essential modules are free. Advanced modules are paid à la carte, priced fairly for your church's size.",
+      "freeBadge": "Included & free",
+      "freeTitle": "Goals & Songbooks",
+      "freeDesc": "Goal tracking and hymn books are always on, at no cost, for every ministry.",
+      "donations": { "name": "Giving", "price": "from €150", "unit": "/ year", "desc": "Record and oversee giving across your whole scope. Price based on church size." },
+      "memberCare": { "name": "Member Care", "price": "from €29", "unit": "/ month", "desc": "Tracking records, spiritual statuses and accountability. Can be enabled independently from giving." },
+      "factorsTitle": "Pricing adapts to your situation",
+      "factors": {
+        "size": "Your church's size (tiers based on member count)",
+        "zone": "Your geographic zone",
+        "cmci": "A mission discount for CMCI churches",
+        "bundle": "A decreasing rate when you enable several modules"
+      },
+      "quoteNote": "Large organisations or specific needs? We'll prepare a tailored quote.",
+      "cta": "Request a quote"
+    },
+    "contact": {
+      "title": "Activate your Shephr space",
+      "desc": "Shephr is rolled out with support: no self-service sign-up. Contact us and we'll set up your ministry, create your first access and enable the modules you need.",
+      "cta": "Contact us to activate",
+      "or": "or write to us at",
+      "mailSubject": "Shephr space activation"
+    },
+    "footer": { "tagline": "The management platform for your ministry." }
+  },
   "common": {
     "brand": "shephr",
     "administration": "Administration",
@@ -111,6 +158,7 @@
     "autre": "Other"
   },
   "login": {
+    "backToHome": "Home",
     "welcome": "Welcome",
     "subtitle": "Sign in to your shephr administration area.",
     "quote": "“Give with joy, receive with gratitude.”",

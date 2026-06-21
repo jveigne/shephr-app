@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './hooks/useAuth';
 import { ToastProvider } from './components/Toast';
 import { AppShell } from './AppShell';
+import { LandingPage } from './pages/Landing';
 import { LoginPage } from './pages/Login';
 import { AcceptInvitationPage } from './pages/AcceptInvitation';
 import { DashboardPage } from './pages/Dashboard';
@@ -35,14 +36,11 @@ export function App() {
         <AuthProvider>
           <ToastProvider>
             <Routes>
+              {/* Landing publique : présentation + fonctionnalités + tarification. */}
+              <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/invitation/:token" element={<AcceptInvitationPage />} />
               <Route element={<AppShell />}>
-                {/* Livraison « Goals only » : la home et les pages Dons basculent sur /goals. */}
-                <Route
-                  index
-                  element={<Navigate to={FEATURES.donations ? '/dashboard' : '/goals'} replace />}
-                />
                 {FEATURES.donations ? (
                   <>
                     <Route path="/dashboard" element={<DashboardPage />} />
