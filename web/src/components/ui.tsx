@@ -6,6 +6,7 @@ import {
   type CSSProperties,
   useEffect,
 } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { Icon } from './Icon';
 
 // ---------------- Button ----------------
@@ -165,19 +166,22 @@ export function Badge({
 }
 
 export function UnitTypeBadge({ type }: Readonly<{ type: 'CENTER' | 'ASSEMBLY' | string }>) {
-  if (type === 'CENTER' || type === 'Centre') return <Badge tone="green" dot>Centre</Badge>;
-  return <Badge tone="earth" dot>Assemblée</Badge>;
+  const { t } = useTranslation();
+  if (type === 'CENTER' || type === 'Centre') return <Badge tone="green" dot>{t('ui.badgeCenter')}</Badge>;
+  return <Badge tone="earth" dot>{t('ui.badgeAssembly')}</Badge>;
 }
 
 export function RoleBadge({ role }: { role: string }) {
-  if (role === 'ADMIN') return <Badge tone="green">Administrateur</Badge>;
-  if (role === 'LEADER') return <Badge tone="earth">Dirigeant</Badge>;
-  return <Badge tone="gray">Membre</Badge>;
+  const { t } = useTranslation();
+  if (role === 'ADMIN') return <Badge tone="green">{t('ui.roleAdmin')}</Badge>;
+  if (role === 'LEADER') return <Badge tone="earth">{t('ui.roleLeader')}</Badge>;
+  return <Badge tone="gray">{t('ui.roleMember')}</Badge>;
 }
 
 export function StatusBadge({ active }: { active: boolean }) {
-  if (active) return <Badge tone="ok" dot>Actif</Badge>;
-  return <Badge tone="gray" dot>Inactif</Badge>;
+  const { t } = useTranslation();
+  if (active) return <Badge tone="ok" dot>{t('ui.statusActive')}</Badge>;
+  return <Badge tone="gray" dot>{t('ui.statusInactive')}</Badge>;
 }
 
 // ---------------- Modal / Drawer ----------------
@@ -238,6 +242,7 @@ export function Drawer({
   children: ReactNode;
   footer?: ReactNode;
 }) {
+  const { t } = useTranslation();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -255,7 +260,7 @@ export function Drawer({
             <div className="ttl">{title}</div>
             {sub && <div className="sub">{sub}</div>}
           </div>
-          <IconButton icon={<Icon name="x" size={18} />} onClick={onClose} title="Fermer" />
+          <IconButton icon={<Icon name="x" size={18} />} onClick={onClose} title={t('common.close')} />
         </div>
         <div className="drawer-body">{children}</div>
         {footer && <div className="drawer-foot">{footer}</div>}
@@ -286,6 +291,7 @@ export function Table<T extends { id?: string | number }>({
   zebra?: boolean;
   empty?: ReactNode;
 }) {
+  const { t } = useTranslation();
   if (!rows || rows.length === 0) {
     return (
       <>
@@ -294,8 +300,8 @@ export function Table<T extends { id?: string | number }>({
             <div className="icon-wrap">
               <Icon name="inbox" size={26} />
             </div>
-            <h4>Aucun résultat</h4>
-            <p>Essayez d'ajuster vos filtres.</p>
+            <h4>{t('ui.noResult')}</h4>
+            <p>{t('ui.adjustFilters')}</p>
           </div>
         )}
       </>
@@ -347,6 +353,7 @@ export function Pagination({
   perPage: number;
   onPage: (p: number) => void;
 }) {
+  const { t } = useTranslation();
   const from = total === 0 ? 0 : (page - 1) * perPage + 1;
   const to = Math.min(page * perPage, total);
   const windowSize = 5;
@@ -358,7 +365,7 @@ export function Pagination({
   return (
     <div className="pagination">
       <div>
-        Affichage <strong>{from}</strong>–<strong>{to}</strong> sur <strong>{total}</strong>
+        <Trans i18nKey="ui.paginationShowing" values={{ from, to, total }} components={[<strong />, <strong />, <strong />]} />
       </div>
       <div className="pages">
         <button className="pg-btn" disabled={page === 1} onClick={() => onPage(page - 1)}>

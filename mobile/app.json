@@ -5,12 +5,12 @@
     "version": "0.1.0",
     "sdkVersion": "54.0.0",
     "extra": {
-      "API_URL": "http://localhost:8080",
+      "API_URL": "https://cmfipraise-backend-dev.up.railway.app",
       "router": {
         "origin": false
       },
       "eas": {
-        "projectId": ""
+        "projectId": "5b13d65d-fa12-4271-92f6-2345820f5240"
       }
     },
     "orientation": "default",

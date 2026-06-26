@@ -26,11 +26,13 @@ import {
 } from '../constants/categories';
 import { createDonation } from '../services/donationApi';
 import { fmtDateLong, toLocalDate } from '../utils/format';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const CURRENCIES = ['GBP', 'EUR', 'USD'];
 
 export default function DeclareScreen() {
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
   const [amount, setAmount] = useState('40');
   const [currency, setCurrency] = useState('GBP');
   const [category, setCategory] = useState<DonationCategory>('dime');
@@ -48,7 +50,7 @@ export default function DeclareScreen() {
   const onSubmit = async () => {
     const num = Number.parseFloat(amount.replace(',', '.'));
     if (!Number.isFinite(num) || num <= 0) {
-      Alert.alert('shephr', 'Saisissez un montant valide.');
+      Alert.alert(t('common.appName'), t('declare.invalidAmount'));
       return;
     }
     setLoading(true);
@@ -69,8 +71,8 @@ export default function DeclareScreen() {
       });
     } catch (e: any) {
       Alert.alert(
-        'shephr',
-        e?.response?.data?.message ?? "L'enregistrement a échoué.",
+        t('common.appName'),
+        e?.response?.data?.message ?? t('errors.saveFailed'),
       );
     } finally {
       setLoading(false);
@@ -87,13 +89,13 @@ export default function DeclareScreen() {
             <Ionicons name="close" size={26} color={colors.ink2} />
           </Pressable>
         </View>
-        <Text style={styles.title}>Déclarer un don</Text>
+        <Text style={styles.title}>{t('declare.title')}</Text>
         <Text style={styles.intro}>
-          Inscrivez un don déjà remis lors d'un culte — l'app ne traite aucun paiement.
+          {t('declare.intro')}
         </Text>
 
         <Card style={styles.amountCard}>
-          <Label style={{ color: colors.mossSoft, textAlign: 'center' }}>Montant</Label>
+          <Label style={{ color: colors.mossSoft, textAlign: 'center' }}>{t('declare.amount')}</Label>
           <View style={styles.amountRow}>
             <Text style={styles.cur}>
               {currency === 'GBP' ? '£' : currency === 'EUR' ? '€' : '$'}
@@ -130,16 +132,16 @@ export default function DeclareScreen() {
         </Card>
 
         <View style={{ marginTop: 18 }}>
-          <Label style={{ marginBottom: 8 }}>Date du don</Label>
+          <Label style={{ marginBottom: 8 }}>{t('declare.date')}</Label>
           <Card style={styles.dateRow}>
             <Ionicons name="calendar-outline" size={20} color={colors.mossSoft} />
             <Text style={styles.dateText}>{fmtDateLong(date)}</Text>
-            <Text style={styles.dateChip}>Aujourd'hui</Text>
+            <Text style={styles.dateChip}>{t('common.today')}</Text>
           </Card>
         </View>
 
         <View style={{ marginTop: 18 }}>
-          <Label style={{ marginBottom: 8 }}>Catégorie</Label>
+          <Label style={{ marginBottom: 8 }}>{t('declare.category')}</Label>
           <View style={styles.catGrid}>
             {CATEGORY_ORDER.map((k) => {
               const c = CATEGORIES[k];
@@ -159,7 +161,7 @@ export default function DeclareScreen() {
                   <View style={[styles.catIcon, { backgroundColor: c.tone + '22' }]}>
                     <Ionicons name={c.icon} size={18} color={c.tone} />
                   </View>
-                  <Text style={styles.catLabel}>{c.fr}</Text>
+                  <Text style={styles.catLabel}>{t('categories.' + c.key)}</Text>
                 </Pressable>
               );
             })}
@@ -167,19 +169,19 @@ export default function DeclareScreen() {
         </View>
 
         <View style={{ marginTop: 18 }}>
-          <Label style={{ marginBottom: 8 }}>Note (facultatif)</Label>
+          <Label style={{ marginBottom: 8 }}>{t('declare.note')}</Label>
           <Field
             value={note}
             onChangeText={setNote}
             multiline
             numberOfLines={3}
-            placeholder="Une intention, un détail à se rappeler…"
+            placeholder={t('declare.notePlaceholder')}
             style={{ minHeight: 90, textAlignVertical: 'top' }}
           />
         </View>
 
         <Button
-          label="Confirmer la déclaration"
+          label={t('declare.submit')}
           onPress={onSubmit}
           loading={loading}
           fullWidth
@@ -189,7 +191,7 @@ export default function DeclareScreen() {
         />
 
         <Text style={styles.footnote}>
-          Un reçu sera ajouté à votre journal personnel. Vous pourrez le modifier dans les 24 h.
+          {t('declare.footnote')}
         </Text>
       </ScreenShell>
     </KeyboardAvoidingView>
@@ -207,6 +209,7 @@ function SuccessScreen({
     reference: string;
   };
 }) {
+  const { t } = useLanguage();
   const cat = CATEGORIES[done.category];
   return (
     <ScreenShell withTabBar={false} paddingTop={40}>
@@ -214,45 +217,45 @@ function SuccessScreen({
         <View style={styles.checkBubble}>
           <Ionicons name="checkmark" size={38} color={colors.white} />
         </View>
-        <Text style={styles.successTitle}>Don enregistré, avec gratitude.</Text>
+        <Text style={styles.successTitle}>{t('declare.successTitle')}</Text>
         <Text style={styles.successHint}>
-          Votre déclaration figure désormais dans votre journal.
+          {t('declare.successHint')}
         </Text>
       </View>
 
       <Card variant="paper2" style={styles.receipt}>
         <View style={styles.receiptHeader}>
-          <Text style={styles.receiptMono}>REÇU · {done.reference}</Text>
+          <Text style={styles.receiptMono}>{t('declare.receiptHeader', { reference: done.reference })}</Text>
           <Text style={styles.receiptMono}>CMCI UK</Text>
         </View>
         <HandDivider style={{ marginVertical: 12 }} />
         <View style={styles.rec1}>
-          <Text style={styles.recLabel}>Montant</Text>
+          <Text style={styles.recLabel}>{t('declare.amount')}</Text>
           <Text style={styles.recAmount}>
             {done.amount % 1 === 0 ? done.amount.toFixed(0) : done.amount.toFixed(2)} GBP
           </Text>
         </View>
         <View style={styles.recRow}>
-          <Text style={styles.recLabel}>Catégorie</Text>
-          <Text style={[styles.recValue, { color: cat.tone, fontWeight: '700' }]}>{cat.fr}</Text>
+          <Text style={styles.recLabel}>{t('declare.category')}</Text>
+          <Text style={[styles.recValue, { color: cat.tone, fontWeight: '700' }]}>{t('categories.' + cat.key)}</Text>
         </View>
         <View style={styles.recRow}>
-          <Text style={styles.recLabel}>Date</Text>
+          <Text style={styles.recLabel}>{t('detail.date')}</Text>
           <Text style={styles.recValue}>{fmtDateLong(done.date)}</Text>
         </View>
         {!!done.note && (
           <View style={styles.recRow}>
-            <Text style={styles.recLabel}>Note</Text>
+            <Text style={styles.recLabel}>{t('detail.note')}</Text>
             <Text style={[styles.recValue, { fontStyle: 'italic' }]}>« {done.note} »</Text>
           </View>
         )}
         <HandDivider style={{ marginVertical: 14 }} />
-        <Text style={styles.verse}>« Que chacun donne comme il l'a résolu en son cœur. »</Text>
+        <Text style={styles.verse}>{t('declare.verseQuote')}</Text>
       </Card>
 
       <View style={{ flexDirection: 'row', gap: 10, marginTop: 22 }}>
         <Button
-          label="Voir mes dons"
+          label={t('declare.viewDonations')}
           variant="ghost"
           onPress={() => {
             router.back();
@@ -261,7 +264,7 @@ function SuccessScreen({
           style={{ flex: 1 }}
         />
         <Button
-          label="Terminer"
+          label={t('declare.finish')}
           onPress={() => router.back()}
           style={{ flex: 1 }}
         />

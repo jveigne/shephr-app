@@ -1,8 +1,11 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import {
   fetchMe,
+  hasGoalsAccess,
+  isLeaderRole,
   login as loginRequest,
   register as registerRequest,
+  type AuthResponse,
   type LoginRequest,
   type MeResponse,
   type RegisterRequest,
@@ -20,9 +23,12 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   isAuthenticated: boolean;
   isLeader: boolean;
+  hasGoals: boolean;
   hasUnit: boolean;
   login: (payload: LoginRequest) => Promise<void>;
   register: (payload: RegisterRequest) => Promise<void>;
+  /** Établit une session à partir d'une réponse d'auth (ex. activation par code — Lot 3.4). */
+  establishSession: (res: AuthResponse) => Promise<void>;
   refreshMe: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -86,6 +92,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ ready: true, token: res.token, user: res.user, me });
   }, []);
 
+  const establishSession = useCallback(async (res: AuthResponse) => {
+    await setAuthToken(res.token);
+    let me: MeResponse | null = null;
+    try {
+      me = await fetchMe();
+    } catch {
+      me = null;
+    }
+    setState({ ready: true, token: res.token, user: res.user, me });
+  }, []);
+
   const logout = useCallback(async () => {
     await setAuthToken(null);
     setState({ ready: true, token: null, user: null, me: null });
@@ -94,10 +111,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthContextValue = {
     ...state,
     isAuthenticated: !!state.token,
-    isLeader: state.me?.role === 'LEADER' || state.me?.role === 'ADMIN',
-    hasUnit: !!state.me?.unitId,
+    isLeader: isLeaderRole(state.me),
+    hasGoals: hasGoalsAccess(state.me),
+    hasUnit: !!state.me?.donationUnitId,
     login,
     register,
+    establishSession,
     refreshMe,
     logout,
   };

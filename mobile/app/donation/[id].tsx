@@ -16,8 +16,10 @@ import {
   type DonationResponse,
 } from '../../services/donationApi';
 import { fmtDateLong, parseLocalDate } from '../../utils/format';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function DonationDetailScreen() {
+  const { t } = useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [donation, setDonation] = useState<DonationResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,10 +38,10 @@ export default function DonationDetailScreen() {
 
   const onDelete = () => {
     if (!donation) return;
-    Alert.alert('shephr', 'Supprimer ce don ?', [
-      { text: 'Annuler', style: 'cancel' },
+    Alert.alert(t('common.appName'), t('detail.deleteConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Supprimer',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -47,8 +49,8 @@ export default function DonationDetailScreen() {
             router.back();
           } catch (e: any) {
             Alert.alert(
-              'shephr',
-              e?.response?.data?.message ?? 'Suppression impossible.',
+              t('common.appName'),
+              e?.response?.data?.message ?? t('detail.deleteFailed'),
             );
           }
         },
@@ -78,12 +80,12 @@ export default function DonationDetailScreen() {
         <Pressable onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="chevron-back" size={22} color={colors.ink2} />
         </Pressable>
-        <Text style={styles.headerTitle}>Détail du don</Text>
+        <Text style={styles.headerTitle}>{t('detail.title')}</Text>
         <View style={{ width: 22 }} />
       </View>
 
       <Card variant="paper2" style={styles.certificate}>
-        <Text style={styles.certLabel}>ATTESTATION DE DON</Text>
+        <Text style={styles.certLabel}>{t('detail.certificate')}</Text>
         <HandDivider style={{ marginVertical: 10, width: '60%', alignSelf: 'center' }} />
 
         <View style={{ alignItems: 'center', marginTop: 14 }}>
@@ -91,31 +93,31 @@ export default function DonationDetailScreen() {
             <Ionicons name={cat.icon} size={28} color={cat.tone} />
           </View>
           <Amount value={donation.amount} currency={donation.currency} size={56} showDecimals />
-          <Text style={[styles.catName, { color: cat.tone }]}>{cat.fr}</Text>
+          <Text style={[styles.catName, { color: cat.tone }]}>{t('categories.' + cat.key)}</Text>
         </View>
 
         <HandDivider style={{ marginVertical: 20, width: '85%', alignSelf: 'center' }} />
 
         <View style={styles.metaGrid}>
           <View style={styles.metaItem}>
-            <Label>Date</Label>
+            <Label>{t('detail.date')}</Label>
             <Text style={styles.metaValue}>{fmtDateLong(date)}</Text>
           </View>
           <View style={[styles.metaItem, { alignItems: 'flex-end' }]}>
-            <Label>Référence</Label>
+            <Label>{t('detail.reference')}</Label>
             <Text style={[styles.metaValue, { fontFamily: fonts.mono, fontSize: 13 }]}>{reference}</Text>
           </View>
           <View style={styles.metaItem}>
-            <Label>Unité</Label>
+            <Label>{t('detail.unit')}</Label>
             <Text style={styles.metaValue}>{donation.unitName ?? '—'}</Text>
           </View>
           <View style={[styles.metaItem, { alignItems: 'flex-end' }]}>
-            <Label>Moyen</Label>
-            <Text style={styles.metaValue}>Espèces · enveloppe</Text>
+            <Label>{t('detail.means')}</Label>
+            <Text style={styles.metaValue}>{t('detail.meansDefault')}</Text>
           </View>
           {!!donation.note && (
             <View style={[styles.metaItem, { width: '100%' }]}>
-              <Label>Note</Label>
+              <Label>{t('detail.note')}</Label>
               <Text style={[styles.metaValue, { fontFamily: fonts.serif, fontStyle: 'italic', color: colors.mossSoft }]}>
                 « {donation.note} »
               </Text>
@@ -124,20 +126,20 @@ export default function DonationDetailScreen() {
         </View>
 
         <HandDivider style={{ marginTop: 22, marginBottom: 12, width: '85%', alignSelf: 'center' }} />
-        <Text style={styles.certFooter}>Enregistré dans shephr · CMCI UK</Text>
+        <Text style={styles.certFooter}>{t('detail.footer')}</Text>
       </Card>
 
       {editable ? (
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 22 }}>
           <Button
-            label="Modifier"
+            label={t('common.edit')}
             variant="ghost"
             iconLeft={<Ionicons name="pencil" size={16} color={colors.moss} />}
             style={{ flex: 1 }}
-            onPress={() => Alert.alert('shephr', 'Édition à venir.')}
+            onPress={() => Alert.alert(t('common.appName'), t('detail.editComing'))}
           />
           <Button
-            label="Supprimer"
+            label={t('common.delete')}
             variant="danger"
             iconLeft={<Ionicons name="trash-outline" size={16} color={colors.clay} />}
             style={{ flex: 1 }}
@@ -148,7 +150,7 @@ export default function DonationDetailScreen() {
         <View style={styles.locked}>
           <Ionicons name="checkmark-circle-outline" size={18} color={colors.mossSoft} />
           <Text style={styles.lockedText}>
-            Ce don est verrouillé (plus de 24 h). Contactez un responsable pour toute correction.
+            {t('detail.locked')}
           </Text>
         </View>
       )}

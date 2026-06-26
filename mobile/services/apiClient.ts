@@ -2,9 +2,20 @@ import axios from 'axios';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL =
-  (Constants.expoConfig?.extra as any)?.API_URL ??
-  'http://localhost:8080';
+// « localhost » ne pointe vers la machine de dev que sur simulateur iOS / web.
+// Sur appareil physique (Expo Go) ou émulateur Android, on dérive l'IP du Mac
+// depuis le serveur Metro (hostUri, ex. "192.168.1.42:8081") en gardant le port 8080.
+function resolveApiUrl(): string {
+  const configured = (Constants.expoConfig?.extra as any)?.API_URL as string | undefined;
+  if (configured && !configured.includes('localhost')) return configured;
+  const devHost = Constants.expoConfig?.hostUri?.split(':')[0];
+  if (devHost && devHost !== 'localhost' && devHost !== '127.0.0.1') {
+    return `http://${devHost}:8080`;
+  }
+  return configured ?? 'http://localhost:8080';
+}
+
+const API_URL = resolveApiUrl();
 
 export const TOKEN_STORAGE_KEY = 'shephr.auth.token';
 

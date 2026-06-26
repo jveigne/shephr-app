@@ -15,6 +15,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getSummary, type DonationSummary } from '../../services/statsApi';
 import { listDonations, type DonationResponse } from '../../services/donationApi';
 import { fmtAmount, monthLabel } from '../../utils/format';
+import { FEATURES } from '../../constants/features';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 type ComingKind = 'cantique' | 'priere' | 'compte-rendu';
@@ -23,13 +25,15 @@ const PRIMARY_CURRENCY = 'GBP';
 const YEAR_GOAL = 3000;
 
 export default function HomeScreen() {
-  const { me, isLeader } = useAuth();
+  const { me, isLeader, hasGoals } = useAuth();
+  const { t } = useLanguage();
   const [summary, setSummary] = useState<DonationSummary | null>(null);
   const [recent, setRecent] = useState<DonationResponse[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [coming, setComing] = useState<ComingKind | null>(null);
 
   const load = useCallback(async () => {
+    if (!FEATURES.donations) return; // livraison « Goals only » : pas de données dons
     const [s, list] = await Promise.allSettled([
       getSummary(),
       listDonations({ size: 5 }),
@@ -88,7 +92,7 @@ export default function HomeScreen() {
             {today.getDate()}, {today.getFullYear()}
           </Text>
           <Text style={styles.greeting}>
-            Bon retour,{'\n'}
+            {t('dashboard.welcomeBack')}{'\n'}
             <Text style={styles.greetingItalic}>{firstName || '…'}</Text>.
           </Text>
         </View>
@@ -99,13 +103,25 @@ export default function HomeScreen() {
 
       <View style={styles.verseCard}>
         <Text style={styles.verseText}>
-          « Que chacun donne comme il l'a résolu en son cœur. »
+          {t('dashboard.verse')}
         </Text>
-        <Text style={styles.verseRef}>2 Corinthiens 9:7</Text>
+        <Text style={styles.verseRef}>{t('dashboard.verseRef')}</Text>
       </View>
 
+      {!FEATURES.donations && hasGoals && (
+        <Card onPress={() => router.push('/(tabs)/goals')} style={styles.scopeCta}>
+          <Ionicons name="flag" size={26} color={colors.white} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.scopeTitle}>{t('dashboard.myGoals')}</Text>
+            <Text style={styles.scopeSub}>{t('dashboard.myGoalsSub')}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.white} />
+        </Card>
+      )}
+
+      {FEATURES.donations && (
       <Card style={styles.hero}>
-        <Label style={{ color: colors.mossSoft }}>Vos dons ce mois-ci</Label>
+        <Label style={{ color: colors.mossSoft }}>{t('dashboard.thisMonth')}</Label>
         <Amount value={thisMonth} currency={PRIMARY_CURRENCY} size={54} showDecimals />
         <View style={styles.diffRow}>
           <Ionicons
@@ -123,50 +139,53 @@ export default function HomeScreen() {
             {Math.abs(diffPct)}%
           </Text>
           <Text style={styles.diffNote}>
-            vs. mois dernier ({fmtAmount(lastMonth, PRIMARY_CURRENCY)})
+            {t('dashboard.vsLastMonth', { amount: fmtAmount(lastMonth, PRIMARY_CURRENCY) })}
           </Text>
         </View>
 
         <HandDivider style={{ marginVertical: 16 }} />
 
-        <Label style={{ color: colors.mossSoft }}>Total de l'année</Label>
+        <Label style={{ color: colors.mossSoft }}>{t('dashboard.yearTotal')}</Label>
         <View style={styles.yearRow}>
           <Amount value={yearTotal} currency={PRIMARY_CURRENCY} size={24} showDecimals />
-          <Text style={styles.goalLabel}>objectif {fmtAmount(YEAR_GOAL, PRIMARY_CURRENCY)}</Text>
+          <Text style={styles.goalLabel}>{t('dashboard.yearGoal', { amount: fmtAmount(YEAR_GOAL, PRIMARY_CURRENCY) })}</Text>
         </View>
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: `${pct}%` }]} />
         </View>
       </Card>
+      )}
 
       <View style={styles.tileGrid}>
+        {FEATURES.donations && (
         <Tile
-          label="Déclarer un don"
-          hint="Espèces, chèque, virement"
+          label={t('dashboard.tiles.declare')}
+          hint={t('dashboard.tiles.declareHint')}
           icon="add"
           tone={colors.moss}
           primary
           onPress={() => router.push('/declare')}
         />
+        )}
         <Tile
-          label="Cantique"
-          hint="Chants de l'assemblée"
+          label={t('dashboard.tiles.cantique')}
+          hint={t('dashboard.tiles.cantiqueHint')}
           icon="musical-notes-outline"
           tone={colors.earth}
           comingSoon
           onPress={() => setComing('cantique')}
         />
         <Tile
-          label="Prière"
-          hint="Intentions & retraite"
+          label={t('dashboard.tiles.priere')}
+          hint={t('dashboard.tiles.priereHint')}
           icon="hand-left-outline"
           tone="#7A8B6F"
           comingSoon
           onPress={() => setComing('priere')}
         />
         <Tile
-          label="Compte rendu"
-          hint="Notes d'assemblée"
+          label={t('dashboard.tiles.compteRendu')}
+          hint={t('dashboard.tiles.compteRenduHint')}
           icon="reader-outline"
           tone={colors.earthDeep}
           comingSoon
@@ -174,16 +193,18 @@ export default function HomeScreen() {
         />
       </View>
 
+      {FEATURES.donations && (
+      <>
       <View style={styles.sectionRow}>
-        <Text style={styles.sectionTitle}>Dons récents</Text>
+        <Text style={styles.sectionTitle}>{t('dashboard.recent')}</Text>
         <Pressable onPress={() => router.push('/(tabs)/donations')}>
-          <Text style={styles.sectionLink}>Tout voir →</Text>
+          <Text style={styles.sectionLink}>{t('dashboard.seeAll')}</Text>
         </Pressable>
       </View>
 
       <View style={{ marginTop: 10, gap: 8 }}>
         {recent.length === 0 ? (
-          <Text style={styles.empty}>Aucun don encore. Votre premier geste se posera ici.</Text>
+          <Text style={styles.empty}>{t('dashboard.empty')}</Text>
         ) : (
           recent.map((d) => (
             <DonationRow
@@ -194,22 +215,24 @@ export default function HomeScreen() {
           ))
         )}
       </View>
+      </>
+      )}
 
-      {isLeader && (
+      {FEATURES.donations && isLeader && (
         <Card
           onPress={() => router.push('/(tabs)/leader')}
           style={styles.scopeCta}
         >
           <Ionicons name="people" size={26} color={colors.white} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.scopeTitle}>Mon périmètre</Text>
-            <Text style={styles.scopeSub}>Suivez vos unités et fidèles</Text>
+            <Text style={styles.scopeTitle}>{t('dashboard.scope')}</Text>
+            <Text style={styles.scopeSub}>{t('dashboard.scopeSub')}</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.white} />
         </Card>
       )}
 
-      <Text style={styles.footerMark}>CMCI · UK Pilot</Text>
+      <Text style={styles.footerMark}>{t('dashboard.footerMark')}</Text>
 
       <ComingSoonModal kind={coming} onClose={() => setComing(null)} />
     </ScreenShell>
@@ -233,6 +256,7 @@ function Tile({
   comingSoon?: boolean;
   onPress: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <Pressable
       onPress={onPress}
@@ -268,34 +292,16 @@ function Tile({
         </Text>
       </View>
       {comingSoon && (
-        <Text style={styles.comingPill}>Bientôt</Text>
+        <Text style={styles.comingPill}>{t('common.comingSoon')}</Text>
       )}
     </Pressable>
   );
 }
 
-const COMING_COPY: Record<ComingKind, { title: string; body: string; icon: IoniconName; tone: string }> = {
-  cantique: {
-    title: 'Cantique',
-    body:
-      "Bientôt — chaque dimanche, retrouvez ici les cantiques de l'assemblée avec paroles et accords, pour chanter et préparer à l'avance.",
-    icon: 'musical-notes-outline',
-    tone: colors.earth,
-  },
-  priere: {
-    title: 'Retraite & prière',
-    body:
-      "Bientôt — un espace pour partager vos intentions de prière, suivre les retraites de l'unité et prier en communion avec les fidèles.",
-    icon: 'hand-left-outline',
-    tone: '#7A8B6F',
-  },
-  'compte-rendu': {
-    title: "Compte rendu d'assemblée",
-    body:
-      'Bientôt — prenez et partagez les notes des cultes : enseignements, témoignages, décisions de l\'assemblée locale.',
-    icon: 'reader-outline',
-    tone: colors.earthDeep,
-  },
+const COMING_META: Record<ComingKind, { titleKey: string; bodyKey: string; icon: IoniconName; tone: string }> = {
+  cantique: { titleKey: 'dashboard.coming.cantiqueTitle', bodyKey: 'dashboard.coming.cantiqueBody', icon: 'musical-notes-outline', tone: colors.earth },
+  priere: { titleKey: 'dashboard.coming.priereTitle', bodyKey: 'dashboard.coming.priereBody', icon: 'hand-left-outline', tone: '#7A8B6F' },
+  'compte-rendu': { titleKey: 'dashboard.coming.compteRenduTitle', bodyKey: 'dashboard.coming.compteRenduBody', icon: 'reader-outline', tone: colors.earthDeep },
 };
 
 function ComingSoonModal({
@@ -305,8 +311,9 @@ function ComingSoonModal({
   kind: ComingKind | null;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   if (!kind) return null;
-  const c = COMING_COPY[kind];
+  const c = COMING_META[kind];
   return (
     <Modal transparent animationType="fade" visible={!!kind} onRequestClose={onClose}>
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
@@ -314,12 +321,12 @@ function ComingSoonModal({
           <View style={[styles.modalIcon, { backgroundColor: c.tone + '1A' }]}>
             <Ionicons name={c.icon} size={28} color={c.tone} />
           </View>
-          <Text style={styles.modalTitle}>{c.title}</Text>
-          <Text style={[styles.modalKicker, { color: c.tone }]}>Bientôt disponible</Text>
+          <Text style={styles.modalTitle}>{t(c.titleKey)}</Text>
+          <Text style={[styles.modalKicker, { color: c.tone }]}>{t('dashboard.comingSoonBadge')}</Text>
           <HandDivider style={{ marginVertical: 14, alignSelf: 'center', width: '80%' }} />
-          <Text style={styles.modalBody}>{c.body}</Text>
+          <Text style={styles.modalBody}>{t(c.bodyKey)}</Text>
           <Button
-            label="D'accord"
+            label={t('dashboard.comingAck')}
             variant="soft"
             onPress={onClose}
             fullWidth

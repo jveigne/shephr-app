@@ -16,6 +16,7 @@ import {
   type LeaderUnitView,
 } from '../../../../services/leaderApi';
 import { getByUnit, type DonationByUnitStat } from '../../../../services/statsApi';
+import { useLanguage } from '../../../../contexts/LanguageContext';
 import { toLocalDate } from '../../../../utils/format';
 
 type Period = 'month' | '3m' | '6m' | 'year';
@@ -30,6 +31,8 @@ const PERIODS: { key: Period; label: string }[] = [
 
 export default function UnitDetailScreen() {
   const { unitId } = useLocalSearchParams<{ unitId: string }>();
+  const { t } = useLanguage();
+  const periodLabel = (k: Period) => t('history.periods.' + k);
   const [period, setPeriod] = useState<Period>('month');
   const [unit, setUnit] = useState<LeaderUnitView | null>(null);
   const [unitStat, setUnitStat] = useState<DonationByUnitStat | null>(null);
@@ -80,7 +83,7 @@ export default function UnitDetailScreen() {
   const memberTotal = members.reduce(
     (s, m) =>
       s +
-      (m.donationTotals.find((t) => t.currency === PRIMARY)?.total ?? 0),
+      (m.donationTotals.find((dt) => dt.currency === PRIMARY)?.total ?? 0),
     0,
   );
   const avg = members.length > 0 ? Math.round(memberTotal / members.length) : 0;
@@ -94,7 +97,7 @@ export default function UnitDetailScreen() {
         <View style={{ flex: 1 }} />
         <Pressable style={styles.inviteBtn} onPress={() => {}}>
           <Ionicons name="add" size={14} color={colors.white} />
-          <Text style={styles.inviteText}>Inviter</Text>
+          <Text style={styles.inviteText}>{t('unit.invite')}</Text>
         </Pressable>
         <Pressable style={styles.iconChip} onPress={() => {}}>
           <Ionicons name="download-outline" size={15} color={colors.mossSoft} />
@@ -116,7 +119,7 @@ export default function UnitDetailScreen() {
             { color: unit.type === 'CENTER' ? colors.moss : colors.earthDeep },
           ]}
         >
-          {unit.type === 'CENTER' ? 'Centre' : 'Assemblée'} · {unit.localityName}
+          {unit.type === 'CENTER' ? t('unit.center') : t('unit.assembly')} · {unit.localityName}
         </Text>
       </View>
 
@@ -126,7 +129,7 @@ export default function UnitDetailScreen() {
         {PERIODS.map((p) => (
           <Chip
             key={p.key}
-            label={p.label}
+            label={periodLabel(p.key)}
             selected={period === p.key}
             onPress={() => setPeriod(p.key)}
           />
@@ -135,15 +138,15 @@ export default function UnitDetailScreen() {
 
       <View style={styles.statsRow}>
         <Card style={[styles.statCard, { flex: 1.6 }]}>
-          <Label style={{ color: colors.mossSoft }}>Total</Label>
+          <Label style={{ color: colors.mossSoft }}>{t('unit.total')}</Label>
           <Amount value={total} currency={PRIMARY} size={24} />
         </Card>
         <Card style={[styles.statCard, { flex: 1 }]}>
-          <Label style={{ color: colors.mossSoft }}>Membres</Label>
+          <Label style={{ color: colors.mossSoft }}>{t('unit.members')}</Label>
           <Text style={styles.bigNum}>{members.length}</Text>
         </Card>
         <Card style={[styles.statCard, { flex: 1 }]}>
-          <Label style={{ color: colors.mossSoft }}>Moy.</Label>
+          <Label style={{ color: colors.mossSoft }}>{t('unit.average')}</Label>
           <Amount value={avg} currency={PRIMARY} size={22} />
         </Card>
       </View>
@@ -151,25 +154,25 @@ export default function UnitDetailScreen() {
       <View style={styles.privacyBox}>
         <Ionicons name="shield-checkmark-outline" size={14} color={colors.mossSoft} />
         <Text style={styles.privacyText}>
-          Les totaux par membre ne sont visibles que par les responsables.
+          {t('unit.privacyNote')}
         </Text>
       </View>
 
       <View style={styles.sectionRow}>
-        <Text style={styles.sectionTitle}>Fidèles</Text>
-        <Text style={styles.sectionCount}>{members.length} affichés</Text>
+        <Text style={styles.sectionTitle}>{t('unit.faithful')}</Text>
+        <Text style={styles.sectionCount}>{t('unit.shownMembers', { count: members.length })}</Text>
       </View>
 
       <Card style={{ marginTop: 10, paddingVertical: 0 }}>
         {members.length === 0 ? (
           <View style={{ paddingHorizontal: 18, paddingVertical: 18 }}>
             <Text style={{ fontFamily: fonts.sans, color: colors.ink3, fontStyle: 'italic' }}>
-              Aucun fidèle sur la période.
+              {t('unit.noMembersPeriod')}
             </Text>
           </View>
         ) : (
           members.map((m, i) => {
-            const t =
+            const memberAmt =
               m.donationTotals.find((c) => c.currency === PRIMARY)?.total ?? 0;
             const initials = m.fullName
               .split(' ')
@@ -193,10 +196,10 @@ export default function UnitDetailScreen() {
                     {m.fullName}
                   </Text>
                   <Text style={styles.memberSub} numberOfLines={1}>
-                    {m.active ? 'Actif' : 'Inactif'}
+                    {m.active ? t('unit.memberActive') : t('unit.memberInactive')}
                   </Text>
                 </View>
-                <Amount value={t} currency={PRIMARY} size={16} />
+                <Amount value={memberAmt} currency={PRIMARY} size={16} />
               </View>
             );
           })

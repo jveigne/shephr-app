@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Trans, useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
 import {
   Badge,
@@ -11,32 +12,23 @@ import {
   Select,
   Table,
   TopBar,
-  UnitTypeBadge,
   type Column,
 } from '../components/ui';
 import { useToast } from '../components/Toast';
-import {
-  listDonations,
-  type DonationResponse,
-} from '../services/donationApi';
-import { listLocalities, listUnits } from '../services/adminApi';
-import { buildExportUrl } from '../services/statsApi';
-import {
-  fmtAmount,
-  fmtDateShort,
-  startOfMonthISO,
-  todayISO,
-} from '../utils/format';
-import { CATEGORY_ORDER, CATEGORIES, categoryLabel } from '../constants/categories';
-import { getAuthToken } from '../services/apiClient';
+import { listDonations, type DonationResponse } from '../services/donationApi';
+import { downloadDonationsCsv, getByUnit } from '../services/statsApi';
+import { fmtAmount, fmtDateShort, startOfMonthISO, todayISO } from '../utils/format';
+import { CATEGORY_ORDER, categoryKey } from '../constants/categories';
+import { saveBlob } from '../utils/download';
 
 const PER_PAGE = 14;
 
+// NB: Localité / Type filters need the admin structure endpoints (/api/church/admin/*),
+// which are SUPER_ADMIN-only today. They return in Phase 4 (Lot 4.2 — délégation scopée).
+// Units for the filter are sourced from the LEADER-accessible by-unit stats instead.
 interface Filters {
   period: 'month' | '30d' | 'ytd' | 'all';
-  localityId: string | 'all';
   unitId: string | 'all';
-  type: 'all' | 'CENTER' | 'ASSEMBLY';
   category: string | 'all';
   member: string;
   minAmount: string;
@@ -45,9 +37,7 @@ interface Filters {
 
 const DEFAULT_FILTERS: Filters = {
   period: 'month',
-  localityId: 'all',
   unitId: 'all',
-  type: 'all',
   category: 'all',
   member: '',
   minAmount: '',
@@ -55,6 +45,7 @@ const DEFAULT_FILTERS: Filters = {
 };
 
 export function DonationsPage() {
+  const { t } = useTranslation();
   const { push } = useToast();
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [page, setPage] = useState(0);
@@ -62,66 +53,59 @@ export function DonationsPage() {
 
   const { from, to } = useMemo(() => computeRange(filters.period), [filters.period]);
 
-  const localitiesQ = useQuery({ queryKey: ['admin', 'localities'], queryFn: listLocalities });
-  const unitsQ = useQuery({ queryKey: ['admin', 'units'], queryFn: listUnits });
-
-  const filteredUnits = useMemo(() => {
-    const units = unitsQ.data ?? [];
-    return units.filter((u) => {
-      if (filters.localityId !== 'all' && u.localityId !== filters.localityId) return false;
-      if (filters.type !== 'all' && u.type !== filters.type) return false;
-      return true;
-    });
-  }, [unitsQ.data, filters.localityId, filters.type]);
+  // Units the current user can see, derived from the (scoped) by-unit stats.
+  const unitsStatsQ = useQuery({ queryKey: ['stats', 'by-unit'], queryFn: () => getByUnit() });
+  const units = useMemo(() => {
+    const map = new Map<string, string>();
+    (unitsStatsQ.data ?? []).forEach((s) => map.set(s.unitId, s.unitName));
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  }, [unitsStatsQ.data]);
 
   const donationsQ = useQuery({
-    queryKey: ['donations', { from, to, unitId: filters.unitId, category: filters.category, page }],
+    queryKey: ['donations', {
+      from, to, unitId: filters.unitId, category: filters.category,
+      member: filters.member, minAmount: filters.minAmount, maxAmount: filters.maxAmount, page,
+    }],
     queryFn: () =>
       listDonations({
         from,
         to,
         unitId: filters.unitId === 'all' ? undefined : filters.unitId,
         category: filters.category === 'all' ? undefined : filters.category,
+        // Lot 6.2 — montant / recherche résolus côté serveur
+        minAmount: filters.minAmount ? Number(filters.minAmount) : undefined,
+        maxAmount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
+        search: filters.member || undefined,
         page,
         size: PER_PAGE,
       }),
   });
 
-  const allRows = donationsQ.data?.content ?? [];
-
-  // Client-side narrowing for fields not supported by API (member name, amount, type)
-  const rows = allRows.filter((d) => {
-    if (filters.member && !d.userFullName.toLowerCase().includes(filters.member.toLowerCase())) {
-      return false;
-    }
-    if (filters.minAmount && d.amount < Number(filters.minAmount)) return false;
-    if (filters.maxAmount && d.amount > Number(filters.maxAmount)) return false;
-    if (filters.type !== 'all') {
-      const unit = unitsQ.data?.find((u) => u.id === d.unitId);
-      if (!unit || unit.type !== filters.type) return false;
-    }
-    return true;
-  });
+  const rows = donationsQ.data?.content ?? [];
 
   const totalElements = donationsQ.data?.totalElements ?? 0;
   const pageCount = donationsQ.data?.totalPages ?? 1;
   const totalAmount = rows.reduce((s, d) => s + d.amount, 0);
 
+  const periodLabelMap: Record<Filters['period'], string> = {
+    month: t('donations.periodMonth'),
+    '30d': t('donations.period30d'),
+    ytd: t('donations.periodYtd'),
+    all: t('donations.periodAll'),
+  };
+
   const chips: { key: keyof Filters; label: string; value: string }[] = [];
-  if (filters.period !== 'all') chips.push({ key: 'period', label: 'Période', value: periodLabel(filters.period) });
-  if (filters.localityId !== 'all') {
-    const loc = localitiesQ.data?.find((l) => l.id === filters.localityId);
-    chips.push({ key: 'localityId', label: 'Localité', value: loc?.name ?? '—' });
-  }
+  if (filters.period !== 'all') chips.push({ key: 'period', label: t('donations.period'), value: periodLabelMap[filters.period] });
   if (filters.unitId !== 'all') {
-    const u = unitsQ.data?.find((x) => x.id === filters.unitId);
-    chips.push({ key: 'unitId', label: 'Unité', value: u?.name ?? '—' });
+    const u = units.find((x) => x.id === filters.unitId);
+    chips.push({ key: 'unitId', label: t('donations.unit'), value: u?.name ?? '—' });
   }
-  if (filters.type !== 'all') chips.push({ key: 'type', label: 'Type', value: filters.type === 'CENTER' ? 'Centre' : 'Assemblée' });
-  if (filters.category !== 'all') chips.push({ key: 'category', label: 'Catégorie', value: categoryLabel(filters.category) });
-  if (filters.member) chips.push({ key: 'member', label: 'Membre', value: filters.member });
-  if (filters.minAmount) chips.push({ key: 'minAmount', label: 'Min', value: `£${filters.minAmount}` });
-  if (filters.maxAmount) chips.push({ key: 'maxAmount', label: 'Max', value: `£${filters.maxAmount}` });
+  if (filters.category !== 'all') chips.push({ key: 'category', label: t('donations.category'), value: t(categoryKey(filters.category)) });
+  if (filters.member) chips.push({ key: 'member', label: t('donations.member'), value: filters.member });
+  if (filters.minAmount) chips.push({ key: 'minAmount', label: t('donations.minShort'), value: `£${filters.minAmount}` });
+  if (filters.maxAmount) chips.push({ key: 'maxAmount', label: t('donations.maxShort'), value: `£${filters.maxAmount}` });
 
   const clearChip = (key: keyof Filters) => {
     setFilters((f) => ({ ...f, [key]: DEFAULT_FILTERS[key] }));
@@ -134,53 +118,38 @@ export function DonationsPage() {
   };
 
   const onExport = async () => {
-    const url = buildExportUrl({
-      from,
-      to,
-      unitId: filters.unitId === 'all' ? undefined : filters.unitId,
-    });
     try {
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${getAuthToken() ?? ''}` },
+      const blob = await downloadDonationsCsv({
+        from,
+        to,
+        unitId: filters.unitId === 'all' ? undefined : filters.unitId,
       });
-      if (!res.ok) throw new Error('export failed');
-      const blob = await res.blob();
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `donations-${todayISO()}.csv`;
-      link.click();
-      push({ kind: 'ok', title: 'Export téléchargé', msg: 'Fichier CSV prêt.' });
+      saveBlob(blob, `dons-${todayISO()}.csv`);
+      push({ kind: 'ok', title: t('donations.exportDownloaded'), msg: t('donations.csvReady') });
     } catch {
-      push({ kind: 'error', title: 'Export impossible', msg: 'Réessayez plus tard.' });
+      push({ kind: 'error', title: t('donations.exportFailed'), msg: t('common.retryLater') });
     }
   };
 
   const cols: Column<DonationResponse>[] = [
     {
-      label: 'Date',
+      label: t('donations.colDate'),
       render: (r) => <span className="num">{fmtDateShort(r.donationDate)}</span>,
     },
     {
-      label: 'Unité',
+      label: t('donations.unit'),
       render: (r) => r.unitName ?? <span className="muted">—</span>,
     },
+    { label: t('donations.member'), render: (r) => r.userFullName },
+    { label: t('donations.category'), render: (r) => <Badge tone="gray">{t(categoryKey(r.category))}</Badge> },
     {
-      label: 'Type',
-      render: (r) => {
-        const u = unitsQ.data?.find((x) => x.id === r.unitId);
-        return u ? <UnitTypeBadge type={u.type} /> : <span className="muted">—</span>;
-      },
-    },
-    { label: 'Membre', render: (r) => r.userFullName },
-    { label: 'Catégorie', render: (r) => <Badge tone="gray">{categoryLabel(r.category)}</Badge> },
-    {
-      label: 'Montant',
+      label: t('common.amount'),
       cellClass: 'num right',
       style: { textAlign: 'right' },
       render: (r) => <span className="amount">{fmtAmount(r.amount, r.currency)}</span>,
     },
     {
-      label: 'Note',
+      label: t('donations.colNote'),
       render: (r) => (
         <span className="muted" style={{ fontSize: 12 }}>
           {r.note ?? '—'}
@@ -192,23 +161,18 @@ export function DonationsPage() {
   return (
     <>
       <TopBar
-        title="Dons"
-        crumbs={['shephr', 'Dons']}
+        title={t('donations.title')}
+        crumbs={[t('common.brand'), t('donations.title')]}
         actions={
-          <>
-            <Button variant="ghost" iconL={<Icon name="filter" size={15} />}>
-              Filtres avancés
-            </Button>
-            <Button variant="primary" iconL={<Icon name="download" size={15} />} onClick={onExport}>
-              Exporter CSV
-            </Button>
-          </>
+          <Button variant="primary" iconL={<Icon name="download" size={15} />} onClick={onExport}>
+            {t('donations.exportCsv')}
+          </Button>
         }
       />
 
       <div className="content">
         <div className="filters">
-          <Field label="Période">
+          <Field label={t('donations.period')}>
             <Select
               value={filters.period}
               onChange={(e) => {
@@ -216,27 +180,13 @@ export function DonationsPage() {
                 setPage(0);
               }}
             >
-              <option value="month">Ce mois-ci</option>
-              <option value="30d">30 derniers jours</option>
-              <option value="ytd">Année en cours</option>
-              <option value="all">Tout</option>
+              <option value="month">{t('donations.periodMonth')}</option>
+              <option value="30d">{t('donations.period30d')}</option>
+              <option value="ytd">{t('donations.periodYtd')}</option>
+              <option value="all">{t('donations.periodAll')}</option>
             </Select>
           </Field>
-          <Field label="Localité">
-            <Select
-              value={filters.localityId}
-              onChange={(e) => {
-                setFilters({ ...filters, localityId: e.target.value, unitId: 'all' });
-                setPage(0);
-              }}
-            >
-              <option value="all">Toutes</option>
-              {(localitiesQ.data ?? []).map((l) => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Unité">
+          <Field label={t('donations.unit')}>
             <Select
               value={filters.unitId}
               onChange={(e) => {
@@ -244,26 +194,13 @@ export function DonationsPage() {
                 setPage(0);
               }}
             >
-              <option value="all">Toutes</option>
-              {filteredUnits.map((u) => (
+              <option value="all">{t('donations.allFem')}</option>
+              {units.map((u) => (
                 <option key={u.id} value={u.id}>{u.name}</option>
               ))}
             </Select>
           </Field>
-          <Field label="Type">
-            <Select
-              value={filters.type}
-              onChange={(e) => {
-                setFilters({ ...filters, type: e.target.value as Filters['type'] });
-                setPage(0);
-              }}
-            >
-              <option value="all">Tous</option>
-              <option value="CENTER">Centre</option>
-              <option value="ASSEMBLY">Assemblée</option>
-            </Select>
-          </Field>
-          <Field label="Catégorie">
+          <Field label={t('donations.category')}>
             <Select
               value={filters.category}
               onChange={(e) => {
@@ -271,21 +208,21 @@ export function DonationsPage() {
                 setPage(0);
               }}
             >
-              <option value="all">Toutes</option>
+              <option value="all">{t('donations.allFem')}</option>
               {CATEGORY_ORDER.map((k) => (
-                <option key={k} value={k}>{CATEGORIES[k].fr}</option>
+                <option key={k} value={k}>{t(`categories.${k}`)}</option>
               ))}
             </Select>
           </Field>
-          <Field label="Membre" style={{ minWidth: 180 }}>
+          <Field label={t('donations.member')} style={{ minWidth: 180 }}>
             <Input
-              placeholder="Recherche…"
+              placeholder={t('common.search')}
               icon={<Icon name="search" size={14} />}
               value={filters.member}
               onChange={(e) => setFilters({ ...filters, member: e.target.value })}
             />
           </Field>
-          <Field label="Min £">
+          <Field label={t('donations.min')}>
             <Input
               placeholder="0"
               value={filters.minAmount}
@@ -293,7 +230,7 @@ export function DonationsPage() {
               style={{ width: 90 }}
             />
           </Field>
-          <Field label="Max £">
+          <Field label={t('donations.max')}>
             <Input
               placeholder="∞"
               value={filters.maxAmount}
@@ -306,7 +243,7 @@ export function DonationsPage() {
         {chips.length > 0 && (
           <div className="chips" style={{ marginBottom: 14 }}>
             <span style={{ fontSize: 12, color: 'var(--ink-500)', marginRight: 4 }}>
-              Filtres actifs :
+              {t('donations.activeFilters')}
             </span>
             {chips.map((c, i) => (
               <span className="chip" key={i}>
@@ -318,7 +255,7 @@ export function DonationsPage() {
               </span>
             ))}
             <Button variant="ghost" size="sm" onClick={clearAll}>
-              Tout effacer
+              {t('donations.clearAll')}
             </Button>
           </div>
         )}
@@ -332,11 +269,14 @@ export function DonationsPage() {
           }}
         >
           <div style={{ color: 'var(--ink-500)', fontSize: 13 }}>
-            <strong style={{ color: 'var(--ink-800)' }}>{rows.length}</strong> dons sur la page ·{' '}
-            <strong style={{ color: 'var(--green-800)', marginLeft: 6 }}>
-              {fmtAmount(totalAmount)}
-            </strong>{' '}
-            · {totalElements} au total
+            <Trans
+              i18nKey="donations.onPage"
+              values={{ count: rows.length, amount: fmtAmount(totalAmount), total: totalElements }}
+              components={[
+                <strong style={{ color: 'var(--ink-800)' }} />,
+                <strong style={{ color: 'var(--green-800)', marginLeft: 6 }} />,
+              ]}
+            />
           </div>
         </div>
 
@@ -351,10 +291,10 @@ export function DonationsPage() {
                 <div className="icon-wrap">
                   <Icon name="inbox" size={26} />
                 </div>
-                <h4>Aucun don ne correspond</h4>
-                <p>Élargissez la période ou retirez un filtre.</p>
+                <h4>{t('donations.noMatch')}</h4>
+                <p>{t('donations.noMatchText')}</p>
                 <Button variant="secondary" onClick={clearAll}>
-                  Réinitialiser les filtres
+                  {t('donations.resetFilters')}
                 </Button>
               </div>
             }
@@ -374,11 +314,11 @@ export function DonationsPage() {
       <Drawer
         open={!!drawer}
         onClose={() => setDrawer(null)}
-        title="Détail du don"
-        sub={drawer ? `Référence ${drawer.id.slice(0, 8).toUpperCase()}` : undefined}
+        title={t('donations.drawerTitle')}
+        sub={drawer ? t('donations.reference', { ref: drawer.id.slice(0, 8).toUpperCase() }) : undefined}
         footer={
           <Button variant="ghost" onClick={() => setDrawer(null)}>
-            Fermer
+            {t('common.close')}
           </Button>
         }
       >
@@ -393,7 +333,7 @@ export function DonationsPage() {
                   letterSpacing: '.08em',
                 }}
               >
-                Montant
+                {t('donations.drawerAmount')}
               </div>
               <div
                 style={{
@@ -408,20 +348,20 @@ export function DonationsPage() {
                 {fmtAmount(drawer.amount, drawer.currency)}
               </div>
               <div style={{ marginTop: 6 }}>
-                <Badge tone="gray">{categoryLabel(drawer.category)}</Badge>
+                <Badge tone="gray">{t(categoryKey(drawer.category))}</Badge>
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <DetailRow label="Date" value={fmtDateShort(drawer.donationDate)} />
-              <DetailRow label="Devise" value={drawer.currency} />
-              <DetailRow label="Membre" value={drawer.userFullName} />
+              <DetailRow label={t('donations.drawerDate')} value={fmtDateShort(drawer.donationDate)} />
+              <DetailRow label={t('donations.drawerCurrency')} value={drawer.currency} />
+              <DetailRow label={t('donations.drawerMember')} value={drawer.userFullName} />
               <DetailRow
-                label="Saisi le"
+                label={t('donations.drawerCreatedAt')}
                 value={new Date(drawer.createdAt).toLocaleString('fr-FR')}
               />
-              <DetailRow label="Unité" value={drawer.unitName ?? '—'} full />
-              {drawer.note && <DetailRow label="Note" value={drawer.note} full />}
+              <DetailRow label={t('donations.drawerUnit')} value={drawer.unitName ?? '—'} full />
+              {drawer.note && <DetailRow label={t('donations.drawerNote')} value={drawer.note} full />}
             </div>
 
             <div className="stat-row">
@@ -430,10 +370,10 @@ export function DonationsPage() {
               </div>
               <div>
                 <div style={{ fontSize: 12.5, color: 'var(--ink-800)', fontWeight: 500 }}>
-                  Don physique déclaré
+                  {t('donations.physicalDeclared')}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 2 }}>
-                  Espèces remises lors d'un culte. La saisie est verrouillée 24 h après création.
+                  {t('donations.physicalDeclaredText')}
                 </div>
               </div>
             </div>
@@ -484,11 +424,4 @@ function computeRange(period: Filters['period']): { from?: string; to?: string }
   // ytd
   const y = new Date().getFullYear();
   return { from: `${y}-01-01`, to: todayISO() };
-}
-
-function periodLabel(p: Filters['period']) {
-  if (p === 'month') return 'Ce mois-ci';
-  if (p === '30d') return '30 derniers jours';
-  if (p === 'ytd') return 'Année en cours';
-  return 'Tout';
 }

@@ -1,7 +1,29 @@
 import { apiClient } from './apiClient';
 
+// --- Legacy admin-users role model (still used by adminApi/Users page; aligned later in Lot 1.2/4.3)
 export type UserRole = 'MEMBER' | 'LEADER' | 'ADMIN';
 export type LeaderLevel = 'JUNIOR' | 'SENIOR' | null;
+
+// --- Real role model exposed by the backend (ModuleRole + superAdmin) — Lot 2.1 contract
+// Lot 3.5 — organigramme : DIRIGEANT_LEADER renommé DIRIGEANT_SENIOR + nouveau DIRIGEANT_UNITE.
+export type ModuleRole =
+  | 'MEMBRE'
+  | 'DIRIGEANT_UNITE'
+  | 'DIRIGEANT'
+  | 'DIRIGEANT_SENIOR'
+  | 'DIRIGEANT_COORDINATEUR'
+  | 'LEADER'
+  | 'SECRETARIAT';
+
+export const MODULE_ROLE_LABELS: Record<ModuleRole, string> = {
+  MEMBRE: 'Membre',
+  DIRIGEANT_UNITE: "Dirigeant d'unité",
+  DIRIGEANT: 'Dirigeant',
+  DIRIGEANT_SENIOR: 'Dirigeant senior',
+  DIRIGEANT_COORDINATEUR: 'Coordinateur',
+  LEADER: 'Leader',
+  SECRETARIAT: 'Secrétariat',
+};
 
 export interface UserDTO {
   id: string;
@@ -14,15 +36,155 @@ export interface AuthResponse {
   user: UserDTO;
 }
 
+export type Language = 'FR' | 'EN';
+
+// Mirrors com.excellence.back.donation.auth.dto.MeResponse
 export interface MeResponse {
   id: string;
   email: string;
   fullName: string;
-  role: UserRole;
-  leaderLevel: LeaderLevel;
+  superAdmin: boolean;
+  donationRole: ModuleRole | null;
+  goalRole: ModuleRole | null;
   ministryId: string | null;
-  unitId: string | null;
+  donationUnitId: string | null;
+  donationZoneId: string | null;
   active: boolean;
+  // Lot 2.1 — enrichissements /me :
+  /** Langue de préférence (UC-TRV-09). */
+  language: Language | null;
+  /** Date d'inscription (ISO-8601). */
+  registeredAt: string | null;
+  /** Nom du DIRIGEANT de l'unité ([DÉCISION V1.8]) ; null si non rattaché / sans dirigeant distinct. */
+  leaderName: string | null;
+  // Lot 4.2 — périmètre GOALS (UC-LDR-04/05, COO-04/05) :
+  /** Unité du DIRIGEANT côté Goals ; null sinon. */
+  goalUnitId: string | null;
+  /** Zone du DIRIGEANT_SENIOR côté Goals ; null sinon. */
+  goalZoneId: string | null;
+  /** Pays du DIRIGEANT_COORDINATEUR côté Goals ; vide sinon. */
+  goalCountryIds: string[] | null;
+  /** Lot 4.8 — pays qu'un SECRETARIAT/LEADER coordonne explicitement (assignés par SUPER_ADMIN). */
+  coordinatedCountryIds: string[] | null;
+  // Périmètre LISIBLE (noms résolus) — affichage explicite dans le profil, selon le leadership :
+  /** Noms des unités rattachées (home + multi-unités, tous modules) ; vide sinon. */
+  unitNames: string[] | null;
+  /** Noms des zones rattachées (DIRIGEANT_SENIOR) ; vide sinon. */
+  zoneNames: string[] | null;
+  /** Noms des pays rattachés (DIRIGEANT_COORDINATEUR) ; vide sinon. */
+  countryNames: string[] | null;
+}
+
+/** A role strictly above MEMBRE in a module. */
+function isElevated(role: ModuleRole | null): boolean {
+  return role != null && role !== 'MEMBRE';
+}
+
+/**
+ * Web Espace ministère access rule (plan Lot 2.1 — « web réservé dirigeants+, MEMBRE refusé »):
+ * superAdmin, or any module role above MEMBRE. A pure member uses the mobile app.
+ */
+export function hasMinistryAccess(me: MeResponse | null): boolean {
+  if (!me) return false;
+  if (me.superAdmin) return true;
+  return isElevated(me.donationRole) || isElevated(me.goalRole);
+}
+
+/** Accès à la page Objectifs (Lot 4.1) : dirigeant+ du module Goals, ou superAdmin. */
+export function hasGoalsAccess(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return me.superAdmin || isElevated(me.goalRole);
+}
+
+/**
+ * Peut administrer la STRUCTURE dans son périmètre (Lot 3.2/3.5) : localités & unités.
+ * superAdmin, ou COORDINATEUR (ses pays) / DIRIGEANT_SENIOR (les zones de son sous-arbre).
+ * Les rôles ministère-large (LEADER/SECRETARIAT) voient mais n'écrivent pas (le backend renvoie 403).
+ */
+export function canManageStructure(me: MeResponse | null): boolean {
+  if (!me) return false;
+  if (me.superAdmin) return true;
+  const writer = (r: ModuleRole | null) =>
+    r === 'DIRIGEANT_COORDINATEUR' || r === 'DIRIGEANT_SENIOR';
+  return writer(me.donationRole) || writer(me.goalRole);
+}
+
+/** Peut administrer les ZONES (autorité pays) : superAdmin ou COORDINATEUR (Lot 3.2). */
+export function canManageZones(me: MeResponse | null): boolean {
+  if (!me) return false;
+  if (me.superAdmin) return true;
+  return me.donationRole === 'DIRIGEANT_COORDINATEUR' || me.goalRole === 'DIRIGEANT_COORDINATEUR';
+}
+
+const ROLE_RANK: Record<ModuleRole, number> = {
+  MEMBRE: 0,
+  DIRIGEANT_UNITE: 1,
+  DIRIGEANT: 2,
+  DIRIGEANT_SENIOR: 3,
+  DIRIGEANT_COORDINATEUR: 4,
+  LEADER: 5,
+  SECRETARIAT: 5,
+};
+
+/**
+ * Rang d'AUTORITÉ (manager) de l'acteur, miroir de `managerRank` backend (Lot 3.5) :
+ * rang max parmi ses rôles de manager. Les rôles ministère-large (LEADER/SECRETARIAT) = 0.
+ */
+function managerRank(me: MeResponse | null): number {
+  if (!me) return 0;
+  const w = (r: ModuleRole | null) =>
+    r === 'DIRIGEANT_COORDINATEUR' || r === 'DIRIGEANT_SENIOR' || r === 'DIRIGEANT' || r === 'DIRIGEANT_UNITE'
+      ? ROLE_RANK[r] : 0;
+  return Math.max(w(me.donationRole), w(me.goalRole));
+}
+
+/**
+ * Peut gérer les UTILISATEURS (Lot 3.5) : tout rôle de manager (DIRIGEANT_UNITE → COORDINATEUR)
+ * gère son sous-arbre ; superAdmin partout. (Les viewers ministère-large n'administrent pas.)
+ */
+export function canManageUsers(me: MeResponse | null): boolean {
+  if (!me) return false;
+  if (me.superAdmin) return true;
+  return managerRank(me) >= ROLE_RANK.DIRIGEANT_UNITE;
+}
+
+/**
+ * Rôles que l'acteur peut CONFÉRER (Lot 3.5) : de rang ≤ au sien (un DIRIGEANT peut conférer DIRIGEANT).
+ * SUPER_ADMIN : tous. Le rattachement à des pays (COORDINATEUR) étant réservé au SUPER_ADMIN côté
+ * backend, on n'offre pas COORDINATEUR à un non-SUPER_ADMIN. Aligné sur `requireCanAssign`.
+ */
+export function assignableRoles(me: MeResponse | null): ModuleRole[] {
+  if (!me) return [];
+  if (me.superAdmin) {
+    return ['MEMBRE', 'DIRIGEANT_UNITE', 'DIRIGEANT', 'DIRIGEANT_SENIOR', 'DIRIGEANT_COORDINATEUR', 'LEADER', 'SECRETARIAT'];
+  }
+  const mr = managerRank(me);
+  return (['MEMBRE', 'DIRIGEANT_UNITE', 'DIRIGEANT', 'DIRIGEANT_SENIOR'] as ModuleRole[]).filter((r) => ROLE_RANK[r] <= mr);
+}
+
+/** Human label for the user's most significant role (for the sidebar footer). */
+export function primaryRoleLabel(me: MeResponse | null): string {
+  if (!me) return '';
+  if (me.superAdmin) return 'Super Admin';
+  const elevated =
+    (isElevated(me.donationRole) ? me.donationRole : null) ??
+    (isElevated(me.goalRole) ? me.goalRole : null);
+  const role = elevated ?? me.donationRole ?? me.goalRole;
+  return role ? MODULE_ROLE_LABELS[role] : '';
+}
+
+/**
+ * i18n key suffix for the user's most significant role (sidebar footer).
+ * Returns 'superAdmin' or a ModuleRole code, to be looked up under `roles.*`. '' if none.
+ */
+export function primaryRoleKey(me: MeResponse | null): 'superAdmin' | ModuleRole | '' {
+  if (!me) return '';
+  if (me.superAdmin) return 'superAdmin';
+  const elevated =
+    (isElevated(me.donationRole) ? me.donationRole : null) ??
+    (isElevated(me.goalRole) ? me.goalRole : null);
+  const role = elevated ?? me.donationRole ?? me.goalRole;
+  return role ?? '';
 }
 
 export async function login(payload: { email: string; password: string }) {
@@ -36,4 +198,32 @@ export async function login(payload: { email: string; password: string }) {
 export async function fetchMe() {
   const { data } = await apiClient.get<MeResponse>('/api/church/auth/me');
   return data;
+}
+
+// --- Invitation (Lot 3.1) — acceptation publique d'une invitation ---
+export interface InvitationPreview {
+  email: string;
+  fullName: string;
+  ministryName: string | null;
+}
+
+export async function previewInvitation(token: string) {
+  const { data } = await apiClient.get<InvitationPreview>(
+    `/api/cmfipraise/auth/invitation/${encodeURIComponent(token)}`,
+  );
+  return data;
+}
+
+export async function acceptInvitation(payload: { token: string; password: string }) {
+  const { data } = await apiClient.post<AuthResponse>(
+    '/api/cmfipraise/auth/invitation/accept',
+    payload,
+  );
+  return data;
+}
+
+/** Modules accessibles à l'utilisateur courant (gratuit/activé OU abonnement actif). */
+export async function getAccessibleModules(): Promise<string[]> {
+  const { data } = await apiClient.get<{ moduleCodes: string[] }>('/api/me/accessible-modules');
+  return data.moduleCodes ?? [];
 }

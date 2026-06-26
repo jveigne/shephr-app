@@ -1,0 +1,628 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  Modal,
+  ActivityIndicator,
+  RefreshControl,
+  Pressable,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
+import ScreenShell from './ScreenShell';
+import Card from './Card';
+import Label from './Label';
+import Button from './Button';
+import HandDivider from './HandDivider';
+import { colors, fonts } from '../theme';
+import { goalCategoryMeta } from '../constants/goalCategories';
+import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { currencySymbol, fmtAmount } from '../utils/format';
+import { confirmDialog, notify } from '../utils/dialogs';
+import {
+  createFaithPledge,
+  deleteFaithPledge,
+  getActiveGoal,
+  getAggregate,
+  getZoneUnits,
+  listFaithPledges,
+  updateFaithPledge,
+  type ActiveGoal,
+  type AggregateLevelPath,
+  type AggregateLine,
+  type FaithPledgeResponse,
+  type GoalCategory,
+  type ZoneUnitStatus,
+} from '../services/goalsApi';
+import { listCountries, listZones } from '../services/orgApi';
+
+const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallback;
+
+interface Perimeter {
+  level: AggregateLevelPath;
+  entityId: string;
+  title: string;
+}
+
+/**
+ * Vue agrégée du périmètre Goals d'un leader (UC-LDR-04/05, UC-COO-04/05) :
+ * zone du DIRIGEANT_LEADER et/ou pays du COORDINATEUR. Effectif = MAX (RG-08).
+ */
+export default function GoalAggregatesScreen({
+  zoneId,
+  countryIds,
+}: {
+  zoneId: string | null;
+  countryIds: string[];
+}) {
+  const { t } = useLanguage();
+  const [goal, setGoal] = useState<ActiveGoal | null>(null);
+  const [perimeters, setPerimeters] = useState<Perimeter[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [noGoal, setNoGoal] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const year = selectedYear ?? goal?.currentYear ?? null;
+
+  const load = useCallback(async () => {
+    try {
+      const g = await getActiveGoal();
+      setGoal(g);
+      setNoGoal(false);
+      const [zonesR, countriesR] = await Promise.allSettled([
+        zoneId ? listZones() : Promise.resolve([]),
+        countryIds.length > 0 ? listCountries() : Promise.resolve([]),
+      ]);
+      const zones = zonesR.status === 'fulfilled' ? zonesR.value : [];
+      const countries = countriesR.status === 'fulfilled' ? countriesR.value : [];
+      const list: Perimeter[] = [];
+      if (zoneId) {
+        const name = zones.find((z) => z.id === zoneId)?.name;
+        list.push({ level: 'zones', entityId: zoneId, title: name ? t('goalsAgg.myZoneNamed', { name }) : t('goalsAgg.myZone') });
+      }
+      for (const id of countryIds) {
+        const name = countries.find((c) => c.id === id)?.name;
+        list.push({ level: 'countries', entityId: id, title: name ? t('goalsAgg.myCountryNamed', { name }) : t('goalsAgg.myCountry') });
+      }
+      setPerimeters(list);
+    } catch (e: any) {
+      if (e?.response?.status === 404) setNoGoal(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [zoneId, countryIds.join(','), t]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setRefreshKey((k) => k + 1);
+    }, []),
+  );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await load();
+      setRefreshKey((k) => k + 1);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <ScreenShell>
+        <View style={{ alignItems: 'center', paddingTop: 80 }}>
+          <ActivityIndicator color={colors.moss} />
+        </View>
+      </ScreenShell>
+    );
+  }
+
+  if (noGoal || !goal) {
+    return (
+      <ScreenShell>
+        <View style={{ alignItems: 'center', paddingTop: 80, paddingHorizontal: 24 }}>
+          <Text style={styles.emptyTitle}>{t('goalsAgg.noGoalTitle')}</Text>
+          <Text style={styles.emptyHint}>
+            {t('goalsAgg.noGoalHint')}
+          </Text>
+        </View>
+      </ScreenShell>
+    );
+  }
+
+  return (
+    <ScreenShell
+      refreshControl={
+        <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
+      <View style={styles.titleRow}>
+        <Ionicons name="flag-outline" size={22} color={colors.mossSoft} />
+        <Text style={styles.title}>{t('goals.title')}</Text>
+      </View>
+      <Text style={styles.subtitle}>
+        {t('goalsAgg.subtitle', { name: goal.name })}
+      </Text>
+
+      {(goal.openYears?.length ?? 0) > 0 && year != null && (
+        <View style={styles.yearRow}>
+          {goal.openYears.map((y) => {
+            const active = y === year;
+            return (
+              <Pressable
+                key={y}
+                onPress={() => setSelectedYear(y)}
+                style={[styles.yearChip, active && styles.yearChipActive]}
+              >
+                <Text style={[styles.yearChipText, active && styles.yearChipTextActive]}>
+                  {y}
+                  {y === 2026 || y === 2030 ? ' ★' : ''}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+
+      {year != null && perimeters.map((p) => (
+        <AggregateSection
+          key={`${p.level}-${p.entityId}-${year}-${refreshKey}`}
+          perimeter={p}
+          goal={goal}
+          year={year}
+        />
+      ))}
+    </ScreenShell>
+  );
+}
+
+function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goal: ActiveGoal; year: number }) {
+  const { me } = useAuth();
+  const { t } = useLanguage();
+  const [lines, setLines] = useState<AggregateLine[]>([]);
+  const [faiths, setFaiths] = useState<FaithPledgeResponse[]>([]);
+  const [units, setUnits] = useState<ZoneUnitStatus[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [faithCategory, setFaithCategory] = useState<GoalCategory | null>(null);
+
+  const currency = goal.defaultCurrency;
+  const categories = [...goal.categories].sort((a, b) => a.displayOrder - b.displayOrder);
+
+  const load = useCallback(async () => {
+    try {
+      const [agg, fp, us] = await Promise.all([
+        getAggregate(perimeter.level, perimeter.entityId, year),
+        listFaithPledges(perimeter.level, perimeter.entityId, year).catch(
+          () => [] as FaithPledgeResponse[],
+        ),
+        // UC-LDR-06 : statut de soumission des unités (zones uniquement).
+        perimeter.level === 'zones'
+          ? getZoneUnits(perimeter.entityId, year).catch(() => [] as ZoneUnitStatus[])
+          : Promise.resolve([] as ZoneUnitStatus[]),
+      ]);
+      setLines(agg);
+      setFaiths(fp);
+      setUnits(us);
+    } finally {
+      setLoading(false);
+    }
+  }, [perimeter.level, perimeter.entityId, year]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const lineFor = (categoryId: string) => lines.find((l) => l.categoryId === categoryId) ?? null;
+  const myFaithFor = (categoryId: string) =>
+    faiths.find((f) => f.categoryId === categoryId && f.createdById === me?.id) ?? null;
+
+  const fmtValue = (category: GoalCategory, v: number) =>
+    category.unitType === 'CURRENCY'
+      ? fmtAmount(v, currency)
+      : `${v} ${category.unitLabel ?? ''}`.trim();
+
+  return (
+    <>
+      <View style={styles.sectionRow}>
+        <Text style={styles.sectionTitle}>{perimeter.title}</Text>
+      </View>
+
+      {loading ? (
+        <ActivityIndicator color={colors.moss} style={{ marginTop: 18 }} />
+      ) : (
+        <View style={{ gap: 8, marginTop: 10 }}>
+          {categories.map((category) => {
+            const meta = goalCategoryMeta(category.code);
+            const line = lineFor(category.id);
+            const agg = line?.aggregateOfChildren ?? 0;
+            const eff = line?.effectiveAmount ?? line?.effectiveCount ?? 0;
+            const mine = myFaithFor(category.id);
+            const faithValue = mine ? mine.targetAmount ?? mine.targetCount ?? 0 : null;
+            return (
+              <Card key={category.id} style={styles.lineCard}>
+                <View style={styles.lineHead}>
+                  <View style={[styles.lineIcon, { backgroundColor: meta.tone + '1F' }]}>
+                    <Ionicons name={meta.icon} size={18} color={meta.tone} />
+                  </View>
+                  <Text style={styles.lineName}>{category.name}</Text>
+                  {line?.source === 'FAITH' && (
+                    <View style={styles.faithBadge}>
+                      <Text style={styles.faithBadgeText}>{t('goalsAgg.faithBadge')}</Text>
+                    </View>
+                  )}
+                </View>
+                <HandDivider style={{ marginVertical: 10 }} />
+                <View style={styles.lineFooter}>
+                  <View>
+                    <Label>{t('goalsAgg.aggregate')}</Label>
+                    <Text style={styles.lineValue}>{fmtValue(category, agg)}</Text>
+                  </View>
+                  <View style={{ alignItems: 'center' }}>
+                    <Label>{t('goalsAgg.myFaith')}</Label>
+                    <Text style={[styles.lineValue, faithValue == null && { color: colors.ink3 }]}>
+                      {faithValue != null ? fmtValue(category, faithValue) : '—'}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Label>{t('goalsAgg.effective')}</Label>
+                    <Text style={[styles.lineValue, { fontWeight: '600' }]}>
+                      {fmtValue(category, eff)}
+                    </Text>
+                  </View>
+                </View>
+                <Button
+                  label={mine ? t('goalsAgg.editFaith') : t('goalsAgg.declareFaith')}
+                  variant="soft"
+                  height={42}
+                  onPress={() => setFaithCategory(category)}
+                  style={{ marginTop: 12 }}
+                />
+              </Card>
+            );
+          })}
+
+          {faiths.length > 0 && (
+            <Card variant="paper2" style={styles.faithListCard}>
+              <Label style={{ marginBottom: 8 }}>{t('goalsAgg.declaredFaith')}</Label>
+              {faiths.map((f) => {
+                const category = goal.categories.find((c) => c.id === f.categoryId);
+                return (
+                  <Text key={f.id} style={styles.faithListItem}>
+                    {category?.name ?? f.categoryCode} ·{' '}
+                    {category ? fmtValue(category, f.targetAmount ?? f.targetCount ?? 0) : ''} —{' '}
+                    {f.createdByName ?? '—'}
+                    {f.createdById === me?.id ? t('goalsAgg.me') : ''}
+                  </Text>
+                );
+              })}
+            </Card>
+          )}
+
+          {perimeter.level === 'zones' && units.length > 0 && (
+            <Card variant="paper2" style={styles.faithListCard}>
+              <Label style={{ marginBottom: 8 }}>{t('goalsAgg.myUnitsSubmission')}</Label>
+              {units.every((u) => u.submitted) && (
+                <Text style={[styles.faithListItem, { color: colors.mossSoft, fontWeight: '600' }]}>
+                  {t('goalsAgg.allUnitsSubmitted')}
+                </Text>
+              )}
+              {units.map((u) => (
+                <View key={u.unitId} style={styles.unitRow}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.unitName}>{u.unitName}</Text>
+                    <Text style={styles.unitMeta}>
+                      {t('goalsAgg.pledgeCount', { name: u.localityName ?? '', count: u.pledgeCount })}
+                    </Text>
+                  </View>
+                  <UnitStatusBadge unit={u} />
+                </View>
+              ))}
+            </Card>
+          )}
+        </View>
+      )}
+
+      <FaithFormModal
+        perimeter={perimeter}
+        category={faithCategory}
+        year={year}
+        aggregate={faithCategory ? lineFor(faithCategory.id)?.aggregateOfChildren ?? 0 : 0}
+        existing={faithCategory ? myFaithFor(faithCategory.id) : null}
+        currency={currency}
+        onClose={() => setFaithCategory(null)}
+        onSaved={async () => {
+          setFaithCategory(null);
+          await load();
+        }}
+      />
+    </>
+  );
+}
+
+/** Badge de statut de soumission (UC-LDR-06) : Soumis / En retard / Brouillon / Non démarré. */
+function UnitStatusBadge({ unit }: { unit: ZoneUnitStatus }) {
+  const { t } = useLanguage();
+  const [label, tone] = unit.submitted
+    ? [t('goalsAgg.statusSubmitted'), colors.moss]
+    : unit.late
+    ? [t('goalsAgg.statusLate'), colors.clay]
+    : unit.pledgeCount > 0
+    ? [t('goalsAgg.statusDraft'), colors.earthDeep]
+    : [t('goalsAgg.statusNotStarted'), colors.ink3];
+  return (
+    <View style={[styles.statusBadge, { backgroundColor: tone + '22' }]}>
+      <Text style={[styles.statusBadgeText, { color: tone }]}>{label}</Text>
+    </View>
+  );
+}
+
+/** Déclaration / modification / retrait d'un engagement de foi (UC-LDR-05, COO-05). */
+function FaithFormModal({
+  perimeter,
+  category,
+  year,
+  aggregate,
+  existing,
+  currency,
+  onClose,
+  onSaved,
+}: {
+  perimeter: Perimeter;
+  category: GoalCategory | null;
+  year: number;
+  aggregate: number;
+  existing: FaithPledgeResponse | null;
+  currency: string;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const { t } = useLanguage();
+  const [value, setValue] = useState('');
+  const [saving, setSaving] = useState(false);
+  const isCurrency = category?.unitType === 'CURRENCY';
+
+  useEffect(() => {
+    if (category) {
+      const v = existing ? existing.targetAmount ?? existing.targetCount : null;
+      setValue(v != null ? String(v) : '');
+    }
+  }, [category, existing]);
+
+  const num = Number.parseFloat(value.replace(',', '.'));
+  const valid = Number.isFinite(num) && num > 0;
+
+  const fmtValue = (v: number) =>
+    isCurrency ? fmtAmount(v, currency) : `${v} ${category?.unitLabel ?? ''}`.trim();
+
+  const onSubmit = async () => {
+    if (!category || !valid) return;
+    setSaving(true);
+    try {
+      const payload = isCurrency ? { targetAmount: num } : { targetCount: Math.round(num) };
+      if (existing) {
+        await updateFaithPledge(existing.id, payload);
+      } else {
+        await createFaithPledge(perimeter.level, perimeter.entityId, {
+          categoryId: category.id,
+          year,
+          ...payload,
+        });
+      }
+      await onSaved();
+    } catch (e: any) {
+      notify(t('common.appName'), errMsg(e, t('errors.saveFailed')));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onRemove = async () => {
+    if (!existing) return;
+    const ok = await confirmDialog(
+      t('goalsAgg.removeTitle'),
+      t('goalsAgg.removeConfirm'),
+      t('goalsAgg.remove'),
+      true,
+    );
+    if (!ok) return;
+    setSaving(true);
+    try {
+      await deleteFaithPledge(existing.id);
+      await onSaved();
+    } catch (e: any) {
+      notify(t('common.appName'), errMsg(e, t('errors.deleteFailed')));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!category) return null;
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <Card style={styles.modalCard}>
+          <Text style={styles.modalTitle}>{t('goalsAgg.faithModalTitle', { name: category.name })}</Text>
+          <Text style={styles.modalSub}>
+            {t('goalsAgg.faithModalSub', { value: fmtValue(aggregate) })}
+          </Text>
+
+          <View style={styles.amountRow}>
+            {isCurrency && <Text style={styles.cur}>{currencySymbol(currency)}</Text>}
+            <TextInput
+              value={value}
+              onChangeText={(v) => setValue(v.replace(/[^0-9.,]/g, ''))}
+              keyboardType={isCurrency ? 'decimal-pad' : 'number-pad'}
+              style={styles.amountInput}
+              maxLength={10}
+              placeholder="0"
+              placeholderTextColor={colors.ink3}
+            />
+          </View>
+
+          {valid && (
+            <Text style={[styles.hint, num <= aggregate && { color: colors.clay }]}>
+              {num > aggregate
+                ? t('goalsAgg.faithAbove', { value: fmtValue(num - aggregate) })
+                : t('goalsAgg.faithBelow')}
+            </Text>
+          )}
+
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
+            <Button label={t('common.cancel')} variant="ghost" onPress={onClose} style={{ flex: 1 }} height={48} />
+            <Button
+              label={existing ? t('common.edit') : t('goalsAgg.declare')}
+              onPress={onSubmit}
+              disabled={!valid}
+              loading={saving}
+              style={{ flex: 1 }}
+              height={48}
+            />
+          </View>
+          {existing && (
+            <Button
+              label={t('goalsAgg.removeFaith')}
+              variant="danger"
+              onPress={onRemove}
+              fullWidth
+              height={44}
+              style={{ marginTop: 10 }}
+            />
+          )}
+        </Card>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  title: {
+    fontFamily: fonts.serif,
+    fontSize: 28,
+    color: colors.ink,
+    letterSpacing: -0.4,
+  },
+  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4 },
+  yearRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  yearChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 99,
+    backgroundColor: 'rgba(42,38,32,0.06)',
+  },
+  yearChipActive: { backgroundColor: colors.moss },
+  yearChipText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink2 },
+  yearChipTextActive: { color: colors.white },
+  sectionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginTop: 22,
+  },
+  sectionTitle: { fontFamily: fonts.serif, fontSize: 20, color: colors.ink },
+  lineCard: { paddingHorizontal: 16, paddingVertical: 14 },
+  lineHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  lineIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lineName: {
+    flex: 1,
+    fontFamily: fonts.sans,
+    fontSize: 14.5,
+    fontWeight: '600',
+    color: colors.ink,
+  },
+  faithBadge: {
+    backgroundColor: 'rgba(201,149,107,0.22)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 99,
+  },
+  faithBadgeText: {
+    fontFamily: fonts.sans,
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: colors.earthDeep,
+  },
+  lineFooter: { flexDirection: 'row', justifyContent: 'space-between' },
+  lineValue: { fontFamily: fonts.serif, fontSize: 17, color: colors.ink, marginTop: 2 },
+  faithListCard: { paddingHorizontal: 16, paddingVertical: 14, marginTop: 4 },
+  unitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 8,
+  },
+  unitName: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
+  unitMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 1 },
+  statusBadge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 99 },
+  statusBadgeText: { fontFamily: fonts.sans, fontSize: 11, fontWeight: '700' },
+  faithListItem: {
+    fontFamily: fonts.sans,
+    fontSize: 12.5,
+    color: colors.ink2,
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  emptyTitle: {
+    fontFamily: fonts.serif,
+    fontSize: 22,
+    color: colors.ink,
+    textAlign: 'center',
+  },
+  emptyHint: {
+    fontFamily: fonts.sans,
+    fontSize: 13,
+    color: colors.ink3,
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 19,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(22,41,31,0.45)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalCard: { paddingHorizontal: 20, paddingVertical: 20 },
+  modalTitle: { fontFamily: fonts.serif, fontSize: 21, color: colors.ink },
+  modalSub: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4 },
+  amountRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+    marginTop: 14,
+  },
+  cur: { fontFamily: fonts.serif, fontSize: 26, color: colors.ink3, marginRight: 4 },
+  amountInput: {
+    fontFamily: fonts.serif,
+    fontSize: 44,
+    fontWeight: '500',
+    color: colors.ink,
+    textAlign: 'center',
+    minWidth: 110,
+    letterSpacing: -0.8,
+    paddingVertical: 0,
+  },
+  hint: {
+    fontFamily: fonts.sans,
+    fontSize: 12.5,
+    color: colors.mossSoft,
+    marginTop: 10,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+});

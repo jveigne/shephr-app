@@ -31,3 +31,10 @@ export const CATEGORY_ORDER: DonationCategory[] = [
 
 export const categoryLabel = (key: string) =>
   CATEGORIES[key as DonationCategory]?.fr ?? key;
+
+/**
+ * i18n key suffix for a donation category (looked up under `categories.*`),
+ * or the raw value if it is not a known category (data passthrough).
+ */
+export const categoryKey = (key: string): string =>
+  CATEGORIES[key as DonationCategory] ? `categories.${key}` : key;

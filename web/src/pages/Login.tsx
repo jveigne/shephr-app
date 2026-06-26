@@ -1,13 +1,16 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
 import { Button, Checkbox, Field, Input } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../components/Toast';
+import { hasMinistryAccess } from '../services/authApi';
 
 export function LoginPage() {
   const { login } = useAuth();
   const { push } = useToast();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,22 +23,22 @@ export function LoginPage() {
     e.preventDefault();
     setError(null);
     if (!email.includes('@') || password.length < 6) {
-      setError('Vérifiez votre adresse e-mail et votre mot de passe.');
+      setError(t('login.validationError'));
       return;
     }
     setLoading(true);
     try {
       const me = await login({ email: email.trim(), password });
-      if (me.role !== 'ADMIN') {
-        setError("Accès réservé aux administrateurs. Utilisez l'application mobile shephr.");
+      if (!hasMinistryAccess(me)) {
+        setError(t('login.memberDenied'));
         return;
       }
-      push({ kind: 'ok', title: 'Bienvenue', msg: 'Vous êtes connecté à shephr.' });
+      push({ kind: 'ok', title: t('login.welcomeToast'), msg: t('login.welcomeToastMsg') });
       navigate('/dashboard', { replace: true });
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        'Identifiants invalides.';
+        t('login.invalidCredentials');
       setError(message);
     } finally {
       setLoading(false);
@@ -47,10 +50,16 @@ export function LoginPage() {
       <div className="login-side">
         <div className="deco-1" />
         <div className="deco-2" />
-        <div className="top">
+        <button
+          type="button"
+          className="top"
+          onClick={() => navigate('/')}
+          title={t('login.backToHome')}
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
           <div className="brand-mark">S</div>
           <span className="word">shephr</span>
-        </div>
+        </button>
 
         <svg
           viewBox="0 0 360 220"
@@ -84,33 +93,44 @@ export function LoginPage() {
         </svg>
 
         <div className="quote">
-          « Donner avec joie, <span className="ital">recevoir avec gratitude.</span> »
+          {t('login.quote')}
           <div className="quote-sub">
-            shephr accompagne votre ministère à travers la collecte, la lecture et le récit de la
-            générosité.
+            {t('login.quoteSub')}
           </div>
         </div>
       </div>
 
-      <div className="login-main">
+      <div className="login-main" style={{ position: 'relative' }}>
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          style={{
+            position: 'absolute', top: 24, left: 24, display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--ink-500)',
+            fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, padding: 6,
+          }}
+        >
+          <Icon name="chevRight" size={14} style={{ transform: 'rotate(180deg)' }} />
+          {t('login.backToHome')}
+        </button>
         <div className="login-card">
-          <h1>Bienvenue</h1>
-          <div className="sub">Connectez-vous à votre espace d'administration shephr.</div>
+          <h1>{t('login.welcome')}</h1>
+          <div className="sub">{t('login.subtitle')}</div>
 
           <form className="form" onSubmit={submit}>
-            <Field label="Adresse e-mail">
+            <Field label={t('login.emailLabel')}>
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 icon={<Icon name="mail" size={15} />}
-                placeholder="votre@email.com"
+                placeholder={t('login.emailPlaceholder')}
                 autoComplete="email"
                 required
               />
             </Field>
 
-            <Field label="Mot de passe">
+            <Field label={t('login.passwordLabel')}>
               <div className="input-wrap">
                 <span className="ico-left">
                   <Icon name="lock" size={15} />
@@ -157,9 +177,9 @@ export function LoginPage() {
                 }}
               >
                 <Checkbox checked={remember} onChange={setRemember} />
-                Se souvenir de moi
+                {t('login.rememberMe')}
               </label>
-              <a href="#">Mot de passe oublié ?</a>
+              <a href="#">{t('login.forgotPassword')}</a>
             </div>
 
             <Button
@@ -168,7 +188,7 @@ export function LoginPage() {
               disabled={loading}
               style={{ justifyContent: 'center', marginTop: 6, padding: '12px 14px' }}
             >
-              {loading ? 'Connexion…' : 'Se connecter'}
+              {loading ? t('login.connecting') : t('login.signIn')}
             </Button>
 
             {error && <div className="err">{error}</div>}
@@ -177,8 +197,7 @@ export function LoginPage() {
           <div className="reserved">
             <Icon name="shield" size={16} />
             <span>
-              Accès réservé aux administrateurs. Les membres et dirigeants utilisent l'application
-              mobile shephr.
+              {t('login.reserved')}
             </span>
           </div>
         </div>

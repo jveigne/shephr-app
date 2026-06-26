@@ -9,6 +9,8 @@ import Amount from '../../../components/Amount';
 import HandDivider from '../../../components/HandDivider';
 import { colors, fonts } from '../../../theme';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useLanguage } from '../../../contexts/LanguageContext';
+import { canManageStructure } from '../../../services/authApi';
 import { listMyUnits, type LeaderUnitView } from '../../../services/leaderApi';
 import {
   getByCategory,
@@ -25,6 +27,7 @@ const PRIMARY = 'GBP';
 
 export default function LeaderHomeScreen() {
   const { me } = useAuth();
+  const { t } = useLanguage();
   const [units, setUnits] = useState<LeaderUnitView[]>([]);
   const [unitStats, setUnitStats] = useState<DonationByUnitStat[]>([]);
   const [catStats, setCatStats] = useState<DonationByCategoryStat[]>([]);
@@ -85,21 +88,27 @@ export default function LeaderHomeScreen() {
     >
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }} />
+        {canManageStructure(me) && (
+          <Pressable onPress={() => router.push('/structure')} style={styles.statsBtn}>
+            <Ionicons name="git-branch-outline" size={15} color={colors.mossSoft} />
+            <Text style={styles.statsBtnText}>{t('leader.structure')}</Text>
+          </Pressable>
+        )}
         <Pressable
           onPress={() => router.push('/(tabs)/leader/stats')}
           style={styles.statsBtn}
         >
           <Ionicons name="stats-chart-outline" size={15} color={colors.mossSoft} />
-          <Text style={styles.statsBtnText}>Statistiques</Text>
+          <Text style={styles.statsBtnText}>{t('leader.stats')}</Text>
         </Pressable>
       </View>
 
       <View style={styles.titleRow}>
         <Ionicons name="people-outline" size={22} color={colors.mossSoft} />
-        <Text style={styles.title}>Mon périmètre</Text>
+        <Text style={styles.title}>{t('leader.title')}</Text>
       </View>
       <Text style={styles.subtitle}>
-        Vue d'ensemble pour {monthLabel(today.getMonth(), true)} · {units.length} unités
+        {t('leader.overview', { month: monthLabel(today.getMonth(), true), count: units.length })}
       </Text>
 
       <Card style={styles.personalCard}>
@@ -107,30 +116,30 @@ export default function LeaderHomeScreen() {
           <Ionicons name="person-outline" size={20} color={colors.mossSoft} />
         </View>
         <View style={{ flex: 1 }}>
-          <Label>Vos dons ce mois</Label>
+          <Label>{t('leader.yourDonations')}</Label>
           <Amount value={personalThisMonth} currency={PRIMARY} size={22} />
         </View>
         <Pressable onPress={() => router.push('/(tabs)/donations')}>
-          <Text style={styles.detailLink}>Détail →</Text>
+          <Text style={styles.detailLink}>{t('leader.detail')}</Text>
         </Pressable>
       </Card>
 
       <View style={styles.statsTwo}>
         <Card style={styles.statBig}>
-          <Label style={{ color: colors.mossSoft }}>Reçu ce mois</Label>
+          <Label style={{ color: colors.mossSoft }}>{t('leader.receivedMonth')}</Label>
           <Amount value={scopeTotal} currency={PRIMARY} size={34} />
         </Card>
         <Card style={styles.statSmall}>
-          <Label style={{ color: colors.mossSoft }}>Fidèles actifs</Label>
+          <Label style={{ color: colors.mossSoft }}>{t('leader.activeMembers')}</Label>
           <Text style={styles.bigNumber}>—</Text>
-          <Text style={styles.bigNumberSub}>3 derniers mois</Text>
+          <Text style={styles.bigNumberSub}>{t('leader.last3Months')}</Text>
         </Card>
       </View>
 
       <Card style={styles.topCatsCard}>
         <View style={styles.topCatHeader}>
-          <Label style={{ color: colors.mossSoft }}>Top catégories</Label>
-          <Text style={styles.monoTiny}>ce mois</Text>
+          <Label style={{ color: colors.mossSoft }}>{t('leader.topCategories')}</Label>
+          <Text style={styles.monoTiny}>{t('leader.thisMonthShort')}</Text>
         </View>
         <View style={{ gap: 12 }}>
           {topCats.map((c) => {
@@ -143,7 +152,7 @@ export default function LeaderHomeScreen() {
                   <View style={[styles.catSquare, { backgroundColor: meta.tone + '1F' }]}>
                     <Ionicons name={meta.icon} size={12} color={meta.tone} />
                   </View>
-                  <Text style={styles.catLineLabel}>{meta.fr}</Text>
+                  <Text style={styles.catLineLabel}>{t('categories.' + meta.key)}</Text>
                   <Text style={styles.catLineAmt}>{fmtAmount(c.total, PRIMARY)}</Text>
                 </View>
                 <View style={styles.barTrack}>
@@ -154,15 +163,15 @@ export default function LeaderHomeScreen() {
           })}
           {topCats.length === 0 && (
             <Text style={{ fontFamily: fonts.sans, color: colors.ink3, fontStyle: 'italic' }}>
-              Aucune donnée pour la période.
+              {t('leader.noDataPeriod')}
             </Text>
           )}
         </View>
       </Card>
 
       <View style={styles.sectionRow}>
-        <Text style={styles.sectionTitle}>Mes unités</Text>
-        <Text style={styles.sectionCount}>{units.length} unités</Text>
+        <Text style={styles.sectionTitle}>{t('leader.myUnits')}</Text>
+        <Text style={styles.sectionCount}>{t('leader.unitsCount', { count: units.length })}</Text>
       </View>
 
       <View style={{ marginTop: 10, gap: 8 }}>
@@ -194,7 +203,7 @@ export default function LeaderHomeScreen() {
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.unitName}>{u.unitName}</Text>
                   <Text style={styles.unitMeta}>
-                    {u.type === 'CENTER' ? 'Centre' : 'Assemblée'} · {u.localityName}
+                    {u.type === 'CENTER' ? t('leader.center') : t('leader.assembly')} · {u.localityName}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
@@ -202,11 +211,11 @@ export default function LeaderHomeScreen() {
               <HandDivider style={{ marginVertical: 12 }} />
               <View style={styles.unitFooter}>
                 <View>
-                  <Label>Reçu ce mois</Label>
+                  <Label>{t('leader.receivedMonth')}</Label>
                   <Amount value={stats?.total ?? 0} currency={PRIMARY} size={22} />
                 </View>
                 <Text style={styles.unitCount}>
-                  {stats?.count ?? 0} don{(stats?.count ?? 0) > 1 ? 's' : ''}
+                  {t('leader.donations', { count: stats?.count ?? 0 })}
                 </Text>
               </View>
             </Card>
@@ -218,7 +227,7 @@ export default function LeaderHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  headerRow: { flexDirection: 'row', alignItems: 'center' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   statsBtn: {
     flexDirection: 'row',
     alignItems: 'center',

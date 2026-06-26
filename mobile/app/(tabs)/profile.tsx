@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '../../components/ScreenShell';
@@ -8,11 +8,12 @@ import Label from '../../components/Label';
 import HandDivider from '../../components/HandDivider';
 import { colors, fonts } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { canManageStructure, roleLabel } from '../../services/authApi';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function ProfileScreen() {
   const { me, isLeader, logout } = useAuth();
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
 
   const initials = (me?.fullName ?? '')
     .split(' ')
@@ -21,22 +22,29 @@ export default function ProfileScreen() {
     .map((s) => s[0]?.toUpperCase() ?? '')
     .join('');
 
-  const confirmLogout = () =>
-    Alert.alert('shephr', 'Se déconnecter ?', [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Se déconnecter',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-          router.replace('/(auth)/login');
-        },
-      },
+  const doLogout = async () => {
+    await logout();
+    router.replace('/(auth)/login');
+  };
+
+  const confirmLogout = () => {
+    // react-native-web ne supporte pas les boutons d'Alert.alert → le onPress ne se
+    // déclenche jamais. On bascule sur window.confirm sur le web, Alert sur natif.
+    if (Platform.OS === 'web') {
+      const ok =
+        typeof window === 'undefined' || window.confirm(t('profile.logoutConfirm'));
+      if (ok) void doLogout();
+      return;
+    }
+    Alert.alert(t('common.appName'), t('profile.logoutConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('profile.logout'), style: 'destructive', onPress: () => void doLogout() },
     ]);
+  };
 
   return (
     <ScreenShell>
-      <Text style={styles.title}>Profil</Text>
+      <Text style={styles.title}>{t('profile.title')}</Text>
 
       <Card style={styles.idCard}>
         <View style={styles.avatar}>
@@ -61,12 +69,12 @@ export default function ProfileScreen() {
                 { color: isLeader ? colors.white : colors.ink2 },
               ]}
             >
-              {isLeader ? (me?.leaderLevel === 'SENIOR' ? 'Responsable senior' : 'Responsable') : 'Fidèle'}
+              {roleLabel(me)}
             </Text>
           </View>
-          {me?.unitId && (
+          {me?.donationUnitId && (
             <View style={[styles.pill, { backgroundColor: 'rgba(201,149,107,0.18)' }]}>
-              <Text style={[styles.pillText, { color: colors.earthDeep }]}>Mon unité</Text>
+              <Text style={[styles.pillText, { color: colors.earthDeep }]}>{t('profile.myUnit')}</Text>
             </View>
           )}
         </View>
@@ -74,33 +82,75 @@ export default function ProfileScreen() {
         <HandDivider style={{ marginVertical: 18 }} />
 
         <View style={styles.statsRow}>
-          <Stat label="Statut" value={me?.active ? 'Actif' : '—'} />
+          <Stat label={t('profile.status')} value={me?.active ? t('profile.active') : '—'} />
           <View style={styles.statsDivider} />
-          <Stat label="Rôle" value={me?.role ?? '—'} />
+          <Stat label={t('profile.role')} value={roleLabel(me)} />
         </View>
       </Card>
 
+      {(me?.unitNames?.length || me?.zoneNames?.length || me?.countryNames?.length) ? (
+        <>
+          <Label style={{ marginTop: 26, marginBottom: 8, paddingHorizontal: 4 }}>
+            {t('profile.perimeter')}
+          </Label>
+          <Card style={{ paddingVertical: 4 }}>
+            {me?.unitNames?.length ? (
+              <InfoRow
+                icon="business-outline"
+                label={me.unitNames.length > 1 ? t('profile.units') : t('profile.unit')}
+                value={me.unitNames.join(', ')}
+              />
+            ) : null}
+            {me?.zoneNames?.length ? (
+              <InfoRow
+                icon="map-outline"
+                label={me.zoneNames.length > 1 ? t('profile.zones') : t('profile.zone')}
+                value={me.zoneNames.join(', ')}
+              />
+            ) : null}
+            {me?.countryNames?.length ? (
+              <InfoRow icon="flag-outline" label={t('profile.countries')} value={me.countryNames.join(', ')} />
+            ) : null}
+          </Card>
+        </>
+      ) : null}
+
+      {canManageStructure(me) && (
+        <>
+          <Label style={{ marginTop: 26, marginBottom: 8, paddingHorizontal: 4 }}>{t('profile.management')}</Label>
+          <Card style={{ paddingVertical: 0 }}>
+            <Row
+              icon="git-branch-outline"
+              label={t('profile.manageStructure')}
+              value={t('profile.manageStructureValue')}
+              onPress={() => router.push('/structure')}
+              last
+            />
+          </Card>
+        </>
+      )}
+
       <Label style={{ marginTop: 26, marginBottom: 8, paddingHorizontal: 4 }}>
-        Préférences
+        {t('profile.preferences')}
       </Label>
       <Card style={{ paddingVertical: 0 }}>
         <Row
           icon="globe-outline"
-          label="Langue"
+          label={t('profile.language')}
           value={language === 'fr' ? 'Français' : 'English'}
           onPress={() => setLanguage(language === 'fr' ? 'en' : 'fr')}
         />
-        <Row icon="notifications-outline" label="Notifications" value="Rappels" />
-        <Row icon="receipt-outline" label="Reçus annuels" value="Activés" />
-        <Row icon="shield-outline" label="Confidentialité" value="Standard" last />
+        <Row icon="notifications-outline" label={t('profile.notifications')} value={t('profile.notificationsValue')} />
+        <Row icon="receipt-outline" label={t('profile.receipts')} value={t('profile.receiptsValue')} />
+        <Row icon="shield-outline" label={t('profile.privacy')} value={t('profile.privacyValue')} last />
       </Card>
 
       <Pressable onPress={confirmLogout} style={styles.logout}>
         <Ionicons name="log-out-outline" size={18} color={colors.ink3} />
-        <Text style={styles.logoutText}>Se déconnecter</Text>
+        <Text style={styles.logoutText}>{t('profile.logout')}</Text>
       </Pressable>
 
-      <Text style={styles.version}>SHEPHR · CMCI UK</Text>
+      <Text style={styles.version}>{t('profile.version')}</Text>
     </ScreenShell>
   );
 }
@@ -142,6 +192,27 @@ function Row({
       <Text style={styles.rowValue}>{value}</Text>
       <Ionicons name="chevron-forward" size={14} color={colors.ink3} />
     </Pressable>
+  );
+}
+
+/** Ligne d'info en lecture seule (périmètre) — pas de chevron, pas de pression. */
+function InfoRow({
+  icon,
+  label,
+  value,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+}) {
+  return (
+    <View style={styles.infoRow}>
+      <View style={styles.rowIcon}>
+        <Ionicons name={icon} size={18} color={colors.mossSoft} />
+      </View>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{value}</Text>
+    </View>
   );
 }
 
@@ -201,6 +272,22 @@ const styles = StyleSheet.create({
   },
   rowLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '500', color: colors.ink },
   rowValue: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+  },
+  infoLabel: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
+  infoValue: {
+    flex: 1,
+    textAlign: 'right',
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.ink,
+  },
   logout: {
     flexDirection: 'row',
     justifyContent: 'center',

@@ -3,7 +3,9 @@ import axios from 'axios';
 export const TOKEN_STORAGE_KEY = 'shephr.admin.token';
 
 export const apiClient = axios.create({
-  baseURL: '',
+  // Empty in dev so the Vite proxy handles `/api/*`; set to the backend URL
+  // for prod builds via VITE_API_BASE_URL (see .env.production).
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? '',
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 });
