@@ -25,6 +25,7 @@ import {
   type ModuleRole,
 } from '../services/authApi';
 import {
+  deleteUser,
   inviteUser,
   listCountries,
   listUnits,
@@ -75,6 +76,7 @@ export function UsersPage() {
   const [filters, setFilters] = useState<Filters>(DEFAULT);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editing, setEditing] = useState<AdminUserResponse | null>(null);
+  const [deleting, setDeleting] = useState<AdminUserResponse | null>(null);
   const [inviteResult, setInviteResult] = useState<{ email: string; link: string; code: string | null } | null>(null);
 
   const unitsQ = useQuery({ queryKey: ['admin', 'units'], queryFn: () => listUnits() });
@@ -115,6 +117,16 @@ export function UsersPage() {
       push({ kind: 'ok', title: t('users.updated') });
     },
     onError: (err) => push({ kind: 'error', title: t('users.updateRefused'), msg: errMsg(err, t('users.updateFailed')) }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteUser(id),
+    onSuccess: () => {
+      invalidate();
+      setDeleting(null);
+      push({ kind: 'ok', title: t('users.deleted') });
+    },
+    onError: (err) => push({ kind: 'error', title: t('users.deleteRefused'), msg: errMsg(err, t('users.deleteFailed')) }),
   });
 
   const units = unitsQ.data ?? [];
@@ -196,6 +208,7 @@ export function UsersPage() {
             r.superAdmin ? null : (
               <div className="row-actions">
                 <IconButton icon={<Icon name="edit" size={15} />} title={t('users.manage')} onClick={() => setEditing(r)} />
+                <IconButton icon={<Icon name="trash" size={15} />} title={t('users.delete')} onClick={() => setDeleting(r)} />
               </div>
             ),
         } as Column<AdminUserResponse>]
@@ -280,6 +293,23 @@ export function UsersPage() {
         submitting={updateMutation.isPending}
         onSubmit={(payload) => editing && updateMutation.mutate({ id: editing.id, ...payload })}
       />
+
+      <Modal
+        open={deleting != null}
+        onClose={() => setDeleting(null)}
+        title={t('users.deleteTitle')}
+        sub={deleting ? `${deleting.fullName} · ${deleting.email}` : undefined}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeleting(null)}>{t('common.cancel')}</Button>
+            <Button variant="danger" disabled={deleteMutation.isPending} onClick={() => deleting && deleteMutation.mutate(deleting.id)}>
+              {deleteMutation.isPending ? t('common.loading') : t('users.confirmDelete')}
+            </Button>
+          </>
+        }
+      >
+        <p style={{ margin: 0, color: 'var(--ink-600)' }}>{t('users.deleteWarning')}</p>
+      </Modal>
     </>
   );
 }

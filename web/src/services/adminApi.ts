@@ -124,6 +124,11 @@ export async function deactivateUser(id: string) {
   return data;
 }
 
+/** Suppression définitive — refusée par le backend si un poste resterait sans responsable. */
+export async function deleteUser(id: string) {
+  await apiClient.delete(`/api/church/admin/users/${id}`);
+}
+
 // ---------------- Ministries ----------------
 export interface MinistryResponse {
   id: string;
