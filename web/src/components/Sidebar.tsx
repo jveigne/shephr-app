@@ -22,8 +22,9 @@ interface NavItem {
   children?: NavChild[];
 }
 
-// Livraison « Goals only » (décision JP 2026-06-10) : les entrées Dons
-// (Tableau de bord, Dons, Exports) sont masquées tant que FEATURES.donations=false.
+// Livraison « Member Care only » (décision JP 2026-06-27) : les entrées Dons
+// (Tableau de bord, Dons, Exports) sont masquées tant que FEATURES.donations=false,
+// et l'entrée Goals tant que FEATURES.goals=false.
 const NAV: { sectionKey: string; items: NavItem[] }[] = [
   {
     sectionKey: 'nav.section.pilotage',
@@ -34,7 +35,9 @@ const NAV: { sectionKey: string; items: NavItem[] }[] = [
             { id: 'donations', labelKey: 'nav.donations', icon: 'donation', to: '/donations' },
           ]
         : []),
-      { id: 'goals', labelKey: 'nav.goals', icon: 'sparkle', to: '/goals' },
+      ...(FEATURES.goals
+        ? [{ id: 'goals', labelKey: 'nav.goals', icon: 'sparkle', to: '/goals' } as NavItem]
+        : []),
     ],
   },
   {

@@ -184,3 +184,13 @@ export async function fetchMe(): Promise<MeResponse> {
   const { data } = await apiClient.get<MeResponse>('/api/church/auth/me');
   return data;
 }
+
+interface AccessibleModulesResponse {
+  moduleCodes: string[];
+}
+
+/** Codes des modules accessibles au user courant (ex. 'DONATIONS', 'GOALS', 'MEMBER_CARE'). */
+export async function fetchAccessibleModules(): Promise<string[]> {
+  const { data } = await apiClient.get<AccessibleModulesResponse>('/api/me/accessible-modules');
+  return data.moduleCodes ?? [];
+}

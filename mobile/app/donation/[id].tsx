@@ -136,7 +136,7 @@ export default function DonationDetailScreen() {
             variant="ghost"
             iconLeft={<Ionicons name="pencil" size={16} color={colors.moss} />}
             style={{ flex: 1 }}
-            onPress={() => Alert.alert(t('common.appName'), t('detail.editComing'))}
+            onPress={() => router.push(`/donation/edit/${donation.id}`)}
           />
           <Button
             label={t('common.delete')}

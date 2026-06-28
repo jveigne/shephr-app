@@ -110,3 +110,31 @@ export async function updateUnit(id: string, payload: { name?: string; localityI
 export async function deleteUnit(id: string): Promise<void> {
   await apiClient.delete(`/api/church/admin/units/${id}`);
 }
+
+// ---------------- Invitations (UC-DIR-04) ----------------
+// POST /api/church/admin/users/invite — route `authenticated()`, le périmètre (rôle ≤ le sien,
+// sous-arbre) est enforcé côté backend. V1 : aucun email envoyé, on récupère le code court à
+// transmettre à l'invité (flux d'activation par code — cf. (auth)/activate).
+import type { ModuleRole } from './authApi';
+
+export interface InviteUserRequest {
+  email: string;
+  fullName: string;
+  donationRole?: ModuleRole;
+  donationUnitId?: string;
+}
+
+export interface InviteUserResponse {
+  userId: string;
+  email: string;
+  invitationToken: string;
+  invitationShortCode: string;
+}
+
+export async function inviteUser(payload: InviteUserRequest): Promise<InviteUserResponse> {
+  const { data } = await apiClient.post<InviteUserResponse>(
+    '/api/church/admin/users/invite',
+    payload,
+  );
+  return data;
+}

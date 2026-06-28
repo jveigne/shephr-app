@@ -29,6 +29,9 @@ const queryClient = new QueryClient({
   },
 });
 
+// Page d'accueil selon les flags de livraison : Dons > Goals > Member Care.
+const HOME = FEATURES.donations ? '/dashboard' : FEATURES.goals ? '/goals' : '/member-care';
+
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -48,11 +51,15 @@ export function App() {
                   </>
                 ) : (
                   <>
-                    <Route path="/dashboard" element={<Navigate to="/goals" replace />} />
-                    <Route path="/donations" element={<Navigate to="/goals" replace />} />
+                    <Route path="/dashboard" element={<Navigate to={HOME} replace />} />
+                    <Route path="/donations" element={<Navigate to={HOME} replace />} />
                   </>
                 )}
-                <Route path="/goals" element={<GoalsPage />} />
+                {FEATURES.goals ? (
+                  <Route path="/goals" element={<GoalsPage />} />
+                ) : (
+                  <Route path="/goals" element={<Navigate to={HOME} replace />} />
+                )}
                 <Route path="/member-care" element={<MemberCarePage />} />
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/structure/ministeres" element={<MonMinisterePage />} />
@@ -73,7 +80,7 @@ export function App() {
                 {FEATURES.donations ? (
                   <Route path="/exports" element={<ExportsPage />} />
                 ) : (
-                  <Route path="/exports" element={<Navigate to="/goals" replace />} />
+                  <Route path="/exports" element={<Navigate to={HOME} replace />} />
                 )}
                 <Route
                   path="/settings"
@@ -85,7 +92,7 @@ export function App() {
                     />
                   }
                 />
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                <Route path="*" element={<Navigate to={HOME} replace />} />
               </Route>
             </Routes>
           </ToastProvider>

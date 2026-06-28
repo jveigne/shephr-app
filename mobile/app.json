@@ -5,7 +5,7 @@
     "version": "0.1.0",
     "sdkVersion": "54.0.0",
     "extra": {
-      "API_URL": "https://cmfipraise-backend-dev.up.railway.app",
+      "API_URL": "https://cmfipraise-backend-dev-c586.up.railway.app",
       "router": {
         "origin": false
       },
