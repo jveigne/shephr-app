@@ -222,6 +222,22 @@ export async function acceptInvitation(payload: { token: string; password: strin
   return data;
 }
 
+// --- Invitation par CODE COURT (Lot 3.4) — alternative au lien : l'invité saisit le code reçu ---
+export async function previewInvitationByCode(shortCode: string) {
+  const { data } = await apiClient.get<InvitationPreview>(
+    `/api/cmfipraise/auth/invitation/code/${encodeURIComponent(shortCode)}`,
+  );
+  return data;
+}
+
+export async function acceptInvitationByCode(payload: { shortCode: string; password: string }) {
+  const { data } = await apiClient.post<AuthResponse>(
+    '/api/cmfipraise/auth/invitation/code/accept',
+    payload,
+  );
+  return data;
+}
+
 /** Modules accessibles à l'utilisateur courant (gratuit/activé OU abonnement actif). */
 export async function getAccessibleModules(): Promise<string[]> {
   const { data } = await apiClient.get<{ moduleCodes: string[] }>('/api/me/accessible-modules');

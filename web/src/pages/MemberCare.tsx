@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -13,6 +13,7 @@ import {
   type Column,
 } from '../components/ui';
 import { useToast } from '../components/Toast';
+import { useAuth } from '../hooks/useAuth';
 import {
   changeStatus,
   createRecord,
@@ -46,6 +47,7 @@ const EMPTY = { unitId: '', firstName: '', lastName: '', contactPhone: '', conta
 export function MemberCarePage() {
   const { t } = useTranslation();
   const { push } = useToast();
+  const { me } = useAuth();
   const qc = useQueryClient();
   const [tab, setTab] = useState<'suivi' | 'redevabilite'>('suivi');
   const [fUnit, setFUnit] = useState('');
@@ -71,6 +73,25 @@ export function MemberCarePage() {
 
   const units = overviewQ.data ?? [];
   const statuses = statusesQ.data ?? [];
+
+  // Unité par défaut à la création : l'unité « home » du dirigeant (donation ou goals) si elle est
+  // dans son périmètre, sinon l'unique unité visible. Un dirigeant d'unité n'a ainsi rien à choisir.
+  const ownUnitId = me?.donationUnitId ?? me?.goalUnitId ?? null;
+  const defaultUnitId =
+    (ownUnitId && units.some((u) => u.unitId === ownUnitId) ? ownUnitId : '') ||
+    (units.length === 1 ? units[0].unitId : '');
+
+  const openCreate = () => {
+    setForm({ ...EMPTY, unitId: defaultUnitId });
+    setCreateOpen(true);
+  };
+
+  // Filet de sécurité : si le périmètre (overview) arrive après l'ouverture du modal, pré-remplir l'unité.
+  useEffect(() => {
+    if (createOpen && !form.unitId && defaultUnitId) {
+      setForm((f) => ({ ...f, unitId: defaultUnitId }));
+    }
+  }, [createOpen, defaultUnitId, form.unitId]);
 
   const createM = useMutation({
     mutationFn: () => createRecord({
@@ -145,7 +166,7 @@ export function MemberCarePage() {
         title={t('memberCare.title')}
         crumbs={[t('common.brand'), t('memberCare.title')]}
         actions={tab === 'suivi' ? (
-          <Button variant="primary" onClick={() => { setForm(EMPTY); setCreateOpen(true); }}>{t('memberCare.addPerson')}</Button>
+          <Button variant="primary" onClick={openCreate}>{t('memberCare.addPerson')}</Button>
         ) : undefined}
       />
       <div className="content">
@@ -197,6 +218,15 @@ export function MemberCarePage() {
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {units.length === 0 && (
+            <div style={{
+              padding: '10px 12px', borderRadius: 8, fontSize: 13, lineHeight: 1.45,
+              background: 'rgba(184,106,74,0.10)', color: 'var(--ink-700)',
+              border: '1px solid rgba(184,106,74,0.30)',
+            }}>
+              {t('memberCare.noUnitAttached')}
+            </div>
+          )}
           <Field label={t('memberCare.filterUnit')}>
             <Select value={form.unitId} onChange={(e) => setForm({ ...form, unitId: e.target.value })}>
               <option value="">{t('memberCare.chooseOption')}</option>

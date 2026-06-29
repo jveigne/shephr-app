@@ -194,6 +194,20 @@ export function LoginPage() {
             {error && <div className="err">{error}</div>}
           </form>
 
+          <div style={{ marginTop: 16, textAlign: 'center', fontSize: 14, color: 'var(--ink-600)' }}>
+            {t('login.invitedQuestion')}{' '}
+            <button
+              type="button"
+              onClick={() => navigate('/activate')}
+              style={{
+                background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
+                color: 'var(--accent, #1E3A2F)', fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
+              }}
+            >
+              {t('login.activateCta')}
+            </button>
+          </div>
+
           <div className="reserved">
             <Icon name="shield" size={16} />
             <span>

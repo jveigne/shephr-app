@@ -1,6 +1,9 @@
 {
   "landing": {
-    "nav": { "login": "Se connecter", "account": "Mon espace" },
+    "nav": {
+      "login": "Se connecter",
+      "account": "Mon espace"
+    },
     "hero": {
       "badge": "Plateforme de gestion d'église",
       "title": "Pilotez la vie de votre église, en un seul endroit",
@@ -12,12 +15,30 @@
     "features": {
       "title": "Tout ce dont votre ministère a besoin",
       "subtitle": "Des modules activables à la carte, pensés pour chaque niveau de responsabilité.",
-      "goals": { "title": "Objectifs", "desc": "Déclarez et suivez les engagements (buts quinquennaux, engagements de foi) à chaque niveau hiérarchique, avec agrégation automatique." },
-      "donations": { "title": "Dons", "desc": "Chaque membre déclare ses dons ; les dirigeants consultent, filtrent et exportent les contributions de leur périmètre." },
-      "memberCare": { "title": "Suivi pastoral", "desc": "Gardez le fil du cheminement spirituel de chaque personne et veillez à la redevabilité des dirigeants." },
-      "songbooks": { "title": "Recueils", "desc": "Accédez aux recueils de cantiques et aux setlists, intégrés et disponibles pour tous." },
-      "hierarchy": { "title": "Organisation multi-niveaux", "desc": "Du centre local au continent : structure, rôles par module et délégation scopée par périmètre." },
-      "reports": { "title": "Rapports & exports", "desc": "Tableaux de bord, cartes, évolution dans le temps et exports CSV/PDF pour le pilotage et la consolidation." }
+      "goals": {
+        "title": "Objectifs",
+        "desc": "Déclarez et suivez les engagements (buts quinquennaux, engagements de foi) à chaque niveau hiérarchique, avec agrégation automatique."
+      },
+      "donations": {
+        "title": "Dons",
+        "desc": "Chaque membre déclare ses dons ; les dirigeants consultent, filtrent et exportent les contributions de leur périmètre."
+      },
+      "memberCare": {
+        "title": "Suivi pastoral",
+        "desc": "Gardez le fil du cheminement spirituel de chaque personne et veillez à la redevabilité des dirigeants."
+      },
+      "songbooks": {
+        "title": "Recueils",
+        "desc": "Accédez aux recueils de cantiques et aux setlists, intégrés et disponibles pour tous."
+      },
+      "hierarchy": {
+        "title": "Organisation multi-niveaux",
+        "desc": "Du centre local au continent : structure, rôles par module et délégation scopée par périmètre."
+      },
+      "reports": {
+        "title": "Rapports & exports",
+        "desc": "Tableaux de bord, cartes, évolution dans le temps et exports CSV/PDF pour le pilotage et la consolidation."
+      }
     },
     "pricing": {
       "title": "Une tarification simple, à votre échelle",
@@ -25,8 +46,18 @@
       "freeBadge": "Inclus & gratuit",
       "freeTitle": "Objectifs & Recueils",
       "freeDesc": "Le suivi des objectifs et les recueils de cantiques sont toujours actifs, sans frais, pour tous les ministères.",
-      "donations": { "name": "Dons", "price": "dès 150 €", "unit": "/ an", "desc": "Déclaration et pilotage des dons sur tout votre périmètre. Tarif selon la taille de l'église." },
-      "memberCare": { "name": "Suivi pastoral", "price": "dès 29 €", "unit": "/ mois", "desc": "Fiches de suivi, statuts spirituels et redevabilité. Activable indépendamment des dons." },
+      "donations": {
+        "name": "Dons",
+        "price": "dès 150 €",
+        "unit": "/ an",
+        "desc": "Déclaration et pilotage des dons sur tout votre périmètre. Tarif selon la taille de l'église."
+      },
+      "memberCare": {
+        "name": "Suivi pastoral",
+        "price": "dès 29 €",
+        "unit": "/ mois",
+        "desc": "Fiches de suivi, statuts spirituels et redevabilité. Activable indépendamment des dons."
+      },
       "factorsTitle": "Le prix s'adapte à votre situation",
       "factors": {
         "size": "La taille de votre église (paliers selon le nombre de membres)",
@@ -44,7 +75,9 @@
       "or": "ou écrivez-nous à",
       "mailSubject": "Activation d'un espace Shephr"
     },
-    "footer": { "tagline": "La plateforme de gestion pour votre ministère." }
+    "footer": {
+      "tagline": "La plateforme de gestion pour votre ministère."
+    }
   },
   "common": {
     "brand": "shephr",
@@ -176,7 +209,9 @@
     "memberDenied": "Accès réservé aux dirigeants. Les membres utilisent l'application mobile shephr.",
     "welcomeToast": "Bienvenue",
     "welcomeToastMsg": "Vous êtes connecté à shephr.",
-    "invalidCredentials": "Identifiants invalides."
+    "invalidCredentials": "Identifiants invalides.",
+    "invitedQuestion": "Vous avez reçu une invitation ?",
+    "activateCta": "Activer mon compte"
   },
   "invitation": {
     "loadingInvitation": "Chargement de l'invitation…",
@@ -463,7 +498,14 @@
     "coordinatedCountriesHint": "Le secrétariat agira comme coordinateur Goals sur ces pays (lecture + foi pays).",
     "noCountry": "Aucun pays.",
     "statusActive": "Actif",
-    "statusInactive": "Inactif"
+    "statusInactive": "Inactif",
+    "delete": "Supprimer",
+    "deleteTitle": "Supprimer définitivement ?",
+    "deleteWarning": "Suppression définitive de la base. Refusée si une zone/unité dont la personne est responsable se retrouverait sans aucun autre responsable (réaffectez d'abord), ou si des données sont rattachées.",
+    "confirmDelete": "Supprimer définitivement",
+    "deleted": "Utilisateur supprimé",
+    "deleteRefused": "Suppression refusée",
+    "deleteFailed": "Suppression impossible"
   },
   "memberCare": {
     "title": "Suivi pastoral",
@@ -509,7 +551,8 @@
     "statusOption": "— statut —",
     "notePlaceholder": "Note (optionnelle)",
     "journey": "Cheminement",
-    "noChange": "Aucun changement enregistré."
+    "noChange": "Aucun changement enregistré.",
+    "noUnitAttached": "Aucune unité n'est rattachée à votre compte. Demandez à un administrateur de vous rattacher à votre unité (rôle « Dirigeant d'unité » + unité) pour pouvoir créer des fiches."
   },
   "goals": {
     "title": "Objectifs",
@@ -678,5 +721,17 @@
     "lateNations": "Nations en retard ({{count}})",
     "notSubmittedRatio": "{{late}} / {{total}} non soumise(s)",
     "noLateNation": "Aucune nation en retard — toutes les unités attendues ont soumis. ✓"
+  },
+  "activate": {
+    "title": "Activer votre compte",
+    "subtitle": "Saisissez le code d'invitation transmis par votre dirigeant ou l'administrateur.",
+    "codeLabel": "Code d'invitation",
+    "codeHint": "Code à usage unique reçu par message",
+    "codePlaceholder": "Ex. 7K2P9X",
+    "continue": "Continuer",
+    "checking": "Vérification…",
+    "codeTooShort": "Le code doit contenir au moins 6 caractères.",
+    "invalidCode": "Code invalide, expiré ou déjà utilisé.",
+    "changeCode": "Saisir un autre code"
   }
 }

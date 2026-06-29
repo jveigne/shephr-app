@@ -6,6 +6,7 @@ import { AppShell } from './AppShell';
 import { LandingPage } from './pages/Landing';
 import { LoginPage } from './pages/Login';
 import { AcceptInvitationPage } from './pages/AcceptInvitation';
+import { ActivateAccountPage } from './pages/ActivateAccount';
 import { DashboardPage } from './pages/Dashboard';
 import { DonationsPage } from './pages/Donations';
 import { GoalsPage } from './pages/Goals';
@@ -42,6 +43,7 @@ export function App() {
               {/* Landing publique : présentation + fonctionnalités + tarification. */}
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/activate" element={<ActivateAccountPage />} />
               <Route path="/invitation/:token" element={<AcceptInvitationPage />} />
               <Route element={<AppShell />}>
                 {FEATURES.donations ? (

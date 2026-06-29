@@ -1,6 +1,9 @@
 {
   "landing": {
-    "nav": { "login": "Sign in", "account": "My account" },
+    "nav": {
+      "login": "Sign in",
+      "account": "My account"
+    },
     "hero": {
       "badge": "Church management platform",
       "title": "Run your church's life, all in one place",
@@ -12,12 +15,30 @@
     "features": {
       "title": "Everything your ministry needs",
       "subtitle": "Modules you can turn on à la carte, designed for every level of responsibility.",
-      "goals": { "title": "Goals", "desc": "Declare and track commitments (five-year goals, faith pledges) at every level of the hierarchy, with automatic aggregation." },
-      "donations": { "title": "Giving", "desc": "Every member records their gifts; leaders view, filter and export the contributions within their scope." },
-      "memberCare": { "title": "Member Care", "desc": "Keep track of each person's spiritual journey and make sure leaders stay accountable." },
-      "songbooks": { "title": "Songbooks", "desc": "Access hymn books and setlists, built in and available to everyone." },
-      "hierarchy": { "title": "Multi-level organisation", "desc": "From the local centre to the continent: structure, per-module roles and scoped delegation." },
-      "reports": { "title": "Reports & exports", "desc": "Dashboards, maps, trends over time and CSV/PDF exports for oversight and consolidation." }
+      "goals": {
+        "title": "Goals",
+        "desc": "Declare and track commitments (five-year goals, faith pledges) at every level of the hierarchy, with automatic aggregation."
+      },
+      "donations": {
+        "title": "Giving",
+        "desc": "Every member records their gifts; leaders view, filter and export the contributions within their scope."
+      },
+      "memberCare": {
+        "title": "Member Care",
+        "desc": "Keep track of each person's spiritual journey and make sure leaders stay accountable."
+      },
+      "songbooks": {
+        "title": "Songbooks",
+        "desc": "Access hymn books and setlists, built in and available to everyone."
+      },
+      "hierarchy": {
+        "title": "Multi-level organisation",
+        "desc": "From the local centre to the continent: structure, per-module roles and scoped delegation."
+      },
+      "reports": {
+        "title": "Reports & exports",
+        "desc": "Dashboards, maps, trends over time and CSV/PDF exports for oversight and consolidation."
+      }
     },
     "pricing": {
       "title": "Simple pricing, at your scale",
@@ -25,8 +46,18 @@
       "freeBadge": "Included & free",
       "freeTitle": "Goals & Songbooks",
       "freeDesc": "Goal tracking and hymn books are always on, at no cost, for every ministry.",
-      "donations": { "name": "Giving", "price": "from €150", "unit": "/ year", "desc": "Record and oversee giving across your whole scope. Price based on church size." },
-      "memberCare": { "name": "Member Care", "price": "from €29", "unit": "/ month", "desc": "Tracking records, spiritual statuses and accountability. Can be enabled independently from giving." },
+      "donations": {
+        "name": "Giving",
+        "price": "from €150",
+        "unit": "/ year",
+        "desc": "Record and oversee giving across your whole scope. Price based on church size."
+      },
+      "memberCare": {
+        "name": "Member Care",
+        "price": "from €29",
+        "unit": "/ month",
+        "desc": "Tracking records, spiritual statuses and accountability. Can be enabled independently from giving."
+      },
       "factorsTitle": "Pricing adapts to your situation",
       "factors": {
         "size": "Your church's size (tiers based on member count)",
@@ -44,7 +75,9 @@
       "or": "or write to us at",
       "mailSubject": "Shephr space activation"
     },
-    "footer": { "tagline": "The management platform for your ministry." }
+    "footer": {
+      "tagline": "The management platform for your ministry."
+    }
   },
   "common": {
     "brand": "shephr",
@@ -176,7 +209,9 @@
     "memberDenied": "Access is reserved for leaders. Members use the shephr mobile app.",
     "welcomeToast": "Welcome",
     "welcomeToastMsg": "You are signed in to shephr.",
-    "invalidCredentials": "Invalid credentials."
+    "invalidCredentials": "Invalid credentials.",
+    "invitedQuestion": "Received an invitation?",
+    "activateCta": "Activate my account"
   },
   "invitation": {
     "loadingInvitation": "Loading the invitation…",
@@ -463,7 +498,14 @@
     "coordinatedCountriesHint": "The secretariat will act as Goals coordinator over these countries (read + country faith).",
     "noCountry": "No country.",
     "statusActive": "Active",
-    "statusInactive": "Inactive"
+    "statusInactive": "Inactive",
+    "delete": "Delete",
+    "deleteTitle": "Permanently delete?",
+    "deleteWarning": "Permanent deletion from the database. Blocked if a zone/unit the person leads would be left without any other leader (reassign first), or if data is linked.",
+    "confirmDelete": "Delete permanently",
+    "deleted": "User deleted",
+    "deleteRefused": "Deletion refused",
+    "deleteFailed": "Deletion failed"
   },
   "memberCare": {
     "title": "Member care",
@@ -509,7 +551,8 @@
     "statusOption": "— status —",
     "notePlaceholder": "Note (optional)",
     "journey": "Journey",
-    "noChange": "No change recorded."
+    "noChange": "No change recorded.",
+    "noUnitAttached": "No unit is attached to your account. Ask an administrator to attach you to your unit (role \"Unit leader\" + unit) so you can create records."
   },
   "goals": {
     "title": "Goals",
@@ -678,5 +721,17 @@
     "lateNations": "Late nations ({{count}})",
     "notSubmittedRatio": "{{late}} / {{total}} not submitted",
     "noLateNation": "No late nation — all expected units have submitted. ✓"
+  },
+  "activate": {
+    "title": "Activate your account",
+    "subtitle": "Enter the invitation code sent by your leader or administrator.",
+    "codeLabel": "Invitation code",
+    "codeHint": "Single-use code received by message",
+    "codePlaceholder": "e.g. 7K2P9X",
+    "continue": "Continue",
+    "checking": "Checking…",
+    "codeTooShort": "The code must be at least 6 characters.",
+    "invalidCode": "Invalid, expired or already used code.",
+    "changeCode": "Enter another code"
   }
 }
