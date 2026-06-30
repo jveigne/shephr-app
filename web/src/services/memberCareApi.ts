@@ -87,6 +87,18 @@ export async function getRecord(id: string) {
   return data;
 }
 
+export async function updateRecord(id: string, body: {
+  firstName?: string;
+  lastName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  firstMetAt?: string;
+  note?: string;
+}) {
+  const { data } = await apiClient.patch<MemberCareRecord>(`${BASE}/records/${id}`, body);
+  return data;
+}
+
 export async function changeStatus(id: string, body: { statusId: string; note?: string }) {
   const { data } = await apiClient.patch<MemberCareRecord>(`${BASE}/records/${id}/status`, body);
   return data;

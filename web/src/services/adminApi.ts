@@ -14,12 +14,16 @@ export interface AdminUserResponse {
   donationRole: ModuleRole | null;
   donationUnitId: string | null;
   donationZoneId: string | null;
+  /** Lot Team — team de rattachement côté Dons (team leader DIRIGEANT). */
+  donationTeamId: string | null;
   /** Lot 3.5 — unités gérées côté Dons (multi-unités). */
   donationUnitIds: string[];
   donationCountryIds: string[];
   goalRole: ModuleRole | null;
   goalUnitId: string | null;
   goalZoneId: string | null;
+  /** Lot Team — team de rattachement côté Objectifs (team leader DIRIGEANT). */
+  goalTeamId: string | null;
   /** Lot 3.5 — unités gérées côté Objectifs (multi-unités). */
   goalUnitIds: string[];
   goalCountryIds: string[];
@@ -48,11 +52,13 @@ export interface InviteUserRequest {
   donationRole?: ModuleRole;
   donationUnitId?: string;
   donationZoneId?: string;
+  donationTeamId?: string;
   donationUnitIds?: string[];
   donationCountryIds?: string[];
   goalRole?: ModuleRole;
   goalUnitId?: string;
   goalZoneId?: string;
+  goalTeamId?: string;
   goalUnitIds?: string[];
   goalCountryIds?: string[];
   /** Lot 4.8 — pays coordonnés (SECRETARIAT/LEADER) — réservé SUPER_ADMIN. */
@@ -75,11 +81,13 @@ export interface UpdateUserRequest {
   donationRole?: ModuleRole;
   donationUnitId?: string;
   donationZoneId?: string;
+  donationTeamId?: string;
   donationUnitIds?: string[];
   donationCountryIds?: string[];
   goalRole?: ModuleRole;
   goalUnitId?: string;
   goalZoneId?: string;
+  goalTeamId?: string;
   goalUnitIds?: string[];
   goalCountryIds?: string[];
   /** Lot 4.8 — pays coordonnés (SECRETARIAT/LEADER) — réservé SUPER_ADMIN. */
@@ -200,6 +208,51 @@ export async function listZones(countryId?: string) {
 export async function createZone(payload: CreateZoneRequest) {
   const { data } = await apiClient.post<ZoneResponse>('/api/church/admin/zones', payload);
   return data;
+}
+
+// ---------------- Teams (Lot Team — niveau entre Zone et Localité) ----------------
+export interface TeamResponse {
+  id: string;
+  ministryId: string;
+  zoneId: string;
+  zoneName: string | null;
+  name: string;
+  orderIndex: number;
+  active: boolean;
+  createdAt: string;
+}
+
+export async function listTeams(zoneId?: string) {
+  const { data } = await apiClient.get<TeamResponse[]>('/api/church/admin/teams', {
+    params: zoneId ? { zoneId } : undefined,
+  });
+  return data;
+}
+
+export interface CreateTeamRequest {
+  zoneId: string;
+  name: string;
+  orderIndex?: number;
+}
+
+export interface UpdateTeamRequest {
+  name?: string;
+  orderIndex?: number;
+  active?: boolean;
+}
+
+export async function createTeam(payload: CreateTeamRequest) {
+  const { data } = await apiClient.post<TeamResponse>('/api/church/admin/teams', payload);
+  return data;
+}
+
+export async function updateTeam(id: string, payload: UpdateTeamRequest) {
+  const { data } = await apiClient.patch<TeamResponse>(`/api/church/admin/teams/${id}`, payload);
+  return data;
+}
+
+export async function deleteTeam(id: string) {
+  await apiClient.delete(`/api/church/admin/teams/${id}`);
 }
 
 export async function updateZone(id: string, payload: UpdateZoneRequest) {

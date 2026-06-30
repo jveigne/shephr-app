@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Icon } from './Icon';
 import { useAuth } from '../hooks/useAuth';
 import { getAccessibleModules, primaryRoleKey } from '../services/authApi';
+import { listUnits, listLocalities } from '../services/adminApi';
 import { FEATURES } from '../config/features';
 import { setLanguage } from '../i18n';
 
@@ -50,6 +51,7 @@ const NAV: { sectionKey: string; items: NavItem[] }[] = [
         children: [
           { id: 'ministeres', labelKey: 'nav.ministeres', to: '/structure/ministeres' },
           { id: 'zones', labelKey: 'nav.zones', to: '/structure/zones' },
+          { id: 'teams', labelKey: 'nav.teams', to: '/structure/teams' },
           { id: 'localites', labelKey: 'nav.localites', to: '/structure/localites' },
           { id: 'unites', labelKey: 'nav.unites', to: '/structure/unites' },
         ],
@@ -87,6 +89,33 @@ export function Sidebar() {
   // MEMBER_CARE est accessible (gratuit/activé OU abonnement actif couvrant le user).
   const modulesQ = useQuery({ queryKey: ['accessible-modules'], queryFn: getAccessibleModules });
   const hasMemberCare = (modulesQ.data ?? []).includes('MEMBER_CARE');
+
+  // Le /me ne porte ni la localité, ni — pour un DIRIGEANT_UNITE — la zone (zoneNames
+  // n'est renseigné que pour le DIRIGEANT_SENIOR). On les résout par ID depuis l'unité du
+  // dirigeant : unité → localityId → localité → zone. Les endpoints structure (lecture)
+  // sont ouverts à tout membre du ministère ; seules les écritures sont gardées.
+  const myUnitIds = useMemo(
+    () => Array.from(new Set([me?.donationUnitId, me?.goalUnitId].filter((x): x is string => Boolean(x)))),
+    [me?.donationUnitId, me?.goalUnitId],
+  );
+  const needsPerimeter = myUnitIds.length > 0;
+  const unitsQ = useQuery({ queryKey: ['admin', 'units'], queryFn: () => listUnits(), enabled: needsPerimeter });
+  const localitiesQ = useQuery({ queryKey: ['admin', 'localities'], queryFn: () => listLocalities(), enabled: needsPerimeter });
+
+  const { localityNames, derivedZoneNames } = useMemo(() => {
+    const units = (unitsQ.data ?? []).filter((u) => myUnitIds.includes(u.id));
+    const localityIds = Array.from(new Set(units.map((u) => u.localityId)));
+    const localities = (localitiesQ.data ?? []).filter((l) => localityIds.includes(l.id));
+    return {
+      localityNames: Array.from(new Set(units.map((u) => u.localityName).filter(Boolean))),
+      derivedZoneNames: Array.from(
+        new Set(localities.map((l) => l.zoneName).filter((z): z is string => Boolean(z))),
+      ),
+    };
+  }, [unitsQ.data, localitiesQ.data, myUnitIds]);
+
+  // Zone affichée : périmètre explicite du /me (DIRIGEANT_SENIOR) sinon zone dérivée de l'unité.
+  const zoneNames = me?.zoneNames && me.zoneNames.length > 0 ? me.zoneNames : derivedZoneNames;
 
   const nav = useMemo(() => {
     if (!hasMemberCare) return NAV;
@@ -234,9 +263,14 @@ export function Sidebar() {
                 {t('sidebar.units', { count: me.unitNames.length })} : {me.unitNames.join(', ')}
               </div>
             ) : null}
-            {me?.zoneNames && me.zoneNames.length > 0 ? (
+            {localityNames.length > 0 ? (
               <div className="rl" style={{ opacity: 0.7 }}>
-                {t('sidebar.zonesLabel', { count: me.zoneNames.length })} : {me.zoneNames.join(', ')}
+                {t('sidebar.localitiesLabel', { count: localityNames.length })} : {localityNames.join(', ')}
+              </div>
+            ) : null}
+            {zoneNames.length > 0 ? (
+              <div className="rl" style={{ opacity: 0.7 }}>
+                {t('sidebar.zonesLabel', { count: zoneNames.length })} : {zoneNames.join(', ')}
               </div>
             ) : null}
             {me?.countryNames && me.countryNames.length > 0 ? (
