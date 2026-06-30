@@ -4,7 +4,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './Icon';
 import { useAuth } from '../hooks/useAuth';
-import { getAccessibleModules, primaryRoleKey } from '../services/authApi';
+import {
+  canManageLocalities,
+  canManageStructure,
+  canManageUnits,
+  canManageZones,
+  getAccessibleModules,
+  primaryRoleKey,
+} from '../services/authApi';
 import { listUnits, listLocalities } from '../services/adminApi';
 import { FEATURES } from '../config/features';
 import { setLanguage } from '../i18n';
@@ -117,14 +124,33 @@ export function Sidebar() {
   // Zone affichée : périmètre explicite du /me (DIRIGEANT_SENIOR) sinon zone dérivée de l'unité.
   const zoneNames = me?.zoneNames && me.zoneNames.length > 0 ? me.zoneNames : derivedZoneNames;
 
+  // Gating « chacun gère le niveau sous lui » : on masque les sous-items de structure que
+  // l'utilisateur ne peut pas administrer (au lieu d'afficher une page vide + bouton inutile).
+  // « Mon ministère » reste visible (contexte de rattachement, lecture seule).
+  const canSeeStructureChild = useMemo(() => {
+    const map: Record<string, boolean> = {
+      ministeres: true,
+      zones: canManageZones(me),
+      teams: canManageStructure(me),
+      localites: canManageLocalities(me),
+      unites: canManageUnits(me),
+    };
+    return (id: string) => map[id] ?? true;
+  }, [me]);
+
   const nav = useMemo(() => {
-    if (!hasMemberCare) return NAV;
-    return NAV.map((sec) =>
-      sec.sectionKey === 'nav.section.pilotage'
-        ? { ...sec, items: [...sec.items, { id: 'member-care', labelKey: 'nav.memberCare', icon: 'users', to: '/member-care' }] }
-        : sec,
-    );
-  }, [hasMemberCare]);
+    return NAV.map((sec) => {
+      let items = sec.items.map((item) =>
+        item.children
+          ? { ...item, children: item.children.filter((c) => canSeeStructureChild(c.id)) }
+          : item,
+      );
+      if (hasMemberCare && sec.sectionKey === 'nav.section.pilotage') {
+        items = [...items, { id: 'member-care', labelKey: 'nav.memberCare', icon: 'users', to: '/member-care' }];
+      }
+      return { ...sec, items };
+    });
+  }, [hasMemberCare, canSeeStructureChild]);
 
   const initials = (me?.fullName ?? 'A·')
     .split(' ')
@@ -266,6 +292,11 @@ export function Sidebar() {
             {localityNames.length > 0 ? (
               <div className="rl" style={{ opacity: 0.7 }}>
                 {t('sidebar.localitiesLabel', { count: localityNames.length })} : {localityNames.join(', ')}
+              </div>
+            ) : null}
+            {me?.teamNames && me.teamNames.length > 0 ? (
+              <div className="rl" style={{ opacity: 0.7 }}>
+                {t('sidebar.teamsLabel', { count: me.teamNames.length })} : {me.teamNames.join(', ')}
               </div>
             ) : null}
             {zoneNames.length > 0 ? (

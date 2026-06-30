@@ -62,6 +62,9 @@ export interface MeResponse {
   goalUnitId: string | null;
   /** Zone du DIRIGEANT_SENIOR côté Goals ; null sinon. */
   goalZoneId: string | null;
+  /** Lot Team — team du team leader (DIRIGEANT) ; null sinon. */
+  donationTeamId: string | null;
+  goalTeamId: string | null;
   /** Pays du DIRIGEANT_COORDINATEUR côté Goals ; vide sinon. */
   goalCountryIds: string[] | null;
   /** Lot 4.8 — pays qu'un SECRETARIAT/LEADER coordonne explicitement (assignés par SUPER_ADMIN). */
@@ -69,8 +72,10 @@ export interface MeResponse {
   // Périmètre LISIBLE (noms résolus) — affichage explicite dans le profil, selon le leadership :
   /** Noms des unités rattachées (home + multi-unités, tous modules) ; vide sinon. */
   unitNames: string[] | null;
-  /** Noms des zones rattachées (DIRIGEANT_SENIOR) ; vide sinon. */
+  /** Noms des zones rattachées (DIRIGEANT_SENIOR ou zone de la team) ; vide sinon. */
   zoneNames: string[] | null;
+  /** Lot Team — noms des teams rattachées (team leader DIRIGEANT) ; vide sinon. */
+  teamNames: string[] | null;
   /** Noms des pays rattachés (DIRIGEANT_COORDINATEUR) ; vide sinon. */
   countryNames: string[] | null;
 }
@@ -115,6 +120,20 @@ export function canManageZones(me: MeResponse | null): boolean {
   if (me.superAdmin) return true;
   return me.donationRole === 'DIRIGEANT_COORDINATEUR' || me.goalRole === 'DIRIGEANT_COORDINATEUR';
 }
+
+/** Lot Team — l'utilisateur est un team leader (rattaché à une team, donation ou goal). */
+export function isTeamLeader(me: MeResponse | null): boolean {
+  return !!me && (!!me.donationTeamId || !!me.goalTeamId);
+}
+
+/**
+ * Peut administrer les LOCALITÉS et UNITÉS de son périmètre : les managers de structure
+ * (SENIOR/COORDINATEUR/superAdmin) PLUS le team leader (qui gère sa team). Lot Team.
+ */
+export function canManageLocalities(me: MeResponse | null): boolean {
+  return canManageStructure(me) || isTeamLeader(me);
+}
+export const canManageUnits = canManageLocalities;
 
 const ROLE_RANK: Record<ModuleRole, number> = {
   MEMBRE: 0,

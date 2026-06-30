@@ -168,6 +168,8 @@
     "units_other": "Units",
     "localitiesLabel_one": "Locality",
     "localitiesLabel_other": "Localities",
+    "teamsLabel_one": "Team",
+    "teamsLabel_other": "Teams",
     "zonesLabel_one": "Zone",
     "zonesLabel_other": "Zones",
     "countriesLabel": "Countries",

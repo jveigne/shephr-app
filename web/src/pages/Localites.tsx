@@ -16,7 +16,7 @@ import {
 } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { canManageStructure } from '../services/authApi';
+import { canManageLocalities, canManageStructure, isTeamLeader } from '../services/authApi';
 import {
   createLocality,
   deleteLocality,
@@ -37,7 +37,11 @@ export function LocalitesPage() {
   const { push } = useToast();
   const { me } = useAuth();
   const ministryId = me?.ministryId ?? null;
-  const canWrite = canManageStructure(me);
+  const canWrite = canManageLocalities(me);
+  // Mode « team leader » : pas de gestion de zone, on rattache à SA team (Lot Team).
+  const myTeamId = me?.donationTeamId ?? me?.goalTeamId ?? null;
+  const myTeamName = me?.teamNames?.[0] ?? null;
+  const teamMode = isTeamLeader(me) && !canManageStructure(me);
 
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
@@ -74,10 +78,14 @@ export function LocalitesPage() {
   }, [localitiesQ.data, search]);
 
   const zones = zonesQ.data ?? [];
-  const canCreate = canWrite && zones.length > 0 && ministryId != null;
+  const canCreate = canWrite && ministryId != null && (teamMode ? !!myTeamId : zones.length > 0);
 
   const cols: Column<LocalityResponse>[] = [
     { label: t('localities.colLocality'), render: (l) => <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{l.name}</span> },
+    {
+      label: t('teams.title'),
+      render: (l) => l.teamName ? <Badge tone="earth">{l.teamName}</Badge> : <span style={{ color: 'var(--ink-400)' }}>—</span>,
+    },
     {
       label: t('common.zone'),
       render: (l) => l.zoneName ? <Badge tone="earth">{l.zoneName}</Badge> : <span style={{ color: 'var(--ink-400)' }}>{t('localities.outOfZone')}</span>,
@@ -153,18 +161,28 @@ export function LocalitesPage() {
         open={creating}
         onClose={() => setCreating(false)}
         zones={zones}
+        teamMode={teamMode}
+        teamName={myTeamName}
         submitting={createM.isPending}
         onSubmit={(v) =>
-          ministryId && createM.mutate({ ministryId, zoneId: v.zoneId, name: v.name, country: v.country })
+          ministryId && createM.mutate(
+            teamMode
+              ? { ministryId, teamId: myTeamId ?? undefined, name: v.name }
+              : { ministryId, zoneId: v.zoneId, name: v.name, country: v.country },
+          )
         }
       />
       <LocalityFormModal
         open={editing != null}
         onClose={() => setEditing(null)}
         zones={zones}
+        teamMode={teamMode}
+        teamName={myTeamName}
         locality={editing ?? undefined}
         submitting={updateM.isPending}
-        onSubmit={(v) => editing && updateM.mutate({ id: editing.id, name: v.name, zoneId: v.zoneId, country: v.country })}
+        onSubmit={(v) => editing && updateM.mutate(
+          teamMode ? { id: editing.id, name: v.name } : { id: editing.id, name: v.name, zoneId: v.zoneId, country: v.country },
+        )}
       />
       <ConfirmDelete
         open={toDelete != null}
@@ -182,6 +200,8 @@ function LocalityFormModal({
   onClose,
   zones,
   locality,
+  teamMode,
+  teamName,
   submitting,
   onSubmit,
 }: {
@@ -189,6 +209,8 @@ function LocalityFormModal({
   onClose: () => void;
   zones: ZoneResponse[];
   locality?: LocalityResponse;
+  teamMode: boolean;
+  teamName: string | null;
   submitting: boolean;
   onSubmit: (v: { zoneId: string; name: string; country: string }) => void;
 }) {
@@ -204,7 +226,7 @@ function LocalityFormModal({
     }
   }, [open, locality, zones]);
 
-  const valid = name.trim().length > 0 && zoneId !== '';
+  const valid = name.trim().length > 0 && (teamMode || zoneId !== '');
   // Le libellé « pays » est dérivé de la zone choisie (Country -> Zone -> Locality).
   const country = zones.find((z) => z.id === zoneId)?.countryName ?? '';
 
@@ -228,13 +250,19 @@ function LocalityFormModal({
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <Field label={t('common.zone')}>
-          <Select value={zoneId} onChange={(e) => setZoneId(e.target.value)}>
-            {zones.map((z) => (
-              <option key={z.id} value={z.id}>{z.name} — {z.countryName}</option>
-            ))}
-          </Select>
-        </Field>
+        {teamMode ? (
+          <Field label={t('teams.title')}>
+            <Input value={teamName ?? '—'} readOnly />
+          </Field>
+        ) : (
+          <Field label={t('common.zone')}>
+            <Select value={zoneId} onChange={(e) => setZoneId(e.target.value)}>
+              {zones.map((z) => (
+                <option key={z.id} value={z.id}>{z.name} — {z.countryName}</option>
+              ))}
+            </Select>
+          </Field>
+        )}
         <Field label={t('localities.nameLabel')}>
           <Input placeholder={t('localities.namePlaceholder')} value={name} onChange={(e) => setName(e.target.value)} />
         </Field>

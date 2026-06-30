@@ -408,6 +408,7 @@
     "parentCountry": "Pays",
     "parentZone": "Zone",
     "parentLocality": "Localité",
+    "team": "Team",
     "optional": " (optionnel)",
     "noParent": "Aucun {{parent}} disponible.",
     "type": "Type",

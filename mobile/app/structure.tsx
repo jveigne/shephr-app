@@ -153,6 +153,8 @@ export default function StructureScreen() {
         zones={zones}
         localities={localities}
         ministryId={me?.ministryId ?? null}
+        teamId={me?.donationTeamId ?? me?.goalTeamId ?? null}
+        teamName={me?.teamNames?.[0] ?? null}
         onClose={() => setEditing(null)}
         onSaved={async () => { setEditing(null); await load(); }}
         onDelete={onDelete}
@@ -162,13 +164,15 @@ export default function StructureScreen() {
 }
 
 function StructureFormModal({
-  editing, countries, zones, localities, ministryId, onClose, onSaved, onDelete,
+  editing, countries, zones, localities, ministryId, teamId, teamName, onClose, onSaved, onDelete,
 }: {
   editing: { level: Level; item: any | null } | null;
   countries: CountryResponse[];
   zones: ZoneResponse[];
   localities: LocalityResponse[];
   ministryId: string | null;
+  teamId: string | null;
+  teamName: string | null;
   onClose: () => void;
   onSaved: () => Promise<void>;
   onDelete: (lvl: Level, id: string, name: string) => Promise<void>;
@@ -194,6 +198,7 @@ function StructureFormModal({
     }
   }, [open, editing]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const teamMode = level === 'localities' && !!teamId;
   const parentLabel = level === 'zones' ? t('structure.parentCountry') : level === 'localities' ? t('structure.parentZone') : t('structure.parentLocality');
   const parents = level === 'zones'
     ? countries.map((c) => ({ id: c.id, name: c.name }))
@@ -212,7 +217,9 @@ function StructureFormModal({
         if (item) await updateZone(item.id, { name: name.trim() });
         else await createZone({ countryId: parentId, name: name.trim() });
       } else if (level === 'localities') {
-        if (item) await updateLocality(item.id, { name: name.trim(), zoneId: parentId || undefined });
+        // Lot Team : un team leader rattache la localité à SA team (pas de zone à choisir).
+        if (item) await updateLocality(item.id, teamMode ? { name: name.trim() } : { name: name.trim(), zoneId: parentId || undefined });
+        else if (teamMode) await createLocality({ ministryId: ministryId!, teamId: teamId!, name: name.trim() });
         else await createLocality({ ministryId: ministryId!, zoneId: parentId || undefined, name: name.trim() });
       } else {
         if (item) await updateUnit(item.id, { name: name.trim(), localityId: parentId, type: unitType });
@@ -237,17 +244,28 @@ function StructureFormModal({
           <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.name')}</Label>
           <TextInput value={name} onChangeText={setName} style={styles.input} placeholder={t('structure.namePlaceholder')} placeholderTextColor={colors.ink3} />
 
-          <Label style={{ marginTop: 14, marginBottom: 6 }}>
-            {parentLabel}{level === 'localities' ? t('structure.optional') : ''}
-          </Label>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            {parents.map((p) => (
-              <Pressable key={p.id} onPress={() => setParentId(p.id)} style={[styles.chip, parentId === p.id && styles.chipActive]}>
-                <Text style={[styles.chipText, parentId === p.id && styles.chipTextActive]}>{p.name}</Text>
-              </Pressable>
-            ))}
-            {parents.length === 0 && <Text style={styles.empty}>{t('structure.noParent', { parent: parentLabel.toLowerCase() })}</Text>}
-          </ScrollView>
+          {teamMode ? (
+            <>
+              <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.team')}</Label>
+              <View style={[styles.chip, styles.chipActive, { alignSelf: 'flex-start' }]}>
+                <Text style={styles.chipTextActive}>{teamName ?? '—'}</Text>
+              </View>
+            </>
+          ) : (
+            <>
+              <Label style={{ marginTop: 14, marginBottom: 6 }}>
+                {parentLabel}{level === 'localities' ? t('structure.optional') : ''}
+              </Label>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {parents.map((p) => (
+                  <Pressable key={p.id} onPress={() => setParentId(p.id)} style={[styles.chip, parentId === p.id && styles.chipActive]}>
+                    <Text style={[styles.chipText, parentId === p.id && styles.chipTextActive]}>{p.name}</Text>
+                  </Pressable>
+                ))}
+                {parents.length === 0 && <Text style={styles.empty}>{t('structure.noParent', { parent: parentLabel.toLowerCase() })}</Text>}
+              </ScrollView>
+            </>
+          )}
 
           {level === 'units' && (
             <>

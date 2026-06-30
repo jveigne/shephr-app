@@ -18,7 +18,7 @@ import {
 } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { canManageStructure } from '../services/authApi';
+import { canManageUnits } from '../services/authApi';
 import {
   createUnit,
   deleteUnit,
@@ -40,7 +40,7 @@ export function UnitesPage() {
   const { push } = useToast();
   const { me } = useAuth();
   const ministryId = me?.ministryId ?? null;
-  const canWrite = canManageStructure(me);
+  const canWrite = canManageUnits(me);
 
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);

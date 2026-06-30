@@ -271,6 +271,8 @@ export interface LocalityResponse {
   ministryName: string;
   zoneId: string | null;
   zoneName: string | null;
+  teamId: string | null;
+  teamName: string | null;
   name: string;
   country: string | null;
   createdAt: string;
@@ -279,6 +281,7 @@ export interface LocalityResponse {
 export interface CreateLocalityRequest {
   ministryId: string;
   zoneId?: string;
+  teamId?: string;
   name: string;
   country?: string;
 }
@@ -286,6 +289,7 @@ export interface CreateLocalityRequest {
 export interface UpdateLocalityRequest {
   name?: string;
   zoneId?: string;
+  teamId?: string;
   country?: string;
 }
 
