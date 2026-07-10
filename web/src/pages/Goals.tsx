@@ -468,6 +468,11 @@ export function GoalsPage() {
               </p>
             </div>
 
+            {/* Mise en avant des engagements (JP 2026-07-10) : la vue globale — carte
+                du monde en tête — s'affiche en premier pour les rôles ministère-large,
+                pour « tomber sur la carte » à la connexion. */}
+            {goal && ministryWide && year != null && <GlobalSummarySection goal={goal} currency={currency} year={year} />}
+
             {hasUnit && (
               <>
                 <Table
@@ -535,8 +540,6 @@ export function GoalsPage() {
                     isSuperAdmin={me?.superAdmin ?? false}
                   />
                 ))}
-
-            {goal && ministryWide && year != null && <GlobalSummarySection goal={goal} currency={currency} year={year} />}
           </>
         )}
       </div>

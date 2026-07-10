@@ -101,12 +101,12 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.verseCard}>
+     {/* <View style={styles.verseCard}>
         <Text style={styles.verseText}>
           {t('dashboard.verse')}
         </Text>
         <Text style={styles.verseRef}>{t('dashboard.verseRef')}</Text>
-      </View>
+      </View>*/}
 
       {!FEATURES.donations && hasGoals && (
         <Card onPress={() => router.push('/(tabs)/goals')} style={styles.scopeCta}>
@@ -167,7 +167,7 @@ export default function HomeScreen() {
           onPress={() => router.push('/declare')}
         />
         )}
-        <Tile
+{/*        <Tile
           label={t('dashboard.tiles.cantique')}
           hint={t('dashboard.tiles.cantiqueHint')}
           icon="musical-notes-outline"
@@ -190,7 +190,7 @@ export default function HomeScreen() {
           tone={colors.earthDeep}
           comingSoon
           onPress={() => setComing('compte-rendu')}
-        />
+        />*/}
       </View>
 
       {FEATURES.donations && (
@@ -231,8 +231,6 @@ export default function HomeScreen() {
           <Ionicons name="chevron-forward" size={18} color={colors.white} />
         </Card>
       )}
-
-      <Text style={styles.footerMark}>{t('dashboard.footerMark')}</Text>
 
       <ComingSoonModal kind={coming} onClose={() => setComing(null)} />
     </ScreenShell>

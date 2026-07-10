@@ -117,7 +117,6 @@
     "empty": "Aucun don encore. Votre premier geste se posera ici.",
     "scope": "Mon périmètre",
     "scopeSub": "Suivez vos unités et fidèles",
-    "footerMark": "CMCI · UK Pilot",
     "tiles": {
       "declare": "Déclarer un don",
       "declareHint": "Espèces, chèque, virement",

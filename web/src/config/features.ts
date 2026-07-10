@@ -1,9 +1,11 @@
 /**
  * Feature flags de livraison.
  *
- * Livraison « Member Care only » (décision JP 2026-06-27) : pour la livraison
- * client Suivi pastoral, on masque temporairement les Dons ET les Goals afin de
- * ne montrer que Member Care + Organisation.
+ * Historique :
+ *   - « Member Care only » (JP 2026-06-27) : Dons ET Goals masqués.
+ *   - Mise en avant des engagements (JP 2026-07-10) : `goals` réactivé — à la
+ *     connexion on tombe sur /goals (la vue globale / carte pour les rôles
+ *     ministère-large). Les Dons restent masqués.
  *
  * Réactivation : repasser le flag concerné à `true`.
  *   - donations : Tableau de bord, Dons, Exports
@@ -12,6 +14,6 @@
 export const FEATURES = {
   // Repasser à true pour réafficher Tableau de bord / Dons / Exports.
   donations: false,
-  // Repasser à true pour réafficher les Goals.
-  goals: false,
+  // Objectifs (Goals) — activé (mise en avant des engagements).
+  goals: true,
 } as const;
