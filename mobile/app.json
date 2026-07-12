@@ -2,10 +2,10 @@
   "expo": {
     "name": "shephr",
     "slug": "shephr",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "sdkVersion": "54.0.0",
     "extra": {
-      "API_URL": "https://cmfipraise-backend-dev-c586.up.railway.app",
+      "API_URL": "https://cmfipraise-prod-production.up.railway.app",
       "router": {
         "origin": false
       },
