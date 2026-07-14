@@ -289,7 +289,7 @@
     "given": "Given"
   },
   "goalsAgg": {
-    "subtitle": "{{name}} · effective = MAX(aggregate, faith pledge)",
+    "subtitle": "{{name}} · retained objective = MAX(aggregate, faith pledge)",
     "noGoalTitle": "No active goal",
     "noGoalHint": "No five-year goal is active at the moment.",
     "myZone": "My zone",
@@ -299,7 +299,7 @@
     "faithBadge": "Faith",
     "aggregate": "Aggregate",
     "myFaith": "My faith",
-    "effective": "Effective",
+    "effective": "Retained objective",
     "editFaith": "Edit my faith pledge",
     "declareFaith": "Declare a faith pledge",
     "declaredFaith": "Declared faith pledges",
@@ -318,7 +318,7 @@
     "declare": "Declare",
     "removeFaith": "Remove my faith pledge",
     "removeTitle": "Remove",
-    "removeConfirm": "Remove your faith pledge? The effective value will fall back to the aggregate.",
+    "removeConfirm": "Remove your faith pledge? The retained objective will fall back to the aggregate.",
     "remove": "Remove"
   },
   "progress": {

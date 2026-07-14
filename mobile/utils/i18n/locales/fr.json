@@ -289,7 +289,7 @@
     "given": "Versé"
   },
   "goalsAgg": {
-    "subtitle": "{{name}} · effectif = MAX(agrégat, engagement de foi)",
+    "subtitle": "{{name}} · objectif retenu = MAX(agrégat, engagement de foi)",
     "noGoalTitle": "Aucun objectif actif",
     "noGoalHint": "Aucun objectif quinquennal n'est actif pour le moment.",
     "myZone": "Ma zone",
@@ -299,7 +299,7 @@
     "faithBadge": "Foi",
     "aggregate": "Agrégat",
     "myFaith": "Ma foi",
-    "effective": "Effectif",
+    "effective": "Objectif retenu",
     "editFaith": "Modifier mon engagement de foi",
     "declareFaith": "Déclarer un engagement de foi",
     "declaredFaith": "Engagements de foi déclarés",
@@ -318,7 +318,7 @@
     "declare": "Déclarer",
     "removeFaith": "Retirer mon engagement de foi",
     "removeTitle": "Retirer",
-    "removeConfirm": "Retirer votre engagement de foi ? L'effectif retombera sur l'agrégat.",
+    "removeConfirm": "Retirer votre engagement de foi ? L'objectif retenu retombera sur l'agrégat.",
     "remove": "Retirer"
   },
   "progress": {
