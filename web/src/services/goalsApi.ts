@@ -31,6 +31,11 @@ export interface ActiveGoal {
   // Annualisation (Lot 4.6) :
   currentYear: number;
   openYears: number[];
+  // Lot G1.c :
+  /** Années affichées dans les sélecteurs (orthogonal à openYears = droit d'écriture). */
+  visibleYears: number[];
+  /** Objectif final « Quinquennat » (année jalon de fin + date) — null si aucun jalon. */
+  quinquennat: { year: number; date: string | null } | null;
 }
 
 /** `?year=` si l'année est fournie (sinon le backend retombe sur l'année courante). */

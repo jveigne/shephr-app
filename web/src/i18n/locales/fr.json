@@ -596,6 +596,7 @@
   "goals": {
     "title": "Objectifs",
     "year": "Année",
+    "quinquennat": "Quinquennat",
     "addProgress": "Saisir un avancement",
     "submitMyPledges": "Soumettre mes engagements",
     "noActiveGoal": "Aucun objectif actif",

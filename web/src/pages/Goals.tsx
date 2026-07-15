@@ -397,7 +397,7 @@ export function GoalsPage() {
         crumbs={[t('common.brand'), t('goals.title')]}
         actions={
           <>
-            {goal && (goal.openYears?.length ?? 0) > 0 && year != null && (
+            {goal && ((goal.visibleYears ?? goal.openYears)?.length ?? 0) > 0 && year != null && (
               <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ink-400)' }}>
                 {t('goals.year')}
                 <select
@@ -413,10 +413,10 @@ export function GoalsPage() {
                     color: 'var(--ink)',
                   }}
                 >
-                  {goal.openYears.map((y) => (
+                  {/* Lot G1.c : années visibles uniquement ; le jalon final est libellé « Quinquennat ». */}
+                  {(goal.visibleYears ?? goal.openYears).map((y) => (
                     <option key={y} value={y}>
-                      {y}
-                      {y === 2026 || y === 2030 ? ' ★' : ''}
+                      {y === goal.quinquennat?.year ? t('goals.quinquennat') : y}
                     </option>
                   ))}
                 </select>

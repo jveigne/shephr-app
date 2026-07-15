@@ -153,9 +153,10 @@ export default function GoalAggregatesScreen({
         {t('goalsAgg.subtitle', { name: goal.name })}
       </Text>
 
-      {(goal.openYears?.length ?? 0) > 0 && year != null && (
+      {((goal.visibleYears ?? goal.openYears)?.length ?? 0) > 0 && year != null && (
         <View style={styles.yearRow}>
-          {goal.openYears.map((y) => {
+          {/* Lot G1.c : années visibles uniquement ; le jalon final est libellé « Quinquennat ». */}
+          {(goal.visibleYears ?? goal.openYears).map((y) => {
             const active = y === year;
             return (
               <Pressable
@@ -164,8 +165,7 @@ export default function GoalAggregatesScreen({
                 style={[styles.yearChip, active && styles.yearChipActive]}
               >
                 <Text style={[styles.yearChipText, active && styles.yearChipTextActive]}>
-                  {y}
-                  {y === 2026 || y === 2030 ? ' ★' : ''}
+                  {y === goal.quinquennat?.year ? t('goals.quinquennat') : y}
                 </Text>
               </Pressable>
             );

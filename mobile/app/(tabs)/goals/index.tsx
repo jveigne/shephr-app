@@ -87,8 +87,13 @@ function UnitGoalsScreen() {
         {goal?.name} · {goal ? `${new Date(goal.startDate).getFullYear()}–${new Date(goal.endDate).getFullYear()}` : ''}
       </Text>
 
-      {goal && (goal.openYears?.length ?? 0) > 0 && year != null && (
-        <YearSelector years={goal.openYears} value={year} onChange={setSelectedYear} />
+      {goal && ((goal.visibleYears ?? goal.openYears)?.length ?? 0) > 0 && year != null && (
+        <YearSelector
+          years={goal.visibleYears ?? goal.openYears}
+          quinquennatYear={goal.quinquennat?.year}
+          value={year}
+          onChange={setSelectedYear}
+        />
       )}
 
       {submitted ? (
@@ -165,16 +170,19 @@ function UnitGoalsScreen() {
   );
 }
 
-/** Sélecteur d'année (annualisation Lot 4.6) — chips horizontaux ; 2026/2030 = jalons (★). */
+/** Sélecteur d'année (Lot 4.6, révisé G1.c) — chips des années VISIBLES ; le jalon final = « Quinquennat ». */
 export function YearSelector({
   years,
+  quinquennatYear,
   value,
   onChange,
 }: {
   years: number[];
+  quinquennatYear?: number;
   value: number;
   onChange: (y: number) => void;
 }) {
+  const { t } = useLanguage();
   return (
     <View style={styles.yearRow}>
       {years.map((y) => {
@@ -186,8 +194,7 @@ export function YearSelector({
             style={[styles.yearChip, active && styles.yearChipActive]}
           >
             <Text style={[styles.yearChipText, active && styles.yearChipTextActive]}>
-              {y}
-              {y === 2026 || y === 2030 ? ' ★' : ''}
+              {y === quinquennatYear ? t('goals.quinquennat') : y}
             </Text>
           </Pressable>
         );

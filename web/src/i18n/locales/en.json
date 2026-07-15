@@ -596,6 +596,7 @@
   "goals": {
     "title": "Goals",
     "year": "Year",
+    "quinquennat": "Five-year goal",
     "addProgress": "Add progress",
     "submitMyPledges": "Submit my pledges",
     "noActiveGoal": "No active goal",
