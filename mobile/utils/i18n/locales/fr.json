@@ -307,6 +307,7 @@
     "myUnitsSubmission": "Mes unités — soumission",
     "allUnitsSubmitted": "Toutes vos unités ont soumis !",
     "pledgeCount": "{{name}} · {{count}}/5 engagements",
+    "unitLeader": "Dirigeant : {{name}}",
     "statusSubmitted": "Soumis",
     "statusLate": "En retard",
     "statusDraft": "Brouillon",
@@ -374,6 +375,7 @@
   },
   "pledge": {
     "lockedBanner": "Engagement soumis et verrouillé — lecture seule. Les avancements restent ouverts.",
+    "declaredBy": "Déclaré par {{name}}",
     "amountPledged": "Montant engagé",
     "pledgeLabel": "Engagement ({{unit}})",
     "unitFallback": "nombre",

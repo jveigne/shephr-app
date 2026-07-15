@@ -49,6 +49,9 @@ export interface PledgeResponse {
   targetCount: number | null;
   locked: boolean;
   lockedAt: string | null;
+  /** Déclarant de l'engagement (Lot G1.b). */
+  createdById: string | null;
+  createdByName: string | null;
 }
 
 export interface CreatePledgeRequest {
@@ -78,6 +81,8 @@ export interface ProgressResponse {
   progressDate: string;
   note: string | null;
   recordedById: string;
+  /** Auteur de l'avancement (Lot G1.b). */
+  recordedByName: string | null;
   createdAt: string;
 }
 
@@ -273,6 +278,10 @@ export interface ZoneUnitStatus {
   submittedAt: string | null;
   /** Deadline dépassée et unité non soumise. */
   late: boolean;
+  /** L'unité a un DIRIGEANT goal rattaché. */
+  hasLeader: boolean;
+  /** Nom du DIRIGEANT goal de l'unité — null si sans dirigeant (Lot G1.b). */
+  leaderName: string | null;
 }
 
 export async function getMyProgress(year?: number): Promise<MyProgressResponse[]> {

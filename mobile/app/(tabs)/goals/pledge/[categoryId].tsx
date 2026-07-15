@@ -79,6 +79,12 @@ export default function PledgeEditScreen() {
           </Card>
         )}
 
+        {pledge?.createdByName && (
+          <Text style={styles.declaredBy}>
+            {t('pledge.declaredBy', { name: pledge.createdByName })}
+          </Text>
+        )}
+
         <TargetSection
           categoryId={category.id}
           year={year ?? goal?.currentYear}
@@ -210,6 +216,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   lockText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },
+  declaredBy: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 12 },
   amountCard: { paddingVertical: 22, paddingHorizontal: 22, marginTop: 22, alignItems: 'center' },
   amountRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 10 },
   cur: { fontFamily: fonts.serif, fontSize: 32, color: colors.ink3, marginRight: 4 },

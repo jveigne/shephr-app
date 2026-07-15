@@ -147,6 +147,7 @@ export default function HistoryScreen() {
                     <Text style={styles.entryValue}>{valueText}</Text>
                     <Text style={styles.entryMeta}>
                       {entry.category.name} · {fmtDate(parseLocalDate(p.progressDate))}
+                      {p.recordedByName ? ` · ${p.recordedByName}` : ''}
                     </Text>
                     {!!p.note && <Text style={styles.entryNote}>« {p.note} »</Text>}
                   </View>

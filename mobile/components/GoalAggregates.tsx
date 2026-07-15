@@ -322,6 +322,11 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
                     <Text style={styles.unitMeta}>
                       {t('goalsAgg.pledgeCount', { name: u.localityName ?? '', count: u.pledgeCount })}
                     </Text>
+                    {u.leaderName != null && (
+                      <Text style={styles.unitMeta}>
+                        {t('goalsAgg.unitLeader', { name: u.leaderName })}
+                      </Text>
+                    )}
                   </View>
                   <UnitStatusBadge unit={u} />
                 </View>

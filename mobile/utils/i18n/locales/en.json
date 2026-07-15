@@ -307,6 +307,7 @@
     "myUnitsSubmission": "My units — submission",
     "allUnitsSubmitted": "All your units have submitted!",
     "pledgeCount": "{{name}} · {{count}}/5 pledges",
+    "unitLeader": "Leader: {{name}}",
     "statusSubmitted": "Submitted",
     "statusLate": "Late",
     "statusDraft": "Draft",
@@ -374,6 +375,7 @@
   },
   "pledge": {
     "lockedBanner": "Pledge submitted and locked — read only. Progress remains open.",
+    "declaredBy": "Declared by {{name}}",
     "amountPledged": "Pledged amount",
     "pledgeLabel": "Pledge ({{unit}})",
     "unitFallback": "count",

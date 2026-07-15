@@ -326,6 +326,11 @@ export function GoalsPage() {
         ),
     },
     {
+      // Lot G1.b : déclarant de l'engagement.
+      label: t('goals.colDeclaredBy'),
+      render: (l) => l.pledge?.createdByName ?? '—',
+    },
+    {
       label: '',
       style: { width: 70 },
       cellStyle: { textAlign: 'right' },
@@ -356,6 +361,11 @@ export function GoalsPage() {
       label: t('goals.colNote'),
       render: (r) =>
         r.progress.note ? <span style={{ fontStyle: 'italic' }}>{r.progress.note}</span> : '—',
+    },
+    {
+      // Lot G1.b : auteur de l'avancement.
+      label: t('goals.colRecordedBy'),
+      render: (r) => r.progress.recordedByName ?? '—',
     },
     {
       label: '',
@@ -1527,6 +1537,11 @@ function ZoneUnitsBlock({
               render: (u) => t('goals.pledgesCount5', { count: u.pledgeCount }),
             },
             {
+              // Lot G1.b : dirigeant de l'unité, à côté du statut.
+              label: t('goals.colLeader'),
+              render: (u) => u.leaderName ?? '—',
+            },
+            {
               label: t('goals.colStatus'),
               render: (u) => (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -1609,6 +1624,12 @@ function ZoneUnitsBlock({
         {detailQ.isLoading ? (
           <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
         ) : (
+          <>
+          {detailQ.data?.[0]?.leaderName && (
+            <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--ink-500, #4A443B)' }}>
+              {t('goals.unitLeaderInline', { name: detailQ.data[0].leaderName })}
+            </p>
+          )}
           <table style={{ width: '100%', fontSize: 14, borderSpacing: 0 }}>
             <thead>
               <tr style={{ textAlign: 'left', color: 'var(--ink-400)', fontSize: 12 }}>
@@ -1646,6 +1667,7 @@ function ZoneUnitsBlock({
               })}
             </tbody>
           </table>
+          </>
         )}
       </Modal>
     </div>
@@ -2050,6 +2072,8 @@ function DrillUnits({ zoneId, year, onOpen }: { zoneId: string; year: number; on
           },
           { label: t('common.locality'), render: (u) => u.localityName ?? '—' },
           { label: t('goals.colPledgesEntered'), render: (u) => t('goals.pledgesCount5', { count: u.pledgeCount }) },
+          // Lot G1.b : dirigeant de l'unité dans le drill-down.
+          { label: t('goals.colLeader'), render: (u) => u.leaderName ?? '—' },
           {
             label: t('goals.colStatus'),
             render: (u) =>
