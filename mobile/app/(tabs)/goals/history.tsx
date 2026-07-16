@@ -18,7 +18,6 @@ import Field from '../../../components/Field';
 import Button from '../../../components/Button';
 import Chip from '../../../components/Chip';
 import { colors, fonts } from '../../../theme';
-import { useAuth } from '../../../contexts/AuthContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useGoalsData } from '../../../hooks/useGoalsData';
 import { goalCategoryMeta } from '../../../constants/goalCategories';
@@ -26,7 +25,6 @@ import { currencySymbol, fmtAmount, fmtDate, parseLocalDate } from '../../../uti
 import { confirmDialog, notify } from '../../../utils/dialogs';
 import {
   deleteProgress,
-  isProgressEditable,
   updateProgress,
   type ProgressResponse,
 } from '../../../services/goalsApi';
@@ -42,7 +40,6 @@ interface HistoryEntry {
 export default function HistoryScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { me } = useAuth();
   const { year: yearParam } = useLocalSearchParams<{ year?: string }>();
   const { goal, lines, progressByPledge, loading, reload } = useGoalsData(yearParam ? Number(yearParam) : null);
   const [filter, setFilter] = useState<string | null>(null);
@@ -50,6 +47,11 @@ export default function HistoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const currency = goal?.defaultCurrency ?? 'EUR';
+  // Lot G2 : deadline PAR ANNÉE (repli legacy sur celle du Goal) pour le pied de page dynamique.
+  const year = yearParam ? Number(yearParam) : goal?.currentYear ?? null;
+  const deadlineIso =
+    (year != null ? goal?.yearDeadlines?.[String(year)] : null) ?? goal?.submissionDeadline ?? null;
+  const deadlinePast = deadlineIso != null && new Date(deadlineIso).getTime() < Date.now();
 
   const entries: HistoryEntry[] = lines
     .filter((l) => l.pledge != null)
@@ -131,7 +133,8 @@ export default function HistoryScreen() {
           {visible.map((entry) => {
             const meta = goalCategoryMeta(entry.category.code);
             const p = entry.progress;
-            const editable = isProgressEditable(p, me?.id);
+            // Lot G2 : éditabilité server-driven (deadline de l'année) — plus de règle 24 h locale.
+            const editable = p.editable === true;
             const isCurrency = entry.category.unitType === 'CURRENCY';
             const valueText =
               p.amount != null && isCurrency
@@ -173,7 +176,11 @@ export default function HistoryScreen() {
       )}
 
       <Text style={styles.footnote}>
-        {t('historyScreen.footnote')}
+        {deadlineIso
+          ? deadlinePast
+            ? t('historyScreen.deadlinePassed')
+            : t('historyScreen.editUntil', { date: fmtDate(new Date(deadlineIso)) })
+          : ''}
       </Text>
 
       <EditProgressModal

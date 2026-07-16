@@ -42,6 +42,11 @@ export default function AddProgressScreen() {
   const declared = lines.filter((l) => l.pledge != null);
   const selected = declared.find((l) => l.category.id === selectedId) ?? declared[0] ?? null;
   const currency = goal?.defaultCurrency ?? 'EUR';
+  // Lot G2 : deadline PAR ANNÉE (repli legacy sur celle du Goal) pour le pied de page dynamique.
+  const year = yearParam ? Number(yearParam) : goal?.currentYear ?? null;
+  const deadlineIso =
+    (year != null ? goal?.yearDeadlines?.[String(year)] : null) ?? goal?.submissionDeadline ?? null;
+  const deadlinePast = deadlineIso != null && new Date(deadlineIso).getTime() < Date.now();
   const isCurrency = selected?.category.unitType === 'CURRENCY';
 
   const fmtValue = (v: number) =>
@@ -205,7 +210,11 @@ export default function AddProgressScreen() {
               iconLeft={<Ionicons name="checkmark" size={20} color={colors.white} />}
             />
             <Text style={styles.footnote}>
-              {t('progress.footnote')}
+              {deadlineIso
+                ? deadlinePast
+                  ? t('progress.deadlinePassed')
+                  : t('progress.editUntil', { date: fmtDateLong(new Date(deadlineIso)) })
+                : ''}
             </Text>
           </>
         )}

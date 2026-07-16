@@ -68,7 +68,10 @@ function UnitGoalsScreen() {
       hint={t('goals.loadingErrorHint')} onRetry={onRefresh} />;
   }
 
-  const deadline = goal?.submissionDeadline ? new Date(goal.submissionDeadline) : null;
+  // Lot G2 : deadline PAR ANNÉE (repli legacy sur celle du Goal), mise en exergue.
+  const deadlineIso =
+    (year != null ? goal?.yearDeadlines?.[String(year)] : null) ?? goal?.submissionDeadline ?? null;
+  const deadline = deadlineIso ? new Date(deadlineIso) : null;
   const deadlinePast = deadline != null && deadline.getTime() < Date.now();
   const hasPledges = pledges.length > 0;
   const lockedAt = pledges.find((p) => p.lockedAt)?.lockedAt;
@@ -90,7 +93,6 @@ function UnitGoalsScreen() {
       {goal && ((goal.visibleYears ?? goal.openYears)?.length ?? 0) > 0 && year != null && (
         <YearSelector
           years={goal.visibleYears ?? goal.openYears}
-          quinquennatYear={goal.quinquennat?.year}
           value={year}
           onChange={setSelectedYear}
         />
@@ -170,19 +172,16 @@ function UnitGoalsScreen() {
   );
 }
 
-/** Sélecteur d'année (Lot 4.6, révisé G1.c) — chips des années VISIBLES ; le jalon final = « Quinquennat ». */
+/** Sélecteur d'année (Lot 4.6, révisé G1.c) — chips des années VISIBLES (JP 16/07 : le jalon final s'affiche « 2030 »). */
 export function YearSelector({
   years,
-  quinquennatYear,
   value,
   onChange,
 }: {
   years: number[];
-  quinquennatYear?: number;
   value: number;
   onChange: (y: number) => void;
 }) {
-  const { t } = useLanguage();
   return (
     <View style={styles.yearRow}>
       {years.map((y) => {
@@ -194,7 +193,7 @@ export function YearSelector({
             style={[styles.yearChip, active && styles.yearChipActive]}
           >
             <Text style={[styles.yearChipText, active && styles.yearChipTextActive]}>
-              {y === quinquennatYear ? t('goals.quinquennat') : y}
+              {y}
             </Text>
           </Pressable>
         );

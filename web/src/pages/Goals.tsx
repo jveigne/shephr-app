@@ -34,13 +34,13 @@ import {
   getTimeline,
   getUnitDetail,
   getZoneUnits,
-  isProgressEditable,
   listFaithPledges,
   sendReminder,
   submitMyPledges,
   updateFaithPledge,
   updatePledge,
   updateProgress,
+  updateYearDeadline,
   type ActiveGoal,
   type AggregateLevelPath,
   type FaithLevelPath,
@@ -140,6 +140,9 @@ export function GoalsPage() {
   const goal = goalQ.data ?? null;
   const data = unitQ.data ?? null;
   const currency = goal?.defaultCurrency ?? 'EUR';
+  // Lot G2 : deadline effective de l'année sélectionnée (repli legacy sur celle du Goal).
+  const yearDeadline =
+    (year != null ? goal?.yearDeadlines?.[String(year)] : null) ?? goal?.submissionDeadline ?? null;
 
   const lines: GoalLine[] = useMemo(() => {
     if (!goal || !data) return [];
@@ -372,17 +375,18 @@ export function GoalsPage() {
       style: { width: 90 },
       cellStyle: { textAlign: 'right' },
       render: (r) =>
-        isProgressEditable(r.progress, me?.id) ? (
+        // Lot G2 : éditabilité server-driven (deadline de l'année) — plus de règle 24 h locale.
+        r.progress.editable === true ? (
           <span style={{ display: 'inline-flex', gap: 6 }}>
             <IconButton
               icon={<Icon name="edit" size={15} />}
-              title={t('goals.editProgress24h')}
+              title={t('goals.editProgressTooltip')}
               onClick={() => setEditProgress(r)}
             />
             <IconButton
               danger
               icon={<Icon name="trash" size={15} />}
-              title={t('goals.deleteProgress24h')}
+              title={t('goals.deleteProgressTooltip')}
               onClick={() => setToDeleteProgress(r.progress)}
             />
           </span>
@@ -413,10 +417,10 @@ export function GoalsPage() {
                     color: 'var(--ink)',
                   }}
                 >
-                  {/* Lot G1.c : années visibles uniquement ; le jalon final est libellé « Quinquennat ». */}
+                  {/* Lot G1.c : années visibles uniquement (JP 16/07 : le jalon final s'affiche « 2030 », sans libellé spécial). */}
                   {(goal.visibleYears ?? goal.openYears).map((y) => (
                     <option key={y} value={y}>
-                      {y === goal.quinquennat?.year ? t('goals.quinquennat') : y}
+                      {y}
                     </option>
                   ))}
                 </select>
@@ -461,21 +465,27 @@ export function GoalsPage() {
           <>
             <div style={{ marginBottom: 14 }}>
               <h3 style={{ margin: '0 0 4px' }}>{goal?.name}</h3>
-              <p style={{ margin: 0, color: 'var(--ink-400)', fontSize: 13 }}>
+              {/* Lot G2 : la date limite est PAR ANNÉE (yearDeadlines), mise en exergue. */}
+              <p style={{ margin: 0, fontSize: 13.5 }}>
                 {!hasUnit ? null : submitted ? (
-                  <>
+                  <span style={{ color: 'var(--ink-400)' }}>
                     <Icon name="lock" size={12} /> {t('goals.pledgesSubmitted')}
-                  </>
-                ) : goal?.submissionDeadline ? (
-                  new Date(goal.submissionDeadline).getTime() < Date.now() ? (
-                    <span style={{ color: 'var(--err, #B86A4A)' }}>
-                      {t('goals.deadlinePast', { date: fmtDateLabel(goal.submissionDeadline.slice(0, 10)) })}
-                    </span>
+                  </span>
+                ) : yearDeadline ? (
+                  new Date(yearDeadline).getTime() < Date.now() ? (
+                    <strong style={{ color: 'var(--err, #B86A4A)' }}>
+                      {t('goals.deadlinePast', { date: fmtDateLabel(yearDeadline.slice(0, 10)) })}
+                    </strong>
                   ) : (
-                    <>{t('goals.submitBefore', { date: fmtDateLabel(goal.submissionDeadline.slice(0, 10)) })}</>
+                    <strong style={{ color: 'var(--earth-700, #8E6B47)' }}>
+                      {t('goals.submitBefore', { date: fmtDateLabel(yearDeadline.slice(0, 10)) })}
+                    </strong>
                   )
                 ) : null}
               </p>
+              {goal && ministryWide && year != null && (
+                <DeadlineEditor year={year} current={yearDeadline} />
+              )}
             </div>
 
             {/* Mise en avant des engagements (JP 2026-07-10) : la vue globale — carte
@@ -1671,6 +1681,71 @@ function ZoneUnitsBlock({
         )}
       </Modal>
     </div>
+  );
+}
+
+/**
+ * Lot G2 : édition de la date limite d'envoi de l'année sélectionnée —
+ * visible uniquement pour les rôles ministère-large (SECRETARIAT/LEADER/SUPER_ADMIN).
+ */
+function DeadlineEditor({ year, current }: { year: number; current: string | null }) {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const { push } = useToast();
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState('');
+
+  useEffect(() => {
+    setValue(current ? current.slice(0, 16) : '');
+  }, [current, year]);
+
+  const saveM = useMutation({
+    mutationFn: () => updateYearDeadline(year, value ? `${value}:00` : null),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      setOpen(false);
+      push({ kind: 'ok', title: t('goals.deadlineSaved', { year }) });
+    },
+    onError: (err) =>
+      push({ kind: 'error', title: t('goals.deadlineSaveFailed'), msg: errMsg(err, '') }),
+  });
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          marginTop: 4,
+          cursor: 'pointer',
+          fontSize: 12.5,
+          color: 'var(--green-700, #1E3A2F)',
+          textDecoration: 'underline',
+        }}
+      >
+        {t('goals.editDeadline', { year })}
+      </button>
+    );
+  }
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+      <input
+        type="datetime-local"
+        className="input"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        style={{ fontSize: 13, padding: '4px 8px' }}
+      />
+      <Button size="sm" variant="primary" disabled={saveM.isPending} onClick={() => saveM.mutate()}>
+        {saveM.isPending ? t('common.saving') : t('common.save')}
+      </Button>
+      <Button size="sm" onClick={() => setOpen(false)}>
+        {t('common.cancel')}
+      </Button>
+    </span>
   );
 }
 

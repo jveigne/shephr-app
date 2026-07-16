@@ -36,6 +36,9 @@ export interface ActiveGoal {
   visibleYears: number[];
   /** Objectif final « Quinquennat » (année jalon de fin + date) — null si aucun jalon. */
   quinquennat: { year: number; date: string | null } | null;
+  // Lot G2 :
+  /** Deadline effective par année (clé = année) — clé absente si aucune deadline. */
+  yearDeadlines: Record<string, string> | null;
 }
 
 /** `?year=` si l'année est fournie (sinon le backend retombe sur l'année courante). */
@@ -57,6 +60,10 @@ export interface PledgeResponse {
   /** Déclarant de l'engagement (Lot G1.b). */
   createdById: string | null;
   createdByName: string | null;
+  /** Lot G2 — server-driven : date limite d'écriture (deadline de l'année). */
+  editableUntil: string | null;
+  /** Lot G2 — server-driven : modifiable par l'appelant courant. */
+  editable: boolean | null;
 }
 
 export interface SubmitResponse {
@@ -77,6 +84,10 @@ export interface ProgressResponse {
   /** Auteur de l'avancement (Lot G1.b). */
   recordedByName: string | null;
   createdAt: string;
+  /** Lot G2 — server-driven : date limite d'écriture (deadline de l'année). */
+  editableUntil: string | null;
+  /** Lot G2 — server-driven : modifiable/supprimable par l'appelant courant (remplace la règle 24 h). */
+  editable: boolean | null;
 }
 
 // --- Goal & pledges (UC-DIR-08/09) ------------------------------------------
@@ -400,11 +411,14 @@ export async function sendReminder(unitId: string, message?: string) {
   return data;
 }
 
-/** Fenêtre d'édition (RG-11) : un avancement reste modifiable 24 h par son créateur. */
-export function isProgressEditable(
-  p: ProgressResponse,
-  userId: string | null | undefined,
-): boolean {
-  if (!userId || p.recordedById !== userId) return false;
-  return Date.now() - new Date(p.createdAt).getTime() < 24 * 60 * 60 * 1000;
+// Lot G2 : la règle locale « 24 h » (ex-isProgressEditable) est SUPPRIMÉE — l'éditabilité est
+// server-driven via `ProgressResponse.editable` / `editableUntil` (deadline de l'année).
+
+/** Lot G2 : édition de la date limite d'envoi d'une année — SECRETARIAT/SUPER_ADMIN. */
+export async function updateYearDeadline(year: number, submissionDeadline: string | null) {
+  const { data } = await apiClient.patch<{ year: number; submissionDeadline: string | null }>(
+    `/api/church/goals/years/${year}`,
+    { submissionDeadline },
+  );
+  return data;
 }

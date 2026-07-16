@@ -155,7 +155,7 @@ export default function GoalAggregatesScreen({
 
       {((goal.visibleYears ?? goal.openYears)?.length ?? 0) > 0 && year != null && (
         <View style={styles.yearRow}>
-          {/* Lot G1.c : années visibles uniquement ; le jalon final est libellé « Quinquennat ». */}
+          {/* Lot G1.c : années visibles uniquement (JP 16/07 : le jalon final s'affiche « 2030 »). */}
           {(goal.visibleYears ?? goal.openYears).map((y) => {
             const active = y === year;
             return (
@@ -165,7 +165,7 @@ export default function GoalAggregatesScreen({
                 style={[styles.yearChip, active && styles.yearChipActive]}
               >
                 <Text style={[styles.yearChipText, active && styles.yearChipTextActive]}>
-                  {y === goal.quinquennat?.year ? t('goals.quinquennat') : y}
+                  {y}
                 </Text>
               </Pressable>
             );
