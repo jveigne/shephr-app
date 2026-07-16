@@ -14,16 +14,16 @@ export interface AdminUserResponse {
   donationRole: ModuleRole | null;
   donationUnitId: string | null;
   donationZoneId: string | null;
-  /** Lot Team — team de rattachement côté Dons (team leader DIRIGEANT). */
-  donationTeamId: string | null;
+  /** Chantier B (décision #7) — ville de rattachement côté Dons (dirigeant de ville). */
+  donationCityId: string | null;
   /** Lot 3.5 — unités gérées côté Dons (multi-unités). */
   donationUnitIds: string[];
   donationCountryIds: string[];
   goalRole: ModuleRole | null;
   goalUnitId: string | null;
   goalZoneId: string | null;
-  /** Lot Team — team de rattachement côté Objectifs (team leader DIRIGEANT). */
-  goalTeamId: string | null;
+  /** Chantier B (décision #7) — ville de rattachement côté Objectifs (dirigeant de ville). */
+  goalCityId: string | null;
   /** Lot 3.5 — unités gérées côté Objectifs (multi-unités). */
   goalUnitIds: string[];
   goalCountryIds: string[];
@@ -52,13 +52,13 @@ export interface InviteUserRequest {
   donationRole?: ModuleRole;
   donationUnitId?: string;
   donationZoneId?: string;
-  donationTeamId?: string;
+  donationCityId?: string;
   donationUnitIds?: string[];
   donationCountryIds?: string[];
   goalRole?: ModuleRole;
   goalUnitId?: string;
   goalZoneId?: string;
-  goalTeamId?: string;
+  goalCityId?: string;
   goalUnitIds?: string[];
   goalCountryIds?: string[];
   /** Lot 4.8 — pays coordonnés (SECRETARIAT/LEADER) — réservé SUPER_ADMIN. */
@@ -81,13 +81,13 @@ export interface UpdateUserRequest {
   donationRole?: ModuleRole;
   donationUnitId?: string;
   donationZoneId?: string;
-  donationTeamId?: string;
+  donationCityId?: string;
   donationUnitIds?: string[];
   donationCountryIds?: string[];
   goalRole?: ModuleRole;
   goalUnitId?: string;
   goalZoneId?: string;
-  goalTeamId?: string;
+  goalCityId?: string;
   goalUnitIds?: string[];
   goalCountryIds?: string[];
   /** Lot 4.8 — pays coordonnés (SECRETARIAT/LEADER) — réservé SUPER_ADMIN. */
@@ -210,51 +210,6 @@ export async function createZone(payload: CreateZoneRequest) {
   return data;
 }
 
-// ---------------- Teams (Lot Team — niveau entre Zone et Localité) ----------------
-export interface TeamResponse {
-  id: string;
-  ministryId: string;
-  zoneId: string;
-  zoneName: string | null;
-  name: string;
-  orderIndex: number;
-  active: boolean;
-  createdAt: string;
-}
-
-export async function listTeams(zoneId?: string) {
-  const { data } = await apiClient.get<TeamResponse[]>('/api/church/admin/teams', {
-    params: zoneId ? { zoneId } : undefined,
-  });
-  return data;
-}
-
-export interface CreateTeamRequest {
-  zoneId: string;
-  name: string;
-  orderIndex?: number;
-}
-
-export interface UpdateTeamRequest {
-  name?: string;
-  orderIndex?: number;
-  active?: boolean;
-}
-
-export async function createTeam(payload: CreateTeamRequest) {
-  const { data } = await apiClient.post<TeamResponse>('/api/church/admin/teams', payload);
-  return data;
-}
-
-export async function updateTeam(id: string, payload: UpdateTeamRequest) {
-  const { data } = await apiClient.patch<TeamResponse>(`/api/church/admin/teams/${id}`, payload);
-  return data;
-}
-
-export async function deleteTeam(id: string) {
-  await apiClient.delete(`/api/church/admin/teams/${id}`);
-}
-
 export async function updateZone(id: string, payload: UpdateZoneRequest) {
   const { data } = await apiClient.patch<ZoneResponse>(`/api/church/admin/zones/${id}`, payload);
   return data;
@@ -271,8 +226,6 @@ export interface LocalityResponse {
   ministryName: string;
   zoneId: string | null;
   zoneName: string | null;
-  teamId: string | null;
-  teamName: string | null;
   name: string;
   country: string | null;
   createdAt: string;
@@ -281,7 +234,6 @@ export interface LocalityResponse {
 export interface CreateLocalityRequest {
   ministryId: string;
   zoneId?: string;
-  teamId?: string;
   name: string;
   country?: string;
 }
@@ -289,7 +241,6 @@ export interface CreateLocalityRequest {
 export interface UpdateLocalityRequest {
   name?: string;
   zoneId?: string;
-  teamId?: string;
   country?: string;
 }
 
@@ -313,7 +264,7 @@ export async function deleteLocality(id: string) {
 }
 
 // ---------------- Units ----------------
-export type UnitType = 'CENTER' | 'ASSEMBLY';
+export type UnitType = 'ASSEMBLY'; // Chantier B (décision #5) : plus de CENTER
 
 export interface UnitResponse {
   id: string;
@@ -332,7 +283,6 @@ export interface CreateUnitRequest {
   ministryId: string;
   localityId: string;
   name: string;
-  type: UnitType;
 }
 
 export interface UpdateUnitRequest {
@@ -348,7 +298,8 @@ export async function listUnits(params: { localityId?: string } = {}) {
 }
 
 export async function createUnit(payload: CreateUnitRequest) {
-  const { data } = await apiClient.post<UnitResponse>('/api/church/admin/units', payload);
+  // Chantier B (décision #5) : plus de type CENTER — toute unité est une assemblée de maison.
+  const { data } = await apiClient.post<UnitResponse>('/api/church/admin/units', { ...payload, type: 'ASSEMBLY' });
   return data;
 }
 

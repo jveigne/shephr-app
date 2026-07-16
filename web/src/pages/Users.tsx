@@ -28,7 +28,7 @@ import {
   deleteUser,
   inviteUser,
   listCountries,
-  listTeams,
+  listLocalities,
   listUnits,
   listUsers,
   listZones,
@@ -36,7 +36,7 @@ import {
   type AdminUserResponse,
   type CountryResponse,
   type InviteUserRequest,
-  type TeamResponse,
+  type LocalityResponse,
   type UnitResponse,
   type UpdateUserRequest,
   type ZoneResponse,
@@ -57,7 +57,7 @@ const VISIBLE_MODULES: ModuleKind[] = FEATURES.donations ? ['goal', 'donation'] 
 const roleOf = (u: AdminUserResponse, m: ModuleKind) => (m === 'goal' ? u.goalRole : u.donationRole);
 const unitIdOf = (u: AdminUserResponse, m: ModuleKind) => (m === 'goal' ? u.goalUnitId : u.donationUnitId);
 const zoneIdOf = (u: AdminUserResponse, m: ModuleKind) => (m === 'goal' ? u.goalZoneId : u.donationZoneId);
-const teamIdOf = (u: AdminUserResponse, m: ModuleKind) => (m === 'goal' ? u.goalTeamId : u.donationTeamId);
+const cityIdOf = (u: AdminUserResponse, m: ModuleKind) => (m === 'goal' ? u.goalCityId : u.donationCityId);
 const countryIdsOf = (u: AdminUserResponse, m: ModuleKind) =>
   m === 'goal' ? u.goalCountryIds : u.donationCountryIds;
 
@@ -84,7 +84,7 @@ export function UsersPage() {
 
   const unitsQ = useQuery({ queryKey: ['admin', 'units'], queryFn: () => listUnits() });
   const zonesQ = useQuery({ queryKey: ['admin', 'zones'], queryFn: () => listZones() });
-  const teamsQ = useQuery({ queryKey: ['admin', 'teams'], queryFn: () => listTeams() });
+  const citiesQ = useQuery({ queryKey: ['admin', 'localities'], queryFn: () => listLocalities() });
   const countriesQ = useQuery({ queryKey: ['admin', 'countries'], queryFn: listCountries });
 
   const usersQ = useQuery({
@@ -135,11 +135,11 @@ export function UsersPage() {
 
   const units = unitsQ.data ?? [];
   const zones = zonesQ.data ?? [];
-  const teams = teamsQ.data ?? [];
+  const cities = citiesQ.data ?? [];
   const countries = countriesQ.data ?? [];
   const unitName = (id: string | null) => units.find((u) => u.id === id)?.name ?? (id ? '…' : null);
   const zoneName = (id: string | null) => zones.find((z) => z.id === id)?.name ?? (id ? '…' : null);
-  const teamOf = (id: string | null) => teams.find((tm) => tm.id === id) ?? null;
+  const cityOf = (id: string | null) => cities.find((c) => c.id === id) ?? null;
 
   const rows = useMemo(() => {
     let all = usersQ.data?.content ?? [];
@@ -155,12 +155,10 @@ export function UsersPage() {
     const cIds = countryIdsOf(u, m);
     if (cIds?.length) return countries.filter((c) => cIds.includes(c.id)).map((c) => c.name).join(', ') || t('users.perimeterCountry');
     if (zoneIdOf(u, m)) return t('users.perimeterZone', { name: zoneName(zoneIdOf(u, m)) });
-    // Lot Team : un team leader (DIRIGEANT) n'a qu'un teamId → on affiche sa team ET sa zone (issue de la team).
-    if (teamIdOf(u, m)) {
-      const team = teamOf(teamIdOf(u, m));
-      return team
-        ? t('users.perimeterTeam', { team: team.name, zone: team.zoneName ?? '—' })
-        : t('users.perimeterTeam', { team: '…', zone: '—' });
+    // Chantier B (décision #7) : un dirigeant de VILLE n'a qu'un cityId → on affiche sa ville.
+    if (cityIdOf(u, m)) {
+      const city = cityOf(cityIdOf(u, m));
+      return t('users.perimeterCity', { city: city?.name ?? '…' });
     }
     if (unitIdOf(u, m)) return unitName(unitIdOf(u, m)) ?? '—';
     return '—';
@@ -286,7 +284,7 @@ export function UsersPage() {
         me={me}
         units={units}
         zones={zones}
-        teams={teams}
+        cities={cities}
         countries={countries}
         people={usersQ.data?.content ?? []}
         result={inviteResult}
@@ -302,7 +300,7 @@ export function UsersPage() {
         user={editing}
         units={units}
         zones={zones}
-        teams={teams}
+        cities={cities}
         countries={countries}
         people={usersQ.data?.content ?? []}
         submitting={updateMutation.isPending}
@@ -334,18 +332,18 @@ export function UsersPage() {
 // d'adressage pour ses engagements de FOI — sa visibilité « données » vient du sous-arbre) ;
 // COORDINATEUR = pays (SUPER_ADMIN) ; LEADER/SECRETARIAT = ministère (pas de rattachement).
 function PerimeterFields({
-  role, unitId, zoneId, teamId, countryIds, units, zones, teams, countries, set,
+  role, unitId, zoneId, cityId, countryIds, units, zones, cities, countries, set,
 }: {
   role: ModuleRole | '';
   unitId: string;
   zoneId: string;
-  teamId: string;
+  cityId: string;
   countryIds: string[];
   units: UnitResponse[];
   zones: ZoneResponse[];
-  teams: TeamResponse[];
+  cities: LocalityResponse[];
   countries: CountryResponse[];
-  set: (patch: { unitId?: string; zoneId?: string; teamId?: string; countryIds?: string[] }) => void;
+  set: (patch: { unitId?: string; zoneId?: string; cityId?: string; countryIds?: string[] }) => void;
 }) {
   const { t } = useTranslation();
   if (role === 'MEMBRE' || role === 'DIRIGEANT_UNITE') {
@@ -359,12 +357,12 @@ function PerimeterFields({
     );
   }
   if (role === 'DIRIGEANT') {
-    // Lot Team : un DIRIGEANT est un team leader → on le rattache à une Team (de son scope).
+    // Chantier B (décision #7) : un DIRIGEANT est un dirigeant de VILLE → on le rattache à une Ville.
     return (
-      <Field label={t('users.teamAttachment')} hint={t('users.teamAttachmentHint')}>
-        <Select value={teamId} onChange={(e) => set({ teamId: e.target.value })}>
+      <Field label={t('users.cityAttachment')} hint={t('users.cityAttachmentHint')}>
+        <Select value={cityId} onChange={(e) => set({ cityId: e.target.value })}>
           <option value="">{t('common.choose')}</option>
-          {teams.map((tm) => (
+          {cities.map((tm) => (
             <option key={tm.id} value={tm.id}>{tm.zoneName ? `${tm.name} — ${tm.zoneName}` : tm.name}</option>
           ))}
         </Select>
@@ -434,24 +432,24 @@ function SupervisorField({
 }
 
 /** Construit le rattachement du MODULE choisi (les autres modules ne sont pas touchés). */
-function buildAttachment(module: ModuleKind, role: ModuleRole | '', unitId: string, zoneId: string, teamId: string, countryIds: string[]) {
+function buildAttachment(module: ModuleKind, role: ModuleRole | '', unitId: string, zoneId: string, cityId: string, countryIds: string[]) {
   const r = (role || undefined) as ModuleRole | undefined;
-  // home unit (action perso). MEMBRE/DIRIGEANT_UNITE = 1 unité ; DIRIGEANT (team leader, Lot Team) = 1 team.
+  // home unit (action perso). MEMBRE/DIRIGEANT_UNITE = 1 assemblée ; DIRIGEANT = 1 ville (décision #7).
   let homeUnit: string | undefined;
   let unitSet: string[] | undefined;
   if (role === 'MEMBRE' || role === 'DIRIGEANT_UNITE') {
     homeUnit = unitId || undefined;
   } else if (role === 'DIRIGEANT') {
-    // DIRIGEANT = team leader : rattachement à une TEAM ; on purge les éventuelles unités héritées.
+    // DIRIGEANT = dirigeant de ville : rattachement à une VILLE ; on purge les unités héritées.
     unitSet = [];
   }
-  const team = role === 'DIRIGEANT' ? teamId || undefined : undefined;
+  const city = role === 'DIRIGEANT' ? cityId || undefined : undefined;
   const zone = role === 'DIRIGEANT_SENIOR' ? zoneId || undefined : undefined;
   const cIds = role === 'DIRIGEANT_COORDINATEUR' ? countryIds : undefined;
   if (module === 'goal') {
-    return { goalRole: r, goalUnitId: homeUnit, goalUnitIds: unitSet, goalZoneId: zone, goalTeamId: team, goalCountryIds: cIds };
+    return { goalRole: r, goalUnitId: homeUnit, goalUnitIds: unitSet, goalZoneId: zone, goalCityId: city, goalCountryIds: cIds };
   }
-  return { donationRole: r, donationUnitId: homeUnit, donationUnitIds: unitSet, donationZoneId: zone, donationTeamId: team, donationCountryIds: cIds };
+  return { donationRole: r, donationUnitId: homeUnit, donationUnitIds: unitSet, donationZoneId: zone, donationCityId: city, donationCountryIds: cIds };
 }
 
 /** Sélecteur de module (affiché seulement si plusieurs modules sont visibles). */
@@ -470,23 +468,23 @@ function ModuleField({ module, onChange }: { module: ModuleKind; onChange: (m: M
   );
 }
 
-function perimeterValid(role: ModuleRole | '', unitId: string, zoneId: string, teamId: string, countryIds: string[]) {
+function perimeterValid(role: ModuleRole | '', unitId: string, zoneId: string, cityId: string, countryIds: string[]) {
   if (role === 'MEMBRE' || role === 'DIRIGEANT_UNITE') return unitId !== '';
-  if (role === 'DIRIGEANT') return teamId !== '';
+  if (role === 'DIRIGEANT') return cityId !== '';
   if (role === 'DIRIGEANT_SENIOR') return zoneId !== '';
   if (role === 'DIRIGEANT_COORDINATEUR') return countryIds.length > 0;
   return role !== ''; // LEADER / SECRETARIAT
 }
 
 function InviteModal({
-  open, onClose, me, units, zones, teams, countries, people, result, submitting, onSubmit, onCopied,
+  open, onClose, me, units, zones, cities, countries, people, result, submitting, onSubmit, onCopied,
 }: {
   open: boolean;
   onClose: () => void;
   me: MeResponse | null;
   units: UnitResponse[];
   zones: ZoneResponse[];
-  teams: TeamResponse[];
+  cities: LocalityResponse[];
   countries: CountryResponse[];
   people: AdminUserResponse[];
   result: { email: string; link: string; code: string | null } | null;
@@ -504,18 +502,18 @@ function InviteModal({
   const [role, setRole] = useState<ModuleRole | ''>('');
   const [unitId, setUnitId] = useState('');
   const [zoneId, setZoneId] = useState('');
-  const [teamId, setTeamId] = useState('');
+  const [cityId, setCityId] = useState('');
   const [countryIds, setCountryIds] = useState<string[]>([]);
   const [supervisorId, setSupervisorId] = useState('');
 
   useEffect(() => {
     if (open) {
       setModule(VISIBLE_MODULES[0]); setEmail(''); setFullName(''); setRole('');
-      setUnitId(''); setZoneId(''); setTeamId(''); setCountryIds([]); setSupervisorId(defaultSupervisor);
+      setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); setSupervisorId(defaultSupervisor);
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const valid = email.includes('@') && fullName.trim().length > 0 && perimeterValid(role, unitId, zoneId, teamId, countryIds);
+  const valid = email.includes('@') && fullName.trim().length > 0 && perimeterValid(role, unitId, zoneId, cityId, countryIds);
 
   return (
     <Modal
@@ -536,7 +534,7 @@ function InviteModal({
               onClick={() => onSubmit({
                 email: email.trim(), fullName: fullName.trim(),
                 supervisorId: supervisorId || undefined,
-                ...buildAttachment(module, role, unitId, zoneId, teamId, countryIds),
+                ...buildAttachment(module, role, unitId, zoneId, cityId, countryIds),
               })}
             >
               {submitting ? t('users.creating') : t('users.generateInvitation')}
@@ -573,15 +571,15 @@ function InviteModal({
             <Field label={t('users.emailLabel')}><Input type="email" placeholder={t('users.emailPlaceholder')} value={email} onChange={(e) => setEmail(e.target.value)} icon={<Icon name="mail" size={14} />} /></Field>
           </div>
           <SupervisorField me={me} people={people} value={supervisorId} onChange={setSupervisorId} />
-          <ModuleField module={module} onChange={(m) => { setModule(m); setRole(''); setUnitId(''); setZoneId(''); setTeamId(''); setCountryIds([]); }} />
+          <ModuleField module={module} onChange={(m) => { setModule(m); setRole(''); setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); }} />
           <Field label={t('users.roleConferred', { module: moduleLabel(module) })}>
-            <Select value={role} onChange={(e) => { setRole(e.target.value as ModuleRole | ''); setUnitId(''); setZoneId(''); setTeamId(''); setCountryIds([]); }}>
+            <Select value={role} onChange={(e) => { setRole(e.target.value as ModuleRole | ''); setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); }}>
               <option value="">{t('common.choose')}</option>
               {roles.map((r) => <option key={r} value={r}>{t(`roles.${r}`)}</option>)}
             </Select>
           </Field>
-          <PerimeterFields role={role} unitId={unitId} zoneId={zoneId} teamId={teamId} countryIds={countryIds} units={units} zones={zones} teams={teams} countries={countries}
-            set={(p) => { if (p.unitId !== undefined) setUnitId(p.unitId); if (p.zoneId !== undefined) setZoneId(p.zoneId); if (p.teamId !== undefined) setTeamId(p.teamId); if (p.countryIds !== undefined) setCountryIds(p.countryIds); }} />
+          <PerimeterFields role={role} unitId={unitId} zoneId={zoneId} cityId={cityId} countryIds={countryIds} units={units} zones={zones} cities={cities} countries={countries}
+            set={(p) => { if (p.unitId !== undefined) setUnitId(p.unitId); if (p.zoneId !== undefined) setZoneId(p.zoneId); if (p.cityId !== undefined) setCityId(p.cityId); if (p.countryIds !== undefined) setCountryIds(p.countryIds); }} />
         </div>
       )}
     </Modal>
@@ -589,7 +587,7 @@ function InviteModal({
 }
 
 function EditModal({
-  open, onClose, me, user, units, zones, teams, countries, people, submitting, onSubmit,
+  open, onClose, me, user, units, zones, cities, countries, people, submitting, onSubmit,
 }: {
   open: boolean;
   onClose: () => void;
@@ -597,7 +595,7 @@ function EditModal({
   user: AdminUserResponse | null;
   units: UnitResponse[];
   zones: ZoneResponse[];
-  teams: TeamResponse[];
+  cities: LocalityResponse[];
   countries: CountryResponse[];
   people: AdminUserResponse[];
   submitting: boolean;
@@ -610,7 +608,7 @@ function EditModal({
   const [role, setRole] = useState<ModuleRole | ''>('');
   const [unitId, setUnitId] = useState('');
   const [zoneId, setZoneId] = useState('');
-  const [teamId, setTeamId] = useState('');
+  const [cityId, setCityId] = useState('');
   const [countryIds, setCountryIds] = useState<string[]>([]);
   const [supervisorId, setSupervisorId] = useState('');
   const [active, setActive] = useState(true);
@@ -622,7 +620,7 @@ function EditModal({
     setRole((roleOf(u, m) ?? '') as ModuleRole | '');
     setUnitId(unitIdOf(u, m) ?? '');
     setZoneId(zoneIdOf(u, m) ?? '');
-    setTeamId(teamIdOf(u, m) ?? '');
+    setCityId(cityIdOf(u, m) ?? '');
     setCountryIds(countryIdsOf(u, m) ?? []);
   };
 
@@ -638,7 +636,7 @@ function EditModal({
 
   const showCoordinated = (me?.superAdmin ?? false) && (role === 'SECRETARIAT' || role === 'LEADER');
 
-  const valid = perimeterValid(role, unitId, zoneId, teamId, countryIds);
+  const valid = perimeterValid(role, unitId, zoneId, cityId, countryIds);
 
   return (
     <Modal
@@ -651,7 +649,7 @@ function EditModal({
           <Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
           <Button variant="primary" disabled={!valid || submitting} onClick={() => onSubmit({
             supervisorId: supervisorId || undefined,
-            ...buildAttachment(module, role, unitId, zoneId, teamId, countryIds),
+            ...buildAttachment(module, role, unitId, zoneId, cityId, countryIds),
             ...(me?.superAdmin ? { coordinatedCountryIds: showCoordinated ? coordinatedCountryIds : [] } : {}),
             active,
           })}>
@@ -664,13 +662,13 @@ function EditModal({
         <SupervisorField me={me} people={people} value={supervisorId} onChange={setSupervisorId} excludeId={user?.id} />
         <ModuleField module={module} onChange={(m) => { setModule(m); if (user) initFromUser(user, m); }} />
         <Field label={t('users.roleConferred', { module: moduleLabel(module) })}>
-          <Select value={role} onChange={(e) => { setRole(e.target.value as ModuleRole | ''); setUnitId(''); setZoneId(''); setTeamId(''); setCountryIds([]); }}>
+          <Select value={role} onChange={(e) => { setRole(e.target.value as ModuleRole | ''); setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); }}>
             <option value="">{t('common.noneOption')}</option>
             {roles.map((r) => <option key={r} value={r}>{t(`roles.${r}`)}</option>)}
           </Select>
         </Field>
-        <PerimeterFields role={role} unitId={unitId} zoneId={zoneId} teamId={teamId} countryIds={countryIds} units={units} zones={zones} teams={teams} countries={countries}
-          set={(p) => { if (p.unitId !== undefined) setUnitId(p.unitId); if (p.zoneId !== undefined) setZoneId(p.zoneId); if (p.teamId !== undefined) setTeamId(p.teamId); if (p.countryIds !== undefined) setCountryIds(p.countryIds); }} />
+        <PerimeterFields role={role} unitId={unitId} zoneId={zoneId} cityId={cityId} countryIds={countryIds} units={units} zones={zones} cities={cities} countries={countries}
+          set={(p) => { if (p.unitId !== undefined) setUnitId(p.unitId); if (p.zoneId !== undefined) setZoneId(p.zoneId); if (p.cityId !== undefined) setCityId(p.cityId); if (p.countryIds !== undefined) setCountryIds(p.countryIds); }} />
         {showCoordinated && (
           <Field label={t('users.coordinatedCountriesNation')} hint={t('users.coordinatedCountriesHint')}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

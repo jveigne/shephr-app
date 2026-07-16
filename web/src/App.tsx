@@ -14,7 +14,6 @@ import { MemberCarePage } from './pages/MemberCare';
 import { UsersPage } from './pages/Users';
 import { MonMinisterePage } from './pages/MonMinistere';
 import { ZonesPage } from './pages/Zones';
-import { TeamsPage } from './pages/Teams';
 import { LocalitesPage } from './pages/Localites';
 import { UnitesPage } from './pages/Unites';
 import { ExportsPage } from './pages/Exports';
@@ -67,7 +66,6 @@ export function App() {
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/structure/ministeres" element={<MonMinisterePage />} />
                 <Route path="/structure/zones" element={<ZonesPage />} />
-                <Route path="/structure/teams" element={<TeamsPage />} />
                 <Route path="/structure/localites" element={<LocalitesPage />} />
                 <Route path="/structure/unites" element={<UnitesPage />} />
                 <Route

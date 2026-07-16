@@ -87,18 +87,18 @@ export interface MeResponse {
   goalUnitId: string | null;
   /** Zone du DIRIGEANT_LEADER côté Goals ; null sinon. */
   goalZoneId: string | null;
-  /** Lot Team — team du team leader (DIRIGEANT) ; null sinon. */
-  donationTeamId: string | null;
-  goalTeamId: string | null;
+  /** Chantier B (décision #7) — ville du dirigeant de ville ; null sinon. */
+  donationCityId: string | null;
+  goalCityId: string | null;
   /** Pays du DIRIGEANT_COORDINATEUR côté Goals ; vide sinon. */
   goalCountryIds: string[] | null;
   // Périmètre LISIBLE (noms résolus) — affichage explicite dans le profil, selon le leadership :
   /** Noms des unités rattachées (home + multi-unités, tous modules) ; vide sinon. */
   unitNames: string[] | null;
-  /** Noms des zones rattachées (DIRIGEANT_SENIOR ou zone de la team) ; vide sinon. */
+  /** Noms des zones rattachées (DIRIGEANT_SENIOR ou région de la ville) ; vide sinon. */
   zoneNames: string[] | null;
-  /** Lot Team — noms des teams rattachées (team leader DIRIGEANT) ; vide sinon. */
-  teamNames: string[] | null;
+  /** Chantier B — noms des villes rattachées (dirigeant de ville) ; vide sinon. */
+  cityNames: string[] | null;
   /** Noms des pays rattachés (DIRIGEANT_COORDINATEUR) ; vide sinon. */
   countryNames: string[] | null;
 }

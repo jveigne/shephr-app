@@ -15,16 +15,6 @@ export type ModuleRole =
   | 'LEADER'
   | 'SECRETARIAT';
 
-export const MODULE_ROLE_LABELS: Record<ModuleRole, string> = {
-  MEMBRE: 'Membre',
-  DIRIGEANT_UNITE: "Dirigeant d'unité",
-  DIRIGEANT: 'Dirigeant',
-  DIRIGEANT_SENIOR: 'Dirigeant senior',
-  DIRIGEANT_COORDINATEUR: 'Coordinateur',
-  LEADER: 'Leader',
-  SECRETARIAT: 'Secrétariat',
-};
-
 export interface UserDTO {
   id: string;
   email: string;
@@ -62,9 +52,9 @@ export interface MeResponse {
   goalUnitId: string | null;
   /** Zone du DIRIGEANT_SENIOR côté Goals ; null sinon. */
   goalZoneId: string | null;
-  /** Lot Team — team du team leader (DIRIGEANT) ; null sinon. */
-  donationTeamId: string | null;
-  goalTeamId: string | null;
+  /** Chantier B (décision #7) — ville du dirigeant de ville ; null sinon. */
+  donationCityId: string | null;
+  goalCityId: string | null;
   /** Pays du DIRIGEANT_COORDINATEUR côté Goals ; vide sinon. */
   goalCountryIds: string[] | null;
   /** Lot 4.8 — pays qu'un SECRETARIAT/LEADER coordonne explicitement (assignés par SUPER_ADMIN). */
@@ -72,10 +62,10 @@ export interface MeResponse {
   // Périmètre LISIBLE (noms résolus) — affichage explicite dans le profil, selon le leadership :
   /** Noms des unités rattachées (home + multi-unités, tous modules) ; vide sinon. */
   unitNames: string[] | null;
-  /** Noms des zones rattachées (DIRIGEANT_SENIOR ou zone de la team) ; vide sinon. */
+  /** Noms des zones rattachées (DIRIGEANT_SENIOR ou région de la ville) ; vide sinon. */
   zoneNames: string[] | null;
-  /** Lot Team — noms des teams rattachées (team leader DIRIGEANT) ; vide sinon. */
-  teamNames: string[] | null;
+  /** Chantier B — noms des villes rattachées (dirigeant de ville) ; vide sinon. */
+  cityNames: string[] | null;
   /** Noms des pays rattachés (DIRIGEANT_COORDINATEUR) ; vide sinon. */
   countryNames: string[] | null;
 }
@@ -121,19 +111,23 @@ export function canManageZones(me: MeResponse | null): boolean {
   return me.donationRole === 'DIRIGEANT_COORDINATEUR' || me.goalRole === 'DIRIGEANT_COORDINATEUR';
 }
 
-/** Lot Team — l'utilisateur est un team leader (rattaché à une team, donation ou goal). */
-export function isTeamLeader(me: MeResponse | null): boolean {
-  return !!me && (!!me.donationTeamId || !!me.goalTeamId);
+/** Chantier B (décision #7) — l'utilisateur est un dirigeant de VILLE (rattaché à une ville). */
+export function isCityLeader(me: MeResponse | null): boolean {
+  return !!me && (!!me.donationCityId || !!me.goalCityId);
+}
+
+/** Peut administrer les VILLES : les managers de structure (SENIOR/COORDINATEUR/superAdmin). */
+export function canManageLocalities(me: MeResponse | null): boolean {
+  return canManageStructure(me);
 }
 
 /**
- * Peut administrer les LOCALITÉS et UNITÉS de son périmètre : les managers de structure
- * (SENIOR/COORDINATEUR/superAdmin) PLUS le team leader (qui gère sa team). Lot Team.
+ * Peut administrer les ASSEMBLÉES de son périmètre : les managers de structure PLUS le
+ * dirigeant de ville (qui gère les assemblées de sa ville — Chantier B).
  */
-export function canManageLocalities(me: MeResponse | null): boolean {
-  return canManageStructure(me) || isTeamLeader(me);
+export function canManageUnits(me: MeResponse | null): boolean {
+  return canManageStructure(me) || isCityLeader(me);
 }
-export const canManageUnits = canManageLocalities;
 
 const ROLE_RANK: Record<ModuleRole, number> = {
   MEMBRE: 0,
@@ -179,17 +173,6 @@ export function assignableRoles(me: MeResponse | null): ModuleRole[] {
   }
   const mr = managerRank(me);
   return (['MEMBRE', 'DIRIGEANT_UNITE', 'DIRIGEANT', 'DIRIGEANT_SENIOR'] as ModuleRole[]).filter((r) => ROLE_RANK[r] <= mr);
-}
-
-/** Human label for the user's most significant role (for the sidebar footer). */
-export function primaryRoleLabel(me: MeResponse | null): string {
-  if (!me) return '';
-  if (me.superAdmin) return 'Super Admin';
-  const elevated =
-    (isElevated(me.donationRole) ? me.donationRole : null) ??
-    (isElevated(me.goalRole) ? me.goalRole : null);
-  const role = elevated ?? me.donationRole ?? me.goalRole;
-  return role ? MODULE_ROLE_LABELS[role] : '';
 }
 
 /**

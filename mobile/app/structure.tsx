@@ -28,7 +28,7 @@ import {
   deleteLocality, deleteUnit, deleteZone,
   listCountries, listLocalities, listUnits, listZones,
   updateLocality, updateUnit, updateZone,
-  type CountryResponse, type LocalityResponse, type UnitResponse, type UnitType, type ZoneResponse,
+  type CountryResponse, type LocalityResponse, type UnitResponse, type ZoneResponse,
 } from '../services/adminApi';
 
 type Level = 'zones' | 'localities' | 'units';
@@ -136,7 +136,7 @@ export default function StructureScreen() {
               <Text style={styles.itemMeta}>
                 {level === 'zones' && (r.countryName ?? '')}
                 {level === 'localities' && (r.zoneName ?? t('structure.noZone'))}
-                {level === 'units' && t('structure.unitMeta', { type: r.type === 'CENTER' ? t('structure.center') : t('structure.assembly'), locality: r.localityName, code: r.joinCode })}
+                {level === 'units' && t('structure.unitMeta', { locality: r.localityName, code: r.joinCode })}
               </Text>
             </View>
             {canAdd && <Ionicons name="chevron-forward" size={16} color={colors.ink3} />}
@@ -153,8 +153,6 @@ export default function StructureScreen() {
         zones={zones}
         localities={localities}
         ministryId={me?.ministryId ?? null}
-        teamId={me?.donationTeamId ?? me?.goalTeamId ?? null}
-        teamName={me?.teamNames?.[0] ?? null}
         onClose={() => setEditing(null)}
         onSaved={async () => { setEditing(null); await load(); }}
         onDelete={onDelete}
@@ -164,15 +162,13 @@ export default function StructureScreen() {
 }
 
 function StructureFormModal({
-  editing, countries, zones, localities, ministryId, teamId, teamName, onClose, onSaved, onDelete,
+  editing, countries, zones, localities, ministryId, onClose, onSaved, onDelete,
 }: {
   editing: { level: Level; item: any | null } | null;
   countries: CountryResponse[];
   zones: ZoneResponse[];
   localities: LocalityResponse[];
   ministryId: string | null;
-  teamId: string | null;
-  teamName: string | null;
   onClose: () => void;
   onSaved: () => Promise<void>;
   onDelete: (lvl: Level, id: string, name: string) => Promise<void>;
@@ -180,7 +176,6 @@ function StructureFormModal({
   const { t } = useLanguage();
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState('');
-  const [unitType, setUnitType] = useState<UnitType>('CENTER');
   const [saving, setSaving] = useState(false);
   const open = editing != null;
   const level = editing?.level ?? 'zones';
@@ -189,7 +184,6 @@ function StructureFormModal({
   useEffect(() => {
     if (open) {
       setName(item?.name ?? '');
-      setUnitType(item?.type ?? 'CENTER');
       setParentId(
         level === 'zones' ? item?.countryId ?? ''
           : level === 'localities' ? item?.zoneId ?? ''
@@ -198,7 +192,6 @@ function StructureFormModal({
     }
   }, [open, editing]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const teamMode = level === 'localities' && !!teamId;
   const parentLabel = level === 'zones' ? t('structure.parentCountry') : level === 'localities' ? t('structure.parentZone') : t('structure.parentLocality');
   const parents = level === 'zones'
     ? countries.map((c) => ({ id: c.id, name: c.name }))
@@ -217,13 +210,13 @@ function StructureFormModal({
         if (item) await updateZone(item.id, { name: name.trim() });
         else await createZone({ countryId: parentId, name: name.trim() });
       } else if (level === 'localities') {
-        // Lot Team : un team leader rattache la localité à SA team (pas de zone à choisir).
-        if (item) await updateLocality(item.id, teamMode ? { name: name.trim() } : { name: name.trim(), zoneId: parentId || undefined });
-        else if (teamMode) await createLocality({ ministryId: ministryId!, teamId: teamId!, name: name.trim() });
+        // Chantier B : la Ville se rattache à sa Région (les teams sont dissoutes).
+        if (item) await updateLocality(item.id, { name: name.trim(), zoneId: parentId || undefined });
         else await createLocality({ ministryId: ministryId!, zoneId: parentId || undefined, name: name.trim() });
       } else {
-        if (item) await updateUnit(item.id, { name: name.trim(), localityId: parentId, type: unitType });
-        else await createUnit({ ministryId: ministryId!, localityId: parentId, name: name.trim(), type: unitType });
+        // Décision #5 : plus de type CENTER — toute unité est une assemblée de maison.
+        if (item) await updateUnit(item.id, { name: name.trim(), localityId: parentId, type: 'ASSEMBLY' });
+        else await createUnit({ ministryId: ministryId!, localityId: parentId, name: name.trim(), type: 'ASSEMBLY' });
       }
       await onSaved();
     } catch (e: any) {
@@ -244,43 +237,17 @@ function StructureFormModal({
           <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.name')}</Label>
           <TextInput value={name} onChangeText={setName} style={styles.input} placeholder={t('structure.namePlaceholder')} placeholderTextColor={colors.ink3} />
 
-          {teamMode ? (
-            <>
-              <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.team')}</Label>
-              <View style={[styles.chip, styles.chipActive, { alignSelf: 'flex-start' }]}>
-                <Text style={styles.chipTextActive}>{teamName ?? '—'}</Text>
-              </View>
-            </>
-          ) : (
-            <>
-              <Label style={{ marginTop: 14, marginBottom: 6 }}>
-                {parentLabel}{level === 'localities' ? t('structure.optional') : ''}
-              </Label>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                {parents.map((p) => (
-                  <Pressable key={p.id} onPress={() => setParentId(p.id)} style={[styles.chip, parentId === p.id && styles.chipActive]}>
-                    <Text style={[styles.chipText, parentId === p.id && styles.chipTextActive]}>{p.name}</Text>
-                  </Pressable>
-                ))}
-                {parents.length === 0 && <Text style={styles.empty}>{t('structure.noParent', { parent: parentLabel.toLowerCase() })}</Text>}
-              </ScrollView>
-            </>
-          )}
-
-          {level === 'units' && (
-            <>
-              <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.type')}</Label>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {(['CENTER', 'ASSEMBLY'] as UnitType[]).map((ut) => (
-                  <Pressable key={ut} onPress={() => setUnitType(ut)} style={[styles.chip, unitType === ut && styles.chipActive]}>
-                    <Text style={[styles.chipText, unitType === ut && styles.chipTextActive]}>
-                      {ut === 'CENTER' ? t('structure.center') : t('structure.assembly')}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </>
-          )}
+          <Label style={{ marginTop: 14, marginBottom: 6 }}>
+            {parentLabel}{level === 'localities' ? t('structure.optional') : ''}
+          </Label>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            {parents.map((p) => (
+              <Pressable key={p.id} onPress={() => setParentId(p.id)} style={[styles.chip, parentId === p.id && styles.chipActive]}>
+                <Text style={[styles.chipText, parentId === p.id && styles.chipTextActive]}>{p.name}</Text>
+              </Pressable>
+            ))}
+            {parents.length === 0 && <Text style={styles.empty}>{t('structure.noParent', { parent: parentLabel.toLowerCase() })}</Text>}
+          </ScrollView>
 
           <Button label={item ? t('common.save') : t('common.create')} onPress={onSave} loading={saving} fullWidth style={{ marginTop: 18 }} />
           {item && (

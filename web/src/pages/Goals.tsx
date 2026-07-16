@@ -12,7 +12,6 @@ import {
   Select,
   Table,
   TopBar,
-  UnitTypeBadge,
   type Column,
 } from '../components/ui';
 import { useToast } from '../components/Toast';
@@ -1537,7 +1536,6 @@ function ZoneUnitsBlock({
                   >
                     {u.unitName}
                   </button>
-                  {u.unitType && <UnitTypeBadge type={u.unitType} />}
                 </span>
               ),
             },
@@ -2141,7 +2139,6 @@ function DrillUnits({ zoneId, year, onOpen }: { zoneId: string; year: number; on
             render: (u: ZoneUnitStatus & { id: string }) => (
               <span>
                 <strong>{u.unitName}</strong>
-                {u.unitType && <UnitTypeBadge type={u.unitType} />}
               </span>
             ),
           },

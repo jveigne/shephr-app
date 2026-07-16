@@ -55,8 +55,6 @@ export interface LocalityResponse {
   ministryId: string;
   zoneId: string | null;
   zoneName: string | null;
-  teamId: string | null;
-  teamName: string | null;
   name: string;
   country: string | null;
 }
@@ -66,12 +64,12 @@ export async function listLocalities(params: { zoneId?: string } = {}): Promise<
   return data;
 }
 
-export async function createLocality(payload: { ministryId: string; zoneId?: string; teamId?: string; name: string; country?: string }) {
+export async function createLocality(payload: { ministryId: string; zoneId?: string; name: string; country?: string }) {
   const { data } = await apiClient.post<LocalityResponse>('/api/church/admin/localities', payload);
   return data;
 }
 
-export async function updateLocality(id: string, payload: { name?: string; zoneId?: string; teamId?: string; country?: string }) {
+export async function updateLocality(id: string, payload: { name?: string; zoneId?: string; country?: string }) {
   const { data } = await apiClient.patch<LocalityResponse>(`/api/church/admin/localities/${id}`, payload);
   return data;
 }

@@ -58,7 +58,6 @@ const NAV: { sectionKey: string; items: NavItem[] }[] = [
         children: [
           { id: 'ministeres', labelKey: 'nav.ministeres', to: '/structure/ministeres' },
           { id: 'zones', labelKey: 'nav.zones', to: '/structure/zones' },
-          { id: 'teams', labelKey: 'nav.teams', to: '/structure/teams' },
           { id: 'localites', labelKey: 'nav.localites', to: '/structure/localites' },
           { id: 'unites', labelKey: 'nav.unites', to: '/structure/unites' },
         ],
@@ -131,7 +130,6 @@ export function Sidebar() {
     const map: Record<string, boolean> = {
       ministeres: true,
       zones: canManageZones(me),
-      teams: canManageStructure(me),
       localites: canManageLocalities(me),
       unites: canManageUnits(me),
     };
@@ -294,9 +292,9 @@ export function Sidebar() {
                 {t('sidebar.localitiesLabel', { count: localityNames.length })} : {localityNames.join(', ')}
               </div>
             ) : null}
-            {me?.teamNames && me.teamNames.length > 0 ? (
+            {me?.cityNames && me.cityNames.length > 0 ? (
               <div className="rl" style={{ opacity: 0.7 }}>
-                {t('sidebar.teamsLabel', { count: me.teamNames.length })} : {me.teamNames.join(', ')}
+                {t('sidebar.citiesLabel', { count: me.cityNames.length })} : {me.cityNames.join(', ')}
               </div>
             ) : null}
             {zoneNames.length > 0 ? (
