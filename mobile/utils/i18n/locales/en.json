@@ -53,8 +53,7 @@
     "newAccount": "Create account",
     "noAccount": "New to shephr?",
     "alreadyAccount": "Already have an account?",
-    "tagline": "Track your giving with grace.",
-    "footer": "CMCI · Christian Missionary Community International",
+    "footer": "shephr · The management platform for your ministry",
     "invalidCredentials": "Check your credentials.",
     "checkEmailPassword": "Check your email address and password.",
     "loginFailedTitle": "Sign-in failed"
@@ -183,8 +182,7 @@
     "means": "Method",
     "meansDefault": "Cash · envelope",
     "note": "Note",
-    "footer": "Recorded in shephr · CMCI UK",
-    "editComing": "Editing coming soon.",
+    "footer": "Recorded in shephr",
     "deleteConfirm": "Delete this gift?",
     "deleteFailed": "Could not delete.",
     "locked": "This gift is locked (over 24 h). Contact a leader for any correction."
@@ -266,11 +264,10 @@
   },
   "goals": {
     "title": "Goals",
-    "subtitleRange": "{{name}} · {{from}}–{{to}}",
     "loadingError": "Loading error",
     "loadingErrorHint": "Could not load your pledges. Pull to retry.",
     "noGoalTitle": "No active goal",
-    "noGoalHint": "No five-year goal is active at the moment. Contact your coordinator.",
+    "noGoalHint": "No Five-Year Goal is active at the moment. Contact your coordinator.",
     "noUnitTitle": "Account not linked",
     "noUnitHint": "Your account is not linked to any assembly for the Goals module. Contact your leader.",
     "submittedBanner": "Pledges submitted{{when}}. The amounts are locked; progress remains open.",
@@ -291,7 +288,7 @@
   "goalsAgg": {
     "subtitle": "{{name}} · retained objective = MAX(total, pledge)",
     "noGoalTitle": "No active goal",
-    "noGoalHint": "No five-year goal is active at the moment.",
+    "noGoalHint": "No Five-Year Goal is active at the moment.",
     "myZone": "My region",
     "myZoneNamed": "My region — {{name}}",
     "myCountry": "My country",
@@ -331,7 +328,7 @@
     "given": "Given",
     "remaining": "Remaining",
     "amountGiven": "Amount given",
-    "progressLabel": "Progress ({{assembly}})",
+    "progressLabel": "Progress ({{unit}})",
     "unitFallback": "count",
     "date": "Date",
     "note": "Note (optional)",
@@ -354,7 +351,7 @@
     "deleteConfirm": "Delete this progress?",
     "editTitle": "Edit progress",
     "amountLabel": "Amount ({{symbol}})",
-    "valueLabel": "Value ({{assembly}})",
+    "valueLabel": "Value ({{unit}})",
     "unitFallback": "count",
     "note": "Note (optional)",
     "valuePositive": "Enter a value greater than 0."
@@ -379,7 +376,7 @@
     "lockedBanner": "Pledge submitted and locked — read only. Progress remains open.",
     "declaredBy": "Declared by {{name}}",
     "amountPledged": "Pledged amount",
-    "pledgeLabel": "Pledge ({{assembly}})",
+    "pledgeLabel": "Pledge ({{unit}})",
     "unitFallback": "count",
     "save": "Save",
     "declarePledge": "Declare the pledge",
@@ -396,8 +393,7 @@
     "addLocality": "Add a city",
     "addUnit": "Add a assembly",
     "noZone": "No region",
-    "assembly": "Assembly",
-    "unitMeta": "{{city}} · code {{code}}",
+    "unitMeta": "{{locality}} · code {{code}}",
     "emptyPerimeter": "No item in your scope.",
     "modalEditZone": "Edit — region",
     "modalEditLocality": "Edit — city",
@@ -424,17 +420,11 @@
     "morePending": "{{count}} more reminder(s) pending",
     "later": "Later"
   },
-  "leaderOld": {
-    "myUnits": "My assemblies",
-    "unitsCount": "{{count}} assemblies"
-  },
   "invite": {
     "title": "Invite a member",
-    "to": "to {{assembly}}",
+    "to": "to {{unit}}",
     "code": "Invitation code",
     "validity": "Valid 7 days · single use",
-    "copy": "Copy code",
-    "copied": "Code copied",
     "fullName": "Full name",
     "fullNamePlaceholder": "Member's first and last name",
     "email": "Email address",
@@ -469,7 +459,7 @@
     "recordCount": "{{count}} record(s)",
     "updated": "Upd.",
     "remindTitle": "Remind the leader",
-    "remindConfirm": "Send a reminder to the leader of {{assembly}}?",
+    "remindConfirm": "Send a reminder to the leader of {{unit}}?",
     "remindSent": "Reminder sent.",
     "remindFailed": "The reminder failed.",
     "newTitle": "New record",
@@ -494,5 +484,21 @@
     "firstMet": "First met",
     "firstMetAt": "First met",
     "notProvided": "Not provided"
+  },
+  "views": {
+    "badge": "View",
+    "overview": "General overview",
+    "secretariat": "Secretariat",
+    "coordinator": "Coordinator",
+    "leader": "Leader",
+    "unit": "Unit",
+    "regionsHeading": "Regions",
+    "statesHeading": "States",
+    "submittedRatio": "{{submitted}}/{{total}} submitted · {{percent}}%",
+    "achievedInline": "given {{value}}",
+    "nationTotal": "Nation grand total",
+    "ministryTotals": "Ministry totals",
+    "nationsHeading": "Nations",
+    "manageOnWeb": "(deadline and year management on the web)"
   }
 }

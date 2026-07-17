@@ -422,3 +422,34 @@ export async function updateYearDeadline(year: number, submissionDeadline: strin
   );
   return data;
 }
+
+// --- Lot V1 — vue COORDINATEUR : cumuls par Région + somme totale Nation (borné à la Région) ---
+export interface RegionSummaryLine {
+  categoryId: string;
+  categoryCode: string;
+  unitType: PledgeUnitType;
+  effectiveAmount: number | null;
+  effectiveCount: number | null;
+  achieved: number;
+}
+export interface RegionSummary {
+  regionId: string;
+  regionName: string;
+  totalUnits: number;
+  submittedUnits: number;
+  submissionRate: number;
+  lines: RegionSummaryLine[];
+}
+export interface NationRegionsSummary {
+  nationId: string;
+  nationName: string | null;
+  regionLabel: 'REGION' | 'STATE' | null;
+  regions: RegionSummary[];
+  totals: RegionSummaryLine[];
+}
+export async function getRegionsSummary(nationId: string, year?: number) {
+  const { data } = await apiClient.get<NationRegionsSummary>(
+    `/api/church/goals/nations/${nationId}/regions-summary${yq(year)}`,
+  );
+  return data;
+}

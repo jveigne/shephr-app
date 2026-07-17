@@ -53,8 +53,7 @@
     "newAccount": "Créer un compte",
     "noAccount": "Nouveau dans shephr ?",
     "alreadyAccount": "Déjà inscrit ?",
-    "tagline": "Suivez vos dons avec grâce.",
-    "footer": "CMCI · Communauté Missionnaire Chrétienne Internationale",
+    "footer": "shephr · La plateforme de gestion pour votre ministère",
     "invalidCredentials": "Vérifiez vos identifiants.",
     "checkEmailPassword": "Vérifiez votre adresse e-mail et votre mot de passe.",
     "loginFailedTitle": "Connexion impossible"
@@ -183,8 +182,7 @@
     "means": "Moyen",
     "meansDefault": "Espèces · enveloppe",
     "note": "Note",
-    "footer": "Enregistré dans shephr · CMCI UK",
-    "editComing": "Édition à venir.",
+    "footer": "Enregistré dans shephr",
     "deleteConfirm": "Supprimer ce don ?",
     "deleteFailed": "Suppression impossible.",
     "locked": "Ce don est verrouillé (plus de 24 h). Contactez un responsable pour toute correction."
@@ -266,11 +264,10 @@
   },
   "goals": {
     "title": "Objectifs",
-    "subtitleRange": "{{name}} · {{from}}–{{to}}",
     "loadingError": "Erreur de chargement",
     "loadingErrorHint": "Impossible de charger vos engagements. Tirez pour réessayer.",
     "noGoalTitle": "Aucun objectif actif",
-    "noGoalHint": "Aucun objectif quinquennal n'est actif pour le moment. Contactez votre coordinateur.",
+    "noGoalHint": "Aucun But Quinquennal n'est actif pour le moment. Contactez votre coordinateur.",
     "noUnitTitle": "Compte non rattaché",
     "noUnitHint": "Votre compte n'est rattaché à aucune assemblée pour le module Objectifs. Contactez votre responsable.",
     "submittedBanner": "Engagements soumis{{when}}. Les montants sont verrouillés ; les avancements restent ouverts.",
@@ -291,7 +288,7 @@
   "goalsAgg": {
     "subtitle": "{{name}} · objectif retenu = MAX(cumul, engagement)",
     "noGoalTitle": "Aucun objectif actif",
-    "noGoalHint": "Aucun objectif quinquennal n'est actif pour le moment.",
+    "noGoalHint": "Aucun But Quinquennal n'est actif pour le moment.",
     "myZone": "Ma région",
     "myZoneNamed": "Ma région — {{name}}",
     "myCountry": "Mon pays",
@@ -396,7 +393,6 @@
     "addLocality": "Ajouter une ville",
     "addUnit": "Ajouter une assemblée",
     "noZone": "Sans région",
-    "assembly": "Assemblée",
     "unitMeta": "{{locality}} · code {{code}}",
     "emptyPerimeter": "Aucun élément dans votre périmètre.",
     "modalEditZone": "Modifier — région",
@@ -424,17 +420,11 @@
     "morePending": "{{count}} autre(s) rappel(s) en attente",
     "later": "Plus tard"
   },
-  "leaderOld": {
-    "myUnits": "Mes assemblées",
-    "unitsCount": "{{count}} assemblées"
-  },
   "invite": {
     "title": "Inviter un fidèle",
     "to": "vers {{unit}}",
     "code": "Code d'invitation",
     "validity": "Valide 7 jours · à usage unique",
-    "copy": "Copier le code",
-    "copied": "Code copié",
     "fullName": "Nom complet",
     "fullNamePlaceholder": "Prénom et nom du fidèle",
     "email": "Adresse e-mail",
@@ -494,5 +484,21 @@
     "firstMet": "Première rencontre",
     "firstMetAt": "Première rencontre",
     "notProvided": "Non renseigné"
+  },
+  "views": {
+    "badge": "Vue",
+    "overview": "Présentation générale",
+    "secretariat": "Secrétariat",
+    "coordinator": "Coordinateur",
+    "leader": "Dirigeant",
+    "unit": "Unité",
+    "regionsHeading": "Régions",
+    "statesHeading": "États",
+    "submittedRatio": "{{submitted}}/{{total}} soumises · {{percent}} %",
+    "achievedInline": "versé {{value}}",
+    "nationTotal": "Somme totale Nation",
+    "ministryTotals": "Totaux du ministère",
+    "nationsHeading": "Nations",
+    "manageOnWeb": "(gestion de la date limite et des années sur le web)"
   }
 }

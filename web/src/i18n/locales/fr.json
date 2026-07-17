@@ -563,7 +563,7 @@
     "addProgress": "Saisir un avancement",
     "submitMyPledges": "Soumettre mes engagements",
     "noActiveGoal": "Aucun objectif actif",
-    "noActiveGoalText": "Aucun objectif quinquennal n'est actif pour le moment. Contactez votre coordinateur.",
+    "noActiveGoalText": "Aucun But Quinquennal n'est actif pour le moment. Contactez votre coordinateur.",
     "notAttached": "Compte non rattaché",
     "notAttachedText": "Votre compte n'est rattaché à aucun périmètre pour le module Objectifs (assemblée, région ou pays). Contactez votre responsable.",
     "errorTitle": "Erreur",
@@ -742,5 +742,19 @@
     "codeTooShort": "Le code doit contenir au moins 6 caractères.",
     "invalidCode": "Code invalide, expiré ou déjà utilisé.",
     "changeCode": "Saisir un autre code"
+  },
+  "views": {
+    "badge": "Vue",
+    "overview": "Présentation générale",
+    "secretariat": "Secrétariat",
+    "coordinator": "Coordinateur",
+    "leader": "Dirigeant",
+    "unit": "Unité",
+    "regionsHeading": "Régions",
+    "statesHeading": "États",
+    "regionsIntro": "Cumuls par région (objectif retenu, versé, soumission) — la vue Coordinateur s'arrête à la région.",
+    "submittedRatio": "{{submitted}}/{{total}} soumises · {{percent}} %",
+    "achievedInline": "versé {{value}}",
+    "nationTotal": "Somme totale Nation"
   }
 }

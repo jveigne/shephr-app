@@ -563,7 +563,7 @@
     "addProgress": "Add progress",
     "submitMyPledges": "Submit my pledges",
     "noActiveGoal": "No active goal",
-    "noActiveGoalText": "No five-year goal is active at the moment. Contact your coordinator.",
+    "noActiveGoalText": "No Five-Year Goal is active at the moment. Contact your coordinator.",
     "notAttached": "Account not attached",
     "notAttachedText": "Your account is not attached to any scope for the Goals module (assembly, region or country). Contact your supervisor.",
     "errorTitle": "Error",
@@ -742,5 +742,19 @@
     "codeTooShort": "The code must be at least 6 characters.",
     "invalidCode": "Invalid, expired or already used code.",
     "changeCode": "Enter another code"
+  },
+  "views": {
+    "badge": "View",
+    "overview": "General overview",
+    "secretariat": "Secretariat",
+    "coordinator": "Coordinator",
+    "leader": "Leader",
+    "unit": "Unit",
+    "regionsHeading": "Regions",
+    "statesHeading": "States",
+    "regionsIntro": "Per-region totals (retained objective, given, submission) — the Coordinator view stops at the region.",
+    "submittedRatio": "{{submitted}}/{{total}} submitted · {{percent}}%",
+    "achievedInline": "given {{value}}",
+    "nationTotal": "Nation grand total"
   }
 }

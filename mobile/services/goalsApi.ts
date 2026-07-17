@@ -314,3 +314,61 @@ export async function getZoneUnits(zoneId: string, year?: number): Promise<ZoneU
 
 // Lot G2 : la règle locale « 24 h » (ex-isProgressEditable) est SUPPRIMÉE — l'éditabilité est
 // server-driven via `ProgressResponse.editable` / `editableUntil` (deadline de l'année).
+
+// --- Lot V1 — vues ministère-large (Présentation générale / Secrétariat) ---
+export interface GlobalSummaryLine {
+  categoryId: string;
+  categoryCode: string;
+  unitType: PledgeUnitType;
+  effectiveAmount: number | null;
+  effectiveCount: number | null;
+  achieved: number;
+}
+export interface GlobalSummary {
+  goalId: string;
+  goalName: string;
+  totalUnits: number;
+  submittedUnits: number;
+  totals: GlobalSummaryLine[];
+}
+export async function getGlobalSummary(year?: number): Promise<GlobalSummary> {
+  const { data } = await apiClient.get<GlobalSummary>(`/api/church/goals/global/summary${yq(year)}`);
+  return data;
+}
+export interface NationStatus {
+  countryId: string;
+  name: string;
+  totalUnits: number;
+  submittedUnits: number;
+  submissionRate: number;
+  late: boolean;
+}
+export async function getNations(year?: number): Promise<{ deadlinePast: boolean; nations: NationStatus[] }> {
+  const { data } = await apiClient.get<{ deadlinePast: boolean; nations: NationStatus[] }>(
+    `/api/church/goals/global/nations${yq(year)}`,
+  );
+  return data;
+}
+
+// --- Lot V1 — vue COORDINATEUR : cumuls par Région + somme totale Nation ---
+export interface RegionSummary {
+  regionId: string;
+  regionName: string;
+  totalUnits: number;
+  submittedUnits: number;
+  submissionRate: number;
+  lines: GlobalSummaryLine[];
+}
+export interface NationRegionsSummary {
+  nationId: string;
+  nationName: string | null;
+  regionLabel: 'REGION' | 'STATE' | null;
+  regions: RegionSummary[];
+  totals: GlobalSummaryLine[];
+}
+export async function getRegionsSummary(nationId: string, year?: number): Promise<NationRegionsSummary> {
+  const { data } = await apiClient.get<NationRegionsSummary>(
+    `/api/church/goals/nations/${nationId}/regions-summary${yq(year)}`,
+  );
+  return data;
+}

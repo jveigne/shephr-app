@@ -27,6 +27,7 @@ import {
   deleteFaithPledge,
   getActiveGoal,
   getAggregate,
+  getRegionsSummary,
   getZoneUnits,
   listFaithPledges,
   updateFaithPledge,
@@ -149,6 +150,11 @@ export default function GoalAggregatesScreen({
         <Ionicons name="flag-outline" size={22} color={colors.mossSoft} />
         <Text style={styles.title}>{t('goals.title')}</Text>
       </View>
+      <View style={styles.viewChip}>
+        <Text style={styles.viewChipText}>
+          {t('views.badge')} : {countryIds.length > 0 ? t('views.coordinator') : t('views.leader')}
+        </Text>
+      </View>
       <Text style={styles.subtitle}>
         {t('goalsAgg.subtitle', { name: goal.name })}
       </Text>
@@ -180,6 +186,11 @@ export default function GoalAggregatesScreen({
           goal={goal}
           year={year}
         />
+      ))}
+
+      {/* Lot V1 — vue Coordinateur : cumuls PAR RÉGION + somme totale (borné à la Région). */}
+      {year != null && countryIds.map((id) => (
+        <RegionsSummaryBlock key={`regions-${id}-${year}-${refreshKey}`} nationId={id} year={year} goal={goal} />
       ))}
     </ScreenShell>
   );
@@ -353,6 +364,60 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
   );
 }
 
+/** Lot V1 — cumuls d'une Nation détaillés PAR RÉGION (la vue Coordinateur s'arrête à la Région). */
+function RegionsSummaryBlock({ nationId, year, goal }: { nationId: string; year: number; goal: ActiveGoal }) {
+  const { t } = useLanguage();
+  const [data, setData] = useState<Awaited<ReturnType<typeof getRegionsSummary>> | null>(null);
+  const currency = goal.defaultCurrency;
+  const catByCode = new Map(goal.categories.map((c) => [c.code, c]));
+
+  useEffect(() => {
+    getRegionsSummary(nationId, year).then(setData).catch(() => setData(null));
+  }, [nationId, year]);
+
+  if (!data || data.regions.length === 0) return null;
+  const heading = data.regionLabel === 'STATE' ? t('views.statesHeading') : t('views.regionsHeading');
+  const fmtLine = (l: { unitType: string; effectiveAmount: number | null; effectiveCount: number | null; achieved: number; categoryCode: string }) => {
+    const cat = catByCode.get(l.categoryCode);
+    const effective = l.unitType === 'CURRENCY'
+      ? fmtAmount(l.effectiveAmount ?? 0, currency)
+      : `${l.effectiveCount ?? 0} ${cat?.unitLabel ?? ''}`.trim();
+    const achieved = l.unitType === 'CURRENCY'
+      ? fmtAmount(l.achieved ?? 0, currency)
+      : `${l.achieved ?? 0} ${cat?.unitLabel ?? ''}`.trim();
+    return `${cat?.name ?? l.categoryCode} : ${effective} · ${t('views.achievedInline', { value: achieved })}`;
+  };
+
+  return (
+    <Card variant="paper2" style={styles.faithListCard}>
+      <Label style={{ marginBottom: 8 }}>
+        {heading}{data.nationName ? ` — ${data.nationName}` : ''}
+      </Label>
+      {data.regions.map((r) => (
+        <View key={r.regionId} style={{ marginBottom: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={styles.unitName}>{r.regionName}</Text>
+            <Text style={styles.unitMeta}>
+              {t('views.submittedRatio', {
+                submitted: r.submittedUnits, total: r.totalUnits,
+                percent: Math.round(r.submissionRate * 100),
+              })}
+            </Text>
+          </View>
+          {r.lines.map((l) => (
+            <Text key={l.categoryId} style={styles.faithListItem}>{fmtLine(l)}</Text>
+          ))}
+        </View>
+      ))}
+      <HandDivider style={{ marginVertical: 8 }} />
+      <Text style={[styles.unitName, { marginBottom: 4 }]}>{t('views.nationTotal')}</Text>
+      {data.totals.map((l) => (
+        <Text key={l.categoryId} style={styles.faithListItem}>{fmtLine(l)}</Text>
+      ))}
+    </Card>
+  );
+}
+
 /** Badge de statut de soumission (UC-LDR-06) : Soumis / En retard / Brouillon / Non démarré. */
 function UnitStatusBadge({ unit }: { unit: ZoneUnitStatus }) {
   const { t } = useLanguage();
@@ -509,6 +574,15 @@ function FaithFormModal({
 }
 
 const styles = StyleSheet.create({
+  viewChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.earthDeep + '1F',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 8,
+  },
+  viewChipText: { fontFamily: fonts.sans, fontSize: 12, fontWeight: '600', color: colors.earthDeep },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   title: {
     fontFamily: fonts.serif,

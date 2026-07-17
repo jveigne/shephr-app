@@ -30,6 +30,7 @@ import {
   getMyPerimeterAggregate,
   getMyUnits,
   getNations,
+  getRegionsSummary,
   getTimeline,
   getUnitDetail,
   getZoneUnits,
@@ -215,6 +216,10 @@ export function GoalsPage() {
   // Lot 4.3 : les rôles ministère-large (LEADER/SECRETARIAT) ont la vue globale.
   const ministryWide =
     (me?.superAdmin ?? false) || me?.goalRole === 'LEADER' || me?.goalRole === 'SECRETARIAT';
+  // Lot V1 : la GESTION (deadline, années, drill-down complet) est la vue « Secrétariat » ;
+  // un LEADER non-secrétariat a la « Présentation générale » (synthèse + carte, lecture).
+  const isSecretariatView = (me?.superAdmin ?? false) || me?.goalRole === 'SECRETARIAT';
+  const isCoordinatorView = countryIds.length > 0 || coordinatedCountryIds.length > 0;
   // Lot 3.5 : un dirigeant (sous-coordinateur) voit « Mon périmètre » = son SOUS-ARBRE (pas la zone géo).
   const showPerimeter =
     !!me && !me.superAdmin && (me.goalRole === 'DIRIGEANT' || me.goalRole === 'DIRIGEANT_SENIOR');
@@ -482,7 +487,7 @@ export function GoalsPage() {
                   )
                 ) : null}
               </p>
-              {goal && ministryWide && year != null && (
+              {goal && isSecretariatView && year != null && (
                 <DeadlineEditor year={year} current={yearDeadline} />
               )}
             </div>
@@ -490,10 +495,16 @@ export function GoalsPage() {
             {/* Mise en avant des engagements (JP 2026-07-10) : la vue globale — carte
                 du monde en tête — s'affiche en premier pour les rôles ministère-large,
                 pour « tomber sur la carte » à la connexion. */}
-            {goal && ministryWide && year != null && <GlobalSummarySection goal={goal} currency={currency} year={year} />}
+            {goal && ministryWide && year != null && (
+              <>
+                <ViewTitle label={isSecretariatView ? t('views.secretariat') : t('views.overview')} />
+                <GlobalSummarySection goal={goal} currency={currency} year={year} drill={isSecretariatView} />
+              </>
+            )}
 
             {hasUnit && (
               <>
+                <ViewTitle label={t('views.unit')} />
                 <Table
                   columns={lineCols}
                   rows={lines.map((l) => ({ ...l, id: l.category.id }))}
@@ -517,7 +528,9 @@ export function GoalsPage() {
             )}
 
             {goal && showPerimeter && year != null && (
-              <MyPerimeterSection
+              <>
+                <ViewTitle label={t('views.leader')} />
+                <MyPerimeterSection
                 goal={goal}
                 currency={currency}
                 year={year}
@@ -525,8 +538,12 @@ export function GoalsPage() {
                 isSuperAdmin={me?.superAdmin ?? false}
                 zoneId={zoneId}
                 zoneName={zoneName}
-              />
+                />
+              </>
             )}
+
+            {/* Lot V1 — vue Coordinateur : agrégats + foi Nation, puis cumuls PAR RÉGION (borné à la Région). */}
+            {goal && year != null && isCoordinatorView && <ViewTitle label={t('views.coordinator')} />}
             {goal && year != null &&
               countryIds.map((id) => (
                 <AggregateSection
@@ -540,6 +557,10 @@ export function GoalsPage() {
                   meId={me?.id ?? null}
                   isSuperAdmin={me?.superAdmin ?? false}
                 />
+              ))}
+            {goal && year != null &&
+              countryIds.map((id) => (
+                <NationRegionsBlock key={`regions-${id}`} nationId={id} year={year} goal={goal} currency={currency} />
               ))}
 
             {/* Lot 4.8 — pays sans coordinateur confiés à ce SECRETARIAT/LEADER (vue éditable). */}
@@ -558,6 +579,12 @@ export function GoalsPage() {
                     meId={me?.id ?? null}
                     isSuperAdmin={me?.superAdmin ?? false}
                   />
+                ))}
+            {goal && year != null &&
+              coordinatedCountryIds
+                .filter((id) => !countryIds.includes(id))
+                .map((id) => (
+                  <NationRegionsBlock key={`regions-coord-${id}`} nationId={id} year={year} goal={goal} currency={currency} />
                 ))}
           </>
         )}
@@ -1682,6 +1709,96 @@ function ZoneUnitsBlock({
   );
 }
 
+/** Lot V1 — intitulé de vue nommée (Présentation générale / Secrétariat / Coordinateur / Dirigeant / Unité). */
+function ViewTitle({ label }: { label: string }) {
+  const { t } = useTranslation();
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '18px 0 10px' }}>
+      <Badge tone="earth">{t('views.badge')}</Badge>
+      <h2 style={{ margin: 0, fontSize: 18 }}>{label}</h2>
+    </div>
+  );
+}
+
+/**
+ * Lot V1 — vue COORDINATEUR : cumuls d'une Nation détaillés PAR RÉGION + somme totale.
+ * Le drill-down du coordinateur s'arrête à la Région (pas de descente Ville/Assemblée).
+ */
+function NationRegionsBlock({
+  nationId, year, goal, currency,
+}: {
+  nationId: string;
+  year: number;
+  goal: ActiveGoal;
+  currency: string;
+}) {
+  const { t } = useTranslation();
+  const q = useQuery({
+    queryKey: ['goals', 'regions-summary', nationId, year],
+    queryFn: () => getRegionsSummary(nationId, year),
+  });
+  const data = q.data ?? null;
+  const catByCode = new Map(goal.categories.map((c) => [c.code, c]));
+  if (q.isLoading) return <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>;
+  if (!data) return null;
+  const levelLabel = data.regionLabel === 'STATE' ? t('views.statesHeading') : t('views.regionsHeading');
+  return (
+    <div style={{ marginTop: 18 }}>
+      <h3 style={{ margin: '0 0 4px' }}>{levelLabel}{data.nationName ? ` — ${data.nationName}` : ''}</h3>
+      <p style={{ margin: '0 0 10px', color: 'var(--ink-400)', fontSize: 13 }}>{t('views.regionsIntro')}</p>
+      {data.regions.map((r) => (
+        <div key={r.regionId} className="card" style={{ padding: '12px 16px', marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <strong>{r.regionName}</strong>
+            <Badge tone={r.submissionRate >= 1 ? 'ok' : r.submittedUnits > 0 ? 'warn' : 'gray'}>
+              {t('views.submittedRatio', { submitted: r.submittedUnits, total: r.totalUnits, percent: Math.round(r.submissionRate * 100) })}
+            </Badge>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 22px', fontSize: 13 }}>
+            {r.lines.map((l) => {
+              const cat = catByCode.get(l.categoryCode);
+              const effective = l.unitType === 'CURRENCY'
+                ? fmtAmount(l.effectiveAmount ?? 0, currency)
+                : `${l.effectiveCount ?? 0} ${cat?.unitLabel ?? ''}`.trim();
+              const achieved = l.unitType === 'CURRENCY'
+                ? fmtAmount(l.achieved ?? 0, currency)
+                : `${l.achieved ?? 0} ${cat?.unitLabel ?? ''}`.trim();
+              return (
+                <span key={l.categoryId}>
+                  <span style={{ color: 'var(--ink-400)' }}>{cat?.name ?? l.categoryCode} : </span>
+                  <strong>{effective}</strong>
+                  <span style={{ color: 'var(--ink-400)' }}> · {t('views.achievedInline', { value: achieved })}</span>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      <div className="card" style={{ padding: '12px 16px', background: 'var(--paper-2, #F7F4EE)' }}>
+        <div style={{ marginBottom: 6 }}><strong>{t('views.nationTotal')}</strong></div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 22px', fontSize: 13 }}>
+          {data.totals.map((l) => {
+            const cat = catByCode.get(l.categoryCode);
+            const effective = l.unitType === 'CURRENCY'
+              ? fmtAmount(l.effectiveAmount ?? 0, currency)
+              : `${l.effectiveCount ?? 0} ${cat?.unitLabel ?? ''}`.trim();
+            const achieved = l.unitType === 'CURRENCY'
+              ? fmtAmount(l.achieved ?? 0, currency)
+              : `${l.achieved ?? 0} ${cat?.unitLabel ?? ''}`.trim();
+            return (
+              <span key={l.categoryId}>
+                <span style={{ color: 'var(--ink-400)' }}>{cat?.name ?? l.categoryCode} : </span>
+                <strong>{effective}</strong>
+                <span style={{ color: 'var(--ink-400)' }}> · {t('views.achievedInline', { value: achieved })}</span>
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Lot G2 : édition de la date limite d'envoi de l'année sélectionnée —
  * visible uniquement pour les rôles ministère-large (SECRETARIAT/LEADER/SUPER_ADMIN).
@@ -1757,7 +1874,7 @@ interface DrillStep {
   unitStatus?: ZoneUnitStatus;
 }
 
-function GlobalSummarySection({ goal, currency, year }: { goal: ActiveGoal; currency: string; year: number }) {
+function GlobalSummarySection({ goal, currency, year, drill = true }: { goal: ActiveGoal; currency: string; year: number; drill?: boolean }) {
   const { t } = useTranslation();
   const summaryQ = useQuery({
     queryKey: ['goals', 'global', 'summary', year],
@@ -1801,7 +1918,7 @@ function GlobalSummarySection({ goal, currency, year }: { goal: ActiveGoal; curr
           <NationsMap
             nations={nationsQ.data.nations}
             deadlinePast={nationsQ.data.deadlinePast}
-            onSelectCountry={(id, name) => setPath([{ level: 'countries', id, name }])}
+            onSelectCountry={drill ? (id, name) => setPath([{ level: 'countries', id, name }]) : undefined}
           />
         </div>
       )}
@@ -1848,15 +1965,17 @@ function GlobalSummarySection({ goal, currency, year }: { goal: ActiveGoal; curr
                 <span style={{ fontWeight: 400, fontSize: 13, color: 'var(--ink-400)' }}>
                   {t('goals.continentSubmitted', { submitted: continent.submittedUnits, total: continent.totalUnits })}
                 </span>
-                <Button
-                  size="sm"
-                  iconR={<Icon name="arrowRight" size={13} />}
-                  onClick={() =>
-                    setPath([{ level: 'continents', id: continent.continentId, name: continent.name }])
-                  }
-                >
-                  {t('goals.explore')}
-                </Button>
+                {drill && (
+                  <Button
+                    size="sm"
+                    iconR={<Icon name="arrowRight" size={13} />}
+                    onClick={() =>
+                      setPath([{ level: 'continents', id: continent.continentId, name: continent.name }])
+                    }
+                  >
+                    {t('goals.explore')}
+                  </Button>
+                )}
               </h4>
               <Table
                 columns={[

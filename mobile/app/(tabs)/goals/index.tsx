@@ -8,6 +8,7 @@ import Label from '../../../components/Label';
 import Button from '../../../components/Button';
 import HandDivider from '../../../components/HandDivider';
 import GoalAggregatesScreen from '../../../components/GoalAggregates';
+import GoalsMinistryOverview from '../../../components/GoalsMinistryOverview';
 import { colors, fonts } from '../../../theme';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
@@ -18,10 +19,15 @@ import { fmtAmount, fmtDate } from '../../../utils/format';
 export default function GoalsOverviewScreen() {
   const { me } = useAuth();
 
-  // Lot 4.2 : un leader sans unité (DIRIGEANT_LEADER / COORDINATEUR) voit la vue
-  // agrégée de son périmètre au lieu des engagements d'unité (UC-LDR-04, COO-04).
+  // Lot V1 — routage par rôle : Secrétariat/Présentation générale (ministère-large),
+  // Coordinateur/Dirigeant (périmètre agrégé), Unité (engagements de l'assemblée).
+  const secretariat = (me?.superAdmin ?? false) || me?.goalRole === 'SECRETARIAT';
+  const ministryWide = secretariat || me?.goalRole === 'LEADER';
   const zoneId = me?.goalZoneId ?? null;
   const countryIds = me?.goalCountryIds ?? [];
+  if (!me?.goalUnitId && ministryWide) {
+    return <GoalsMinistryOverview secretariat={secretariat} />;
+  }
   if (!me?.goalUnitId && (zoneId != null || countryIds.length > 0)) {
     return <GoalAggregatesScreen zoneId={zoneId} countryIds={countryIds} />;
   }
@@ -85,6 +91,9 @@ function UnitGoalsScreen() {
       <View style={styles.titleRow}>
         <Ionicons name="flag-outline" size={22} color={colors.mossSoft} />
         <Text style={styles.title}>{t('goals.title')}</Text>
+      </View>
+      <View style={styles.viewChip}>
+        <Text style={styles.viewChipText}>{t('views.badge')} : {t('views.unit')}</Text>
       </View>
       <Text style={styles.subtitle}>
         {goal?.name} · {goal ? `${new Date(goal.startDate).getFullYear()}–${new Date(goal.endDate).getFullYear()}` : ''}
@@ -301,6 +310,15 @@ function EmptyState({
 }
 
 const styles = StyleSheet.create({
+  viewChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.earthDeep + '1F',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 8,
+  },
+  viewChipText: { fontFamily: fonts.sans, fontSize: 12, fontWeight: '600', color: colors.earthDeep },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   title: {
     fontFamily: fonts.serif,
