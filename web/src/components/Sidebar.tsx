@@ -4,7 +4,15 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './Icon';
 import { useAuth } from '../hooks/useAuth';
-import { getAccessibleModules, primaryRoleKey } from '../services/authApi';
+import {
+  canManageLocalities,
+  canManageStructure,
+  canManageUnits,
+  canManageZones,
+  getAccessibleModules,
+  primaryRoleKey,
+} from '../services/authApi';
+import { listUnits, listLocalities } from '../services/adminApi';
 import { FEATURES } from '../config/features';
 import { setLanguage } from '../i18n';
 
@@ -22,8 +30,9 @@ interface NavItem {
   children?: NavChild[];
 }
 
-// Livraison « Goals only » (décision JP 2026-06-10) : les entrées Dons
-// (Tableau de bord, Dons, Exports) sont masquées tant que FEATURES.donations=false.
+// Livraison « Member Care only » (décision JP 2026-06-27) : les entrées Dons
+// (Tableau de bord, Dons, Exports) sont masquées tant que FEATURES.donations=false,
+// et l'entrée Goals tant que FEATURES.goals=false.
 const NAV: { sectionKey: string; items: NavItem[] }[] = [
   {
     sectionKey: 'nav.section.pilotage',
@@ -34,7 +43,9 @@ const NAV: { sectionKey: string; items: NavItem[] }[] = [
             { id: 'donations', labelKey: 'nav.donations', icon: 'donation', to: '/donations' },
           ]
         : []),
-      { id: 'goals', labelKey: 'nav.goals', icon: 'sparkle', to: '/goals' },
+      ...(FEATURES.goals
+        ? [{ id: 'goals', labelKey: 'nav.goals', icon: 'sparkle', to: '/goals' } as NavItem]
+        : []),
     ],
   },
   {
@@ -85,14 +96,59 @@ export function Sidebar() {
   const modulesQ = useQuery({ queryKey: ['accessible-modules'], queryFn: getAccessibleModules });
   const hasMemberCare = (modulesQ.data ?? []).includes('MEMBER_CARE');
 
+  // Le /me ne porte ni la localité, ni — pour un DIRIGEANT_UNITE — la zone (zoneNames
+  // n'est renseigné que pour le DIRIGEANT_SENIOR). On les résout par ID depuis l'unité du
+  // dirigeant : unité → localityId → localité → zone. Les endpoints structure (lecture)
+  // sont ouverts à tout membre du ministère ; seules les écritures sont gardées.
+  const myUnitIds = useMemo(
+    () => Array.from(new Set([me?.donationUnitId, me?.goalUnitId].filter((x): x is string => Boolean(x)))),
+    [me?.donationUnitId, me?.goalUnitId],
+  );
+  const needsPerimeter = myUnitIds.length > 0;
+  const unitsQ = useQuery({ queryKey: ['admin', 'units'], queryFn: () => listUnits(), enabled: needsPerimeter });
+  const localitiesQ = useQuery({ queryKey: ['admin', 'localities'], queryFn: () => listLocalities(), enabled: needsPerimeter });
+
+  const { localityNames, derivedZoneNames } = useMemo(() => {
+    const units = (unitsQ.data ?? []).filter((u) => myUnitIds.includes(u.id));
+    const localityIds = Array.from(new Set(units.map((u) => u.localityId)));
+    const localities = (localitiesQ.data ?? []).filter((l) => localityIds.includes(l.id));
+    return {
+      localityNames: Array.from(new Set(units.map((u) => u.localityName).filter(Boolean))),
+      derivedZoneNames: Array.from(
+        new Set(localities.map((l) => l.zoneName).filter((z): z is string => Boolean(z))),
+      ),
+    };
+  }, [unitsQ.data, localitiesQ.data, myUnitIds]);
+
+  // Zone affichée : périmètre explicite du /me (DIRIGEANT_SENIOR) sinon zone dérivée de l'unité.
+  const zoneNames = me?.zoneNames && me.zoneNames.length > 0 ? me.zoneNames : derivedZoneNames;
+
+  // Gating « chacun gère le niveau sous lui » : on masque les sous-items de structure que
+  // l'utilisateur ne peut pas administrer (au lieu d'afficher une page vide + bouton inutile).
+  // « Mon ministère » reste visible (contexte de rattachement, lecture seule).
+  const canSeeStructureChild = useMemo(() => {
+    const map: Record<string, boolean> = {
+      ministeres: true,
+      zones: canManageZones(me),
+      localites: canManageLocalities(me),
+      unites: canManageUnits(me),
+    };
+    return (id: string) => map[id] ?? true;
+  }, [me]);
+
   const nav = useMemo(() => {
-    if (!hasMemberCare) return NAV;
-    return NAV.map((sec) =>
-      sec.sectionKey === 'nav.section.pilotage'
-        ? { ...sec, items: [...sec.items, { id: 'member-care', labelKey: 'nav.memberCare', icon: 'users', to: '/member-care' }] }
-        : sec,
-    );
-  }, [hasMemberCare]);
+    return NAV.map((sec) => {
+      let items = sec.items.map((item) =>
+        item.children
+          ? { ...item, children: item.children.filter((c) => canSeeStructureChild(c.id)) }
+          : item,
+      );
+      if (hasMemberCare && sec.sectionKey === 'nav.section.pilotage') {
+        items = [...items, { id: 'member-care', labelKey: 'nav.memberCare', icon: 'users', to: '/member-care' }];
+      }
+      return { ...sec, items };
+    });
+  }, [hasMemberCare, canSeeStructureChild]);
 
   const initials = (me?.fullName ?? 'A·')
     .split(' ')
@@ -231,9 +287,19 @@ export function Sidebar() {
                 {t('sidebar.units', { count: me.unitNames.length })} : {me.unitNames.join(', ')}
               </div>
             ) : null}
-            {me?.zoneNames && me.zoneNames.length > 0 ? (
+            {localityNames.length > 0 ? (
               <div className="rl" style={{ opacity: 0.7 }}>
-                {t('sidebar.zonesLabel', { count: me.zoneNames.length })} : {me.zoneNames.join(', ')}
+                {t('sidebar.localitiesLabel', { count: localityNames.length })} : {localityNames.join(', ')}
+              </div>
+            ) : null}
+            {me?.cityNames && me.cityNames.length > 0 ? (
+              <div className="rl" style={{ opacity: 0.7 }}>
+                {t('sidebar.citiesLabel', { count: me.cityNames.length })} : {me.cityNames.join(', ')}
+              </div>
+            ) : null}
+            {zoneNames.length > 0 ? (
+              <div className="rl" style={{ opacity: 0.7 }}>
+                {t('sidebar.zonesLabel', { count: zoneNames.length })} : {zoneNames.join(', ')}
               </div>
             ) : null}
             {me?.countryNames && me.countryNames.length > 0 ? (

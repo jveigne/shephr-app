@@ -8,6 +8,7 @@ import Label from '../../../components/Label';
 import Button from '../../../components/Button';
 import HandDivider from '../../../components/HandDivider';
 import GoalAggregatesScreen from '../../../components/GoalAggregates';
+import GoalsMinistryOverview from '../../../components/GoalsMinistryOverview';
 import { colors, fonts } from '../../../theme';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
@@ -18,10 +19,15 @@ import { fmtAmount, fmtDate } from '../../../utils/format';
 export default function GoalsOverviewScreen() {
   const { me } = useAuth();
 
-  // Lot 4.2 : un leader sans unité (DIRIGEANT_LEADER / COORDINATEUR) voit la vue
-  // agrégée de son périmètre au lieu des engagements d'unité (UC-LDR-04, COO-04).
+  // Lot V1 — routage par rôle : Secrétariat/Présentation générale (ministère-large),
+  // Coordinateur/Dirigeant (périmètre agrégé), Unité (engagements de l'assemblée).
+  const secretariat = (me?.superAdmin ?? false) || me?.goalRole === 'SECRETARIAT';
+  const ministryWide = secretariat || me?.goalRole === 'LEADER';
   const zoneId = me?.goalZoneId ?? null;
   const countryIds = me?.goalCountryIds ?? [];
+  if (!me?.goalUnitId && ministryWide) {
+    return <GoalsMinistryOverview secretariat={secretariat} />;
+  }
   if (!me?.goalUnitId && (zoneId != null || countryIds.length > 0)) {
     return <GoalAggregatesScreen zoneId={zoneId} countryIds={countryIds} />;
   }
@@ -68,7 +74,10 @@ function UnitGoalsScreen() {
       hint={t('goals.loadingErrorHint')} onRetry={onRefresh} />;
   }
 
-  const deadline = goal?.submissionDeadline ? new Date(goal.submissionDeadline) : null;
+  // Lot G2 : deadline PAR ANNÉE (repli legacy sur celle du Goal), mise en exergue.
+  const deadlineIso =
+    (year != null ? goal?.yearDeadlines?.[String(year)] : null) ?? goal?.submissionDeadline ?? null;
+  const deadline = deadlineIso ? new Date(deadlineIso) : null;
   const deadlinePast = deadline != null && deadline.getTime() < Date.now();
   const hasPledges = pledges.length > 0;
   const lockedAt = pledges.find((p) => p.lockedAt)?.lockedAt;
@@ -83,12 +92,19 @@ function UnitGoalsScreen() {
         <Ionicons name="flag-outline" size={22} color={colors.mossSoft} />
         <Text style={styles.title}>{t('goals.title')}</Text>
       </View>
+      <View style={styles.viewChip}>
+        <Text style={styles.viewChipText}>{t('views.badge')} : {t('views.unit')}</Text>
+      </View>
       <Text style={styles.subtitle}>
         {goal?.name} · {goal ? `${new Date(goal.startDate).getFullYear()}–${new Date(goal.endDate).getFullYear()}` : ''}
       </Text>
 
-      {goal && (goal.openYears?.length ?? 0) > 0 && year != null && (
-        <YearSelector years={goal.openYears} value={year} onChange={setSelectedYear} />
+      {goal && ((goal.visibleYears ?? goal.openYears)?.length ?? 0) > 0 && year != null && (
+        <YearSelector
+          years={goal.visibleYears ?? goal.openYears}
+          value={year}
+          onChange={setSelectedYear}
+        />
       )}
 
       {submitted ? (
@@ -165,7 +181,7 @@ function UnitGoalsScreen() {
   );
 }
 
-/** Sélecteur d'année (annualisation Lot 4.6) — chips horizontaux ; 2026/2030 = jalons (★). */
+/** Sélecteur d'année (Lot 4.6, révisé G1.c) — chips des années VISIBLES (JP 16/07 : le jalon final s'affiche « 2030 »). */
 export function YearSelector({
   years,
   value,
@@ -187,7 +203,6 @@ export function YearSelector({
           >
             <Text style={[styles.yearChipText, active && styles.yearChipTextActive]}>
               {y}
-              {y === 2026 || y === 2030 ? ' ★' : ''}
             </Text>
           </Pressable>
         );
@@ -295,6 +310,15 @@ function EmptyState({
 }
 
 const styles = StyleSheet.create({
+  viewChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.earthDeep + '1F',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 8,
+  },
+  viewChipText: { fontFamily: fonts.sans, fontSize: 12, fontWeight: '600', color: colors.earthDeep },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   title: {
     fontFamily: fonts.serif,

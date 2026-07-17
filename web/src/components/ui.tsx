@@ -165,12 +165,6 @@ export function Badge({
   );
 }
 
-export function UnitTypeBadge({ type }: Readonly<{ type: 'CENTER' | 'ASSEMBLY' | string }>) {
-  const { t } = useTranslation();
-  if (type === 'CENTER' || type === 'Centre') return <Badge tone="green" dot>{t('ui.badgeCenter')}</Badge>;
-  return <Badge tone="earth" dot>{t('ui.badgeAssembly')}</Badge>;
-}
-
 export function RoleBadge({ role }: { role: string }) {
   const { t } = useTranslation();
   if (role === 'ADMIN') return <Badge tone="green">{t('ui.roleAdmin')}</Badge>;

@@ -31,6 +31,14 @@ export interface ActiveGoal {
   // Annualisation (Lot 4.6) :
   currentYear: number;
   openYears: number[];
+  // Lot G1.c :
+  /** Années affichées dans les sélecteurs (orthogonal à openYears = droit d'écriture). */
+  visibleYears: number[];
+  /** Objectif final « Quinquennat » (année jalon de fin + date) — null si aucun jalon. */
+  quinquennat: { year: number; date: string | null } | null;
+  // Lot G2 :
+  /** Deadline effective par année (clé = année) — clé absente si aucune deadline. */
+  yearDeadlines: Record<string, string> | null;
 }
 
 /** `?year=` si l'année est fournie (sinon le backend retombe sur l'année courante). */
@@ -49,6 +57,13 @@ export interface PledgeResponse {
   targetCount: number | null;
   locked: boolean;
   lockedAt: string | null;
+  /** Déclarant de l'engagement (Lot G1.b). */
+  createdById: string | null;
+  createdByName: string | null;
+  /** Lot G2 — server-driven : date limite d'écriture (deadline de l'année). */
+  editableUntil: string | null;
+  /** Lot G2 — server-driven : modifiable par l'appelant courant. */
+  editable: boolean | null;
 }
 
 export interface CreatePledgeRequest {
@@ -78,7 +93,13 @@ export interface ProgressResponse {
   progressDate: string;
   note: string | null;
   recordedById: string;
+  /** Auteur de l'avancement (Lot G1.b). */
+  recordedByName: string | null;
   createdAt: string;
+  /** Lot G2 — server-driven : date limite d'écriture (deadline de l'année). */
+  editableUntil: string | null;
+  /** Lot G2 — server-driven : modifiable/supprimable par l'appelant courant (remplace la règle 24 h). */
+  editable: boolean | null;
 }
 
 export interface AddProgressRequest {
@@ -273,6 +294,10 @@ export interface ZoneUnitStatus {
   submittedAt: string | null;
   /** Deadline dépassée et unité non soumise. */
   late: boolean;
+  /** L'unité a un DIRIGEANT goal rattaché. */
+  hasLeader: boolean;
+  /** Nom du DIRIGEANT goal de l'unité — null si sans dirigeant (Lot G1.b). */
+  leaderName: string | null;
 }
 
 export async function getMyProgress(year?: number): Promise<MyProgressResponse[]> {
@@ -287,12 +312,63 @@ export async function getZoneUnits(zoneId: string, year?: number): Promise<ZoneU
   return data;
 }
 
-/** Edit window (RG-11): a progress entry stays editable 24h by its creator. */
-export function isProgressEditable(
-  p: ProgressResponse,
-  userId: string | null | undefined,
-): boolean {
-  if (!userId || p.recordedById !== userId) return false;
-  const age = Date.now() - new Date(p.createdAt).getTime();
-  return age < 24 * 60 * 60 * 1000;
+// Lot G2 : la règle locale « 24 h » (ex-isProgressEditable) est SUPPRIMÉE — l'éditabilité est
+// server-driven via `ProgressResponse.editable` / `editableUntil` (deadline de l'année).
+
+// --- Lot V1 — vues ministère-large (Présentation générale / Secrétariat) ---
+export interface GlobalSummaryLine {
+  categoryId: string;
+  categoryCode: string;
+  unitType: PledgeUnitType;
+  effectiveAmount: number | null;
+  effectiveCount: number | null;
+  achieved: number;
+}
+export interface GlobalSummary {
+  goalId: string;
+  goalName: string;
+  totalUnits: number;
+  submittedUnits: number;
+  totals: GlobalSummaryLine[];
+}
+export async function getGlobalSummary(year?: number): Promise<GlobalSummary> {
+  const { data } = await apiClient.get<GlobalSummary>(`/api/church/goals/global/summary${yq(year)}`);
+  return data;
+}
+export interface NationStatus {
+  countryId: string;
+  name: string;
+  totalUnits: number;
+  submittedUnits: number;
+  submissionRate: number;
+  late: boolean;
+}
+export async function getNations(year?: number): Promise<{ deadlinePast: boolean; nations: NationStatus[] }> {
+  const { data } = await apiClient.get<{ deadlinePast: boolean; nations: NationStatus[] }>(
+    `/api/church/goals/global/nations${yq(year)}`,
+  );
+  return data;
+}
+
+// --- Lot V1 — vue COORDINATEUR : cumuls par Région + somme totale Nation ---
+export interface RegionSummary {
+  regionId: string;
+  regionName: string;
+  totalUnits: number;
+  submittedUnits: number;
+  submissionRate: number;
+  lines: GlobalSummaryLine[];
+}
+export interface NationRegionsSummary {
+  nationId: string;
+  nationName: string | null;
+  regionLabel: 'REGION' | 'STATE' | null;
+  regions: RegionSummary[];
+  totals: GlobalSummaryLine[];
+}
+export async function getRegionsSummary(nationId: string, year?: number): Promise<NationRegionsSummary> {
+  const { data } = await apiClient.get<NationRegionsSummary>(
+    `/api/church/goals/nations/${nationId}/regions-summary${yq(year)}`,
+  );
+  return data;
 }

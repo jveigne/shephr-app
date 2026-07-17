@@ -16,7 +16,7 @@ import {
 } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { canManageStructure } from '../services/authApi';
+import { canManageLocalities } from '../services/authApi';
 import {
   createLocality,
   deleteLocality,
@@ -37,7 +37,8 @@ export function LocalitesPage() {
   const { push } = useToast();
   const { me } = useAuth();
   const ministryId = me?.ministryId ?? null;
-  const canWrite = canManageStructure(me);
+  // Chantier B : la Ville se crée sous une Région (les teams sont dissoutes) — managers de structure.
+  const canWrite = canManageLocalities(me);
 
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
@@ -74,7 +75,7 @@ export function LocalitesPage() {
   }, [localitiesQ.data, search]);
 
   const zones = zonesQ.data ?? [];
-  const canCreate = canWrite && zones.length > 0 && ministryId != null;
+  const canCreate = canWrite && ministryId != null && zones.length > 0;
 
   const cols: Column<LocalityResponse>[] = [
     { label: t('localities.colLocality'), render: (l) => <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{l.name}</span> },
@@ -154,9 +155,7 @@ export function LocalitesPage() {
         onClose={() => setCreating(false)}
         zones={zones}
         submitting={createM.isPending}
-        onSubmit={(v) =>
-          ministryId && createM.mutate({ ministryId, zoneId: v.zoneId, name: v.name, country: v.country })
-        }
+        onSubmit={(v) => ministryId && createM.mutate({ ministryId, zoneId: v.zoneId, name: v.name, country: v.country })}
       />
       <LocalityFormModal
         open={editing != null}

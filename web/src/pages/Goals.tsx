@@ -12,7 +12,6 @@ import {
   Select,
   Table,
   TopBar,
-  UnitTypeBadge,
   type Column,
 } from '../components/ui';
 import { useToast } from '../components/Toast';
@@ -31,16 +30,18 @@ import {
   getMyPerimeterAggregate,
   getMyUnits,
   getNations,
+  getRegionsSummary,
   getTimeline,
   getUnitDetail,
   getZoneUnits,
-  isProgressEditable,
   listFaithPledges,
   sendReminder,
+  unlockUnit,
   submitMyPledges,
   updateFaithPledge,
   updatePledge,
   updateProgress,
+  updateYearDeadline,
   type ActiveGoal,
   type AggregateLevelPath,
   type FaithLevelPath,
@@ -140,17 +141,26 @@ export function GoalsPage() {
   const goal = goalQ.data ?? null;
   const data = unitQ.data ?? null;
   const currency = goal?.defaultCurrency ?? 'EUR';
+  // Lot G2 : deadline effective de l'année sélectionnée (repli legacy sur celle du Goal).
+  const yearDeadline =
+    (year != null ? goal?.yearDeadlines?.[String(year)] : null) ?? goal?.submissionDeadline ?? null;
 
   const lines: GoalLine[] = useMemo(() => {
     if (!goal || !data) return [];
     const categories = [...goal.categories].sort((a, b) => a.displayOrder - b.displayOrder);
     return categories.map((category) => {
       const pledge = data.pledges.find((p) => p.categoryId === category.id) ?? null;
-      const achieved = pledge
-        ? (data.progressByPledge[pledge.id] ?? []).reduce(
-            (s, x) => s + (x.amount ?? x.count ?? 0),
-            0,
-          )
+      // Lot P1 (décision #13) : le versé = DERNIER état déclaré (progressDate puis createdAt),
+      // pas la somme des saisies.
+      const progresses = pledge ? data.progressByPledge[pledge.id] ?? [] : [];
+      const achieved = progresses.length
+        ? (() => {
+            const latest = progresses.reduce((a, x) => {
+              if (x.progressDate !== a.progressDate) return x.progressDate > a.progressDate ? x : a;
+              return x.createdAt > a.createdAt ? x : a;
+            });
+            return latest.amount ?? latest.count ?? 0;
+          })()
         : 0;
       return {
         category,
@@ -213,6 +223,10 @@ export function GoalsPage() {
   // Lot 4.3 : les rôles ministère-large (LEADER/SECRETARIAT) ont la vue globale.
   const ministryWide =
     (me?.superAdmin ?? false) || me?.goalRole === 'LEADER' || me?.goalRole === 'SECRETARIAT';
+  // Lot V1 : la GESTION (deadline, années, drill-down complet) est la vue « Secrétariat » ;
+  // un LEADER non-secrétariat a la « Présentation générale » (synthèse + carte, lecture).
+  const isSecretariatView = (me?.superAdmin ?? false) || me?.goalRole === 'SECRETARIAT';
+  const isCoordinatorView = countryIds.length > 0 || coordinatedCountryIds.length > 0;
   // Lot 3.5 : un dirigeant (sous-coordinateur) voit « Mon périmètre » = son SOUS-ARBRE (pas la zone géo).
   const showPerimeter =
     !!me && !me.superAdmin && (me.goalRole === 'DIRIGEANT' || me.goalRole === 'DIRIGEANT_SENIOR');
@@ -326,6 +340,11 @@ export function GoalsPage() {
         ),
     },
     {
+      // Lot G1.b : déclarant de l'engagement.
+      label: t('goals.colDeclaredBy'),
+      render: (l) => l.pledge?.createdByName ?? '—',
+    },
+    {
       label: '',
       style: { width: 70 },
       cellStyle: { textAlign: 'right' },
@@ -358,21 +377,27 @@ export function GoalsPage() {
         r.progress.note ? <span style={{ fontStyle: 'italic' }}>{r.progress.note}</span> : '—',
     },
     {
+      // Lot G1.b : auteur de l'avancement.
+      label: t('goals.colRecordedBy'),
+      render: (r) => r.progress.recordedByName ?? '—',
+    },
+    {
       label: '',
       style: { width: 90 },
       cellStyle: { textAlign: 'right' },
       render: (r) =>
-        isProgressEditable(r.progress, me?.id) ? (
+        // Lot G2 : éditabilité server-driven (deadline de l'année) — plus de règle 24 h locale.
+        r.progress.editable === true ? (
           <span style={{ display: 'inline-flex', gap: 6 }}>
             <IconButton
               icon={<Icon name="edit" size={15} />}
-              title={t('goals.editProgress24h')}
+              title={t('goals.editProgressTooltip')}
               onClick={() => setEditProgress(r)}
             />
             <IconButton
               danger
               icon={<Icon name="trash" size={15} />}
-              title={t('goals.deleteProgress24h')}
+              title={t('goals.deleteProgressTooltip')}
               onClick={() => setToDeleteProgress(r.progress)}
             />
           </span>
@@ -387,7 +412,7 @@ export function GoalsPage() {
         crumbs={[t('common.brand'), t('goals.title')]}
         actions={
           <>
-            {goal && (goal.openYears?.length ?? 0) > 0 && year != null && (
+            {goal && ((goal.visibleYears ?? goal.openYears)?.length ?? 0) > 0 && year != null && (
               <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ink-400)' }}>
                 {t('goals.year')}
                 <select
@@ -403,10 +428,10 @@ export function GoalsPage() {
                     color: 'var(--ink)',
                   }}
                 >
-                  {goal.openYears.map((y) => (
+                  {/* Lot G1.c : années visibles uniquement (JP 16/07 : le jalon final s'affiche « 2030 », sans libellé spécial). */}
+                  {(goal.visibleYears ?? goal.openYears).map((y) => (
                     <option key={y} value={y}>
                       {y}
-                      {y === 2026 || y === 2030 ? ' ★' : ''}
                     </option>
                   ))}
                 </select>
@@ -451,25 +476,42 @@ export function GoalsPage() {
           <>
             <div style={{ marginBottom: 14 }}>
               <h3 style={{ margin: '0 0 4px' }}>{goal?.name}</h3>
-              <p style={{ margin: 0, color: 'var(--ink-400)', fontSize: 13 }}>
+              {/* Lot G2 : la date limite est PAR ANNÉE (yearDeadlines), mise en exergue. */}
+              <p style={{ margin: 0, fontSize: 13.5 }}>
                 {!hasUnit ? null : submitted ? (
-                  <>
+                  <span style={{ color: 'var(--ink-400)' }}>
                     <Icon name="lock" size={12} /> {t('goals.pledgesSubmitted')}
-                  </>
-                ) : goal?.submissionDeadline ? (
-                  new Date(goal.submissionDeadline).getTime() < Date.now() ? (
-                    <span style={{ color: 'var(--err, #B86A4A)' }}>
-                      {t('goals.deadlinePast', { date: fmtDateLabel(goal.submissionDeadline.slice(0, 10)) })}
-                    </span>
+                  </span>
+                ) : yearDeadline ? (
+                  new Date(yearDeadline).getTime() < Date.now() ? (
+                    <strong style={{ color: 'var(--err, #B86A4A)' }}>
+                      {t('goals.deadlinePast', { date: fmtDateLabel(yearDeadline.slice(0, 10)) })}
+                    </strong>
                   ) : (
-                    <>{t('goals.submitBefore', { date: fmtDateLabel(goal.submissionDeadline.slice(0, 10)) })}</>
+                    <strong style={{ color: 'var(--earth-700, #8E6B47)' }}>
+                      {t('goals.submitBefore', { date: fmtDateLabel(yearDeadline.slice(0, 10)) })}
+                    </strong>
                   )
                 ) : null}
               </p>
+              {goal && isSecretariatView && year != null && (
+                <DeadlineEditor year={year} current={yearDeadline} />
+              )}
             </div>
+
+            {/* Mise en avant des engagements (JP 2026-07-10) : la vue globale — carte
+                du monde en tête — s'affiche en premier pour les rôles ministère-large,
+                pour « tomber sur la carte » à la connexion. */}
+            {goal && ministryWide && year != null && (
+              <>
+                <ViewTitle label={isSecretariatView ? t('views.secretariat') : t('views.overview')} />
+                <GlobalSummarySection goal={goal} currency={currency} year={year} drill={isSecretariatView} />
+              </>
+            )}
 
             {hasUnit && (
               <>
+                <ViewTitle label={t('views.unit')} />
                 <Table
                   columns={lineCols}
                   rows={lines.map((l) => ({ ...l, id: l.category.id }))}
@@ -493,7 +535,9 @@ export function GoalsPage() {
             )}
 
             {goal && showPerimeter && year != null && (
-              <MyPerimeterSection
+              <>
+                <ViewTitle label={t('views.leader')} />
+                <MyPerimeterSection
                 goal={goal}
                 currency={currency}
                 year={year}
@@ -501,8 +545,12 @@ export function GoalsPage() {
                 isSuperAdmin={me?.superAdmin ?? false}
                 zoneId={zoneId}
                 zoneName={zoneName}
-              />
+                />
+              </>
             )}
+
+            {/* Lot V1 — vue Coordinateur : agrégats + foi Nation, puis cumuls PAR RÉGION (borné à la Région). */}
+            {goal && year != null && isCoordinatorView && <ViewTitle label={t('views.coordinator')} />}
             {goal && year != null &&
               countryIds.map((id) => (
                 <AggregateSection
@@ -516,6 +564,10 @@ export function GoalsPage() {
                   meId={me?.id ?? null}
                   isSuperAdmin={me?.superAdmin ?? false}
                 />
+              ))}
+            {goal && year != null &&
+              countryIds.map((id) => (
+                <NationRegionsBlock key={`regions-${id}`} nationId={id} year={year} goal={goal} currency={currency} />
               ))}
 
             {/* Lot 4.8 — pays sans coordinateur confiés à ce SECRETARIAT/LEADER (vue éditable). */}
@@ -535,8 +587,12 @@ export function GoalsPage() {
                     isSuperAdmin={me?.superAdmin ?? false}
                   />
                 ))}
-
-            {goal && ministryWide && year != null && <GlobalSummarySection goal={goal} currency={currency} year={year} />}
+            {goal && year != null &&
+              coordinatedCountryIds
+                .filter((id) => !countryIds.includes(id))
+                .map((id) => (
+                  <NationRegionsBlock key={`regions-coord-${id}`} nationId={id} year={year} goal={goal} currency={currency} />
+                ))}
           </>
         )}
       </div>
@@ -850,7 +906,7 @@ function ProgressFormModal({
   );
 }
 
-/** Modification d'un avancement de moins de 24 h (UC-DIR-14). */
+/** Modification d'une déclaration d'état (UC-DIR-14 — auteur jusqu'à la deadline, secrétariat au-delà). */
 function EditProgressModal({
   entry,
   currency,
@@ -1425,12 +1481,29 @@ function ZoneUnitsBlock({
 }: { zoneId: string | null; goal: ActiveGoal; year: number; perimeterScoped?: boolean }) {
   const { t } = useTranslation();
   const { push } = useToast();
+  const { me } = useAuth();
+  // Lot P2 (décision JP 17/07) : déverrouillage réservé à SUPER_ADMIN + SECRETARIAT (pas LEADER).
+  const canUnlock = (me?.superAdmin ?? false) || me?.goalRole === 'SECRETARIAT';
   const unitsQ = useQuery({
     queryKey: perimeterScoped ? ['goals', 'me-units', year] : ['goals', 'zone-units', zoneId, year],
     queryFn: () => (perimeterScoped ? getMyUnits(year) : getZoneUnits(zoneId!, year)),
   });
   const units = unitsQ.data ?? [];
   const allSubmitted = units.length > 0 && units.every((u) => u.submitted);
+
+  // Lot P2 : rouvrir la soumission d'une assemblée (elle pourra compléter puis resoumettre).
+  const [unlockUnitTarget, setUnlockUnitTarget] = useState<ZoneUnitStatus | null>(null);
+  const unlockM = useMutation({
+    mutationFn: () => unlockUnit(unlockUnitTarget!.unitId, year),
+    onSuccess: () => {
+      setUnlockUnitTarget(null);
+      unitsQ.refetch();
+      push({ kind: 'ok', title: t('goals.unitUnlocked') });
+    },
+    onError: (err) => {
+      push({ kind: 'error', title: t('goals.unlockFailed'), msg: errMsg(err, '') || undefined });
+    },
+  });
 
   // UC-LDR-07 : modale de rappel avec message pré-rempli (modifiable).
   const [reminderUnit, setReminderUnit] = useState<ZoneUnitStatus | null>(null);
@@ -1514,7 +1587,6 @@ function ZoneUnitsBlock({
                   >
                     {u.unitName}
                   </button>
-                  {u.unitType && <UnitTypeBadge type={u.unitType} />}
                 </span>
               ),
             },
@@ -1522,6 +1594,11 @@ function ZoneUnitsBlock({
             {
               label: t('goals.colPledgesEntered'),
               render: (u) => t('goals.pledgesCount5', { count: u.pledgeCount }),
+            },
+            {
+              // Lot G1.b : dirigeant de l'unité, à côté du statut.
+              label: t('goals.colLeader'),
+              render: (u) => u.leaderName ?? '—',
             },
             {
               label: t('goals.colStatus'),
@@ -1538,10 +1615,21 @@ function ZoneUnitsBlock({
             },
             {
               label: '',
-              style: { width: 150 },
+              style: { width: 160 },
               cellStyle: { textAlign: 'right' },
               render: (u) =>
-                u.submitted ? null : u.hasLeader ? (
+                u.submitted ? (
+                  // Lot P2 : le secrétariat (ou super admin) rouvre une soumission.
+                  canUnlock ? (
+                    <Button
+                      size="sm"
+                      title={t('goals.unlockTooltip')}
+                      onClick={() => setUnlockUnitTarget(u)}
+                    >
+                      {t('goals.unlockUnit')}
+                    </Button>
+                  ) : null
+                ) : u.hasLeader ? (
                   <Button size="sm" iconL={<Icon name="bell" size={14} />} onClick={() => openReminder(u)}>
                     {t('goals.sendReminder')}
                   </Button>
@@ -1606,6 +1694,12 @@ function ZoneUnitsBlock({
         {detailQ.isLoading ? (
           <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
         ) : (
+          <>
+          {detailQ.data?.[0]?.leaderName && (
+            <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--ink-500, #4A443B)' }}>
+              {t('goals.unitLeaderInline', { name: detailQ.data[0].leaderName })}
+            </p>
+          )}
           <table style={{ width: '100%', fontSize: 14, borderSpacing: 0 }}>
             <thead>
               <tr style={{ textAlign: 'left', color: 'var(--ink-400)', fontSize: 12 }}>
@@ -1643,9 +1737,182 @@ function ZoneUnitsBlock({
               })}
             </tbody>
           </table>
+          </>
         )}
       </Modal>
+
+      <Modal
+        open={unlockUnitTarget != null}
+        onClose={() => setUnlockUnitTarget(null)}
+        title={t('goals.unlockModalTitle', { name: unlockUnitTarget?.unitName ?? '' })}
+        sub={t('goals.unlockModalSub', { year })}
+        footer={
+          <>
+            <Button onClick={() => setUnlockUnitTarget(null)}>{t('common.cancel')}</Button>
+            <Button variant="primary" disabled={unlockM.isPending} onClick={() => unlockM.mutate()}>
+              {unlockM.isPending ? t('common.saving') : t('goals.unlockConfirm')}
+            </Button>
+          </>
+        }
+      >
+        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>{t('goals.unlockModalBody')}</p>
+      </Modal>
     </div>
+  );
+}
+
+/** Lot V1 — intitulé de vue nommée (Présentation générale / Secrétariat / Coordinateur / Dirigeant / Unité). */
+function ViewTitle({ label }: { label: string }) {
+  const { t } = useTranslation();
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '18px 0 10px' }}>
+      <Badge tone="earth">{t('views.badge')}</Badge>
+      <h2 style={{ margin: 0, fontSize: 18 }}>{label}</h2>
+    </div>
+  );
+}
+
+/**
+ * Lot V1 — vue COORDINATEUR : cumuls d'une Nation détaillés PAR RÉGION + somme totale.
+ * Le drill-down du coordinateur s'arrête à la Région (pas de descente Ville/Assemblée).
+ */
+function NationRegionsBlock({
+  nationId, year, goal, currency,
+}: {
+  nationId: string;
+  year: number;
+  goal: ActiveGoal;
+  currency: string;
+}) {
+  const { t } = useTranslation();
+  const q = useQuery({
+    queryKey: ['goals', 'regions-summary', nationId, year],
+    queryFn: () => getRegionsSummary(nationId, year),
+  });
+  const data = q.data ?? null;
+  const catByCode = new Map(goal.categories.map((c) => [c.code, c]));
+  if (q.isLoading) return <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>;
+  if (!data) return null;
+  const levelLabel = data.regionLabel === 'STATE' ? t('views.statesHeading') : t('views.regionsHeading');
+  return (
+    <div style={{ marginTop: 18 }}>
+      <h3 style={{ margin: '0 0 4px' }}>{levelLabel}{data.nationName ? ` — ${data.nationName}` : ''}</h3>
+      <p style={{ margin: '0 0 10px', color: 'var(--ink-400)', fontSize: 13 }}>{t('views.regionsIntro')}</p>
+      {data.regions.map((r) => (
+        <div key={r.regionId} className="card" style={{ padding: '12px 16px', marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <strong>{r.regionName}</strong>
+            <Badge tone={r.submissionRate >= 1 ? 'ok' : r.submittedUnits > 0 ? 'warn' : 'gray'}>
+              {t('views.submittedRatio', { submitted: r.submittedUnits, total: r.totalUnits, percent: Math.round(r.submissionRate * 100) })}
+            </Badge>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 22px', fontSize: 13 }}>
+            {r.lines.map((l) => {
+              const cat = catByCode.get(l.categoryCode);
+              const effective = l.unitType === 'CURRENCY'
+                ? fmtAmount(l.effectiveAmount ?? 0, currency)
+                : `${l.effectiveCount ?? 0} ${cat?.unitLabel ?? ''}`.trim();
+              const achieved = l.unitType === 'CURRENCY'
+                ? fmtAmount(l.achieved ?? 0, currency)
+                : `${l.achieved ?? 0} ${cat?.unitLabel ?? ''}`.trim();
+              return (
+                <span key={l.categoryId}>
+                  <span style={{ color: 'var(--ink-400)' }}>{cat?.name ?? l.categoryCode} : </span>
+                  <strong>{effective}</strong>
+                  <span style={{ color: 'var(--ink-400)' }}> · {t('views.achievedInline', { value: achieved })}</span>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      <div className="card" style={{ padding: '12px 16px', background: 'var(--paper-2, #F7F4EE)' }}>
+        <div style={{ marginBottom: 6 }}><strong>{t('views.nationTotal')}</strong></div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 22px', fontSize: 13 }}>
+          {data.totals.map((l) => {
+            const cat = catByCode.get(l.categoryCode);
+            const effective = l.unitType === 'CURRENCY'
+              ? fmtAmount(l.effectiveAmount ?? 0, currency)
+              : `${l.effectiveCount ?? 0} ${cat?.unitLabel ?? ''}`.trim();
+            const achieved = l.unitType === 'CURRENCY'
+              ? fmtAmount(l.achieved ?? 0, currency)
+              : `${l.achieved ?? 0} ${cat?.unitLabel ?? ''}`.trim();
+            return (
+              <span key={l.categoryId}>
+                <span style={{ color: 'var(--ink-400)' }}>{cat?.name ?? l.categoryCode} : </span>
+                <strong>{effective}</strong>
+                <span style={{ color: 'var(--ink-400)' }}> · {t('views.achievedInline', { value: achieved })}</span>
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Lot G2 : édition de la date limite d'envoi de l'année sélectionnée —
+ * visible uniquement pour les rôles ministère-large (SECRETARIAT/LEADER/SUPER_ADMIN).
+ */
+function DeadlineEditor({ year, current }: { year: number; current: string | null }) {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const { push } = useToast();
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState('');
+
+  useEffect(() => {
+    setValue(current ? current.slice(0, 16) : '');
+  }, [current, year]);
+
+  const saveM = useMutation({
+    mutationFn: () => updateYearDeadline(year, value ? `${value}:00` : null),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      setOpen(false);
+      push({ kind: 'ok', title: t('goals.deadlineSaved', { year }) });
+    },
+    onError: (err) =>
+      push({ kind: 'error', title: t('goals.deadlineSaveFailed'), msg: errMsg(err, '') }),
+  });
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          marginTop: 4,
+          cursor: 'pointer',
+          fontSize: 12.5,
+          color: 'var(--green-700, #1E3A2F)',
+          textDecoration: 'underline',
+        }}
+      >
+        {t('goals.editDeadline', { year })}
+      </button>
+    );
+  }
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+      <input
+        type="datetime-local"
+        className="input"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        style={{ fontSize: 13, padding: '4px 8px' }}
+      />
+      <Button size="sm" variant="primary" disabled={saveM.isPending} onClick={() => saveM.mutate()}>
+        {saveM.isPending ? t('common.saving') : t('common.save')}
+      </Button>
+      <Button size="sm" onClick={() => setOpen(false)}>
+        {t('common.cancel')}
+      </Button>
+    </span>
   );
 }
 
@@ -1659,7 +1926,7 @@ interface DrillStep {
   unitStatus?: ZoneUnitStatus;
 }
 
-function GlobalSummarySection({ goal, currency, year }: { goal: ActiveGoal; currency: string; year: number }) {
+function GlobalSummarySection({ goal, currency, year, drill = true }: { goal: ActiveGoal; currency: string; year: number; drill?: boolean }) {
   const { t } = useTranslation();
   const summaryQ = useQuery({
     queryKey: ['goals', 'global', 'summary', year],
@@ -1703,7 +1970,7 @@ function GlobalSummarySection({ goal, currency, year }: { goal: ActiveGoal; curr
           <NationsMap
             nations={nationsQ.data.nations}
             deadlinePast={nationsQ.data.deadlinePast}
-            onSelectCountry={(id, name) => setPath([{ level: 'countries', id, name }])}
+            onSelectCountry={drill ? (id, name) => setPath([{ level: 'countries', id, name }]) : undefined}
           />
         </div>
       )}
@@ -1750,15 +2017,17 @@ function GlobalSummarySection({ goal, currency, year }: { goal: ActiveGoal; curr
                 <span style={{ fontWeight: 400, fontSize: 13, color: 'var(--ink-400)' }}>
                   {t('goals.continentSubmitted', { submitted: continent.submittedUnits, total: continent.totalUnits })}
                 </span>
-                <Button
-                  size="sm"
-                  iconR={<Icon name="arrowRight" size={13} />}
-                  onClick={() =>
-                    setPath([{ level: 'continents', id: continent.continentId, name: continent.name }])
-                  }
-                >
-                  {t('goals.explore')}
-                </Button>
+                {drill && (
+                  <Button
+                    size="sm"
+                    iconR={<Icon name="arrowRight" size={13} />}
+                    onClick={() =>
+                      setPath([{ level: 'continents', id: continent.continentId, name: continent.name }])
+                    }
+                  >
+                    {t('goals.explore')}
+                  </Button>
+                )}
               </h4>
               <Table
                 columns={[
@@ -2029,8 +2298,26 @@ function DrillZones({ countryId, onOpen }: { countryId: string; onOpen: (id: str
 
 function DrillUnits({ zoneId, year, onOpen }: { zoneId: string; year: number; onOpen: (u: ZoneUnitStatus) => void }) {
   const { t } = useTranslation();
+  const { push } = useToast();
+  const { me } = useAuth();
+  // Lot P2 (décision #14) : déverrouillage réservé à SUPER_ADMIN + SECRETARIAT.
+  const canUnlock = (me?.superAdmin ?? false) || me?.goalRole === 'SECRETARIAT';
   const unitsQ = useQuery({ queryKey: ['goals', 'zone-units', zoneId, year], queryFn: () => getZoneUnits(zoneId, year) });
   const rows = unitsQ.data ?? [];
+
+  const [unlockTarget, setUnlockTarget] = useState<ZoneUnitStatus | null>(null);
+  const unlockM = useMutation({
+    mutationFn: () => unlockUnit(unlockTarget!.unitId, year),
+    onSuccess: () => {
+      setUnlockTarget(null);
+      unitsQ.refetch();
+      push({ kind: 'ok', title: t('goals.unitUnlocked') });
+    },
+    onError: (err) => {
+      push({ kind: 'error', title: t('goals.unlockFailed'), msg: errMsg(err, '') || undefined });
+    },
+  });
+
   return (
     <div style={{ marginTop: 16 }}>
       <h4 style={{ margin: '0 0 8px' }}>{t('goals.unitsStatusHeading')}</h4>
@@ -2041,12 +2328,13 @@ function DrillUnits({ zoneId, year, onOpen }: { zoneId: string; year: number; on
             render: (u: ZoneUnitStatus & { id: string }) => (
               <span>
                 <strong>{u.unitName}</strong>
-                {u.unitType && <UnitTypeBadge type={u.unitType} />}
               </span>
             ),
           },
           { label: t('common.locality'), render: (u) => u.localityName ?? '—' },
           { label: t('goals.colPledgesEntered'), render: (u) => t('goals.pledgesCount5', { count: u.pledgeCount }) },
+          // Lot G1.b : dirigeant de l'unité dans le drill-down.
+          { label: t('goals.colLeader'), render: (u) => u.leaderName ?? '—' },
           {
             label: t('goals.colStatus'),
             render: (u) =>
@@ -2062,9 +2350,26 @@ function DrillUnits({ zoneId, year, onOpen }: { zoneId: string; year: number; on
           },
           {
             label: '',
-            style: { width: 40 },
+            style: { width: canUnlock ? 160 : 40 },
             cellStyle: { textAlign: 'right' },
-            render: () => <Icon name="chevRight" size={13} />,
+            render: (u) => (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                {/* Lot P2 : rouvrir une soumission depuis le drill-down secrétariat. */}
+                {canUnlock && u.submitted && (
+                  <Button
+                    size="sm"
+                    title={t('goals.unlockTooltip')}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setUnlockTarget(u);
+                    }}
+                  >
+                    {t('goals.unlockUnit')}
+                  </Button>
+                )}
+                <Icon name="chevRight" size={13} />
+              </span>
+            ),
           },
         ]}
         rows={rows.map((u) => ({ ...u, id: u.unitId }))}
@@ -2072,6 +2377,23 @@ function DrillUnits({ zoneId, year, onOpen }: { zoneId: string; year: number; on
         zebra
         empty={<p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>{t('goals.noUnitInZone')}</p>}
       />
+
+      <Modal
+        open={unlockTarget != null}
+        onClose={() => setUnlockTarget(null)}
+        title={t('goals.unlockModalTitle', { name: unlockTarget?.unitName ?? '' })}
+        sub={t('goals.unlockModalSub', { year })}
+        footer={
+          <>
+            <Button onClick={() => setUnlockTarget(null)}>{t('common.cancel')}</Button>
+            <Button variant="primary" disabled={unlockM.isPending} onClick={() => unlockM.mutate()}>
+              {unlockM.isPending ? t('common.saving') : t('goals.unlockConfirm')}
+            </Button>
+          </>
+        }
+      >
+        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>{t('goals.unlockModalBody')}</p>
+      </Modal>
     </div>
   );
 }

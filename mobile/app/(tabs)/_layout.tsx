@@ -11,7 +11,7 @@ import NotificationGate from '../../components/NotificationGate';
 export default function TabLayout() {
   const { t, applyAccountLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { isLeader, hasGoals, me } = useAuth();
+  const { isLeader, hasGoals, hasMemberCare, me } = useAuth();
 
   // Initialise la langue depuis le compte (me.language) tant que l'utilisateur
   // n'a pas choisi explicitement une langue dans l'app (cf. LanguageContext).
@@ -86,6 +86,17 @@ export default function TabLayout() {
           title: t('tabs.leader'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="care"
+        options={{
+          // Suivi pastoral (UC-MCR) : réservé aux dirigeants disposant du module Member Care.
+          href: isLeader && hasMemberCare ? '/(tabs)/care' : null,
+          title: t('tabs.care'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="heart-outline" size={size} color={color} />
           ),
         }}
       />

@@ -95,12 +95,17 @@ export default function UnitDetailScreen() {
           <Ionicons name="chevron-back" size={22} color={colors.ink2} />
         </Pressable>
         <View style={{ flex: 1 }} />
-        <Pressable style={styles.inviteBtn} onPress={() => {}}>
+        <Pressable
+          style={styles.inviteBtn}
+          onPress={() =>
+            router.push({
+              pathname: '/invite',
+              params: { unitId: unit.unitId, unitName: unit.unitName },
+            })
+          }
+        >
           <Ionicons name="add" size={14} color={colors.white} />
           <Text style={styles.inviteText}>{t('unit.invite')}</Text>
-        </Pressable>
-        <Pressable style={styles.iconChip} onPress={() => {}}>
-          <Ionicons name="download-outline" size={15} color={colors.mossSoft} />
         </Pressable>
       </View>
 

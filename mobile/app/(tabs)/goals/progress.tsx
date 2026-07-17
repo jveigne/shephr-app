@@ -42,6 +42,11 @@ export default function AddProgressScreen() {
   const declared = lines.filter((l) => l.pledge != null);
   const selected = declared.find((l) => l.category.id === selectedId) ?? declared[0] ?? null;
   const currency = goal?.defaultCurrency ?? 'EUR';
+  // Lot G2 : deadline PAR ANNÉE (repli legacy sur celle du Goal) pour le pied de page dynamique.
+  const year = yearParam ? Number(yearParam) : goal?.currentYear ?? null;
+  const deadlineIso =
+    (year != null ? goal?.yearDeadlines?.[String(year)] : null) ?? goal?.submissionDeadline ?? null;
+  const deadlinePast = deadlineIso != null && new Date(deadlineIso).getTime() < Date.now();
   const isCurrency = selected?.category.unitType === 'CURRENCY';
 
   const fmtValue = (v: number) =>
@@ -74,12 +79,12 @@ export default function AddProgressScreen() {
       notify(t('common.appName'), t('progress.valuePositive'));
       return;
     }
-    // UC-DIR-12 A1 : dépassement permis, mais confirmé.
-    const remaining = (selected.target ?? 0) - selected.achieved;
-    if (selected.target != null && num > remaining) {
+    // UC-DIR-12 A1 : dépassement permis, mais confirmé. Lot P1 : la valeur saisie est un ÉTAT
+    // (« où nous en sommes ») — on la compare donc directement à l'engagement.
+    if (selected.target != null && num > selected.target) {
       const ok = await confirmDialog(
         t('progress.overTitle'),
-        t('progress.overConfirm', { value: fmtValue(num - Math.max(0, remaining)) }),
+        t('progress.overConfirm', { value: fmtValue(num - selected.target) }),
       );
       if (!ok) return;
     }
@@ -167,7 +172,7 @@ export default function AddProgressScreen() {
                   keyboardType={isCurrency ? 'decimal-pad' : 'number-pad'}
                   style={styles.amountInput}
                   maxLength={10}
-                  placeholder="0"
+                  placeholder={selected ? String(selected.achieved) : '0'}
                   placeholderTextColor={colors.ink3}
                 />
               </View>
@@ -205,7 +210,11 @@ export default function AddProgressScreen() {
               iconLeft={<Ionicons name="checkmark" size={20} color={colors.white} />}
             />
             <Text style={styles.footnote}>
-              {t('progress.footnote')}
+              {deadlineIso
+                ? deadlinePast
+                  ? t('progress.deadlinePassed')
+                  : t('progress.editUntil', { date: fmtDateLong(new Date(deadlineIso)) })
+                : ''}
             </Text>
           </>
         )}

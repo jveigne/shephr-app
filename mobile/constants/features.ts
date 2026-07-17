@@ -1,10 +1,11 @@
 /**
- * Feature flags de livraison (décision JP 2026-06-10) : on livre « Goals only ».
+ * Feature flags de livraison : on livre « Goals only » (mise en avant des
+ * engagements demandée par le client — JP 2026-07-10).
  * Tout ce qui concerne les Dons (onglets Mes dons / Périmètre, sections de l'accueil)
- * est masqué tant que le MVP Donations (Phase 6) n'est pas lancé.
+ * est masqué ; l'accueil affiche le raccourci « Mes objectifs ».
  * Réactivation = passer `donations` à true.
  */
 export const FEATURES = {
-  // Phase 6 (MVP Donations Londres) — activé. Repasser à false pour masquer les Dons.
-  donations: true,
+  // Dons masqués (mise en avant Goals). Repasser à true pour réafficher les Dons.
+  donations: false,
 } as const;

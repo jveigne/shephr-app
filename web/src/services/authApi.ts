@@ -15,16 +15,6 @@ export type ModuleRole =
   | 'LEADER'
   | 'SECRETARIAT';
 
-export const MODULE_ROLE_LABELS: Record<ModuleRole, string> = {
-  MEMBRE: 'Membre',
-  DIRIGEANT_UNITE: "Dirigeant d'unité",
-  DIRIGEANT: 'Dirigeant',
-  DIRIGEANT_SENIOR: 'Dirigeant senior',
-  DIRIGEANT_COORDINATEUR: 'Coordinateur',
-  LEADER: 'Leader',
-  SECRETARIAT: 'Secrétariat',
-};
-
 export interface UserDTO {
   id: string;
   email: string;
@@ -62,6 +52,9 @@ export interface MeResponse {
   goalUnitId: string | null;
   /** Zone du DIRIGEANT_SENIOR côté Goals ; null sinon. */
   goalZoneId: string | null;
+  /** Chantier B (décision #7) — ville du dirigeant de ville ; null sinon. */
+  donationCityId: string | null;
+  goalCityId: string | null;
   /** Pays du DIRIGEANT_COORDINATEUR côté Goals ; vide sinon. */
   goalCountryIds: string[] | null;
   /** Lot 4.8 — pays qu'un SECRETARIAT/LEADER coordonne explicitement (assignés par SUPER_ADMIN). */
@@ -69,8 +62,10 @@ export interface MeResponse {
   // Périmètre LISIBLE (noms résolus) — affichage explicite dans le profil, selon le leadership :
   /** Noms des unités rattachées (home + multi-unités, tous modules) ; vide sinon. */
   unitNames: string[] | null;
-  /** Noms des zones rattachées (DIRIGEANT_SENIOR) ; vide sinon. */
+  /** Noms des zones rattachées (DIRIGEANT_SENIOR ou région de la ville) ; vide sinon. */
   zoneNames: string[] | null;
+  /** Chantier B — noms des villes rattachées (dirigeant de ville) ; vide sinon. */
+  cityNames: string[] | null;
   /** Noms des pays rattachés (DIRIGEANT_COORDINATEUR) ; vide sinon. */
   countryNames: string[] | null;
 }
@@ -114,6 +109,24 @@ export function canManageZones(me: MeResponse | null): boolean {
   if (!me) return false;
   if (me.superAdmin) return true;
   return me.donationRole === 'DIRIGEANT_COORDINATEUR' || me.goalRole === 'DIRIGEANT_COORDINATEUR';
+}
+
+/** Chantier B (décision #7) — l'utilisateur est un dirigeant de VILLE (rattaché à une ville). */
+export function isCityLeader(me: MeResponse | null): boolean {
+  return !!me && (!!me.donationCityId || !!me.goalCityId);
+}
+
+/** Peut administrer les VILLES : les managers de structure (SENIOR/COORDINATEUR/superAdmin). */
+export function canManageLocalities(me: MeResponse | null): boolean {
+  return canManageStructure(me);
+}
+
+/**
+ * Peut administrer les ASSEMBLÉES de son périmètre : les managers de structure PLUS le
+ * dirigeant de ville (qui gère les assemblées de sa ville — Chantier B).
+ */
+export function canManageUnits(me: MeResponse | null): boolean {
+  return canManageStructure(me) || isCityLeader(me);
 }
 
 const ROLE_RANK: Record<ModuleRole, number> = {
@@ -162,17 +175,6 @@ export function assignableRoles(me: MeResponse | null): ModuleRole[] {
   return (['MEMBRE', 'DIRIGEANT_UNITE', 'DIRIGEANT', 'DIRIGEANT_SENIOR'] as ModuleRole[]).filter((r) => ROLE_RANK[r] <= mr);
 }
 
-/** Human label for the user's most significant role (for the sidebar footer). */
-export function primaryRoleLabel(me: MeResponse | null): string {
-  if (!me) return '';
-  if (me.superAdmin) return 'Super Admin';
-  const elevated =
-    (isElevated(me.donationRole) ? me.donationRole : null) ??
-    (isElevated(me.goalRole) ? me.goalRole : null);
-  const role = elevated ?? me.donationRole ?? me.goalRole;
-  return role ? MODULE_ROLE_LABELS[role] : '';
-}
-
 /**
  * i18n key suffix for the user's most significant role (sidebar footer).
  * Returns 'superAdmin' or a ModuleRole code, to be looked up under `roles.*`. '' if none.
@@ -217,6 +219,22 @@ export async function previewInvitation(token: string) {
 export async function acceptInvitation(payload: { token: string; password: string }) {
   const { data } = await apiClient.post<AuthResponse>(
     '/api/cmfipraise/auth/invitation/accept',
+    payload,
+  );
+  return data;
+}
+
+// --- Invitation par CODE COURT (Lot 3.4) — alternative au lien : l'invité saisit le code reçu ---
+export async function previewInvitationByCode(shortCode: string) {
+  const { data } = await apiClient.get<InvitationPreview>(
+    `/api/cmfipraise/auth/invitation/code/${encodeURIComponent(shortCode)}`,
+  );
+  return data;
+}
+
+export async function acceptInvitationByCode(payload: { shortCode: string; password: string }) {
+  const { data } = await apiClient.post<AuthResponse>(
+    '/api/cmfipraise/auth/invitation/code/accept',
     payload,
   );
   return data;

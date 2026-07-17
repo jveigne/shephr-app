@@ -115,7 +115,7 @@ export default function ProfileScreen() {
         </>
       ) : null}
 
-      {canManageStructure(me) && (
+{/*      {canManageStructure(me) && (
         <>
           <Label style={{ marginTop: 26, marginBottom: 8, paddingHorizontal: 4 }}>{t('profile.management')}</Label>
           <Card style={{ paddingVertical: 0 }}>
@@ -128,7 +128,7 @@ export default function ProfileScreen() {
             />
           </Card>
         </>
-      )}
+      )}*/}
 
       <Label style={{ marginTop: 26, marginBottom: 8, paddingHorizontal: 4 }}>
         {t('profile.preferences')}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -13,6 +13,7 @@ import {
   type Column,
 } from '../components/ui';
 import { useToast } from '../components/Toast';
+import { useAuth } from '../hooks/useAuth';
 import {
   changeStatus,
   createRecord,
@@ -21,6 +22,7 @@ import {
   listRecords,
   listStatuses,
   sendReminder,
+  updateRecord,
   type MemberCareRecord,
   type OverviewRow,
 } from '../services/memberCareApi';
@@ -46,6 +48,7 @@ const EMPTY = { unitId: '', firstName: '', lastName: '', contactPhone: '', conta
 export function MemberCarePage() {
   const { t } = useTranslation();
   const { push } = useToast();
+  const { me } = useAuth();
   const qc = useQueryClient();
   const [tab, setTab] = useState<'suivi' | 'redevabilite'>('suivi');
   const [fUnit, setFUnit] = useState('');
@@ -56,6 +59,8 @@ export function MemberCarePage() {
   const [openRecordId, setOpenRecordId] = useState<string | null>(null);
   const [newStatusId, setNewStatusId] = useState('');
   const [statusNote, setStatusNote] = useState('');
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({ firstName: '', lastName: '', contactPhone: '', contactEmail: '', note: '' });
 
   const statusesQ = useQuery({ queryKey: ['mc-statuses'], queryFn: listStatuses });
   const overviewQ = useQuery({ queryKey: ['mc-overview'], queryFn: getOverview });
@@ -71,6 +76,25 @@ export function MemberCarePage() {
 
   const units = overviewQ.data ?? [];
   const statuses = statusesQ.data ?? [];
+
+  // Unité par défaut à la création : l'unité « home » du dirigeant (donation ou goals) si elle est
+  // dans son périmètre, sinon l'unique unité visible. Un dirigeant d'unité n'a ainsi rien à choisir.
+  const ownUnitId = me?.donationUnitId ?? me?.goalUnitId ?? null;
+  const defaultUnitId =
+    (ownUnitId && units.some((u) => u.unitId === ownUnitId) ? ownUnitId : '') ||
+    (units.length === 1 ? units[0].unitId : '');
+
+  const openCreate = () => {
+    setForm({ ...EMPTY, unitId: defaultUnitId });
+    setCreateOpen(true);
+  };
+
+  // Filet de sécurité : si le périmètre (overview) arrive après l'ouverture du modal, pré-remplir l'unité.
+  useEffect(() => {
+    if (createOpen && !form.unitId && defaultUnitId) {
+      setForm((f) => ({ ...f, unitId: defaultUnitId }));
+    }
+  }, [createOpen, defaultUnitId, form.unitId]);
 
   const createM = useMutation({
     mutationFn: () => createRecord({
@@ -104,6 +128,35 @@ export function MemberCarePage() {
     },
     onError: (e: unknown) => push({ kind: 'error', title: t('memberCare.failed'), msg: e instanceof Error ? e.message : t('common.error') }),
   });
+
+  const updateM = useMutation({
+    mutationFn: () => updateRecord(openRecordId as string, {
+      firstName: editForm.firstName.trim(),
+      lastName: editForm.lastName.trim(),
+      contactPhone: editForm.contactPhone.trim() || undefined,
+      contactEmail: editForm.contactEmail.trim() || undefined,
+      note: editForm.note.trim() || undefined,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['mc-records'] });
+      qc.invalidateQueries({ queryKey: ['mc-record', openRecordId] });
+      setEditMode(false);
+      push({ kind: 'ok', title: t('memberCare.recordUpdated'), msg: '' });
+    },
+    onError: (e: unknown) => push({ kind: 'error', title: t('memberCare.failed'), msg: e instanceof Error ? e.message : t('common.error') }),
+  });
+
+  const startEdit = () => {
+    if (!detail) return;
+    setEditForm({
+      firstName: detail.record.firstName,
+      lastName: detail.record.lastName,
+      contactPhone: detail.record.contactPhone ?? '',
+      contactEmail: detail.record.contactEmail ?? '',
+      note: detail.record.note ?? '',
+    });
+    setEditMode(true);
+  };
 
   const reminderM = useMutation({
     mutationFn: (unitId: string) => sendReminder(unitId),
@@ -145,7 +198,7 @@ export function MemberCarePage() {
         title={t('memberCare.title')}
         crumbs={[t('common.brand'), t('memberCare.title')]}
         actions={tab === 'suivi' ? (
-          <Button variant="primary" onClick={() => { setForm(EMPTY); setCreateOpen(true); }}>{t('memberCare.addPerson')}</Button>
+          <Button variant="primary" onClick={openCreate}>{t('memberCare.addPerson')}</Button>
         ) : undefined}
       />
       <div className="content">
@@ -173,7 +226,7 @@ export function MemberCarePage() {
                 <Input placeholder={t('memberCare.searchPlaceholder')} value={search} onChange={(e) => setSearch(e.target.value)} />
               </Field>
             </div>
-            <Table columns={recordCols} rows={recordsQ.data ?? []} zebra onRowClick={(r) => { setOpenRecordId(r.id); setNewStatusId(''); }} />
+            <Table columns={recordCols} rows={recordsQ.data ?? []} zebra onRowClick={(r) => { setOpenRecordId(r.id); setNewStatusId(''); setEditMode(false); }} />
           </>
         ) : (
           <Table columns={overviewCols} rows={(overviewQ.data ?? []).map((r) => ({ ...r, id: r.unitId }))} zebra
@@ -197,6 +250,15 @@ export function MemberCarePage() {
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {units.length === 0 && (
+            <div style={{
+              padding: '10px 12px', borderRadius: 8, fontSize: 13, lineHeight: 1.45,
+              background: 'rgba(184,106,74,0.10)', color: 'var(--ink-700)',
+              border: '1px solid rgba(184,106,74,0.30)',
+            }}>
+              {t('memberCare.noUnitAttached')}
+            </div>
+          )}
           <Field label={t('memberCare.filterUnit')}>
             <Select value={form.unitId} onChange={(e) => setForm({ ...form, unitId: e.target.value })}>
               <option value="">{t('memberCare.chooseOption')}</option>
@@ -224,17 +286,42 @@ export function MemberCarePage() {
       {/* Détail fiche + timeline */}
       <Modal
         open={!!openRecordId}
-        onClose={() => setOpenRecordId(null)}
+        onClose={() => { setOpenRecordId(null); setEditMode(false); }}
         title={detail ? `${detail.record.firstName} ${detail.record.lastName}` : t('memberCare.recordTitle')}
         sub={detail ? <StatusPill label={detail.record.currentStatusLabel} color={detail.record.currentStatusColor} /> : undefined}
-        footer={<Button variant="ghost" onClick={() => setOpenRecordId(null)}>{t('common.close')}</Button>}
+        footer={editMode ? (
+          <>
+            <Button variant="ghost" onClick={() => setEditMode(false)}>{t('common.cancel')}</Button>
+            <Button variant="primary" onClick={() => updateM.mutate()}
+              disabled={!editForm.firstName.trim() || !editForm.lastName.trim() || updateM.isPending}>
+              {updateM.isPending ? t('common.saving') : t('common.save')}
+            </Button>
+          </>
+        ) : <Button variant="ghost" onClick={() => { setOpenRecordId(null); setEditMode(false); }}>{t('common.close')}</Button>}
       >
-        {!detail ? <div style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</div> : (
+        {!detail ? <div style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</div> : editMode ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <Field label={t('memberCare.firstName')}><Input value={editForm.firstName} onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })} /></Field>
+              <Field label={t('memberCare.lastName')}><Input value={editForm.lastName} onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })} /></Field>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <Field label={t('memberCare.phone')}><Input value={editForm.contactPhone} onChange={(e) => setEditForm({ ...editForm, contactPhone: e.target.value })} /></Field>
+              <Field label={t('memberCare.email')}><Input value={editForm.contactEmail} onChange={(e) => setEditForm({ ...editForm, contactEmail: e.target.value })} /></Field>
+            </div>
+            <Field label={t('memberCare.note')}><Input value={editForm.note} onChange={(e) => setEditForm({ ...editForm, note: e.target.value })} /></Field>
+          </div>
+        ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ fontSize: 14, color: 'var(--ink-600)' }}>
               {detail.record.contactPhone && <div>📞 {detail.record.contactPhone}</div>}
               {detail.record.contactEmail && <div>✉️ {detail.record.contactEmail}</div>}
               {detail.record.note && <div style={{ marginTop: 6 }}>{detail.record.note}</div>}
+              {detail.record.canEdit && (
+                <div style={{ marginTop: 10 }}>
+                  <Button variant="ghost" onClick={startEdit}>{t('common.edit')}</Button>
+                </div>
+              )}
             </div>
 
             {detail.record.canEdit && (

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import {
+  fetchAccessibleModules,
   fetchMe,
   hasGoalsAccess,
   isLeaderRole,
@@ -25,6 +26,9 @@ interface AuthContextValue extends AuthState {
   isLeader: boolean;
   hasGoals: boolean;
   hasUnit: boolean;
+  /** Modules accessibles (codes) ; alimente le gating de navigation. */
+  modules: string[];
+  hasMemberCare: boolean;
   login: (payload: LoginRequest) => Promise<void>;
   register: (payload: RegisterRequest) => Promise<void>;
   /** Établit une session à partir d'une réponse d'auth (ex. activation par code — Lot 3.4). */
@@ -43,6 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     me: null,
   });
 
+  const [modules, setModules] = useState<string[]>([]);
+
   const refreshMe = useCallback(async () => {
     try {
       const me = await fetchMe();
@@ -51,6 +57,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState((s) => ({ ...s, me: null }));
     }
   }, []);
+
+  // Charge les modules accessibles à chaque changement de session (login/logout/restauration).
+  useEffect(() => {
+    let active = true;
+    if (!state.token) {
+      setModules([]);
+      return;
+    }
+    fetchAccessibleModules()
+      .then((m) => active && setModules(m))
+      .catch(() => active && setModules([]));
+    return () => {
+      active = false;
+    };
+  }, [state.token]);
 
   useEffect(() => {
     (async () => {
@@ -114,6 +135,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLeader: isLeaderRole(state.me),
     hasGoals: hasGoalsAccess(state.me),
     hasUnit: !!state.me?.donationUnitId,
+    modules,
+    hasMemberCare: modules.includes('MEMBER_CARE'),
     login,
     register,
     establishSession,

@@ -1,9 +1,19 @@
 /**
- * Feature flags de livraison (décision JP 2026-06-10) : on livre « Goals only ».
- * Tout ce qui concerne les Dons (Tableau de bord, Dons, Exports) est masqué tant que
- * le MVP Donations (Phase 6) n'est pas lancé. Réactivation = passer `donations` à true.
+ * Feature flags de livraison.
+ *
+ * Historique :
+ *   - « Member Care only » (JP 2026-06-27) : Dons ET Goals masqués.
+ *   - Mise en avant des engagements (JP 2026-07-10) : `goals` réactivé — à la
+ *     connexion on tombe sur /goals (la vue globale / carte pour les rôles
+ *     ministère-large). Les Dons restent masqués.
+ *
+ * Réactivation : repasser le flag concerné à `true`.
+ *   - donations : Tableau de bord, Dons, Exports
+ *   - goals     : Objectifs (Goals)
  */
 export const FEATURES = {
-  // Phase 6 (MVP Donations Londres) — activé. Repasser à false pour masquer les Dons.
-  donations: true,
+  // Repasser à true pour réafficher Tableau de bord / Dons / Exports.
+  donations: false,
+  // Objectifs (Goals) — activé (mise en avant des engagements).
+  goals: true,
 } as const;

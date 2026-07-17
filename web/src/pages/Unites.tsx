@@ -13,12 +13,11 @@ import {
   Table,
   Toggle,
   TopBar,
-  UnitTypeBadge,
   type Column,
 } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { canManageStructure } from '../services/authApi';
+import { canManageUnits } from '../services/authApi';
 import {
   createUnit,
   deleteUnit,
@@ -27,7 +26,6 @@ import {
   updateUnit,
   type LocalityResponse,
   type UnitResponse,
-  type UnitType,
 } from '../services/adminApi';
 import { ConfirmDelete } from './Zones';
 
@@ -40,7 +38,7 @@ export function UnitesPage() {
   const { push } = useToast();
   const { me } = useAuth();
   const ministryId = me?.ministryId ?? null;
-  const canWrite = canManageStructure(me);
+  const canWrite = canManageUnits(me);
 
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
@@ -58,7 +56,7 @@ export function UnitesPage() {
     onError: (err) => push({ kind: 'error', title: t('units.createRefused'), msg: errMsg(err, t('units.createFailed')) }),
   });
   const updateM = useMutation({
-    mutationFn: ({ id, ...payload }: { id: string; name?: string; localityId?: string; type?: UnitType; active?: boolean }) =>
+    mutationFn: ({ id, ...payload }: { id: string; name?: string; localityId?: string; active?: boolean }) =>
       updateUnit(id, payload),
     onSuccess: () => { invalidate(); setEditing(null); push({ kind: 'ok', title: t('units.updated') }); },
     onError: (err) => push({ kind: 'error', title: t('units.updateRefused'), msg: errMsg(err, t('units.updateFailed')) }),
@@ -81,7 +79,6 @@ export function UnitesPage() {
 
   const cols: Column<UnitResponse>[] = [
     { label: t('units.colUnit'), render: (u) => <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{u.name}</span> },
-    { label: t('units.colType'), render: (u) => <UnitTypeBadge type={u.type} /> },
     { label: t('common.locality'), render: (u) => u.localityName },
     {
       label: t('units.colCode'),
@@ -160,7 +157,7 @@ export function UnitesPage() {
         localities={localities}
         submitting={createM.isPending}
         onSubmit={(v) =>
-          ministryId && createM.mutate({ ministryId, localityId: v.localityId, name: v.name, type: v.type })
+          ministryId && createM.mutate({ ministryId, localityId: v.localityId, name: v.name })
         }
       />
       <UnitFormModal
@@ -169,7 +166,7 @@ export function UnitesPage() {
         localities={localities}
         unit={editing ?? undefined}
         submitting={updateM.isPending}
-        onSubmit={(v) => editing && updateM.mutate({ id: editing.id, name: v.name, localityId: v.localityId, type: v.type, active: v.active })}
+        onSubmit={(v) => editing && updateM.mutate({ id: editing.id, name: v.name, localityId: v.localityId, active: v.active })}
       />
       <ConfirmDelete
         open={toDelete != null}
@@ -195,20 +192,18 @@ function UnitFormModal({
   localities: LocalityResponse[];
   unit?: UnitResponse;
   submitting: boolean;
-  onSubmit: (v: { localityId: string; name: string; type: UnitType; active: boolean }) => void;
+  onSubmit: (v: { localityId: string; name: string; active: boolean }) => void;
 }) {
   const { t } = useTranslation();
   const isEdit = unit != null;
   const [localityId, setLocalityId] = useState('');
   const [name, setName] = useState('');
-  const [type, setType] = useState<UnitType>('CENTER');
   const [active, setActive] = useState(true);
 
   useEffect(() => {
     if (open) {
       setLocalityId(unit?.localityId ?? localities[0]?.id ?? '');
       setName(unit?.name ?? '');
-      setType(unit?.type ?? 'CENTER');
       setActive(unit?.active ?? true);
     }
   }, [open, unit, localities]);
@@ -227,7 +222,7 @@ function UnitFormModal({
           <Button
             variant="primary"
             disabled={!valid || submitting}
-            onClick={() => onSubmit({ localityId, name: name.trim(), type, active })}
+            onClick={() => onSubmit({ localityId, name: name.trim(), active })}
           >
             {submitting ? t('common.saving') : isEdit ? t('common.save') : t('common.create')}
           </Button>
@@ -245,13 +240,7 @@ function UnitFormModal({
         <Field label={t('units.nameLabel')}>
           <Input placeholder={t('units.namePlaceholder')} value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label={t('units.colType')}>
-          <Select value={type} onChange={(e) => setType(e.target.value as UnitType)}>
-            <option value="CENTER">{t('units.typeCenter')}</option>
-            <option value="ASSEMBLY">{t('units.typeAssembly')}</option>
-          </Select>
-        </Field>
-        {isEdit && (
+                {isEdit && (
           <Field label={t('common.status')}>
             <Toggle checked={active} onChange={setActive} label={active ? t('common.activeFem') : t('common.inactiveFem')} />
           </Field>
