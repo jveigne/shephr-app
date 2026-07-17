@@ -12,11 +12,11 @@ import {
 
 export type GoalsError = 'NO_GOAL' | 'NO_UNIT' | 'OTHER' | null;
 
-/** Ligne d'engagement par catégorie : pledge (éventuel) + total versé (UC-DIR-08). */
+/** Ligne d'engagement par catégorie : pledge (éventuel) + versé (UC-DIR-08). */
 export interface GoalLine {
   category: GoalCategory;
   pledge: PledgeResponse | null;
-  /** Somme des avancements (montant pour CURRENCY, nombre pour COUNT). */
+  /** Dernier ÉTAT déclaré (Lot P1 — montant pour CURRENCY, nombre pour COUNT), pas une somme. */
   achieved: number;
   /** Cible déclarée (targetAmount ou targetCount selon le type). */
   target: number | null;
@@ -48,8 +48,17 @@ export function pledgeTarget(p: PledgeResponse | null): number | null {
   return p.targetAmount ?? p.targetCount ?? null;
 }
 
+/**
+ * Lot P1 (décision #13) : chaque avancement est une déclaration d'ÉTAT — le versé est la
+ * déclaration la plus récente (progressDate puis createdAt), pas la somme des saisies.
+ */
 export function progressTotal(items: ProgressResponse[]): number {
-  return items.reduce((s, x) => s + (x.amount ?? x.count ?? 0), 0);
+  if (items.length === 0) return 0;
+  const latest = items.reduce((a, b) => {
+    if (b.progressDate !== a.progressDate) return b.progressDate > a.progressDate ? b : a;
+    return (b.createdAt ?? '') > (a.createdAt ?? '') ? b : a;
+  });
+  return latest.amount ?? latest.count ?? 0;
 }
 
 export function useGoalsData(selectedYear?: number | null): GoalsData {

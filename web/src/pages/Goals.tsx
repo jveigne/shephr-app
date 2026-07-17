@@ -149,11 +149,17 @@ export function GoalsPage() {
     const categories = [...goal.categories].sort((a, b) => a.displayOrder - b.displayOrder);
     return categories.map((category) => {
       const pledge = data.pledges.find((p) => p.categoryId === category.id) ?? null;
-      const achieved = pledge
-        ? (data.progressByPledge[pledge.id] ?? []).reduce(
-            (s, x) => s + (x.amount ?? x.count ?? 0),
-            0,
-          )
+      // Lot P1 (décision #13) : le versé = DERNIER état déclaré (progressDate puis createdAt),
+      // pas la somme des saisies.
+      const progresses = pledge ? data.progressByPledge[pledge.id] ?? [] : [];
+      const achieved = progresses.length
+        ? (() => {
+            const latest = progresses.reduce((a, x) => {
+              if (x.progressDate !== a.progressDate) return x.progressDate > a.progressDate ? x : a;
+              return x.createdAt > a.createdAt ? x : a;
+            });
+            return latest.amount ?? latest.count ?? 0;
+          })()
         : 0;
       return {
         category,
@@ -899,7 +905,7 @@ function ProgressFormModal({
   );
 }
 
-/** Modification d'un avancement de moins de 24 h (UC-DIR-14). */
+/** Modification d'une déclaration d'état (UC-DIR-14 — auteur jusqu'à la deadline, secrétariat au-delà). */
 function EditProgressModal({
   entry,
   currency,
