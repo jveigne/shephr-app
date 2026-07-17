@@ -360,7 +360,7 @@
     "title": "Soumettre mes engagements",
     "intro": "Relisez le récapitulatif : après soumission, les engagements sont verrouillés et ne pourront plus être modifiés.",
     "verse": "« Lorsque tu fais un vœu à Dieu, ne tarde pas à l'accomplir. »",
-    "warning": "La soumission est un acte unique et irréversible. Seul un administrateur pourra déverrouiller vos engagements.",
+    "warning": "La soumission est un acte unique. Seul le secrétariat (ou un administrateur) pourra déverrouiller vos engagements.",
     "alreadySubmitted": "Vos engagements ont déjà été soumis.",
     "confirmBtn": "Confirmer et soumettre",
     "confirmTitle": "Êtes-vous sûr ?",

@@ -717,7 +717,15 @@
     "paidEvolution": "Paid trend (cumulative per month)",
     "pledgesCount5": "{{count}} / 5",
     "noEvolution": "No payment recorded for this year — no trend to display yet.",
-    "targetLabel": "target {{value}}"
+    "targetLabel": "target {{value}}",
+    "unlockUnit": "Unlock",
+    "unlockTooltip": "Reopen this assembly's pledges (it will need to resubmit)",
+    "unlockModalTitle": "Unlock {{name}}",
+    "unlockModalSub": "Pledges {{year}}",
+    "unlockModalBody": "This assembly's submission will be cancelled: its pledges become editable again and it will need to submit again. Its current status is not affected.",
+    "unlockConfirm": "Unlock",
+    "unitUnlocked": "Assembly unlocked — it can complete and resubmit.",
+    "unlockFailed": "Unlock failed"
   },
   "map": {
     "searchCountry": "Search a country…",

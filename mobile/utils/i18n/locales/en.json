@@ -360,7 +360,7 @@
     "title": "Submit my pledges",
     "intro": "Review the summary: after submission, the pledges are locked and can no longer be edited.",
     "verse": "“When you make a vow to God, do not delay to fulfill it.”",
-    "warning": "Submission is a single, irreversible act. Only an administrator can unlock your pledges.",
+    "warning": "Submission is a single act. Only the secretariat (or an administrator) can unlock your pledges.",
     "alreadySubmitted": "Your pledges have already been submitted.",
     "confirmBtn": "Confirm and submit",
     "confirmTitle": "Are you sure?",

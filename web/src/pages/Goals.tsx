@@ -36,6 +36,7 @@ import {
   getZoneUnits,
   listFaithPledges,
   sendReminder,
+  unlockUnit,
   submitMyPledges,
   updateFaithPledge,
   updatePledge,
@@ -1480,12 +1481,29 @@ function ZoneUnitsBlock({
 }: { zoneId: string | null; goal: ActiveGoal; year: number; perimeterScoped?: boolean }) {
   const { t } = useTranslation();
   const { push } = useToast();
+  const { me } = useAuth();
+  // Lot P2 (décision JP 17/07) : déverrouillage réservé à SUPER_ADMIN + SECRETARIAT (pas LEADER).
+  const canUnlock = (me?.superAdmin ?? false) || me?.goalRole === 'SECRETARIAT';
   const unitsQ = useQuery({
     queryKey: perimeterScoped ? ['goals', 'me-units', year] : ['goals', 'zone-units', zoneId, year],
     queryFn: () => (perimeterScoped ? getMyUnits(year) : getZoneUnits(zoneId!, year)),
   });
   const units = unitsQ.data ?? [];
   const allSubmitted = units.length > 0 && units.every((u) => u.submitted);
+
+  // Lot P2 : rouvrir la soumission d'une assemblée (elle pourra compléter puis resoumettre).
+  const [unlockUnitTarget, setUnlockUnitTarget] = useState<ZoneUnitStatus | null>(null);
+  const unlockM = useMutation({
+    mutationFn: () => unlockUnit(unlockUnitTarget!.unitId, year),
+    onSuccess: () => {
+      setUnlockUnitTarget(null);
+      unitsQ.refetch();
+      push({ kind: 'ok', title: t('goals.unitUnlocked') });
+    },
+    onError: (err) => {
+      push({ kind: 'error', title: t('goals.unlockFailed'), msg: errMsg(err, '') || undefined });
+    },
+  });
 
   // UC-LDR-07 : modale de rappel avec message pré-rempli (modifiable).
   const [reminderUnit, setReminderUnit] = useState<ZoneUnitStatus | null>(null);
@@ -1597,10 +1615,21 @@ function ZoneUnitsBlock({
             },
             {
               label: '',
-              style: { width: 150 },
+              style: { width: 160 },
               cellStyle: { textAlign: 'right' },
               render: (u) =>
-                u.submitted ? null : u.hasLeader ? (
+                u.submitted ? (
+                  // Lot P2 : le secrétariat (ou super admin) rouvre une soumission.
+                  canUnlock ? (
+                    <Button
+                      size="sm"
+                      title={t('goals.unlockTooltip')}
+                      onClick={() => setUnlockUnitTarget(u)}
+                    >
+                      {t('goals.unlockUnit')}
+                    </Button>
+                  ) : null
+                ) : u.hasLeader ? (
                   <Button size="sm" iconL={<Icon name="bell" size={14} />} onClick={() => openReminder(u)}>
                     {t('goals.sendReminder')}
                   </Button>
@@ -1710,6 +1739,23 @@ function ZoneUnitsBlock({
           </table>
           </>
         )}
+      </Modal>
+
+      <Modal
+        open={unlockUnitTarget != null}
+        onClose={() => setUnlockUnitTarget(null)}
+        title={t('goals.unlockModalTitle', { name: unlockUnitTarget?.unitName ?? '' })}
+        sub={t('goals.unlockModalSub', { year })}
+        footer={
+          <>
+            <Button onClick={() => setUnlockUnitTarget(null)}>{t('common.cancel')}</Button>
+            <Button variant="primary" disabled={unlockM.isPending} onClick={() => unlockM.mutate()}>
+              {unlockM.isPending ? t('common.saving') : t('goals.unlockConfirm')}
+            </Button>
+          </>
+        }
+      >
+        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>{t('goals.unlockModalBody')}</p>
       </Modal>
     </div>
   );
@@ -2252,8 +2298,26 @@ function DrillZones({ countryId, onOpen }: { countryId: string; onOpen: (id: str
 
 function DrillUnits({ zoneId, year, onOpen }: { zoneId: string; year: number; onOpen: (u: ZoneUnitStatus) => void }) {
   const { t } = useTranslation();
+  const { push } = useToast();
+  const { me } = useAuth();
+  // Lot P2 (décision #14) : déverrouillage réservé à SUPER_ADMIN + SECRETARIAT.
+  const canUnlock = (me?.superAdmin ?? false) || me?.goalRole === 'SECRETARIAT';
   const unitsQ = useQuery({ queryKey: ['goals', 'zone-units', zoneId, year], queryFn: () => getZoneUnits(zoneId, year) });
   const rows = unitsQ.data ?? [];
+
+  const [unlockTarget, setUnlockTarget] = useState<ZoneUnitStatus | null>(null);
+  const unlockM = useMutation({
+    mutationFn: () => unlockUnit(unlockTarget!.unitId, year),
+    onSuccess: () => {
+      setUnlockTarget(null);
+      unitsQ.refetch();
+      push({ kind: 'ok', title: t('goals.unitUnlocked') });
+    },
+    onError: (err) => {
+      push({ kind: 'error', title: t('goals.unlockFailed'), msg: errMsg(err, '') || undefined });
+    },
+  });
+
   return (
     <div style={{ marginTop: 16 }}>
       <h4 style={{ margin: '0 0 8px' }}>{t('goals.unitsStatusHeading')}</h4>
@@ -2286,9 +2350,26 @@ function DrillUnits({ zoneId, year, onOpen }: { zoneId: string; year: number; on
           },
           {
             label: '',
-            style: { width: 40 },
+            style: { width: canUnlock ? 160 : 40 },
             cellStyle: { textAlign: 'right' },
-            render: () => <Icon name="chevRight" size={13} />,
+            render: (u) => (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                {/* Lot P2 : rouvrir une soumission depuis le drill-down secrétariat. */}
+                {canUnlock && u.submitted && (
+                  <Button
+                    size="sm"
+                    title={t('goals.unlockTooltip')}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setUnlockTarget(u);
+                    }}
+                  >
+                    {t('goals.unlockUnit')}
+                  </Button>
+                )}
+                <Icon name="chevRight" size={13} />
+              </span>
+            ),
           },
         ]}
         rows={rows.map((u) => ({ ...u, id: u.unitId }))}
@@ -2296,6 +2377,23 @@ function DrillUnits({ zoneId, year, onOpen }: { zoneId: string; year: number; on
         zebra
         empty={<p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>{t('goals.noUnitInZone')}</p>}
       />
+
+      <Modal
+        open={unlockTarget != null}
+        onClose={() => setUnlockTarget(null)}
+        title={t('goals.unlockModalTitle', { name: unlockTarget?.unitName ?? '' })}
+        sub={t('goals.unlockModalSub', { year })}
+        footer={
+          <>
+            <Button onClick={() => setUnlockTarget(null)}>{t('common.cancel')}</Button>
+            <Button variant="primary" disabled={unlockM.isPending} onClick={() => unlockM.mutate()}>
+              {unlockM.isPending ? t('common.saving') : t('goals.unlockConfirm')}
+            </Button>
+          </>
+        }
+      >
+        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>{t('goals.unlockModalBody')}</p>
+      </Modal>
     </div>
   );
 }

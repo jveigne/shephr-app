@@ -411,6 +411,14 @@ export async function sendReminder(unitId: string, message?: string) {
   return data;
 }
 
+/**
+ * Lot P2 : rouvre (déverrouille) les engagements d'une assemblée soumise pour une année —
+ * SECRETARIAT ou SUPER_ADMIN uniquement (vérifié côté backend). L'assemblée devra resoumettre.
+ */
+export async function unlockUnit(unitId: string, year?: number) {
+  await apiClient.post(`/api/church/goals/units/${unitId}/unlock${yq(year)}`);
+}
+
 // Lot G2 : la règle locale « 24 h » (ex-isProgressEditable) est SUPPRIMÉE — l'éditabilité est
 // server-driven via `ProgressResponse.editable` / `editableUntil` (deadline de l'année).
 

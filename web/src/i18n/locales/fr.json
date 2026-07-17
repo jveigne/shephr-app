@@ -717,7 +717,15 @@
     "paidEvolution": "Évolution du versé (cumulé par mois)",
     "pledgesCount5": "{{count}} / 5",
     "noEvolution": "Aucun versement enregistré pour cette année — pas encore d'évolution à afficher.",
-    "targetLabel": "cible {{value}}"
+    "targetLabel": "cible {{value}}",
+    "unlockUnit": "Déverrouiller",
+    "unlockTooltip": "Rouvrir les engagements de cette assemblée (elle devra resoumettre)",
+    "unlockModalTitle": "Déverrouiller {{name}}",
+    "unlockModalSub": "Engagements {{year}}",
+    "unlockModalBody": "La soumission de cette assemblée sera annulée : ses engagements redeviennent modifiables et elle devra soumettre à nouveau. Son état actuel n'est pas affecté.",
+    "unlockConfirm": "Déverrouiller",
+    "unitUnlocked": "Assemblée déverrouillée — elle peut compléter puis resoumettre.",
+    "unlockFailed": "Déverrouillage impossible"
   },
   "map": {
     "searchCountry": "Rechercher un pays…",
