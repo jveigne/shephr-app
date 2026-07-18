@@ -90,6 +90,9 @@ export interface MeResponse {
   /** Chantier B (décision #7) — ville du dirigeant de ville ; null sinon. */
   donationCityId: string | null;
   goalCityId: string | null;
+  /** Multi-rattachements (home + set) : villes d'un DIRIGEANT / régions d'un SENIOR ; vides sinon. */
+  goalCityIds: string[] | null;
+  goalZoneIds: string[] | null;
   /** Pays du DIRIGEANT_COORDINATEUR côté Goals ; vide sinon. */
   goalCountryIds: string[] | null;
   // Périmètre LISIBLE (noms résolus) — affichage explicite dans le profil, selon le leadership :

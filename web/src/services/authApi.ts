@@ -55,6 +55,9 @@ export interface MeResponse {
   /** Chantier B (décision #7) — ville du dirigeant de ville ; null sinon. */
   donationCityId: string | null;
   goalCityId: string | null;
+  /** Multi-rattachements (home + set) : villes d'un DIRIGEANT / régions d'un SENIOR ; vides sinon. */
+  goalCityIds: string[] | null;
+  goalZoneIds: string[] | null;
   /** Pays du DIRIGEANT_COORDINATEUR côté Goals ; vide sinon. */
   goalCountryIds: string[] | null;
   /** Lot 4.8 — pays qu'un SECRETARIAT/LEADER coordonne explicitement (assignés par SUPER_ADMIN). */
