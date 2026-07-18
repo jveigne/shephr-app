@@ -265,11 +265,11 @@ export function MemberCarePage() {
               {units.map((u) => <option key={u.unitId} value={u.unitId}>{u.unitName}</option>)}
             </Select>
           </Field>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
             <Field label={t('memberCare.firstName')}><Input value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} /></Field>
             <Field label={t('memberCare.lastName')}><Input value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} /></Field>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
             <Field label={t('memberCare.phone')}><Input value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} /></Field>
             <Field label={t('memberCare.email')}><Input value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></Field>
           </div>
@@ -301,11 +301,11 @@ export function MemberCarePage() {
       >
         {!detail ? <div style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</div> : editMode ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
               <Field label={t('memberCare.firstName')}><Input value={editForm.firstName} onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })} /></Field>
               <Field label={t('memberCare.lastName')}><Input value={editForm.lastName} onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })} /></Field>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
               <Field label={t('memberCare.phone')}><Input value={editForm.contactPhone} onChange={(e) => setEditForm({ ...editForm, contactPhone: e.target.value })} /></Field>
               <Field label={t('memberCare.email')}><Input value={editForm.contactEmail} onChange={(e) => setEditForm({ ...editForm, contactEmail: e.target.value })} /></Field>
             </div>

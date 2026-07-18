@@ -104,6 +104,7 @@ export const Icons = {
   Check: (p: IconProps) => <I {...p}><path d="M5 12l4 4 10-10" /></I>,
   Search: (p: IconProps) => <I {...p}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></I>,
   Filter: (p: IconProps) => <I {...p}><path d="M3 5h18M6 12h12M10 19h4" /></I>,
+  Menu: (p: IconProps) => <I {...p}><path d="M4 6h16M4 12h16M4 18h16" /></I>,
   Mail: (p: IconProps) => <I {...p}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></I>,
   Lock: (p: IconProps) => <I {...p}><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></I>,
   Eye: (p: IconProps) => <I {...p}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></I>,

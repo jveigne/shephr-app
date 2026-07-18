@@ -30,6 +30,7 @@ const NAME_MAP: Record<string, IconName> = {
   check: 'Check',
   search: 'Search',
   filter: 'Filter',
+  menu: 'Menu',
   mail: 'Mail',
   lock: 'Lock',
   eye: 'Eye',

@@ -70,7 +70,7 @@ export function LandingPage() {
         position: 'sticky', top: 0, zIndex: 10, background: 'var(--parchment)',
         borderBottom: '1px solid var(--line-soft)',
       }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '14px clamp(14px, 3vw, 24px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--green-600)', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>S</div>
             <span style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: 'var(--green-800)' }}>shephr</span>
@@ -89,15 +89,15 @@ export function LandingPage() {
       </header>
 
       {/* Hero */}
-      <section style={{ maxWidth: 880, margin: '0 auto', padding: '72px 24px 56px', textAlign: 'center' }}>
+      <section style={{ maxWidth: 880, margin: '0 auto', padding: 'clamp(36px, 9vw, 72px) 20px clamp(32px, 7vw, 56px)', textAlign: 'center' }}>
         <span style={{
           display: 'inline-block', padding: '5px 14px', borderRadius: 999, background: 'var(--green-50)',
           color: 'var(--green-700)', fontSize: 12, fontWeight: 600, letterSpacing: '.02em', marginBottom: 22,
         }}>{t('landing.hero.badge')}</span>
-        <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 46, lineHeight: 1.1, letterSpacing: '-.02em', color: 'var(--green-900)', margin: '0 0 20px' }}>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(29px, 8vw, 46px)', lineHeight: 1.1, letterSpacing: '-.02em', color: 'var(--green-900)', margin: '0 0 20px' }}>
           {t('landing.hero.title')}
         </h1>
-        <p style={{ fontSize: 19, lineHeight: 1.55, color: 'var(--ink-700)', maxWidth: 640, margin: '0 auto 32px' }}>
+        <p style={{ fontSize: 'clamp(16px, 4.5vw, 19px)', lineHeight: 1.55, color: 'var(--ink-700)', maxWidth: 640, margin: '0 auto 32px' }}>
           {t('landing.hero.subtitle')}
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -113,12 +113,12 @@ export function LandingPage() {
       </section>
 
       {/* Features */}
-      <section style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 24px 64px' }}>
+      <section style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px clamp(40px, 8vw, 64px)' }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 32, color: 'var(--green-800)', margin: '0 0 10px' }}>{t('landing.features.title')}</h2>
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(24px, 6vw, 32px)', color: 'var(--green-800)', margin: '0 0 10px' }}>{t('landing.features.title')}</h2>
           <p style={{ color: 'var(--ink-500)', fontSize: 16, maxWidth: 560, margin: '0 auto' }}>{t('landing.features.subtitle')}</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 18 }}>
           {features.map((f) => (
             <Feature key={f.key} icon={f.icon} title={t(`landing.features.${f.key}.title`)} desc={t(`landing.features.${f.key}.desc`)} />
           ))}
@@ -179,14 +179,14 @@ export function LandingPage() {
       {/*</section>*/}
 
       {/* Activation / contact */}
-      <section style={{ maxWidth: 760, margin: '0 auto', padding: '64px 24px', textAlign: 'center' }}>
-        <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 30, color: 'var(--green-900)', margin: '0 0 14px' }}>{t('landing.contact.title')}</h2>
-        <p style={{ color: 'var(--ink-700)', fontSize: 17, lineHeight: 1.6, margin: '0 auto 26px', maxWidth: 580 }}>{t('landing.contact.desc')}</p>
+      <section style={{ maxWidth: 760, margin: '0 auto', padding: 'clamp(40px, 8vw, 64px) 20px', textAlign: 'center' }}>
+        <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(23px, 6vw, 30px)', color: 'var(--green-900)', margin: '0 0 14px' }}>{t('landing.contact.title')}</h2>
+        <p style={{ color: 'var(--ink-700)', fontSize: 'clamp(15px, 4vw, 17px)', lineHeight: 1.6, margin: '0 auto 26px', maxWidth: 580 }}>{t('landing.contact.desc')}</p>
         <a href={mailto} style={{ padding: '14px 30px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--green-600)', color: '#fff', fontWeight: 600, fontSize: 16, textDecoration: 'none', display: 'inline-block' }}>
           {t('landing.contact.cta')}
         </a>
         <p style={{ color: 'var(--ink-400)', fontSize: 14, marginTop: 16 }}>
-          {t('landing.contact.or')} <a href={mailto} style={{ color: 'var(--green-700)', fontWeight: 600 }}>{CONTACT_EMAIL}</a>
+          {t('landing.contact.or')} <a href={mailto} style={{ color: 'var(--green-700)', fontWeight: 600, wordBreak: 'break-all' }}>{CONTACT_EMAIL}</a>
         </p>
       </section>
 
