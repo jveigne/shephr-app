@@ -545,6 +545,8 @@ export function GoalsPage() {
                 isSuperAdmin={me?.superAdmin ?? false}
                 zoneId={zoneId}
                 zoneName={zoneName}
+                cityId={me?.goalCityId ?? null}
+                cityName={me?.cityNames?.[0] ?? null}
                 />
               </>
             )}
@@ -1002,7 +1004,7 @@ function EditProgressModal({
  * La foi (si une zone d'adressage est rattachée — cas DIRIGEANT_SENIOR) reste la SIENNE.
  */
 function MyPerimeterSection({
-  goal, currency, year, meId, isSuperAdmin, zoneId, zoneName,
+  goal, currency, year, meId, isSuperAdmin, zoneId, zoneName, cityId, cityName,
 }: {
   goal: ActiveGoal;
   currency: string;
@@ -1011,6 +1013,8 @@ function MyPerimeterSection({
   isSuperAdmin: boolean;
   zoneId: string | null;
   zoneName: string | null;
+  cityId: string | null;
+  cityName: string | null;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -1018,17 +1022,21 @@ function MyPerimeterSection({
   const [faithCategory, setFaithCategory] = useState<GoalCategory | null>(null);
   const [faithToDelete, setFaithToDelete] = useState<FaithPledgeResponse | null>(null);
 
-  const canFaith = zoneId != null;
+  // Chantier B : la foi se déclare sur le NŒUD de rattachement — région (DIRIGEANT_SENIOR)
+  // ou ville (DIRIGEANT de ville). La zone prime si les deux sont présents.
+  const faithLevel: FaithLevelPath | null = zoneId != null ? 'zones' : cityId != null ? 'cities' : null;
+  const faithEntityId = zoneId ?? cityId;
+  const canFaith = faithLevel != null && faithEntityId != null;
   const aggQ = useQuery({ queryKey: ['goals', 'me-aggregate', year], queryFn: () => getMyPerimeterAggregate(year) });
   const faithQ = useQuery({
-    queryKey: ['goals', 'faith', 'zones', zoneId, year],
-    queryFn: () => listFaithPledges('zones', zoneId!, year),
+    queryKey: ['goals', 'faith', faithLevel, faithEntityId, year],
+    queryFn: () => listFaithPledges(faithLevel!, faithEntityId!, year),
     enabled: canFaith,
   });
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['goals', 'me-aggregate'] });
-    if (zoneId) queryClient.invalidateQueries({ queryKey: ['goals', 'faith', 'zones', zoneId] });
+    if (faithLevel) queryClient.invalidateQueries({ queryKey: ['goals', 'faith', faithLevel, faithEntityId] });
   };
 
   const deleteM = useMutation({
@@ -1089,7 +1097,7 @@ function MyPerimeterSection({
 
   return (
     <div style={{ marginTop: 32 }}>
-      <h3 style={{ margin: '0 0 4px' }}>{zoneName ? t('goals.myPerimeterNamed', { name: zoneName }) : t('goals.myPerimeter')}</h3>
+      <h3 style={{ margin: '0 0 4px' }}>{zoneName ? t('goals.myPerimeterNamed', { name: zoneName }) : cityName ? t('goals.myPerimeterNamed', { name: cityName }) : t('goals.myPerimeter')}</h3>
       <p style={{ margin: '0 0 10px', color: 'var(--ink-400)', fontSize: 13 }}>
         {t('goals.myPerimeterIntro')}
         {canFaith && t('goals.myPerimeterFaithRule')}
@@ -1141,8 +1149,8 @@ function MyPerimeterSection({
 
       {canFaith && (
         <FaithFormModal
-          level="zones"
-          entityId={zoneId!}
+          level={faithLevel!}
+          entityId={faithEntityId!}
           category={faithCategory}
           year={year}
           aggregate={faithCategory ? lineByCat.get(faithCategory.id)?.aggregateOfChildren ?? 0 : 0}

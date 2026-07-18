@@ -168,7 +168,7 @@ export async function deleteProgress(id: string) {
 // --- Agrégats & engagements de foi (Lot 4.2 — UC-LDR-04/05, UC-COO-04/05) -----
 
 /** Niveaux portant des engagements de foi. */
-export type FaithLevelPath = 'zones' | 'countries' | 'continents';
+export type FaithLevelPath = 'cities' | 'zones' | 'countries' | 'continents';
 /** Niveaux agrégeables ('units' : agrégat seulement, pas de foi — Lot 4.5). */
 export type AggregateLevelPath = FaithLevelPath | 'units';
 
@@ -369,7 +369,7 @@ export async function getNations(year?: number) {
 }
 
 // --- Lot 7.1 — évolution dans le temps (versé cumulé par mois) à chaque niveau ---
-export type TimelineLevel = 'units' | 'zones' | 'countries' | 'continents';
+export type TimelineLevel = 'units' | 'cities' | 'zones' | 'countries' | 'continents';
 
 export interface TimelinePoint {
   /** Période « yyyy-MM ». */

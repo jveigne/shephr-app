@@ -4,7 +4,7 @@ import { Icon } from '../components/Icon';
 import { useAuth } from '../hooks/useAuth';
 import { setLanguage } from '../i18n';
 
-const CONTACT_EMAIL = 'contact@shephr.app';
+const CONTACT_EMAIL = 'jexcellence2065@gmail.com';
 
 function LangSwitch() {
   const { i18n } = useTranslation();
@@ -125,58 +125,58 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing */}
-      <section style={{ background: 'var(--ivory)', borderTop: '1px solid var(--line-soft)', borderBottom: '1px solid var(--line-soft)' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '64px 24px' }}>
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 32, color: 'var(--green-800)', margin: '0 0 10px' }}>{t('landing.pricing.title')}</h2>
-            <p style={{ color: 'var(--ink-500)', fontSize: 16, maxWidth: 620, margin: '0 auto' }}>{t('landing.pricing.subtitle')}</p>
-          </div>
+      {/*/!* Pricing *!/*/}
+      {/*<section style={{ background: 'var(--ivory)', borderTop: '1px solid var(--line-soft)', borderBottom: '1px solid var(--line-soft)' }}>*/}
+      {/*  <div style={{ maxWidth: 1100, margin: '0 auto', padding: '64px 24px' }}>*/}
+      {/*    <div style={{ textAlign: 'center', marginBottom: 40 }}>*/}
+      {/*      <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 32, color: 'var(--green-800)', margin: '0 0 10px' }}>{t('landing.pricing.title')}</h2>*/}
+      {/*      <p style={{ color: 'var(--ink-500)', fontSize: 16, maxWidth: 620, margin: '0 auto' }}>{t('landing.pricing.subtitle')}</p>*/}
+      {/*    </div>*/}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 18, marginBottom: 28 }}>
-            {/* Gratuit */}
-            <div style={{ background: 'var(--ivory-card)', border: '1px solid var(--green-100)', borderRadius: 'var(--radius-lg)', padding: 26 }}>
-              <span style={{ display: 'inline-block', padding: '4px 12px', borderRadius: 999, background: 'var(--green-50)', color: 'var(--green-700)', fontSize: 12, fontWeight: 600, marginBottom: 14 }}>{t('landing.pricing.freeBadge')}</span>
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 8px' }}>{t('landing.pricing.freeTitle')}</h3>
-              <p style={{ color: 'var(--ink-500)', fontSize: 14, lineHeight: 1.55, margin: 0 }}>{t('landing.pricing.freeDesc')}</p>
-            </div>
-            {/* Donations */}
-            <div style={{ background: 'var(--ivory-card)', border: '1px solid var(--line-soft)', borderRadius: 'var(--radius-lg)', padding: 26 }}>
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 4px' }}>{t('landing.pricing.donations.name')}</h3>
-              <div style={{ fontFamily: 'var(--font-serif)', fontSize: 26, color: 'var(--green-700)', margin: '6px 0' }}>
-                {t('landing.pricing.donations.price')} <span style={{ fontSize: 13, color: 'var(--ink-400)' }}>{t('landing.pricing.donations.unit')}</span>
-              </div>
-              <p style={{ color: 'var(--ink-500)', fontSize: 14, lineHeight: 1.55, margin: 0 }}>{t('landing.pricing.donations.desc')}</p>
-            </div>
-            {/* Member Care */}
-            <div style={{ background: 'var(--ivory-card)', border: '1px solid var(--line-soft)', borderRadius: 'var(--radius-lg)', padding: 26 }}>
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 4px' }}>{t('landing.pricing.memberCare.name')}</h3>
-              <div style={{ fontFamily: 'var(--font-serif)', fontSize: 26, color: 'var(--green-700)', margin: '6px 0' }}>
-                {t('landing.pricing.memberCare.price')} <span style={{ fontSize: 13, color: 'var(--ink-400)' }}>{t('landing.pricing.memberCare.unit')}</span>
-              </div>
-              <p style={{ color: 'var(--ink-500)', fontSize: 14, lineHeight: 1.55, margin: 0 }}>{t('landing.pricing.memberCare.desc')}</p>
-            </div>
-          </div>
+      {/*    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 18, marginBottom: 28 }}>*/}
+      {/*      /!* Gratuit *!/*/}
+      {/*      <div style={{ background: 'var(--ivory-card)', border: '1px solid var(--green-100)', borderRadius: 'var(--radius-lg)', padding: 26 }}>*/}
+      {/*        <span style={{ display: 'inline-block', padding: '4px 12px', borderRadius: 999, background: 'var(--green-50)', color: 'var(--green-700)', fontSize: 12, fontWeight: 600, marginBottom: 14 }}>{t('landing.pricing.freeBadge')}</span>*/}
+      {/*        <h3 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 8px' }}>{t('landing.pricing.freeTitle')}</h3>*/}
+      {/*        <p style={{ color: 'var(--ink-500)', fontSize: 14, lineHeight: 1.55, margin: 0 }}>{t('landing.pricing.freeDesc')}</p>*/}
+      {/*      </div>*/}
+      {/*      /!* Donations *!/*/}
+      {/*      <div style={{ background: 'var(--ivory-card)', border: '1px solid var(--line-soft)', borderRadius: 'var(--radius-lg)', padding: 26 }}>*/}
+      {/*        <h3 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 4px' }}>{t('landing.pricing.donations.name')}</h3>*/}
+      {/*        <div style={{ fontFamily: 'var(--font-serif)', fontSize: 26, color: 'var(--green-700)', margin: '6px 0' }}>*/}
+      {/*          {t('landing.pricing.donations.price')} <span style={{ fontSize: 13, color: 'var(--ink-400)' }}>{t('landing.pricing.donations.unit')}</span>*/}
+      {/*        </div>*/}
+      {/*        <p style={{ color: 'var(--ink-500)', fontSize: 14, lineHeight: 1.55, margin: 0 }}>{t('landing.pricing.donations.desc')}</p>*/}
+      {/*      </div>*/}
+      {/*      /!* Member Care *!/*/}
+      {/*      <div style={{ background: 'var(--ivory-card)', border: '1px solid var(--line-soft)', borderRadius: 'var(--radius-lg)', padding: 26 }}>*/}
+      {/*        <h3 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 4px' }}>{t('landing.pricing.memberCare.name')}</h3>*/}
+      {/*        <div style={{ fontFamily: 'var(--font-serif)', fontSize: 26, color: 'var(--green-700)', margin: '6px 0' }}>*/}
+      {/*          {t('landing.pricing.memberCare.price')} <span style={{ fontSize: 13, color: 'var(--ink-400)' }}>{t('landing.pricing.memberCare.unit')}</span>*/}
+      {/*        </div>*/}
+      {/*        <p style={{ color: 'var(--ink-500)', fontSize: 14, lineHeight: 1.55, margin: 0 }}>{t('landing.pricing.memberCare.desc')}</p>*/}
+      {/*      </div>*/}
+      {/*    </div>*/}
 
-          <div style={{ background: 'var(--parchment-deep)', borderRadius: 'var(--radius-lg)', padding: '22px 26px' }}>
-            <h4 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 16, color: 'var(--green-800)', margin: '0 0 12px' }}>{t('landing.pricing.factorsTitle')}</h4>
-            <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
-              {factors.map((f) => (
-                <li key={f} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 14, color: 'var(--ink-700)' }}>
-                  <Icon name="sparkle" size={14} /> <span>{t(`landing.pricing.factors.${f}`)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+      {/*    <div style={{ background: 'var(--parchment-deep)', borderRadius: 'var(--radius-lg)', padding: '22px 26px' }}>*/}
+      {/*      <h4 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 16, color: 'var(--green-800)', margin: '0 0 12px' }}>{t('landing.pricing.factorsTitle')}</h4>*/}
+      {/*      <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>*/}
+      {/*        {factors.map((f) => (*/}
+      {/*          <li key={f} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 14, color: 'var(--ink-700)' }}>*/}
+      {/*            <Icon name="sparkle" size={14} /> <span>{t(`landing.pricing.factors.${f}`)}</span>*/}
+      {/*          </li>*/}
+      {/*        ))}*/}
+      {/*      </ul>*/}
+      {/*    </div>*/}
 
-          <div style={{ textAlign: 'center', marginTop: 30 }}>
-            <p style={{ color: 'var(--ink-500)', fontSize: 14, marginBottom: 14 }}>{t('landing.pricing.quoteNote')}</p>
-            <a href={mailto} style={{ padding: '13px 26px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--green-600)', color: '#fff', fontWeight: 600, fontSize: 15, textDecoration: 'none', display: 'inline-block' }}>
-              {t('landing.pricing.cta')}
-            </a>
-          </div>
-        </div>
-      </section>
+      {/*    <div style={{ textAlign: 'center', marginTop: 30 }}>*/}
+      {/*      <p style={{ color: 'var(--ink-500)', fontSize: 14, marginBottom: 14 }}>{t('landing.pricing.quoteNote')}</p>*/}
+      {/*      <a href={mailto} style={{ padding: '13px 26px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--green-600)', color: '#fff', fontWeight: 600, fontSize: 15, textDecoration: 'none', display: 'inline-block' }}>*/}
+      {/*        {t('landing.pricing.cta')}*/}
+      {/*      </a>*/}
+      {/*    </div>*/}
+      {/*  </div>*/}
+      {/*</section>*/}
 
       {/* Activation / contact */}
       <section style={{ maxWidth: 760, margin: '0 auto', padding: '64px 24px', textAlign: 'center' }}>
