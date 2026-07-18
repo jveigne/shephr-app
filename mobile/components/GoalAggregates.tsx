@@ -38,7 +38,7 @@ import {
   type GoalCategory,
   type ZoneUnitStatus,
 } from '../services/goalsApi';
-import { listCountries, listZones } from '../services/orgApi';
+import { listCountries, listLocalities, listZones } from '../services/orgApi';
 
 const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallback;
 
@@ -53,10 +53,14 @@ interface Perimeter {
  * zone du DIRIGEANT_LEADER et/ou pays du COORDINATEUR. Effectif = MAX (RG-08).
  */
 export default function GoalAggregatesScreen({
-  zoneId,
+  zoneIds,
+  cityIds,
   countryIds,
 }: {
-  zoneId: string | null;
+  /** Régions portées (multi-rattachements), principale en tête ; vide sinon. */
+  zoneIds: string[];
+  /** Villes portées (dirigeant de ville, multi inclus) ; vide sinon. */
+  cityIds: string[];
   countryIds: string[];
 }) {
   const { t } = useLanguage();
@@ -74,16 +78,24 @@ export default function GoalAggregatesScreen({
       const g = await getActiveGoal();
       setGoal(g);
       setNoGoal(false);
-      const [zonesR, countriesR] = await Promise.allSettled([
-        zoneId ? listZones() : Promise.resolve([]),
+      const [zonesR, localitiesR, countriesR] = await Promise.allSettled([
+        zoneIds.length > 0 ? listZones() : Promise.resolve([]),
+        cityIds.length > 0 ? listLocalities() : Promise.resolve([]),
         countryIds.length > 0 ? listCountries() : Promise.resolve([]),
       ]);
       const zones = zonesR.status === 'fulfilled' ? zonesR.value : [];
+      const localities = localitiesR.status === 'fulfilled' ? localitiesR.value : [];
       const countries = countriesR.status === 'fulfilled' ? countriesR.value : [];
       const list: Perimeter[] = [];
-      if (zoneId) {
-        const name = zones.find((z) => z.id === zoneId)?.name;
-        list.push({ level: 'zones', entityId: zoneId, title: name ? t('goalsAgg.myZoneNamed', { name }) : t('goalsAgg.myZone') });
+      // Multi-rattachements : une section par région / ville portée — chaque foi se déclare sur
+      // SON nœud et remonte vers SA branche dans l'arbre.
+      for (const id of zoneIds) {
+        const name = zones.find((z) => z.id === id)?.name;
+        list.push({ level: 'zones', entityId: id, title: name ? t('goalsAgg.myZoneNamed', { name }) : t('goalsAgg.myZone') });
+      }
+      for (const id of cityIds) {
+        const name = localities.find((l) => l.id === id)?.name;
+        list.push({ level: 'cities', entityId: id, title: name ? t('goalsAgg.myCityNamed', { name }) : t('goalsAgg.myCity') });
       }
       for (const id of countryIds) {
         const name = countries.find((c) => c.id === id)?.name;
@@ -95,7 +107,7 @@ export default function GoalAggregatesScreen({
     } finally {
       setLoading(false);
     }
-  }, [zoneId, countryIds.join(','), t]);
+  }, [zoneIds.join(','), cityIds.join(','), countryIds.join(','), t]);
 
   useEffect(() => {
     load();

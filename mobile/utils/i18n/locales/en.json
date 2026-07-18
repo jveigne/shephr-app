@@ -291,6 +291,8 @@
     "noGoalHint": "No Five-Year Goal is active at the moment.",
     "myZone": "My region",
     "myZoneNamed": "My region — {{name}}",
+    "myCity": "My city",
+    "myCityNamed": "My city — {{name}}",
     "myCountry": "My country",
     "myCountryNamed": "My country — {{name}}",
     "faithBadge": "Faith",

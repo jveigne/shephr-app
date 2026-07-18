@@ -17,8 +17,19 @@ export interface CountrySummary {
   name: string;
 }
 
+export interface LocalitySummary {
+  id: string;
+  zoneId: string | null;
+  name: string;
+}
+
 export async function listZones(): Promise<ZoneSummary[]> {
   const { data } = await apiClient.get<ZoneSummary[]>('/api/church/admin/zones');
+  return data;
+}
+
+export async function listLocalities(): Promise<LocalitySummary[]> {
+  const { data } = await apiClient.get<LocalitySummary[]>('/api/church/admin/localities');
   return data;
 }
 

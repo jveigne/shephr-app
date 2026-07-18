@@ -53,7 +53,7 @@ import {
   type UnitPledgeDetail,
   type ZoneUnitStatus,
 } from '../services/goalsApi';
-import { listCountries, listZones } from '../services/adminApi';
+import { listCountries, listLocalities, listZones } from '../services/adminApi';
 import { NationsMap } from '../components/NationsMap';
 import { GoalTimeline } from '../components/GoalTimeline';
 import { currencySymbol, fmtAmount, fmtDateLabel, toLocalDate } from '../utils/format';
@@ -107,6 +107,13 @@ export function GoalsPage() {
   // périmètre zone/pays (goalZoneId / goalCountryIds).
   const hasUnit = !!me?.goalUnitId;
   const zoneId = me?.goalZoneId ?? null;
+  // Multi-rattachements (home + set) : toutes les régions / villes portées, principale en tête.
+  const uniq = (home?: string | null, set?: string[] | null) => {
+    const rest = (set ?? []).filter((id) => id !== home);
+    return home ? [home, ...rest] : rest;
+  };
+  const zoneIds = uniq(me?.goalZoneId, me?.goalZoneIds);
+  const cityIds = uniq(me?.goalCityId, me?.goalCityIds);
   const countryIds = me?.goalCountryIds ?? [];
   // Lot 4.8 — pays qu'un SECRETARIAT/LEADER coordonne explicitement (vue pays éditable comme un coordinateur).
   const coordinatedCountryIds = me?.coordinatedCountryIds ?? [];
@@ -123,7 +130,8 @@ export function GoalsPage() {
     enabled: hasUnit && year != null,
     retry: false,
   });
-  const zonesQ = useQuery({ queryKey: ['admin', 'zones'], queryFn: () => listZones(), enabled: zoneId != null });
+  const zonesQ = useQuery({ queryKey: ['admin', 'zones'], queryFn: () => listZones(), enabled: zoneIds.length > 0 });
+  const localitiesQ = useQuery({ queryKey: ['admin', 'localities'], queryFn: () => listLocalities(), enabled: cityIds.length > 0 });
   const countriesQ = useQuery({
     queryKey: ['admin', 'countries'],
     queryFn: listCountries,
@@ -543,10 +551,10 @@ export function GoalsPage() {
                 year={year}
                 meId={me?.id ?? null}
                 isSuperAdmin={me?.superAdmin ?? false}
-                zoneId={zoneId}
-                zoneName={zoneName}
-                cityId={me?.goalCityId ?? null}
-                cityName={me?.cityNames?.[0] ?? null}
+                nodes={[
+                  ...zoneIds.map((id) => ({ level: 'zones' as const, id, name: zonesQ.data?.find((z) => z.id === id)?.name ?? null })),
+                  ...cityIds.map((id) => ({ level: 'cities' as const, id, name: localitiesQ.data?.find((l) => l.id === id)?.name ?? null })),
+                ]}
                 />
               </>
             )}
@@ -1003,18 +1011,44 @@ function EditProgressModal({
  * (et non à la zone géographique). Deux dirigeants d'une même zone voient des agrégats DISTINCTS.
  * La foi (si une zone d'adressage est rattachée — cas DIRIGEANT_SENIOR) reste la SIENNE.
  */
+/** Nœud de périmètre d'un dirigeant : ville ou région portée (multi-rattachements). */
+type PerimeterNode = { level: FaithLevelPath; id: string; name: string | null };
+
 function MyPerimeterSection({
-  goal, currency, year, meId, isSuperAdmin, zoneId, zoneName, cityId, cityName,
+  goal, currency, year, meId, isSuperAdmin, nodes,
 }: {
   goal: ActiveGoal;
   currency: string;
   year: number;
   meId: string | null;
   isSuperAdmin: boolean;
-  zoneId: string | null;
-  zoneName: string | null;
-  cityId: string | null;
-  cityName: string | null;
+  /** Villes/régions portées (principale en tête) ; vide = dirigeant multi-unités (somme à plat, sans foi). */
+  nodes: PerimeterNode[];
+}) {
+  return (
+    <div style={{ marginTop: 32 }}>
+      {nodes.length === 0 ? (
+        <PerimeterBlock goal={goal} currency={currency} year={year} meId={meId} isSuperAdmin={isSuperAdmin} node={null} />
+      ) : (
+        nodes.map((n) => (
+          <PerimeterBlock key={n.id} goal={goal} currency={currency} year={year} meId={meId} isSuperAdmin={isSuperAdmin} node={n} />
+        ))
+      )}
+      <ZoneUnitsBlock zoneId={null} goal={goal} year={year} perimeterScoped />
+    </div>
+  );
+}
+
+/** Un bloc « Mon périmètre » : agrégat + foi d'UN nœud (ville/région) — ou somme à plat du sous-arbre si node null. */
+function PerimeterBlock({
+  goal, currency, year, meId, isSuperAdmin, node,
+}: {
+  goal: ActiveGoal;
+  currency: string;
+  year: number;
+  meId: string | null;
+  isSuperAdmin: boolean;
+  node: PerimeterNode | null;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -1022,21 +1056,25 @@ function MyPerimeterSection({
   const [faithCategory, setFaithCategory] = useState<GoalCategory | null>(null);
   const [faithToDelete, setFaithToDelete] = useState<FaithPledgeResponse | null>(null);
 
-  // Chantier B : la foi se déclare sur le NŒUD de rattachement — région (DIRIGEANT_SENIOR)
-  // ou ville (DIRIGEANT de ville). La zone prime si les deux sont présents.
-  const faithLevel: FaithLevelPath | null = zoneId != null ? 'zones' : cityId != null ? 'cities' : null;
-  const faithEntityId = zoneId ?? cityId;
-  const canFaith = faithLevel != null && faithEntityId != null;
-  const aggQ = useQuery({ queryKey: ['goals', 'me-aggregate', year], queryFn: () => getMyPerimeterAggregate(year) });
+  // La foi se déclare sur le NŒUD (ville/région) : chaque bloc porte la sienne — un multi-villes
+  // déclare ville par ville, et chacune remonte vers SA région dans l'arbre.
+  const canFaith = node != null;
+  const aggQ = useQuery(node != null
+    ? { queryKey: ['goals', 'aggregate', node.level, node.id, year], queryFn: () => getAggregate(node.level, node.id, year) }
+    : { queryKey: ['goals', 'me-aggregate', year], queryFn: () => getMyPerimeterAggregate(year) });
   const faithQ = useQuery({
-    queryKey: ['goals', 'faith', faithLevel, faithEntityId, year],
-    queryFn: () => listFaithPledges(faithLevel!, faithEntityId!, year),
+    queryKey: ['goals', 'faith', node?.level, node?.id, year],
+    queryFn: () => listFaithPledges(node!.level, node!.id, year),
     enabled: canFaith,
   });
 
   const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['goals', 'me-aggregate'] });
-    if (faithLevel) queryClient.invalidateQueries({ queryKey: ['goals', 'faith', faithLevel, faithEntityId] });
+    if (node != null) {
+      queryClient.invalidateQueries({ queryKey: ['goals', 'aggregate', node.level, node.id] });
+      queryClient.invalidateQueries({ queryKey: ['goals', 'faith', node.level, node.id] });
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['goals', 'me-aggregate'] });
+    }
   };
 
   const deleteM = useMutation({
@@ -1096,8 +1134,8 @@ function MyPerimeterSection({
   ];
 
   return (
-    <div style={{ marginTop: 32 }}>
-      <h3 style={{ margin: '0 0 4px' }}>{zoneName ? t('goals.myPerimeterNamed', { name: zoneName }) : cityName ? t('goals.myPerimeterNamed', { name: cityName }) : t('goals.myPerimeter')}</h3>
+    <div style={{ marginBottom: 24 }}>
+      <h3 style={{ margin: '0 0 4px' }}>{node?.name ? t('goals.myPerimeterNamed', { name: node.name }) : t('goals.myPerimeter')}</h3>
       <p style={{ margin: '0 0 10px', color: 'var(--ink-400)', fontSize: 13 }}>
         {t('goals.myPerimeterIntro')}
         {canFaith && t('goals.myPerimeterFaithRule')}
@@ -1145,12 +1183,10 @@ function MyPerimeterSection({
         </div>
       )}
 
-      <ZoneUnitsBlock zoneId={zoneId} goal={goal} year={year} perimeterScoped />
-
       {canFaith && (
         <FaithFormModal
-          level={faithLevel!}
-          entityId={faithEntityId!}
+          level={node!.level}
+          entityId={node!.id}
           category={faithCategory}
           year={year}
           aggregate={faithCategory ? lineByCat.get(faithCategory.id)?.aggregateOfChildren ?? 0 : 0}

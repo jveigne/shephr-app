@@ -291,6 +291,8 @@
     "noGoalHint": "Aucun But Quinquennal n'est actif pour le moment.",
     "myZone": "Ma région",
     "myZoneNamed": "Ma région — {{name}}",
+    "myCity": "Ma ville",
+    "myCityNamed": "Ma ville — {{name}}",
     "myCountry": "Mon pays",
     "myCountryNamed": "Mon pays — {{name}}",
     "faithBadge": "Foi",

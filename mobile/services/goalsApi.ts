@@ -200,7 +200,7 @@ export async function deleteProgress(id: string): Promise<void> {
 // --- Agrégats & engagements de foi (Lot 4.2 — UC-LDR-04/05, UC-COO-04/05) -----
 
 /** Chemin d'URL des niveaux agrégeables. */
-export type AggregateLevelPath = 'zones' | 'countries' | 'continents';
+export type AggregateLevelPath = 'cities' | 'zones' | 'countries' | 'continents';
 
 export type AggregationSource = 'AGGREGATE' | 'FAITH';
 

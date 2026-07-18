@@ -23,13 +23,19 @@ export default function GoalsOverviewScreen() {
   // Coordinateur/Dirigeant (périmètre agrégé), Unité (engagements de l'assemblée).
   const secretariat = (me?.superAdmin ?? false) || me?.goalRole === 'SECRETARIAT';
   const ministryWide = secretariat || me?.goalRole === 'LEADER';
-  const zoneId = me?.goalZoneId ?? null;
+  // Multi-rattachements (home + set) : toutes les régions / villes portées, principale en tête.
+  const uniq = (home?: string | null, set?: string[] | null) => {
+    const rest = (set ?? []).filter((id) => id !== home);
+    return home ? [home, ...rest] : rest;
+  };
+  const zoneIds = uniq(me?.goalZoneId, me?.goalZoneIds);
+  const cityIds = uniq(me?.goalCityId, me?.goalCityIds);
   const countryIds = me?.goalCountryIds ?? [];
   if (!me?.goalUnitId && ministryWide) {
     return <GoalsMinistryOverview secretariat={secretariat} />;
   }
-  if (!me?.goalUnitId && (zoneId != null || countryIds.length > 0)) {
-    return <GoalAggregatesScreen zoneId={zoneId} countryIds={countryIds} />;
+  if (!me?.goalUnitId && (zoneIds.length > 0 || cityIds.length > 0 || countryIds.length > 0)) {
+    return <GoalAggregatesScreen zoneIds={zoneIds} cityIds={cityIds} countryIds={countryIds} />;
   }
 
   return <UnitGoalsScreen />;
