@@ -352,7 +352,7 @@ export function DonationsPage() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14 }}>
               <DetailRow label={t('donations.drawerDate')} value={fmtDateShort(drawer.donationDate)} />
               <DetailRow label={t('donations.drawerCurrency')} value={drawer.currency} />
               <DetailRow label={t('donations.drawerMember')} value={drawer.userFullName} />

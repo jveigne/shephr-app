@@ -566,7 +566,7 @@ function InviteModal({
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
             <Field label={t('users.fullName')}><Input placeholder={t('users.fullNamePlaceholder')} value={fullName} onChange={(e) => setFullName(e.target.value)} /></Field>
             <Field label={t('users.emailLabel')}><Input type="email" placeholder={t('users.emailPlaceholder')} value={email} onChange={(e) => setEmail(e.target.value)} icon={<Icon name="mail" size={14} />} /></Field>
           </div>
