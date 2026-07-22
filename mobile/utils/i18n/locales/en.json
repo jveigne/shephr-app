@@ -148,11 +148,13 @@
     "comingAck": "Got it",
     "coming": {
       "cantiqueTitle": "Hymn",
-      "cantiqueBody": "Coming soon — every Sunday, find the assembly's hymns here with lyrics and chords, to sing and prepare in advance.",
+      "cantiqueBody": "Find every hymn — lyrics and chords — in the CMFIPraise app. Download it and sing with us.\n\nBe blessed!\n— The CMFIPraise team",
       "priereTitle": "Retreat & prayer",
       "priereBody": "Coming soon — a space to share your prayer requests, follow the assembly's retreats and pray in fellowship with the members.",
       "compteRenduTitle": "Assembly report",
-      "compteRenduBody": "Coming soon — take and share notes from services: teachings, testimonies, decisions of the local assembly."
+      "compteRenduBody": "Coming soon — take and share notes from services: teachings, testimonies, decisions of the local assembly.",
+      "cantiqueKicker": "Available on the CMFIPraise app",
+      "cantiqueDownload": "Download CMFIPraise"
     }
   },
   "declare": {
@@ -443,7 +445,8 @@
   },
   "notifications": {
     "morePending": "{{count}} more reminder(s) pending",
-    "later": "Later"
+    "later": "Later",
+    "updateNow": "Update now"
   },
   "membres": {
     "title": "Members",

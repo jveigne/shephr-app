@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, RefreshControl, Modal } from 'react-native';
+import { View, Text, StyleSheet, Pressable, RefreshControl, Modal, Linking, Platform } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
@@ -325,6 +325,10 @@ const COMING_META: Record<ComingKind, { titleKey: string; bodyKey: string; icon:
   'compte-rendu': { titleKey: 'dashboard.coming.compteRenduTitle', bodyKey: 'dashboard.coming.compteRenduBody', icon: 'reader-outline', tone: colors.earthDeep },
 };
 
+// Cantiques (23/07) : la brique renvoie vers l'app CMFIPraise — liens stores officiels.
+const CMFIPRAISE_IOS = 'https://apps.apple.com/fr/app/cmfipraise/id6744709222';
+const CMFIPRAISE_ANDROID = 'https://play.google.com/store/apps/details?id=org.cmfi.cmfipraise';
+
 function ComingSoonModal({
   kind,
   onClose,
@@ -335,6 +339,13 @@ function ComingSoonModal({
   const { t } = useLanguage();
   if (!kind) return null;
   const c = COMING_META[kind];
+  const isCantique = kind === 'cantique';
+
+  const openStore = () => {
+    const url = Platform.OS === 'ios' ? CMFIPRAISE_IOS : CMFIPRAISE_ANDROID;
+    Linking.openURL(url).catch(() => {});
+  };
+
   return (
     <Modal transparent animationType="fade" visible={!!kind} onRequestClose={onClose}>
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
@@ -343,17 +354,40 @@ function ComingSoonModal({
             <Ionicons name={c.icon} size={28} color={c.tone} />
           </View>
           <Text style={styles.modalTitle}>{t(c.titleKey)}</Text>
-          <Text style={[styles.modalKicker, { color: c.tone }]}>{t('dashboard.comingSoonBadge')}</Text>
+          <Text style={[styles.modalKicker, { color: c.tone }]}>
+            {isCantique ? t('dashboard.coming.cantiqueKicker') : t('dashboard.comingSoonBadge')}
+          </Text>
           <HandDivider style={{ marginVertical: 14, alignSelf: 'center', width: '80%' }} />
           <Text style={styles.modalBody}>{t(c.bodyKey)}</Text>
-          <Button
-            label={t('dashboard.comingAck')}
-            variant="soft"
-            onPress={onClose}
-            fullWidth
-            height={46}
-            style={{ marginTop: 18 }}
-          />
+          {isCantique ? (
+            <>
+              <Button
+                label={t('dashboard.coming.cantiqueDownload')}
+                onPress={openStore}
+                fullWidth
+                height={50}
+                style={{ marginTop: 18 }}
+                iconLeft={<Ionicons name="download-outline" size={18} color={colors.white} />}
+              />
+              <Button
+                label={t('dashboard.comingAck')}
+                variant="ghost"
+                onPress={onClose}
+                fullWidth
+                height={44}
+                style={{ marginTop: 8 }}
+              />
+            </>
+          ) : (
+            <Button
+              label={t('dashboard.comingAck')}
+              variant="soft"
+              onPress={onClose}
+              fullWidth
+              height={46}
+              style={{ marginTop: 18 }}
+            />
+          )}
         </Pressable>
       </Pressable>
     </Modal>

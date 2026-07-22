@@ -148,11 +148,13 @@
     "comingAck": "D'accord",
     "coming": {
       "cantiqueTitle": "Cantique",
-      "cantiqueBody": "Bientôt — chaque dimanche, retrouvez ici les cantiques de l'assemblée avec paroles et accords, pour chanter et préparer à l'avance.",
+      "cantiqueBody": "Retrouvez tous les cantiques — paroles et accords — dans l'application CMFIPraise. Téléchargez-la et chantez avec nous.\n\nSoyez bénis !\n— L'équipe CMFIPraise",
       "priereTitle": "Retraite & prière",
       "priereBody": "Bientôt — un espace pour partager vos intentions de prière, suivre les retraites de l'assemblée et prier en communion avec les fidèles.",
       "compteRenduTitle": "Compte rendu d'assemblée",
-      "compteRenduBody": "Bientôt — prenez et partagez les notes des cultes : enseignements, témoignages, décisions de l'assemblée locale."
+      "compteRenduBody": "Bientôt — prenez et partagez les notes des cultes : enseignements, témoignages, décisions de l'assemblée locale.",
+      "cantiqueKicker": "Disponible sur l'app CMFIPraise",
+      "cantiqueDownload": "Télécharger CMFIPraise"
     }
   },
   "declare": {
@@ -443,7 +445,8 @@
   },
   "notifications": {
     "morePending": "{{count}} autre(s) rappel(s) en attente",
-    "later": "Plus tard"
+    "later": "Plus tard",
+    "updateNow": "Mettre à jour"
   },
   "membres": {
     "title": "Membres",
