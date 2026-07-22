@@ -21,18 +21,24 @@ import { colors, fonts } from '../theme';
 import { inviteUser } from '../services/adminApi';
 import { notify } from '../utils/dialogs';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
+import { assignableLeaderRoles, MODULE_ROLE_LABELS, type ModuleRole } from '../services/authApi';
 
 /**
- * Invite un fidèle (MEMBRE) à rejoindre une unité (UC-DIR-04). V1 : le backend renvoie un code
- * court d'activation à transmettre ; l'invité l'utilise sur l'écran d'activation par code.
+ * Invite un DIRIGEANT à rejoindre une assemblée (décision JP 21/07 : les simples membres n'ont
+ * pas accès au module Goals — seuls des rôles dirigeants sont conférables, plafonnés au rang de
+ * l'invitant côté backend). V1 : le backend renvoie un code court d'activation à transmettre.
  */
 export default function InviteScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
+  const { me } = useAuth();
   const { unitId, unitName } = useLocalSearchParams<{ unitId: string; unitName?: string }>();
 
+  const roles = assignableLeaderRoles(me);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [role, setRole] = useState<ModuleRole>('DIRIGEANT_UNITE');
   const [loading, setLoading] = useState(false);
   const [code, setCode] = useState<string | null>(null);
 
@@ -51,8 +57,8 @@ export default function InviteScreen() {
       const res = await inviteUser({
         email: email.trim(),
         fullName: fullName.trim(),
-        donationRole: 'MEMBRE',
-        donationUnitId: unitId,
+        goalRole: role,
+        goalUnitId: unitId,
       });
       setCode(res.invitationShortCode);
     } catch (e: any) {
@@ -137,6 +143,23 @@ export default function InviteScreen() {
               />
             </View>
 
+            <View style={{ marginTop: 16 }}>
+              <Label style={{ marginBottom: 8 }}>{t('invite.role')}</Label>
+              <View style={styles.roleRow}>
+                {roles.map((r) => (
+                  <Pressable
+                    key={r}
+                    onPress={() => setRole(r)}
+                    style={[styles.roleChip, role === r && styles.roleChipActive]}
+                  >
+                    <Text style={[styles.roleChipText, role === r && styles.roleChipTextActive]}>
+                      {MODULE_ROLE_LABELS[r]}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
             <View style={styles.noteBox}>
               <Ionicons name="information-circle-outline" size={16} color={colors.mossSoft} />
               <Text style={styles.noteText}>{t('invite.memberNote')}</Text>
@@ -172,6 +195,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   noteText: { flex: 1, fontFamily: fonts.sans, fontSize: 12, color: colors.mossDeep, lineHeight: 18 },
+  roleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  roleChip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 99, backgroundColor: 'rgba(42,38,32,0.06)' },
+  roleChipActive: { backgroundColor: colors.moss },
+  roleChipText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink2 },
+  roleChipTextActive: { color: colors.white },
   codeCard: { marginTop: 24, paddingVertical: 26, paddingHorizontal: 22, alignItems: 'center' },
   checkBubble: {
     width: 64,

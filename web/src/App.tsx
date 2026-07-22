@@ -17,6 +17,7 @@ import { ZonesPage } from './pages/Zones';
 import { LocalitesPage } from './pages/Localites';
 import { UnitesPage } from './pages/Unites';
 import { ExportsPage } from './pages/Exports';
+import { HierarchyPage } from './pages/Hierarchy';
 import { Placeholder } from './pages/Placeholder';
 import { FEATURES } from './config/features';
 
@@ -68,17 +69,7 @@ export function App() {
                 <Route path="/structure/zones" element={<ZonesPage />} />
                 <Route path="/structure/localites" element={<LocalitesPage />} />
                 <Route path="/structure/unites" element={<UnitesPage />} />
-                <Route
-                  path="/hierarchy"
-                  element={
-                    <Placeholder
-                      titleKey="placeholder.hierarchyTitle"
-                      crumbKeys={['common.brand', 'placeholder.hierarchyTitle']}
-                      descriptionKey="placeholder.hierarchyDescription"
-                      endpointHint="GET /api/church/admin/leaders/{assignment|hierarchy}"
-                    />
-                  }
-                />
+                <Route path="/hierarchy" element={<HierarchyPage />} />
                 {FEATURES.donations ? (
                   <Route path="/exports" element={<ExportsPage />} />
                 ) : (

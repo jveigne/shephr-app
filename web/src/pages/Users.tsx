@@ -61,6 +61,11 @@ const cityIdOf = (u: AdminUserResponse, m: ModuleKind) => (m === 'goal' ? u.goal
 const countryIdsOf = (u: AdminUserResponse, m: ModuleKind) =>
   m === 'goal' ? u.goalCountryIds : u.donationCountryIds;
 
+// 21/07 (décision JP) : le module Goals est réservé aux dirigeants — « Membre » n'est pas
+// proposable pour ce module (le backend le refuse aussi hors super-admin).
+const conferrableRoles = (me: MeResponse | null, m: ModuleKind): ModuleRole[] =>
+  assignableRoles(me).filter((r) => (me?.superAdmin ?? false) || m !== 'goal' || r !== 'MEMBRE');
+
 type Filters = { role: ModuleRole | 'all'; active: 'all' | 'true' | 'false'; search: string };
 const DEFAULT: Filters = { role: 'all', active: 'all', search: '' };
 
@@ -494,7 +499,6 @@ function InviteModal({
 }) {
   const { t } = useTranslation();
   const moduleLabel = (m: ModuleKind) => t(m === 'goal' ? 'users.moduleGoals' : 'users.moduleDonations');
-  const roles = assignableRoles(me);
   const defaultSupervisor = me && !me.superAdmin ? me.id : '';
   const [module, setModule] = useState<ModuleKind>(VISIBLE_MODULES[0]);
   const [email, setEmail] = useState('');
@@ -575,7 +579,7 @@ function InviteModal({
           <Field label={t('users.roleConferred', { module: moduleLabel(module) })}>
             <Select value={role} onChange={(e) => { setRole(e.target.value as ModuleRole | ''); setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); }}>
               <option value="">{t('common.choose')}</option>
-              {roles.map((r) => <option key={r} value={r}>{t(`roles.${r}`)}</option>)}
+              {conferrableRoles(me, module).map((r) => <option key={r} value={r}>{t(`roles.${r}`)}</option>)}
             </Select>
           </Field>
           <PerimeterFields role={role} unitId={unitId} zoneId={zoneId} cityId={cityId} countryIds={countryIds} units={units} zones={zones} cities={cities} countries={countries}
@@ -603,7 +607,6 @@ function EditModal({
 }) {
   const { t } = useTranslation();
   const moduleLabel = (m: ModuleKind) => t(m === 'goal' ? 'users.moduleGoals' : 'users.moduleDonations');
-  const roles = assignableRoles(me);
   const [module, setModule] = useState<ModuleKind>(VISIBLE_MODULES[0]);
   const [role, setRole] = useState<ModuleRole | ''>('');
   const [unitId, setUnitId] = useState('');
@@ -664,7 +667,7 @@ function EditModal({
         <Field label={t('users.roleConferred', { module: moduleLabel(module) })}>
           <Select value={role} onChange={(e) => { setRole(e.target.value as ModuleRole | ''); setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); }}>
             <option value="">{t('common.noneOption')}</option>
-            {roles.map((r) => <option key={r} value={r}>{t(`roles.${r}`)}</option>)}
+            {conferrableRoles(me, module).map((r) => <option key={r} value={r}>{t(`roles.${r}`)}</option>)}
           </Select>
         </Field>
         <PerimeterFields role={role} unitId={unitId} zoneId={zoneId} cityId={cityId} countryIds={countryIds} units={units} zones={zones} cities={cities} countries={countries}

@@ -108,6 +108,30 @@ export default function StructureScreen() {
       </View>
       <Text style={styles.subtitle}>{t('structure.subtitle')}</Text>
 
+      {/* Lot S1 (D4) : un non-manager voit d'abord SON rattachement — les listes ci-dessous
+          restent scopées backend (souvent vides pour un membre simple). */}
+      {!canManageStructure(me) && (
+        <Card style={styles.attachCard}>
+          <Text style={styles.attachTitle}>{t('structure.myAttachment')}</Text>
+          {([
+            [t('structure.units'), me?.unitNames],
+            [t('structure.localities'), me?.cityNames],
+            [t('structure.zones'), me?.zoneNames],
+            [t('structure.countries'), me?.countryNames],
+          ] as [string, string[] | null | undefined][])
+            .filter(([, names]) => names && names.length > 0)
+            .map(([label, names]) => (
+              <View key={label} style={styles.attachRow}>
+                <Text style={styles.attachLabel}>{label}</Text>
+                <Text style={styles.attachNames}>{(names ?? []).join(', ')}</Text>
+              </View>
+            ))}
+          {!(me?.unitNames?.length || me?.cityNames?.length || me?.zoneNames?.length || me?.countryNames?.length) && (
+            <Text style={styles.empty}>{t('structure.attachEmpty')}</Text>
+          )}
+        </Card>
+      )}
+
       <View style={styles.segmentRow}>
         {(['zones', 'localities', 'units'] as Level[]).map((lv) => (
           <Pressable key={lv} onPress={() => setLevel(lv)} style={[styles.segment, level === lv && styles.segmentActive]}>
@@ -266,6 +290,11 @@ function StructureFormModal({
 
 const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2 },
+  attachCard: { paddingHorizontal: 16, paddingVertical: 14, marginTop: 14 },
+  attachTitle: { fontFamily: fonts.serif, fontSize: 17, color: colors.ink, marginBottom: 6 },
+  attachRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 6 },
+  attachLabel: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, width: 90 },
+  attachNames: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
   title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4 },
   subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4 },
   segmentRow: { flexDirection: 'row', gap: 8, marginTop: 16 },

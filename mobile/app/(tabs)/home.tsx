@@ -167,14 +167,37 @@ export default function HomeScreen() {
           onPress={() => router.push('/declare')}
         />
         )}
-{/*        <Tile
+{/* Lot S1 (21/07) : briques visibles de TOUS — le contenu des écrans s'adapte au rôle
+    (listes scopées côté backend ; lecture seule pour un membre simple). */}
+        <Tile
+          label={t('dashboard.tiles.structure')}
+          hint={t('dashboard.tiles.structureHint')}
+          icon="business-outline"
+          tone={colors.moss}
+          onPress={() => router.push('/structure')}
+        />
+        <Tile
+          label={t('dashboard.tiles.membres')}
+          hint={t('dashboard.tiles.membresHint')}
+          icon="people-outline"
+          tone={colors.earthDeep}
+          onPress={() => router.push('/membres')}
+        />
+        <Tile
+          label={t('dashboard.tiles.hierarchie')}
+          hint={t('dashboard.tiles.hierarchieHint')}
+          icon="git-network-outline"
+          tone="#7A8B6F"
+          onPress={() => router.push('/hierarchie')}
+        />
+{        <Tile
           label={t('dashboard.tiles.cantique')}
           hint={t('dashboard.tiles.cantiqueHint')}
           icon="musical-notes-outline"
           tone={colors.earth}
-          comingSoon
           onPress={() => setComing('cantique')}
         />
+        /*
         <Tile
           label={t('dashboard.tiles.priere')}
           hint={t('dashboard.tiles.priereHint')}

@@ -122,6 +122,9 @@ export interface InviteUserRequest {
   fullName: string;
   donationRole?: ModuleRole;
   donationUnitId?: string;
+  /** 21/07 — invitation de DIRIGEANTS (module Goals) : plus jamais de MEMBRE depuis le mobile. */
+  goalRole?: ModuleRole;
+  goalUnitId?: string;
 }
 
 export interface InviteUserResponse {
@@ -136,5 +139,34 @@ export async function inviteUser(payload: InviteUserRequest): Promise<InviteUser
     '/api/church/admin/users/invite',
     payload,
   );
+  return data;
+}
+
+// ---------------- Membres (Lot S1 — 21/07) ----------------
+// GET /api/church/admin/users — route `authenticated()`, liste SCOPÉE côté backend (sous-arbre
+// superviseur + unités visibles ; LEADER/SECRETARIAT = ministère ; MEMBRE = lui-même).
+
+export interface AdminUserResponse {
+  id: string;
+  email: string;
+  fullName: string;
+  superAdmin: boolean;
+  supervisorId: string | null;
+  donationRole: ModuleRole | null;
+  donationUnitId: string | null;
+  goalRole: ModuleRole | null;
+  goalUnitId: string | null;
+  active: boolean;
+}
+
+export interface UsersPage {
+  content: AdminUserResponse[];
+  totalElements: number;
+}
+
+export async function listUsers(
+  params: { active?: boolean; page?: number; size?: number } = {},
+): Promise<UsersPage> {
+  const { data } = await apiClient.get<UsersPage>('/api/church/admin/users', { params });
   return data;
 }

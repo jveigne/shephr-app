@@ -46,6 +46,25 @@ export function canManageStructure(me: MeResponse | null): boolean {
   return me.superAdmin || managerRank(me) >= ROLE_RANK.DIRIGEANT_UNITE;
 }
 
+/** Peut gérer les MEMBRES (inviter/administrer dans son périmètre) : tout manager ou superAdmin. */
+export function canManageUsers(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return me.superAdmin || managerRank(me) >= ROLE_RANK.DIRIGEANT_UNITE;
+}
+
+/**
+ * Rôles DIRIGEANTS conférables à l'invitation (module GOALS) : du DIRIGEANT_UNITE au rang de
+ * l'acteur, plafonné à DIRIGEANT_SENIOR hors superAdmin (COORDINATEUR réservé au superAdmin).
+ * JAMAIS « MEMBRE » : l'app Goals est réservée aux dirigeants (décision JP 21/07).
+ */
+export function assignableLeaderRoles(me: MeResponse | null): ModuleRole[] {
+  if (!me) return [];
+  const LEADERS: ModuleRole[] = ['DIRIGEANT_UNITE', 'DIRIGEANT', 'DIRIGEANT_SENIOR', 'DIRIGEANT_COORDINATEUR'];
+  if (me.superAdmin) return LEADERS;
+  const cap = Math.min(managerRank(me), ROLE_RANK.DIRIGEANT_SENIOR);
+  return LEADERS.filter((r) => ROLE_RANK[r] <= cap);
+}
+
 /** Peut gérer les zones (créer une zone) : COORDINATEUR (ses pays) ou superAdmin. */
 export function canManageZones(me: MeResponse | null): boolean {
   if (!me) return false;
