@@ -19,6 +19,8 @@ export interface HierarchyUnitView {
   /** Région et pays de la ville (22/07) — pour le regroupement pays → région → ville. */
   zoneName: string | null;
   countryName: string | null;
+  /** RG-DS-10 — aucun dirigeant « home » sur cette assemblée. */
+  needsLeader: boolean;
   members: HierarchyMemberView[];
 }
 
@@ -37,9 +39,11 @@ export type HierarchyMode = 'SUBTREE' | 'CHAIN' | 'MINISTRY';
 export interface LeaderHierarchyResponse {
   mode: HierarchyMode;
   roots: LeaderHierarchyNode[];
+  /** Assemblées du périmètre SANS dirigeant rattaché (22/07) — label « dirigeant requis ». */
+  unassignedUnits: HierarchyUnitView[];
 }
 
 export async function fetchLeaderHierarchy(): Promise<LeaderHierarchyResponse> {
   const { data } = await apiClient.get<LeaderHierarchyResponse>('/api/church/leaders/hierarchy');
-  return data;
+  return { ...data, roots: data?.roots ?? [], unassignedUnits: data?.unassignedUnits ?? [] };
 }

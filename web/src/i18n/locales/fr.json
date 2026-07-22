@@ -126,7 +126,8 @@
     "deleteTitle": "Confirmer la suppression",
     "deleteConfirm": "Voulez-vous vraiment supprimer {{label}} ? Cette action est irréversible.",
     "error": "Erreur",
-    "retryLater": "Réessayez plus tard."
+    "retryLater": "Réessayez plus tard.",
+    "failure": "Échec"
   },
   "ui": {
     "noResult": "Aucun résultat",
@@ -157,7 +158,8 @@
     "hierarchy": "Hiérarchie des dirigeants",
     "exports": "Exports",
     "settings": "Paramètres",
-    "language": "Langue"
+    "language": "Langue",
+    "requests": "Demandes"
   },
   "sidebar": {
     "logout": "Déconnexion",
@@ -257,7 +259,10 @@
     "you": "Vous",
     "empty": "Aucune hiérarchie à afficher",
     "emptyHint": "Aucun dirigeant ni assemblée dans votre périmètre pour le moment.",
-    "loadError": "Impossible de charger la hiérarchie."
+    "loadError": "Impossible de charger la hiérarchie.",
+    "needsLeader": "Dirigeant requis",
+    "unassignedTitle": "Assemblées sans dirigeant",
+    "unassignedHint": "Créées (souvent via une demande approuvée) mais sans dirigeant rattaché — nommez-en un via Membres (inviter ou gérer)."
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -397,7 +402,8 @@
     "nameLabel": "Nom de la région",
     "namePlaceholder": "Région Sud…",
     "descPlaceholder": "Description…",
-    "deleteLabel": "la région « {{name}} »"
+    "deleteLabel": "la région « {{name}} »",
+    "requestZone": "Demander une région"
   },
   "localities": {
     "title": "Villes",
@@ -426,7 +432,8 @@
     "newSub": "Rattachez la ville à une région de votre périmètre.",
     "nameLabel": "Nom de la ville",
     "namePlaceholder": "Londres…",
-    "deleteLabel": "la ville « {{name}} »"
+    "deleteLabel": "la ville « {{name}} »",
+    "requestLocality": "Demander une ville"
   },
   "units": {
     "title": "Assemblées",
@@ -455,7 +462,8 @@
     "newSub": "Rattachez l'assemblée à une ville de votre périmètre.",
     "nameLabel": "Nom de l'assemblée",
     "namePlaceholder": "Centre Londres…",
-    "deleteLabel": "l'assemblée « {{name}} »"
+    "deleteLabel": "l'assemblée « {{name}} »",
+    "requestUnit": "Demander une assemblée"
   },
   "users": {
     "title": "Membres",
@@ -780,5 +788,69 @@
     "submittedRatio": "{{submitted}}/{{total}} soumises · {{percent}} %",
     "achievedInline": "versé {{value}}",
     "nationTotal": "Somme totale Nation"
+  },
+  "requests": {
+    "title": "Demandes de structure",
+    "intro": "Proposez une création — région, ville ou assemblée, quel que soit votre niveau. Si le rattachement n'existe pas encore, il sera créé avec votre demande. Le secrétariat valide avant toute apparition dans la structure.",
+    "newRequest": "Nouvelle demande",
+    "newRequestSub": "Choisissez le type, le rattachement, puis le nom à créer.",
+    "typeLabel": "Que souhaitez-vous créer ?",
+    "parentLabel": {
+      "REGION": "Dans quel pays ?",
+      "CITY": "Dans quelle région ?",
+      "ASSEMBLY": "Dans quelle ville ?"
+    },
+    "existingList": "Déjà dans « {{parent}} » : {{list}}.",
+    "existingNone": "Aucun élément existant dans « {{parent}} » pour le moment.",
+    "nameLabel": "Nom demandé",
+    "namePlaceholder": "Nom de la nouvelle entité",
+    "submit": "Déposer la demande",
+    "submitting": "Dépôt…",
+    "createdToast": "Demande « {{name}} » déposée",
+    "createRefused": "Dépôt refusé",
+    "cancelledToast": "Demande annulée",
+    "cancel": "Annuler la demande",
+    "colDate": "Date",
+    "colType": "Type",
+    "colName": "Nom demandé",
+    "colParent": "Rattachement",
+    "colRequester": "Demandeur",
+    "colStatus": "Statut",
+    "status": {
+      "PENDING": "En attente",
+      "APPROVED": "Approuvée",
+      "REJECTED": "Refusée",
+      "CANCELLED": "Annulée"
+    },
+    "types": {
+      "REGION": "Région",
+      "CITY": "Ville",
+      "ASSEMBLY": "Assemblée"
+    },
+    "toValidate": "À valider (secrétariat)",
+    "mine": "Mes demandes",
+    "noPending": "Aucune demande en attente",
+    "noMine": "Aucune demande",
+    "noMineHint": "Déposez votre première demande avec le bouton « Nouvelle demande ».",
+    "notEligible": "Votre rôle ne permet pas de proposer de création.",
+    "approve": "Approuver",
+    "reject": "Refuser",
+    "approvedToast": "« {{name}} » créé et demande approuvée",
+    "rejectedToast": "Demande « {{name}} » refusée",
+    "rejectTitle": "Refuser « {{name}} » ?",
+    "rejectSub": "Le motif sera visible par le demandeur dans son suivi de demandes.",
+    "rejectReasonLabel": "Motif du refus",
+    "rejectReasonPlaceholder": "Ex. : doublon avec une structure existante…",
+    "rejectConfirm": "Refuser la demande",
+    "parentPendingBadge": "à créer",
+    "approveChainHint": "Approuver créera aussi les parents « à créer » de la chaîne.",
+    "rejectChainHint": "Refuser ce maillon refusera aussi les demandes qui en dépendent.",
+    "toCreate": "À créer : {{name}}",
+    "changePick": "Changer",
+    "searchPlaceholder": "Rechercher…",
+    "createOption": "Créer « {{name}} »",
+    "noOption": "Aucun élément — saisissez un nom pour le créer.",
+    "chainNote": "Cette demande créera {{count}} éléments liés — le secrétariat validera la chaîne en une décision.",
+    "entityCreated": "Créée dans la structure — visible dans votre périmètre."
   }
 }

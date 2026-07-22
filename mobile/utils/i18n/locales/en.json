@@ -5,7 +5,8 @@
     "leader": "Scope",
     "profile": "Profile",
     "goals": "Goals",
-    "care": "Flock"
+    "care": "Flock",
+    "requests": "Requests"
   },
   "common": {
     "today": "Today",
@@ -400,6 +401,7 @@
     "countries": "Countries",
     "myAttachment": "My attachment",
     "attachEmpty": "No attachment yet.",
+    "requestCreate": "Request a creation",
     "addZone": "Add a region",
     "addLocality": "Add a city",
     "addUnit": "Add a assembly",
@@ -445,6 +447,54 @@
     "pickUnitSub": "The invited leader will be attached to this assembly.",
     "pickUnitEmpty": "No assembly in your scope."
   },
+  "requests": {
+    "title": "Requests",
+    "subtitle": "Propose a creation — region, city or assembly, whatever your level. If the attachment does not exist, it will be created with your request.",
+    "newRequest": "New request",
+    "newRequestSub": "Choose the type, the attachment, then the name to create.",
+    "typeLabel": "What do you want to create?",
+    "parentLabel": {
+      "REGION": "In which country?",
+      "CITY": "In which region?",
+      "ASSEMBLY": "In which city?"
+    },
+    "existingList": "Already in “{{parent}}”: {{list}}.",
+    "existingNone": "Nothing exists in “{{parent}}” yet.",
+    "nameLabel": "Requested name",
+    "namePlaceholder": "Name of the new entity",
+    "submit": "Submit the request",
+    "fillFields": "Choose the type, the attachment and the name.",
+    "createdTitle": "Request submitted",
+    "createdBody": "It will appear in the structure once validated by the secretariat.",
+    "createRefused": "Submission refused",
+    "createFailed": "The request submission failed.",
+    "types": {
+      "REGION": "Region",
+      "CITY": "City",
+      "ASSEMBLY": "Assembly"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "CANCELLED": "Cancelled"
+    },
+    "emptyMine": "No request yet.",
+    "notEligible": "Your role does not allow proposing a creation.",
+    "cancel": "Cancel",
+    "cancelTitle": "Cancel the request",
+    "cancelConfirm": "Cancel the request “{{name}}”?",
+    "cancelYes": "Yes, cancel",
+    "cancelFailed": "The cancellation failed.",
+    "toCreate": "To create: {{name}}",
+    "changePick": "Change",
+    "searchPlaceholder": "Search…",
+    "createOption": "Create “{{name}}”",
+    "noOption": "No item — type a name to create it.",
+    "chainNote": "This request will create {{count}} linked items — the secretariat validates the chain in one decision.",
+    "parentPendingInline": "{{name}} (to create)",
+    "entityCreated": "created in the structure — visible in your scope"
+  },
   "hierarchy": {
     "title": "Hierarchy",
     "introSubtree": "Your leadership: your leaders, their assemblies and the members of those assemblies.",
@@ -463,7 +513,8 @@
     "viewUnits": "Assemblies",
     "leaderPrefix": "Leader: {{name}}",
     "noUnits": "No assembly under your leadership.",
-    "ungrouped": "Other"
+    "ungrouped": "Other",
+    "needsLeader": "Leader needed"
   },
   "invite": {
     "title": "Invite a leader",

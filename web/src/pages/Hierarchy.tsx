@@ -99,6 +99,32 @@ export function HierarchyPage() {
             ))
           )}
         </div>
+
+        {(data?.unassignedUnits.length ?? 0) > 0 && (
+          <>
+            <h3 style={{ margin: '22px 0 10px' }}>{t('hierarchy.unassignedTitle')}</h3>
+            <p className="section-sub">{t('hierarchy.unassignedHint')}</p>
+            <div className="card" style={{ padding: '6px 0' }}>
+              {data!.unassignedUnits.map((unit) => (
+                <div key={unit.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px' }}>
+                  <Icon name="unit" size={15} />
+                  <span style={{ fontWeight: 600 }}>{unit.name ?? t('hierarchy.unnamedUnit')}</span>
+                  {(unit.localityName || unit.countryName) && (
+                    <span style={{ color: 'var(--ink-500)', fontSize: 12 }}>
+                      · {[unit.localityName, unit.zoneName, unit.countryName].filter(Boolean).join(' · ')}
+                    </span>
+                  )}
+                  <Badge tone="warn">{t('hierarchy.needsLeader')}</Badge>
+                  <span style={{ marginLeft: 'auto', color: 'var(--ink-500)', fontSize: 12 }}>
+                    {unit.members.length > 0
+                      ? t('hierarchy.membersCount', { count: unit.members.length })
+                      : t('hierarchy.unitNoMembers')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </>
   );
@@ -177,6 +203,7 @@ function UnitRow({ unit, depth }: { unit: HierarchyUnitView; depth: number }) {
         {unit.localityName && (
           <span style={{ color: 'var(--ink-500)', fontSize: 12 }}>· {unit.localityName}</span>
         )}
+        {unit.needsLeader && <Badge tone="warn">{t('hierarchy.needsLeader')}</Badge>}
         <span style={{ marginLeft: 'auto', color: 'var(--ink-500)', fontSize: 12 }}>
           {hasMembers
             ? t('hierarchy.membersCount', { count: unit.members.length })

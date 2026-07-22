@@ -90,6 +90,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="demandes"
+        options={{
+          // Demandes de structure (RDG 22/07) : ouvertes à tous, validées par le secrétariat.
+          title: t('tabs.requests'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="paper-plane-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="care"
         options={{
           // Suivi pastoral (UC-MCR) : réservé aux dirigeants disposant du module Member Care.

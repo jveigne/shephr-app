@@ -126,7 +126,8 @@
     "deleteTitle": "Confirm deletion",
     "deleteConfirm": "Are you sure you want to delete {{label}}? This action cannot be undone.",
     "error": "Error",
-    "retryLater": "Please try again later."
+    "retryLater": "Please try again later.",
+    "failure": "Failure"
   },
   "ui": {
     "noResult": "No results",
@@ -157,7 +158,8 @@
     "hierarchy": "Leader hierarchy",
     "exports": "Exports",
     "settings": "Settings",
-    "language": "Language"
+    "language": "Language",
+    "requests": "Requests"
   },
   "sidebar": {
     "logout": "Log out",
@@ -257,7 +259,10 @@
     "you": "You",
     "empty": "No hierarchy to display",
     "emptyHint": "No leader or assembly in your scope yet.",
-    "loadError": "Could not load the hierarchy."
+    "loadError": "Could not load the hierarchy.",
+    "needsLeader": "Leader needed",
+    "unassignedTitle": "Assemblies without a leader",
+    "unassignedHint": "Created (often via an approved request) but with no attached leader — appoint one via Members (invite or manage)."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -397,7 +402,8 @@
     "nameLabel": "Region name",
     "namePlaceholder": "South region…",
     "descPlaceholder": "Description…",
-    "deleteLabel": "the region “{{name}}”"
+    "deleteLabel": "the region “{{name}}”",
+    "requestZone": "Request a region"
   },
   "localities": {
     "title": "Cities",
@@ -426,7 +432,8 @@
     "newSub": "Attach the city to a region in your scope.",
     "nameLabel": "City name",
     "namePlaceholder": "London…",
-    "deleteLabel": "the city “{{name}}”"
+    "deleteLabel": "the city “{{name}}”",
+    "requestLocality": "Request a city"
   },
   "units": {
     "title": "Assemblies",
@@ -455,7 +462,8 @@
     "newSub": "Attach the assembly to a city in your scope.",
     "nameLabel": "Assembly name",
     "namePlaceholder": "London Center…",
-    "deleteLabel": "the assembly “{{name}}”"
+    "deleteLabel": "the assembly “{{name}}”",
+    "requestUnit": "Request an assembly"
   },
   "users": {
     "title": "Members",
@@ -780,5 +788,69 @@
     "submittedRatio": "{{submitted}}/{{total}} submitted · {{percent}}%",
     "achievedInline": "given {{value}}",
     "nationTotal": "Nation grand total"
+  },
+  "requests": {
+    "title": "Structure requests",
+    "intro": "Propose a creation — region, city or assembly, whatever your level. If the attachment does not exist yet, it will be created with your request. The secretariat validates before anything appears in the structure.",
+    "newRequest": "New request",
+    "newRequestSub": "Choose the type, the attachment, then the name to create.",
+    "typeLabel": "What do you want to create?",
+    "parentLabel": {
+      "REGION": "In which country?",
+      "CITY": "In which region?",
+      "ASSEMBLY": "In which city?"
+    },
+    "existingList": "Already in “{{parent}}”: {{list}}.",
+    "existingNone": "Nothing exists in “{{parent}}” yet.",
+    "nameLabel": "Requested name",
+    "namePlaceholder": "Name of the new entity",
+    "submit": "Submit the request",
+    "submitting": "Submitting…",
+    "createdToast": "Request “{{name}}” submitted",
+    "createRefused": "Submission refused",
+    "cancelledToast": "Request cancelled",
+    "cancel": "Cancel the request",
+    "colDate": "Date",
+    "colType": "Type",
+    "colName": "Requested name",
+    "colParent": "Attachment",
+    "colRequester": "Requester",
+    "colStatus": "Status",
+    "status": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "CANCELLED": "Cancelled"
+    },
+    "types": {
+      "REGION": "Region",
+      "CITY": "City",
+      "ASSEMBLY": "Assembly"
+    },
+    "toValidate": "To validate (secretariat)",
+    "mine": "My requests",
+    "noPending": "No pending request",
+    "noMine": "No request",
+    "noMineHint": "Submit your first request with the “New request” button.",
+    "notEligible": "Your role does not allow proposing a creation.",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approvedToast": "“{{name}}” created and request approved",
+    "rejectedToast": "Request “{{name}}” rejected",
+    "rejectTitle": "Reject “{{name}}”?",
+    "rejectSub": "The reason will be visible to the requester in their request history.",
+    "rejectReasonLabel": "Rejection reason",
+    "rejectReasonPlaceholder": "E.g.: duplicate of an existing structure…",
+    "rejectConfirm": "Reject the request",
+    "parentPendingBadge": "to create",
+    "approveChainHint": "Approving will also create the “to create” parents of the chain.",
+    "rejectChainHint": "Rejecting this link will also reject the requests that depend on it.",
+    "toCreate": "To create: {{name}}",
+    "changePick": "Change",
+    "searchPlaceholder": "Search…",
+    "createOption": "Create “{{name}}”",
+    "noOption": "No item — type a name to create it.",
+    "chainNote": "This request will create {{count}} linked items — the secretariat validates the chain in one decision.",
+    "entityCreated": "Created in the structure — visible in your scope."
   }
 }

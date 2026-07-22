@@ -5,7 +5,8 @@
     "leader": "Périmètre",
     "profile": "Profil",
     "goals": "Objectifs",
-    "care": "Brebis"
+    "care": "Brebis",
+    "requests": "Demandes"
   },
   "common": {
     "today": "Aujourd'hui",
@@ -400,6 +401,7 @@
     "countries": "Pays",
     "myAttachment": "Mon rattachement",
     "attachEmpty": "Aucun rattachement pour le moment.",
+    "requestCreate": "Demander une création",
     "addZone": "Ajouter une région",
     "addLocality": "Ajouter une ville",
     "addUnit": "Ajouter une assemblée",
@@ -445,6 +447,54 @@
     "pickUnitSub": "Le dirigeant invité sera rattaché à cette assemblée.",
     "pickUnitEmpty": "Aucune assemblée dans votre périmètre."
   },
+  "requests": {
+    "title": "Demandes",
+    "subtitle": "Proposez une création — région, ville ou assemblée, quel que soit votre niveau. Si le rattachement n'existe pas, il sera créé avec votre demande.",
+    "newRequest": "Nouvelle demande",
+    "newRequestSub": "Choisissez le type, le rattachement, puis le nom à créer.",
+    "typeLabel": "Que souhaitez-vous créer ?",
+    "parentLabel": {
+      "REGION": "Dans quel pays ?",
+      "CITY": "Dans quelle région ?",
+      "ASSEMBLY": "Dans quelle ville ?"
+    },
+    "existingList": "Déjà dans « {{parent}} » : {{list}}.",
+    "existingNone": "Aucun élément existant dans « {{parent}} » pour le moment.",
+    "nameLabel": "Nom demandé",
+    "namePlaceholder": "Nom de la nouvelle entité",
+    "submit": "Déposer la demande",
+    "fillFields": "Choisissez le type, le rattachement et le nom.",
+    "createdTitle": "Demande déposée",
+    "createdBody": "Elle apparaîtra dans la structure une fois validée par le secrétariat.",
+    "createRefused": "Dépôt refusé",
+    "createFailed": "Le dépôt de la demande a échoué.",
+    "types": {
+      "REGION": "Région",
+      "CITY": "Ville",
+      "ASSEMBLY": "Assemblée"
+    },
+    "status": {
+      "PENDING": "En attente",
+      "APPROVED": "Approuvée",
+      "REJECTED": "Refusée",
+      "CANCELLED": "Annulée"
+    },
+    "emptyMine": "Aucune demande pour le moment.",
+    "notEligible": "Votre rôle ne permet pas de proposer de création.",
+    "cancel": "Annuler",
+    "cancelTitle": "Annuler la demande",
+    "cancelConfirm": "Annuler la demande « {{name}} » ?",
+    "cancelYes": "Oui, annuler",
+    "cancelFailed": "L'annulation a échoué.",
+    "toCreate": "À créer : {{name}}",
+    "changePick": "Changer",
+    "searchPlaceholder": "Rechercher…",
+    "createOption": "Créer « {{name}} »",
+    "noOption": "Aucun élément — saisissez un nom pour le créer.",
+    "chainNote": "Cette demande créera {{count}} éléments liés — le secrétariat validera la chaîne en une décision.",
+    "parentPendingInline": "{{name}} (à créer)",
+    "entityCreated": "créée dans la structure — visible dans votre périmètre"
+  },
   "hierarchy": {
     "title": "Hiérarchie",
     "introSubtree": "Votre leadership : vos dirigeants, leurs assemblées et les membres de ces assemblées.",
@@ -463,7 +513,8 @@
     "viewUnits": "Assemblées",
     "leaderPrefix": "Dirigeant : {{name}}",
     "noUnits": "Aucune assemblée sous votre leadership.",
-    "ungrouped": "Autre"
+    "ungrouped": "Autre",
+    "needsLeader": "Dirigeant requis"
   },
   "invite": {
     "title": "Inviter un dirigeant",

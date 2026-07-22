@@ -67,7 +67,13 @@ export default function StructureScreen() {
     try { await load(); } finally { setRefreshing(false); }
   };
 
-  const canAdd = level === 'zones' ? canManageZones(me) : canManageStructure(me);
+  const isAdmin = me?.superAdmin ?? false;
+  // Modification/suppression : règles inchangées (scopées serveur). Création directe :
+  // RG-DS-05 (22/07) — réservée au SUPER_ADMIN ; les dirigeants (dirigeant d'unité inclus)
+  // déposent une DEMANDE validée par le secrétariat (écran Demandes).
+  const canEdit = level === 'zones' ? canManageZones(me) : canManageStructure(me);
+  const canAdd = isAdmin && canEdit;
+  const canPropose = !isAdmin && canManageStructure(me);
 
   const onDelete = async (lvl: Level, id: string, name: string) => {
     const ok = await confirmDialog(t('structure.deleteTitle'), t('structure.deleteConfirm', { name }), t('common.delete'), true);
@@ -151,10 +157,19 @@ export default function StructureScreen() {
           iconLeft={<Ionicons name="add" size={18} color={colors.mossDeep} />}
         />
       )}
+      {canPropose && (
+        <Button
+          label={t('structure.requestCreate')}
+          variant="soft"
+          onPress={() => router.push('/demandes')}
+          style={{ marginTop: 12 }}
+          iconLeft={<Ionicons name="add" size={18} color={colors.mossDeep} />}
+        />
+      )}
 
       <View style={{ gap: 8, marginTop: 12 }}>
         {rows.map((r: any) => (
-          <Card key={r.id} style={styles.itemCard} onPress={canAdd ? () => setEditing({ level, item: r }) : undefined}>
+          <Card key={r.id} style={styles.itemCard} onPress={canEdit ? () => setEditing({ level, item: r }) : undefined}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles.itemName}>{r.name}</Text>
               <Text style={styles.itemMeta}>
@@ -163,7 +178,7 @@ export default function StructureScreen() {
                 {level === 'units' && t('structure.unitMeta', { locality: r.localityName, code: r.joinCode })}
               </Text>
             </View>
-            {canAdd && <Ionicons name="chevron-forward" size={16} color={colors.ink3} />}
+            {canEdit && <Ionicons name="chevron-forward" size={16} color={colors.ink3} />}
           </Card>
         ))}
         {rows.length === 0 && (

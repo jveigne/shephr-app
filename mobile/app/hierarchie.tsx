@@ -30,16 +30,21 @@ import {
  */
 type ViewMode = 'leaders' | 'units';
 
-/** Aplatis l'arbre en liste d'assemblées, chacune avec le dirigeant qui la porte. */
-function flattenUnits(
-  nodes: LeaderHierarchyNode[],
-): { unit: HierarchyUnitView; leaderName: string }[] {
-  const out: { unit: HierarchyUnitView; leaderName: string }[] = [];
+type UnitEntry = { unit: HierarchyUnitView; leaderName?: string };
+
+/**
+ * Aplatis l'arbre en liste d'assemblées (chacune avec son dirigeant), et y AJOUTE les
+ * assemblées du périmètre sans dirigeant (le label « dirigeant requis » vient du serveur —
+ * `unit.needsLeader`, RG-DS-10).
+ */
+function flattenUnits(nodes: LeaderHierarchyNode[], unassigned: HierarchyUnitView[]): UnitEntry[] {
+  const out: UnitEntry[] = [];
   const walk = (node: LeaderHierarchyNode) => {
     node.units.forEach((unit) => out.push({ unit, leaderName: node.fullName }));
     node.children.forEach(walk);
   };
   nodes.forEach(walk);
+  unassigned.forEach((unit) => out.push({ unit }));
   // Regroupement pays → région → ville (22/07) : le tri porte l'ordre des sections.
   return out.sort((a, b) =>
     (a.unit.countryName ?? '').localeCompare(b.unit.countryName ?? '')
@@ -125,7 +130,7 @@ export default function HierarchieScreen() {
               <LeaderNodeRow key={root.id} node={root} depth={0} meId={me?.id ?? null} />
             ))
           : (() => {
-              const units = flattenUnits(roots);
+              const units = flattenUnits(roots, data?.unassignedUnits ?? []);
               if (!error && roots.length > 0 && units.length === 0) {
                 return <Text style={styles.empty}>{t('hierarchy.noUnits')}</Text>;
               }
@@ -150,7 +155,9 @@ export default function HierarchieScreen() {
                   rows.push(<Text key={`v-${city}-${unit.id}`} style={styles.groupCity}>{city}</Text>);
                   prevCity = city;
                 }
-                rows.push(<UnitRow key={unit.id} unit={unit} depth={1} leaderName={leaderName} hideLocality />);
+                rows.push(
+                  <UnitRow key={unit.id} unit={unit} depth={1} leaderName={leaderName} hideLocality />,
+                );
               });
               return rows;
             })()}
@@ -218,10 +225,13 @@ function UnitRow({ unit, depth, leaderName, hideLocality }: {
       >
         <Ionicons name="home-outline" size={14} color={colors.earthDeep} />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.unitName} numberOfLines={1}>
-            {unit.name ?? t('hierarchy.unnamedUnit')}
-            {!hideLocality && unit.localityName ? `  ·  ${unit.localityName}` : ''}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <Text style={styles.unitName} numberOfLines={1}>
+              {unit.name ?? t('hierarchy.unnamedUnit')}
+              {!hideLocality && unit.localityName ? `  ·  ${unit.localityName}` : ''}
+            </Text>
+            {unit.needsLeader && <Text style={styles.needsLeaderPill}>{t('hierarchy.needsLeader')}</Text>}
+          </View>
           <Text style={styles.nodeMeta} numberOfLines={1}>
             {leaderName ? `${t('hierarchy.leaderPrefix', { name: leaderName })} · ` : ''}
             {hasMembers
@@ -280,6 +290,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.mono, fontSize: 9, color: colors.white, letterSpacing: 0.6,
     textTransform: 'uppercase', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99,
     backgroundColor: colors.moss, overflow: 'hidden',
+  },
+  needsLeaderPill: {
+    fontFamily: fonts.mono, fontSize: 9, color: '#A9812C', letterSpacing: 0.6,
+    textTransform: 'uppercase', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99,
+    backgroundColor: 'rgba(169,129,44,0.14)', overflow: 'hidden',
   },
   inactivePill: {
     fontFamily: fonts.mono, fontSize: 9, color: colors.ink3, letterSpacing: 0.6,

@@ -18,6 +18,7 @@ import { LocalitesPage } from './pages/Localites';
 import { UnitesPage } from './pages/Unites';
 import { ExportsPage } from './pages/Exports';
 import { HierarchyPage } from './pages/Hierarchy';
+import { RequestsPage } from './pages/Requests';
 import { Placeholder } from './pages/Placeholder';
 import { FEATURES } from './config/features';
 
@@ -70,6 +71,7 @@ export function App() {
                 <Route path="/structure/localites" element={<LocalitesPage />} />
                 <Route path="/structure/unites" element={<UnitesPage />} />
                 <Route path="/hierarchy" element={<HierarchyPage />} />
+                <Route path="/requests" element={<RequestsPage />} />
                 {FEATURES.donations ? (
                   <Route path="/exports" element={<ExportsPage />} />
                 ) : (
