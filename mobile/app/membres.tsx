@@ -64,7 +64,7 @@ export default function MembresScreen() {
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
     const filtered = q
-      ? users.filter((u) => u.fullName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+      ? users.filter((u) => u.fullName.toLowerCase().includes(q) || (u.email ?? u.username ?? '').toLowerCase().includes(q))
       : users;
     return [...filtered].sort((a, b) => a.fullName.localeCompare(b.fullName));
   }, [users, search]);

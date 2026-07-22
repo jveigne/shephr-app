@@ -55,7 +55,9 @@ export default function InviteScreen() {
     setLoading(true);
     try {
       const res = await inviteUser({
-        email: email.trim(),
+        // A1 (RG-ID-01) : on attribue un IDENTIFIANT de connexion (l'email réel sera fourni
+        // par la personne à l'activation).
+        username: email.trim(),
         fullName: fullName.trim(),
         goalRole: role,
         goalUnitId: unitId,

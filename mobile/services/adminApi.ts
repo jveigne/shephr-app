@@ -118,7 +118,10 @@ export async function deleteUnit(id: string): Promise<void> {
 import type { ModuleRole } from './authApi';
 
 export interface InviteUserRequest {
-  email: string;
+  /** A1 (RG-ID-02) — email de contact facultatif ; identifiant OU email requis. */
+  email?: string;
+  /** A1 (RG-ID-01) — identifiant de connexion attribué (type pveigne@shephr.org). */
+  username?: string;
   fullName: string;
   donationRole?: ModuleRole;
   donationUnitId?: string;
@@ -129,7 +132,7 @@ export interface InviteUserRequest {
 
 export interface InviteUserResponse {
   userId: string;
-  email: string;
+  email: string | null;
   invitationToken: string;
   invitationShortCode: string;
 }
@@ -148,7 +151,9 @@ export async function inviteUser(payload: InviteUserRequest): Promise<InviteUser
 
 export interface AdminUserResponse {
   id: string;
-  email: string;
+  email: string | null;
+  /** A1 — identifiant de connexion (null pour les comptes historiques). */
+  username: string | null;
   fullName: string;
   superAdmin: boolean;
   supervisorId: string | null;

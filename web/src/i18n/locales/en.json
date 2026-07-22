@@ -201,8 +201,8 @@
     "quote": "“Give with joy, receive with gratitude.”",
     "quoteHighlight": "receive with gratitude.",
     "quoteSub": "shephr supports your ministry through the collection, reading and storytelling of generosity.",
-    "emailLabel": "Email address",
-    "emailPlaceholder": "your@email.com",
+    "emailLabel": "Email or username",
+    "emailPlaceholder": "your@email.com or pveigne@shephr.org",
     "passwordLabel": "Password",
     "rememberMe": "Remember me",
     "forgotPassword": "Forgot password?",
@@ -236,7 +236,16 @@
     "activatedToast": "Account activated",
     "activatedMsg": "Welcome to shephr.",
     "activateFailed": "Unable to activate the account.",
-    "invalidExpired": "This invitation is invalid or has expired."
+    "invalidExpired": "This invitation is invalid or has expired.",
+    "usernameLabel": "Login username",
+    "phoneLabel": "Phone number",
+    "phoneHint": "Required — with the country dial code.",
+    "phonePlaceholder": "7XXX XXX XXX",
+    "contactEmailLabel": "Email (optional)",
+    "contactEmailPlaceholder": "you@example.com",
+    "phoneRequired": "The phone number is required.",
+    "countryPlaceholder": "— Country —",
+    "countryRequired": "Choose your country (dial code)."
   },
   "placeholder": {
     "inPreparation": "Screen in preparation",
@@ -531,7 +540,11 @@
     "deleteFailed": "Deletion failed",
     "perimeterCity": "City · {{city}}",
     "cityAttachment": "Attached city",
-    "cityAttachmentHint": "The leader manages every house assembly of their city."
+    "cityAttachmentHint": "The leader manages every house assembly of their city.",
+    "usernameLabel": "Login username",
+    "usernameHint": "Assigned by you (e.g. first.last@shephr.org) — it is not an email.",
+    "usernamePlaceholder": "first.last@shephr.org",
+    "emailOptionalLabel": "Email (optional)"
   },
   "memberCare": {
     "title": "Member care",

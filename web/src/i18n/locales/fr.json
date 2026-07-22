@@ -201,8 +201,8 @@
     "quote": "« Donner avec joie, recevoir avec gratitude. »",
     "quoteHighlight": "recevoir avec gratitude.",
     "quoteSub": "shephr accompagne votre ministère à travers la collecte, la lecture et le récit de la générosité.",
-    "emailLabel": "Adresse e-mail",
-    "emailPlaceholder": "votre@email.com",
+    "emailLabel": "Email ou identifiant",
+    "emailPlaceholder": "votre@email.com ou pveigne@shephr.org",
     "passwordLabel": "Mot de passe",
     "rememberMe": "Se souvenir de moi",
     "forgotPassword": "Mot de passe oublié ?",
@@ -236,7 +236,16 @@
     "activatedToast": "Compte activé",
     "activatedMsg": "Bienvenue sur shephr.",
     "activateFailed": "Impossible d'activer le compte.",
-    "invalidExpired": "Cette invitation est invalide ou a expiré."
+    "invalidExpired": "Cette invitation est invalide ou a expiré.",
+    "usernameLabel": "Identifiant de connexion",
+    "phoneLabel": "Numéro de téléphone",
+    "phoneHint": "Obligatoire — avec l’indicatif du pays.",
+    "phonePlaceholder": "6XX XX XX XX",
+    "contactEmailLabel": "Email (facultatif)",
+    "contactEmailPlaceholder": "vous@exemple.com",
+    "phoneRequired": "Le numéro de téléphone est obligatoire.",
+    "countryPlaceholder": "— Pays —",
+    "countryRequired": "Choisissez votre pays (indicatif)."
   },
   "placeholder": {
     "inPreparation": "Écran en préparation",
@@ -531,7 +540,11 @@
     "deleteFailed": "Suppression impossible",
     "perimeterCity": "Ville · {{city}}",
     "cityAttachment": "Ville de rattachement",
-    "cityAttachmentHint": "Le dirigeant administre toutes les assemblées de sa ville."
+    "cityAttachmentHint": "Le dirigeant administre toutes les assemblées de sa ville.",
+    "usernameLabel": "Identifiant de connexion",
+    "usernameHint": "Attribué par vous (ex. prenom.nom@shephr.org) — ce n'est pas un email.",
+    "usernamePlaceholder": "prenom.nom@shephr.org",
+    "emailOptionalLabel": "Email (facultatif)"
   },
   "memberCare": {
     "title": "Suivi pastoral",

@@ -90,7 +90,9 @@ export interface AuthResponse {
 // Mirrors com.excellence.back.donation.auth.dto.MeResponse
 export interface MeResponse {
   id: string;
-  email: string;
+  email: string | null;
+  /** A1 — identifiant de connexion (null pour les comptes historiques). */
+  username: string | null;
   fullName: string;
   /** Langue préférée du compte ('FR' | 'EN' | …) ; null si non définie côté backend. */
   language?: string | null;
@@ -185,7 +187,9 @@ export async function register(payload: RegisterRequest): Promise<AuthResponse> 
 
 // --- Activation par CODE COURT (Lot 3.4, UC-TRV-10) — endpoints publics ---------------
 export interface InvitationPreview {
-  email: string;
+  email: string | null;
+  /** A1 — identifiant de connexion (comptes créés sans email). */
+  username: string | null;
   fullName: string;
   ministryName: string | null;
 }
@@ -198,11 +202,18 @@ export async function previewInvitationByCode(shortCode: string): Promise<Invita
   return data;
 }
 
-/** Active le compte par code court : définit le mot de passe, active, et connecte (renvoie token+user). */
-export async function acceptInvitationByCode(shortCode: string, password: string): Promise<AuthResponse> {
+/**
+ * Active le compte par code court (A1 — RG-ID-04) : mot de passe + TÉLÉPHONE obligatoire
+ * (avec indicatif) + email facultatif ; active et connecte (renvoie token+user).
+ */
+export async function acceptInvitationByCode(
+  shortCode: string,
+  password: string,
+  contact: { phoneNumber: string; countryCode?: string; email?: string },
+): Promise<AuthResponse> {
   const { data } = await apiClient.post<AuthResponse>(
     '/api/cmfipraise/auth/invitation/code/accept',
-    { shortCode, password },
+    { shortCode, password, ...contact },
   );
   return data;
 }

@@ -8,7 +8,7 @@ import type { ModuleRole } from './authApi';
 export interface HierarchyMemberView {
   id: string;
   fullName: string;
-  email: string;
+  email: string | null;
   active: boolean;
 }
 

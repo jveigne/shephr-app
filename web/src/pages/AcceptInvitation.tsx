@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { DIAL_COUNTRIES, flagEmoji, sortedDialCountries } from '../constants/dialCodes';
 import { Icon } from '../components/Icon';
 import { Button, Field, Input } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
@@ -23,7 +24,7 @@ export function AcceptInvitationPage() {
   const { establishSession } = useAuth();
   const { push } = useToast();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState<InvitationPreview | null>(null);
@@ -31,6 +32,10 @@ export function AcceptInvitationPage() {
 
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  // A1 (RG-ID-04) : téléphone OBLIGATOIRE — le PAYS choisi porte l'indicatif (JP 23/07).
+  const [countryIso, setCountryIso] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +60,14 @@ export function AcceptInvitationPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (!countryIso) {
+      setError(t('invitation.countryRequired'));
+      return;
+    }
+    if (phone.trim().replace(/\D/g, '').length < 6) {
+      setError(t('invitation.phoneRequired'));
+      return;
+    }
     if (password.length < 8) {
       setError(t('invitation.tooShort'));
       return;
@@ -65,7 +78,12 @@ export function AcceptInvitationPage() {
     }
     setSubmitting(true);
     try {
-      const res = await acceptInvitation({ token, password });
+      const res = await acceptInvitation({
+        token, password,
+        phoneNumber: phone.trim(),
+        countryCode: DIAL_COUNTRIES.find((c) => c.iso === countryIso)?.dial,
+        email: email.trim() || undefined,
+      });
       const me = await establishSession(res.token);
       if (!hasMinistryAccess(me)) {
         setError(t('invitation.noAccess'));
@@ -114,8 +132,43 @@ export function AcceptInvitationPage() {
               </div>
 
               <form className="form" onSubmit={submit}>
-                <Field label={t('invitation.emailLabel')}>
-                  <Input type="email" value={preview?.email ?? ''} readOnly icon={<Icon name="mail" size={15} />} />
+                <Field label={preview?.email ? t('invitation.emailLabel') : t('invitation.usernameLabel')}>
+                  <Input type="text" value={preview?.email ?? preview?.username ?? ''} readOnly icon={<Icon name="mail" size={15} />} />
+                </Field>
+
+                <Field label={t('invitation.phoneLabel')} hint={t('invitation.phoneHint')}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <select
+                      className="input"
+                      style={{ width: 190 }}
+                      value={countryIso}
+                      onChange={(e) => setCountryIso(e.target.value)}
+                      required
+                    >
+                      <option value="">{t('invitation.countryPlaceholder')}</option>
+                      {sortedDialCountries(i18n.resolvedLanguage === 'en' ? 'en' : 'fr').map((c) => (
+                        <option key={c.iso} value={c.iso}>
+                          {flagEmoji(c.iso)} {i18n.resolvedLanguage === 'en' ? c.nameEn : c.name} ({c.dial})
+                        </option>
+                      ))}
+                    </select>
+                    <Input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder={t('invitation.phonePlaceholder')}
+                      required
+                    />
+                  </div>
+                </Field>
+
+                <Field label={t('invitation.contactEmailLabel')}>
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={t('invitation.contactEmailPlaceholder')}
+                    icon={<Icon name="mail" size={15} />}
+                  />
                 </Field>
 
                 <Field label={t('invitation.passwordLabel')} hint={t('invitation.passwordHint')}>
