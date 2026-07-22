@@ -462,7 +462,8 @@
     "viewLeaders": "Leaders",
     "viewUnits": "Assemblies",
     "leaderPrefix": "Leader: {{name}}",
-    "noUnits": "No assembly under your leadership."
+    "noUnits": "No assembly under your leadership.",
+    "ungrouped": "Other"
   },
   "invite": {
     "title": "Invite a leader",

@@ -462,7 +462,8 @@
     "viewLeaders": "Dirigeants",
     "viewUnits": "Assemblées",
     "leaderPrefix": "Dirigeant : {{name}}",
-    "noUnits": "Aucune assemblée sous votre leadership."
+    "noUnits": "Aucune assemblée sous votre leadership.",
+    "ungrouped": "Autre"
   },
   "invite": {
     "title": "Inviter un dirigeant",

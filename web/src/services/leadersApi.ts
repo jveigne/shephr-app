@@ -17,6 +17,9 @@ export interface HierarchyUnitView {
   id: string;
   name: string | null;
   localityName: string | null;
+  /** Région et pays de la ville (22/07) — pour le regroupement pays → région → ville. */
+  zoneName: string | null;
+  countryName: string | null;
   members: HierarchyMemberView[];
 }
 

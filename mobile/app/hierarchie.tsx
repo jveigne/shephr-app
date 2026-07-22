@@ -40,8 +40,11 @@ function flattenUnits(
     node.children.forEach(walk);
   };
   nodes.forEach(walk);
+  // Regroupement pays → région → ville (22/07) : le tri porte l'ordre des sections.
   return out.sort((a, b) =>
-    (a.unit.localityName ?? '').localeCompare(b.unit.localityName ?? '')
+    (a.unit.countryName ?? '').localeCompare(b.unit.countryName ?? '')
+    || (a.unit.zoneName ?? '').localeCompare(b.unit.zoneName ?? '')
+    || (a.unit.localityName ?? '').localeCompare(b.unit.localityName ?? '')
     || (a.unit.name ?? '').localeCompare(b.unit.name ?? ''));
 }
 
@@ -126,9 +129,30 @@ export default function HierarchieScreen() {
               if (!error && roots.length > 0 && units.length === 0) {
                 return <Text style={styles.empty}>{t('hierarchy.noUnits')}</Text>;
               }
-              return units.map(({ unit, leaderName }) => (
-                <UnitRow key={unit.id} unit={unit} depth={0} leaderName={leaderName} />
-              ));
+              // Sections pays → région → ville (la liste est déjà triée dans cet ordre).
+              const rows: React.ReactNode[] = [];
+              let prevCountry: string | null = null;
+              let prevZone: string | null = null;
+              let prevCity: string | null = null;
+              units.forEach(({ unit, leaderName }) => {
+                const country = unit.countryName ?? t('hierarchy.ungrouped');
+                const zone = unit.zoneName ?? t('hierarchy.ungrouped');
+                const city = unit.localityName ?? t('hierarchy.ungrouped');
+                if (country !== prevCountry) {
+                  rows.push(<Text key={`c-${country}-${unit.id}`} style={styles.groupCountry}>{country}</Text>);
+                  prevCountry = country; prevZone = null; prevCity = null;
+                }
+                if (zone !== prevZone) {
+                  rows.push(<Text key={`z-${zone}-${unit.id}`} style={styles.groupZone}>{zone}</Text>);
+                  prevZone = zone; prevCity = null;
+                }
+                if (city !== prevCity) {
+                  rows.push(<Text key={`v-${city}-${unit.id}`} style={styles.groupCity}>{city}</Text>);
+                  prevCity = city;
+                }
+                rows.push(<UnitRow key={unit.id} unit={unit} depth={1} leaderName={leaderName} hideLocality />);
+              });
+              return rows;
             })()}
       </View>
     </ScreenShell>
@@ -178,7 +202,9 @@ function LeaderNodeRow({ node, depth, meId }: { node: LeaderHierarchyNode; depth
   );
 }
 
-function UnitRow({ unit, depth, leaderName }: { unit: HierarchyUnitView; depth: number; leaderName?: string }) {
+function UnitRow({ unit, depth, leaderName, hideLocality }: {
+  unit: HierarchyUnitView; depth: number; leaderName?: string; hideLocality?: boolean;
+}) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const hasMembers = unit.members.length > 0;
@@ -194,7 +220,7 @@ function UnitRow({ unit, depth, leaderName }: { unit: HierarchyUnitView; depth: 
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={styles.unitName} numberOfLines={1}>
             {unit.name ?? t('hierarchy.unnamedUnit')}
-            {unit.localityName ? `  ·  ${unit.localityName}` : ''}
+            {!hideLocality && unit.localityName ? `  ·  ${unit.localityName}` : ''}
           </Text>
           <Text style={styles.nodeMeta} numberOfLines={1}>
             {leaderName ? `${t('hierarchy.leaderPrefix', { name: leaderName })} · ` : ''}
@@ -229,6 +255,18 @@ const styles = StyleSheet.create({
   segmentActive: { backgroundColor: colors.moss },
   segmentText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink2 },
   segmentTextActive: { color: colors.white },
+  groupCountry: {
+    fontFamily: fonts.serif, fontSize: 19, color: colors.ink, letterSpacing: -0.2,
+    marginTop: 12, marginBottom: 2,
+  },
+  groupZone: {
+    fontFamily: fonts.mono, fontSize: 10.5, color: colors.ink3, letterSpacing: 1.1,
+    textTransform: 'uppercase', marginTop: 6, marginLeft: 2,
+  },
+  groupCity: {
+    fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.earthDeep,
+    marginTop: 6, marginLeft: 8, marginBottom: 2,
+  },
   title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4 },
   subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4, lineHeight: 18 },
   nodeCard: { paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
