@@ -181,9 +181,21 @@ export default function StructureScreen() {
             {canEdit && <Ionicons name="chevron-forward" size={16} color={colors.ink3} />}
           </Card>
         ))}
-        {rows.length === 0 && (
+        {/* Niveau Région gaté par rang (lecture admin dès SENIOR) : un dirigeant de ville a une
+            liste vide — on affiche sa/ses région(s) de rattachement en LECTURE SEULE (info). */}
+        {rows.length === 0 && level === 'zones' && (me?.zoneNames?.length ?? 0) > 0 ? (
+          (me?.zoneNames ?? []).map((name) => (
+            <Card key={name} style={styles.itemCard}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.itemName}>{name}</Text>
+                <Text style={styles.itemMeta}>{t('structure.attachedRegionReadOnly')}</Text>
+              </View>
+              <Ionicons name="lock-closed-outline" size={14} color={colors.ink3} />
+            </Card>
+          ))
+        ) : rows.length === 0 ? (
           <Text style={styles.empty}>{t('structure.emptyPerimeter')}</Text>
-        )}
+        ) : null}
       </View>
 
       <StructureFormModal

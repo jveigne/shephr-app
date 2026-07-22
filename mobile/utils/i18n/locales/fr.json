@@ -427,7 +427,8 @@
     "deleteFailedBody": "Hors de votre périmètre ou élément non vide.",
     "fillFields": "Renseignez le nom et le rattachement.",
     "saveRefusedTitle": "Enregistrement refusé",
-    "saveRefusedBody": "Hors de votre périmètre."
+    "saveRefusedBody": "Hors de votre périmètre.",
+    "attachedRegionReadOnly": "Votre région de rattachement · lecture seule"
   },
   "notifications": {
     "morePending": "{{count}} autre(s) rappel(s) en attente",

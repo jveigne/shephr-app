@@ -427,7 +427,8 @@
     "deleteFailedBody": "Outside your scope or item not empty.",
     "fillFields": "Enter the name and the parent.",
     "saveRefusedTitle": "Save refused",
-    "saveRefusedBody": "Outside your scope."
+    "saveRefusedBody": "Outside your scope.",
+    "attachedRegionReadOnly": "Your attached region · read-only"
   },
   "notifications": {
     "morePending": "{{count}} more reminder(s) pending",
