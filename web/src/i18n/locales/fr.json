@@ -79,6 +79,27 @@
       "tagline": "La plateforme de gestion pour votre ministère."
     }
   },
+  "deleteAccount": {
+    "title": "Suppression de votre compte Shephr",
+    "intro": "Vous pouvez demander à tout moment la suppression de votre compte Shephr et des données associées. Cette page explique comment procéder, ce qui est supprimé et dans quels délais.",
+    "howTitle": "Comment demander la suppression",
+    "step1": "Envoyez-nous un email (bouton ci-dessous) en indiquant l'identifiant avec lequel vous vous connectez à l'application.",
+    "step2": "Précisez si possible le nom de votre ministère ou de votre église, pour nous aider à retrouver votre compte.",
+    "step3": "Nous vous confirmons la prise en compte de la demande, puis nous supprimons votre compte et les données associées.",
+    "cta": "Demander la suppression de mon compte",
+    "or": "ou écrivez-nous à",
+    "mailSubject": "Suppression de mon compte Shephr",
+    "mailBody": "Bonjour,\n\nJe souhaite la suppression de mon compte Shephr et des données associées.\n\nIdentifiant de connexion : \nMinistère / église : \n\nMerci.",
+    "deletedTitle": "Données supprimées",
+    "deleted": {
+      "profile": "Votre profil : nom, identifiant de connexion, coordonnées et mot de passe.",
+      "assignments": "Vos rattachements à l'organisation (ministère, région, ville, assemblée) et vos rôles.",
+      "activity": "Les données liées à votre activité dans l'application (objectifs déclarés, suivi pastoral, préférences)."
+    },
+    "retentionTitle": "Délais et conservation",
+    "retentionDelay": "Les demandes sont traitées sous 30 jours au maximum. Une fois la suppression effectuée, votre compte n'est plus accessible et vos données sont retirées de nos systèmes actifs.",
+    "retentionLegal": "Certaines données peuvent être conservées plus longtemps lorsque la loi l'exige (par exemple les registres liés aux dons, pour des obligations comptables), puis supprimées à l'issue du délai légal."
+  },
   "common": {
     "brand": "shephr",
     "administration": "Administration",

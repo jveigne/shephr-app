@@ -79,6 +79,27 @@
       "tagline": "The management platform for your ministry."
     }
   },
+  "deleteAccount": {
+    "title": "Delete your Shephr account",
+    "intro": "You can request the deletion of your Shephr account and the data associated with it at any time. This page explains how to proceed, what gets deleted and within which timeframe.",
+    "howTitle": "How to request deletion",
+    "step1": "Send us an email (button below) mentioning the identifier you use to sign in to the app.",
+    "step2": "If possible, include the name of your ministry or church to help us find your account.",
+    "step3": "We confirm that your request has been received, then delete your account and the associated data.",
+    "cta": "Request the deletion of my account",
+    "or": "or write to us at",
+    "mailSubject": "Deletion of my Shephr account",
+    "mailBody": "Hello,\n\nI would like my Shephr account and the associated data to be deleted.\n\nSign-in identifier: \nMinistry / church: \n\nThank you.",
+    "deletedTitle": "Data that gets deleted",
+    "deleted": {
+      "profile": "Your profile: name, sign-in identifier, contact details and password.",
+      "assignments": "Your attachments to the organization (ministry, region, city, assembly) and your roles.",
+      "activity": "Data linked to your activity in the app (declared goals, member care records, preferences)."
+    },
+    "retentionTitle": "Timeframe and retention",
+    "retentionDelay": "Requests are processed within 30 days at most. Once the deletion is done, your account can no longer be accessed and your data is removed from our active systems.",
+    "retentionLegal": "Some data may be kept longer when required by law (for example donation records, for accounting obligations), then deleted once the legal retention period ends."
+  },
   "common": {
     "brand": "shephr",
     "administration": "Administration",
