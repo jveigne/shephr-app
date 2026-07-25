@@ -5,7 +5,9 @@ import type { ModuleRole } from './authApi';
 // ---------------- Users (Lot 3.3 — contrat ModuleRole + périmètre) ----------------
 export interface AdminUserResponse {
   id: string;
-  email: string;
+  email: string | null;
+  /** A1 — identifiant de connexion (null pour les comptes historiques). */
+  username: string | null;
   fullName: string;
   superAdmin: boolean;
   ministryId: string | null;
@@ -44,7 +46,10 @@ export interface ListUsersParams {
 }
 
 export interface InviteUserRequest {
-  email: string;
+  /** A1 (RG-ID-02) — email facultatif ; identifiant OU email requis. */
+  email?: string;
+  /** A1 (RG-ID-01) — identifiant de connexion attribué. */
+  username?: string;
   fullName: string;
   ministryId?: string;
   /** Lot 3.5 — superviseur (par défaut l'invitant côté backend si omis). */

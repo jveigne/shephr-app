@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import {
@@ -36,6 +37,7 @@ export function ZonesPage() {
   const queryClient = useQueryClient();
   const { push } = useToast();
   const { me } = useAuth();
+  const navigate = useNavigate();
   const canWrite = canManageZones(me);
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<ZoneResponse | null>(null);
@@ -124,15 +126,27 @@ export function ZonesPage() {
         title={t('zones.title')}
         crumbs={[t('common.brand'), t('nav.structure'), t('zones.title')]}
         actions={
-          <Button
-            variant="primary"
-            iconL={<Icon name="plus" size={15} />}
-            disabled={!canCreate}
-            title={canCreate ? undefined : t('zones.noCountryHint')}
-            onClick={() => setCreating(true)}
-          >
-            {t('zones.newZone')}
-          </Button>
+          // RG-DS-05 (22/07) : la création directe est réservée au SUPER_ADMIN — les dirigeants
+          // déposent une demande validée par le secrétariat (page Demandes).
+          me?.superAdmin ? (
+            <Button
+              variant="primary"
+              iconL={<Icon name="plus" size={15} />}
+              disabled={!canCreate}
+              title={canCreate ? undefined : t('zones.noCountryHint')}
+              onClick={() => setCreating(true)}
+            >
+              {t('zones.newZone')}
+            </Button>
+          ) : canWrite ? (
+            <Button
+              variant="primary"
+              iconL={<Icon name="plus" size={15} />}
+              onClick={() => navigate('/requests')}
+            >
+              {t('zones.requestZone')}
+            </Button>
+          ) : undefined
         }
       />
 

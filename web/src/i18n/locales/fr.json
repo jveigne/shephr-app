@@ -79,6 +79,27 @@
       "tagline": "La plateforme de gestion pour votre ministère."
     }
   },
+  "deleteAccount": {
+    "title": "Suppression de votre compte Shephr",
+    "intro": "Vous pouvez demander à tout moment la suppression de votre compte Shephr et des données associées. Cette page explique comment procéder, ce qui est supprimé et dans quels délais.",
+    "howTitle": "Comment demander la suppression",
+    "step1": "Envoyez-nous un email (bouton ci-dessous) en indiquant l'identifiant avec lequel vous vous connectez à l'application.",
+    "step2": "Précisez si possible le nom de votre ministère ou de votre église, pour nous aider à retrouver votre compte.",
+    "step3": "Nous vous confirmons la prise en compte de la demande, puis nous supprimons votre compte et les données associées.",
+    "cta": "Demander la suppression de mon compte",
+    "or": "ou écrivez-nous à",
+    "mailSubject": "Suppression de mon compte Shephr",
+    "mailBody": "Bonjour,\n\nJe souhaite la suppression de mon compte Shephr et des données associées.\n\nIdentifiant de connexion : \nMinistère / église : \n\nMerci.",
+    "deletedTitle": "Données supprimées",
+    "deleted": {
+      "profile": "Votre profil : nom, identifiant de connexion, coordonnées et mot de passe.",
+      "assignments": "Vos rattachements à l'organisation (ministère, région, ville, assemblée) et vos rôles.",
+      "activity": "Les données liées à votre activité dans l'application (objectifs déclarés, suivi pastoral, préférences)."
+    },
+    "retentionTitle": "Délais et conservation",
+    "retentionDelay": "Les demandes sont traitées sous 30 jours au maximum. Une fois la suppression effectuée, votre compte n'est plus accessible et vos données sont retirées de nos systèmes actifs.",
+    "retentionLegal": "Certaines données peuvent être conservées plus longtemps lorsque la loi l'exige (par exemple les registres liés aux dons, pour des obligations comptables), puis supprimées à l'issue du délai légal."
+  },
   "common": {
     "brand": "shephr",
     "administration": "Administration",
@@ -126,7 +147,8 @@
     "deleteTitle": "Confirmer la suppression",
     "deleteConfirm": "Voulez-vous vraiment supprimer {{label}} ? Cette action est irréversible.",
     "error": "Erreur",
-    "retryLater": "Réessayez plus tard."
+    "retryLater": "Réessayez plus tard.",
+    "failure": "Échec"
   },
   "ui": {
     "noResult": "Aucun résultat",
@@ -153,11 +175,12 @@
     "zones": "Régions",
     "localites": "Villes",
     "unites": "Assemblées",
-    "users": "Utilisateurs",
+    "users": "Membres",
     "hierarchy": "Hiérarchie des dirigeants",
     "exports": "Exports",
     "settings": "Paramètres",
-    "language": "Langue"
+    "language": "Langue",
+    "requests": "Demandes"
   },
   "sidebar": {
     "logout": "Déconnexion",
@@ -199,8 +222,8 @@
     "quote": "« Donner avec joie, recevoir avec gratitude. »",
     "quoteHighlight": "recevoir avec gratitude.",
     "quoteSub": "shephr accompagne votre ministère à travers la collecte, la lecture et le récit de la générosité.",
-    "emailLabel": "Adresse e-mail",
-    "emailPlaceholder": "votre@email.com",
+    "emailLabel": "Email ou identifiant",
+    "emailPlaceholder": "votre@email.com ou pveigne@shephr.org",
     "passwordLabel": "Mot de passe",
     "rememberMe": "Se souvenir de moi",
     "forgotPassword": "Mot de passe oublié ?",
@@ -234,14 +257,42 @@
     "activatedToast": "Compte activé",
     "activatedMsg": "Bienvenue sur shephr.",
     "activateFailed": "Impossible d'activer le compte.",
-    "invalidExpired": "Cette invitation est invalide ou a expiré."
+    "invalidExpired": "Cette invitation est invalide ou a expiré.",
+    "usernameLabel": "Identifiant de connexion",
+    "phoneLabel": "Numéro de téléphone",
+    "phoneHint": "Obligatoire — avec l’indicatif du pays.",
+    "phonePlaceholder": "6XX XX XX XX",
+    "contactEmailLabel": "Email (facultatif)",
+    "contactEmailPlaceholder": "vous@exemple.com",
+    "phoneRequired": "Le numéro de téléphone est obligatoire.",
+    "countryPlaceholder": "— Pays —",
+    "countryRequired": "Choisissez votre pays (indicatif)."
   },
   "placeholder": {
     "inPreparation": "Écran en préparation",
-    "hierarchyTitle": "Hiérarchie des dirigeants",
-    "hierarchyDescription": "Attributions dirigeant ↔ assemblée et supervision senior-junior.",
     "settingsTitle": "Paramètres",
     "settingsDescription": "Profil, notifications, sécurité, devises et catégories."
+  },
+  "hierarchy": {
+    "title": "Hiérarchie des dirigeants",
+    "introSubtree": "Votre leadership : vos dirigeants, leurs assemblées et les membres de ces assemblées.",
+    "introChain": "Votre chaîne de rattachement : vos dirigeants jusqu'à la racine, et votre assemblée.",
+    "introMinistry": "Les arbres de leadership du ministère.",
+    "leadersCount_one": "{{count}} dirigeant",
+    "leadersCount_other": "{{count}} dirigeants",
+    "unitsCount_one": "{{count}} assemblée",
+    "unitsCount_other": "{{count}} assemblées",
+    "membersCount_one": "{{count}} membre",
+    "membersCount_other": "{{count}} membres",
+    "unitNoMembers": "Aucun membre rattaché",
+    "unnamedUnit": "Assemblée",
+    "you": "Vous",
+    "empty": "Aucune hiérarchie à afficher",
+    "emptyHint": "Aucun dirigeant ni assemblée dans votre périmètre pour le moment.",
+    "loadError": "Impossible de charger la hiérarchie.",
+    "needsLeader": "Dirigeant requis",
+    "unassignedTitle": "Assemblées sans dirigeant",
+    "unassignedHint": "Créées (souvent via une demande approuvée) mais sans dirigeant rattaché — nommez-en un via Membres (inviter ou gérer)."
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -381,7 +432,8 @@
     "nameLabel": "Nom de la région",
     "namePlaceholder": "Région Sud…",
     "descPlaceholder": "Description…",
-    "deleteLabel": "la région « {{name}} »"
+    "deleteLabel": "la région « {{name}} »",
+    "requestZone": "Demander une région"
   },
   "localities": {
     "title": "Villes",
@@ -410,7 +462,8 @@
     "newSub": "Rattachez la ville à une région de votre périmètre.",
     "nameLabel": "Nom de la ville",
     "namePlaceholder": "Londres…",
-    "deleteLabel": "la ville « {{name}} »"
+    "deleteLabel": "la ville « {{name}} »",
+    "requestLocality": "Demander une ville"
   },
   "units": {
     "title": "Assemblées",
@@ -439,13 +492,14 @@
     "newSub": "Rattachez l'assemblée à une ville de votre périmètre.",
     "nameLabel": "Nom de l'assemblée",
     "namePlaceholder": "Centre Londres…",
-    "deleteLabel": "l'assemblée « {{name}} »"
+    "deleteLabel": "l'assemblée « {{name}} »",
+    "requestUnit": "Demander une assemblée"
   },
   "users": {
-    "title": "Utilisateurs",
+    "title": "Membres",
     "moduleGoals": "Objectifs",
     "moduleDonations": "Dons",
-    "invite": "Inviter un utilisateur",
+    "invite": "Inviter un membre",
     "intro": "Dirigeants et membres de votre périmètre. Les invitations sont partagées par lien ; les rôles que vous pouvez conférer sont limités à ceux strictement inférieurs au vôtre.",
     "searchPlaceholder": "Nom ou email…",
     "colName": "Nom",
@@ -453,14 +507,14 @@
     "colRoleSingle": "Rôle ({{module}})",
     "roleFilter": "Rôle",
     "colPerimeter": "Périmètre",
-    "count_one": "{{count}} utilisateur",
-    "count_other": "{{count}} utilisateurs",
+    "count_one": "{{count}} membre",
+    "count_other": "{{count}} membres",
     "roleWithModule": "{{module}} : {{role}}",
     "perimeterCountry": "Pays",
     "perimeterZone": "Région : {{name}}",
     "manage": "Gérer",
     "inviteRefused": "Invitation refusée",
-    "updated": "Utilisateur mis à jour",
+    "updated": "Membre mis à jour",
     "updateRefused": "Mise à jour refusée",
     "createFailed": "Création impossible.",
     "updateFailed": "Mise à jour impossible.",
@@ -502,12 +556,16 @@
     "deleteTitle": "Supprimer définitivement ?",
     "deleteWarning": "Suppression définitive de la base. Refusée si une région/assemblée dont la personne est responsable se retrouverait sans aucun autre responsable (réaffectez d'abord), ou si des données sont rattachées.",
     "confirmDelete": "Supprimer définitivement",
-    "deleted": "Utilisateur supprimé",
+    "deleted": "Membre supprimé",
     "deleteRefused": "Suppression refusée",
     "deleteFailed": "Suppression impossible",
     "perimeterCity": "Ville · {{city}}",
     "cityAttachment": "Ville de rattachement",
-    "cityAttachmentHint": "Le dirigeant administre toutes les assemblées de sa ville."
+    "cityAttachmentHint": "Le dirigeant administre toutes les assemblées de sa ville.",
+    "usernameLabel": "Identifiant de connexion",
+    "usernameHint": "Attribué par vous (ex. prenom.nom@shephr.org) — ce n'est pas un email.",
+    "usernamePlaceholder": "prenom.nom@shephr.org",
+    "emailOptionalLabel": "Email (facultatif)"
   },
   "memberCare": {
     "title": "Suivi pastoral",
@@ -764,5 +822,69 @@
     "submittedRatio": "{{submitted}}/{{total}} soumises · {{percent}} %",
     "achievedInline": "versé {{value}}",
     "nationTotal": "Somme totale Nation"
+  },
+  "requests": {
+    "title": "Demandes de structure",
+    "intro": "Proposez une création — région, ville ou assemblée, quel que soit votre niveau. Si le rattachement n'existe pas encore, il sera créé avec votre demande. Le secrétariat valide avant toute apparition dans la structure.",
+    "newRequest": "Nouvelle demande",
+    "newRequestSub": "Choisissez le type, le rattachement, puis le nom à créer.",
+    "typeLabel": "Que souhaitez-vous créer ?",
+    "parentLabel": {
+      "REGION": "Dans quel pays ?",
+      "CITY": "Dans quelle région ?",
+      "ASSEMBLY": "Dans quelle ville ?"
+    },
+    "existingList": "Déjà dans « {{parent}} » : {{list}}.",
+    "existingNone": "Aucun élément existant dans « {{parent}} » pour le moment.",
+    "nameLabel": "Nom demandé",
+    "namePlaceholder": "Nom de la nouvelle entité",
+    "submit": "Déposer la demande",
+    "submitting": "Dépôt…",
+    "createdToast": "Demande « {{name}} » déposée",
+    "createRefused": "Dépôt refusé",
+    "cancelledToast": "Demande annulée",
+    "cancel": "Annuler la demande",
+    "colDate": "Date",
+    "colType": "Type",
+    "colName": "Nom demandé",
+    "colParent": "Rattachement",
+    "colRequester": "Demandeur",
+    "colStatus": "Statut",
+    "status": {
+      "PENDING": "En attente",
+      "APPROVED": "Approuvée",
+      "REJECTED": "Refusée",
+      "CANCELLED": "Annulée"
+    },
+    "types": {
+      "REGION": "Région",
+      "CITY": "Ville",
+      "ASSEMBLY": "Assemblée"
+    },
+    "toValidate": "À valider (secrétariat)",
+    "mine": "Mes demandes",
+    "noPending": "Aucune demande en attente",
+    "noMine": "Aucune demande",
+    "noMineHint": "Déposez votre première demande avec le bouton « Nouvelle demande ».",
+    "notEligible": "Votre rôle ne permet pas de proposer de création.",
+    "approve": "Approuver",
+    "reject": "Refuser",
+    "approvedToast": "« {{name}} » créé et demande approuvée",
+    "rejectedToast": "Demande « {{name}} » refusée",
+    "rejectTitle": "Refuser « {{name}} » ?",
+    "rejectSub": "Le motif sera visible par le demandeur dans son suivi de demandes.",
+    "rejectReasonLabel": "Motif du refus",
+    "rejectReasonPlaceholder": "Ex. : doublon avec une structure existante…",
+    "rejectConfirm": "Refuser la demande",
+    "parentPendingBadge": "à créer",
+    "approveChainHint": "Approuver créera aussi les parents « à créer » de la chaîne.",
+    "rejectChainHint": "Refuser ce maillon refusera aussi les demandes qui en dépendent.",
+    "toCreate": "À créer : {{name}}",
+    "changePick": "Changer",
+    "searchPlaceholder": "Rechercher…",
+    "createOption": "Créer « {{name}} »",
+    "noOption": "Aucun élément — saisissez un nom pour le créer.",
+    "chainNote": "Cette demande créera {{count}} éléments liés — le secrétariat validera la chaîne en une décision.",
+    "entityCreated": "Créée dans la structure — visible dans votre périmètre."
   }
 }

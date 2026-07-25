@@ -67,7 +67,13 @@ export default function StructureScreen() {
     try { await load(); } finally { setRefreshing(false); }
   };
 
-  const canAdd = level === 'zones' ? canManageZones(me) : canManageStructure(me);
+  const isAdmin = me?.superAdmin ?? false;
+  // Modification/suppression : règles inchangées (scopées serveur). Création directe :
+  // RG-DS-05 (22/07) — réservée au SUPER_ADMIN ; les dirigeants (dirigeant d'unité inclus)
+  // déposent une DEMANDE validée par le secrétariat (écran Demandes).
+  const canEdit = level === 'zones' ? canManageZones(me) : canManageStructure(me);
+  const canAdd = isAdmin && canEdit;
+  const canPropose = !isAdmin && canManageStructure(me);
 
   const onDelete = async (lvl: Level, id: string, name: string) => {
     const ok = await confirmDialog(t('structure.deleteTitle'), t('structure.deleteConfirm', { name }), t('common.delete'), true);
@@ -108,6 +114,30 @@ export default function StructureScreen() {
       </View>
       <Text style={styles.subtitle}>{t('structure.subtitle')}</Text>
 
+      {/* Lot S1 (D4) : un non-manager voit d'abord SON rattachement — les listes ci-dessous
+          restent scopées backend (souvent vides pour un membre simple). */}
+      {!canManageStructure(me) && (
+        <Card style={styles.attachCard}>
+          <Text style={styles.attachTitle}>{t('structure.myAttachment')}</Text>
+          {([
+            [t('structure.units'), me?.unitNames],
+            [t('structure.localities'), me?.cityNames],
+            [t('structure.zones'), me?.zoneNames],
+            [t('structure.countries'), me?.countryNames],
+          ] as [string, string[] | null | undefined][])
+            .filter(([, names]) => names && names.length > 0)
+            .map(([label, names]) => (
+              <View key={label} style={styles.attachRow}>
+                <Text style={styles.attachLabel}>{label}</Text>
+                <Text style={styles.attachNames}>{(names ?? []).join(', ')}</Text>
+              </View>
+            ))}
+          {!(me?.unitNames?.length || me?.cityNames?.length || me?.zoneNames?.length || me?.countryNames?.length) && (
+            <Text style={styles.empty}>{t('structure.attachEmpty')}</Text>
+          )}
+        </Card>
+      )}
+
       <View style={styles.segmentRow}>
         {(['zones', 'localities', 'units'] as Level[]).map((lv) => (
           <Pressable key={lv} onPress={() => setLevel(lv)} style={[styles.segment, level === lv && styles.segmentActive]}>
@@ -127,10 +157,19 @@ export default function StructureScreen() {
           iconLeft={<Ionicons name="add" size={18} color={colors.mossDeep} />}
         />
       )}
+      {canPropose && (
+        <Button
+          label={t('structure.requestCreate')}
+          variant="soft"
+          onPress={() => router.push('/demandes')}
+          style={{ marginTop: 12 }}
+          iconLeft={<Ionicons name="add" size={18} color={colors.mossDeep} />}
+        />
+      )}
 
       <View style={{ gap: 8, marginTop: 12 }}>
         {rows.map((r: any) => (
-          <Card key={r.id} style={styles.itemCard} onPress={canAdd ? () => setEditing({ level, item: r }) : undefined}>
+          <Card key={r.id} style={styles.itemCard} onPress={canEdit ? () => setEditing({ level, item: r }) : undefined}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles.itemName}>{r.name}</Text>
               <Text style={styles.itemMeta}>
@@ -139,12 +178,24 @@ export default function StructureScreen() {
                 {level === 'units' && t('structure.unitMeta', { locality: r.localityName, code: r.joinCode })}
               </Text>
             </View>
-            {canAdd && <Ionicons name="chevron-forward" size={16} color={colors.ink3} />}
+            {canEdit && <Ionicons name="chevron-forward" size={16} color={colors.ink3} />}
           </Card>
         ))}
-        {rows.length === 0 && (
+        {/* Niveau Région gaté par rang (lecture admin dès SENIOR) : un dirigeant de ville a une
+            liste vide — on affiche sa/ses région(s) de rattachement en LECTURE SEULE (info). */}
+        {rows.length === 0 && level === 'zones' && (me?.zoneNames?.length ?? 0) > 0 ? (
+          (me?.zoneNames ?? []).map((name) => (
+            <Card key={name} style={styles.itemCard}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.itemName}>{name}</Text>
+                <Text style={styles.itemMeta}>{t('structure.attachedRegionReadOnly')}</Text>
+              </View>
+              <Ionicons name="lock-closed-outline" size={14} color={colors.ink3} />
+            </Card>
+          ))
+        ) : rows.length === 0 ? (
           <Text style={styles.empty}>{t('structure.emptyPerimeter')}</Text>
-        )}
+        ) : null}
       </View>
 
       <StructureFormModal
@@ -266,6 +317,11 @@ function StructureFormModal({
 
 const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2 },
+  attachCard: { paddingHorizontal: 16, paddingVertical: 14, marginTop: 14 },
+  attachTitle: { fontFamily: fonts.serif, fontSize: 17, color: colors.ink, marginBottom: 6 },
+  attachRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 6 },
+  attachLabel: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, width: 90 },
+  attachNames: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
   title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4 },
   subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4 },
   segmentRow: { flexDirection: 'row', gap: 8, marginTop: 16 },

@@ -118,15 +118,21 @@ export async function deleteUnit(id: string): Promise<void> {
 import type { ModuleRole } from './authApi';
 
 export interface InviteUserRequest {
-  email: string;
+  /** A1 (RG-ID-02) — email de contact facultatif ; identifiant OU email requis. */
+  email?: string;
+  /** A1 (RG-ID-01) — identifiant de connexion attribué (type pveigne@shephr.org). */
+  username?: string;
   fullName: string;
   donationRole?: ModuleRole;
   donationUnitId?: string;
+  /** 21/07 — invitation de DIRIGEANTS (module Goals) : plus jamais de MEMBRE depuis le mobile. */
+  goalRole?: ModuleRole;
+  goalUnitId?: string;
 }
 
 export interface InviteUserResponse {
   userId: string;
-  email: string;
+  email: string | null;
   invitationToken: string;
   invitationShortCode: string;
 }
@@ -136,5 +142,36 @@ export async function inviteUser(payload: InviteUserRequest): Promise<InviteUser
     '/api/church/admin/users/invite',
     payload,
   );
+  return data;
+}
+
+// ---------------- Membres (Lot S1 — 21/07) ----------------
+// GET /api/church/admin/users — route `authenticated()`, liste SCOPÉE côté backend (sous-arbre
+// superviseur + unités visibles ; LEADER/SECRETARIAT = ministère ; MEMBRE = lui-même).
+
+export interface AdminUserResponse {
+  id: string;
+  email: string | null;
+  /** A1 — identifiant de connexion (null pour les comptes historiques). */
+  username: string | null;
+  fullName: string;
+  superAdmin: boolean;
+  supervisorId: string | null;
+  donationRole: ModuleRole | null;
+  donationUnitId: string | null;
+  goalRole: ModuleRole | null;
+  goalUnitId: string | null;
+  active: boolean;
+}
+
+export interface UsersPage {
+  content: AdminUserResponse[];
+  totalElements: number;
+}
+
+export async function listUsers(
+  params: { active?: boolean; page?: number; size?: number } = {},
+): Promise<UsersPage> {
+  const { data } = await apiClient.get<UsersPage>('/api/church/admin/users', { params });
   return data;
 }

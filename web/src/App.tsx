@@ -7,6 +7,7 @@ import { LandingPage } from './pages/Landing';
 import { LoginPage } from './pages/Login';
 import { AcceptInvitationPage } from './pages/AcceptInvitation';
 import { ActivateAccountPage } from './pages/ActivateAccount';
+import { DeleteAccountPage } from './pages/DeleteAccount';
 import { DashboardPage } from './pages/Dashboard';
 import { DonationsPage } from './pages/Donations';
 import { GoalsPage } from './pages/Goals';
@@ -17,6 +18,8 @@ import { ZonesPage } from './pages/Zones';
 import { LocalitesPage } from './pages/Localites';
 import { UnitesPage } from './pages/Unites';
 import { ExportsPage } from './pages/Exports';
+import { HierarchyPage } from './pages/Hierarchy';
+import { RequestsPage } from './pages/Requests';
 import { Placeholder } from './pages/Placeholder';
 import { FEATURES } from './config/features';
 
@@ -45,6 +48,9 @@ export function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/activate" element={<ActivateAccountPage />} />
               <Route path="/invitation/:token" element={<AcceptInvitationPage />} />
+              {/* Page publique exigée par Google Play : demande de suppression de compte. */}
+              <Route path="/delete-account" element={<DeleteAccountPage />} />
+              <Route path="/supprimer-compte" element={<DeleteAccountPage />} />
               <Route element={<AppShell />}>
                 {FEATURES.donations ? (
                   <>
@@ -68,17 +74,8 @@ export function App() {
                 <Route path="/structure/zones" element={<ZonesPage />} />
                 <Route path="/structure/localites" element={<LocalitesPage />} />
                 <Route path="/structure/unites" element={<UnitesPage />} />
-                <Route
-                  path="/hierarchy"
-                  element={
-                    <Placeholder
-                      titleKey="placeholder.hierarchyTitle"
-                      crumbKeys={['common.brand', 'placeholder.hierarchyTitle']}
-                      descriptionKey="placeholder.hierarchyDescription"
-                      endpointHint="GET /api/church/admin/leaders/{assignment|hierarchy}"
-                    />
-                  }
-                />
+                <Route path="/hierarchy" element={<HierarchyPage />} />
+                <Route path="/requests" element={<RequestsPage />} />
                 {FEATURES.donations ? (
                   <Route path="/exports" element={<ExportsPage />} />
                 ) : (

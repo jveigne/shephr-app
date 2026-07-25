@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import {
@@ -36,6 +37,7 @@ export function LocalitesPage() {
   const queryClient = useQueryClient();
   const { push } = useToast();
   const { me } = useAuth();
+  const navigate = useNavigate();
   const ministryId = me?.ministryId ?? null;
   // Chantier B : la Ville se crée sous une Région (les teams sont dissoutes) — managers de structure.
   const canWrite = canManageLocalities(me);
@@ -104,15 +106,27 @@ export function LocalitesPage() {
         title={t('localities.title')}
         crumbs={[t('common.brand'), t('nav.structure'), t('localities.title')]}
         actions={
-          <Button
-            variant="primary"
-            iconL={<Icon name="plus" size={15} />}
-            disabled={!canCreate}
-            title={canCreate ? undefined : t('localities.noZoneHint')}
-            onClick={() => setCreating(true)}
-          >
-            {t('localities.newLocality')}
-          </Button>
+          // RG-DS-05 (22/07) : la création directe est réservée au SUPER_ADMIN — les dirigeants
+          // déposent une demande validée par le secrétariat (page Demandes).
+          me?.superAdmin ? (
+            <Button
+              variant="primary"
+              iconL={<Icon name="plus" size={15} />}
+              disabled={!canCreate}
+              title={canCreate ? undefined : t('localities.noZoneHint')}
+              onClick={() => setCreating(true)}
+            >
+              {t('localities.newLocality')}
+            </Button>
+          ) : canWrite ? (
+            <Button
+              variant="primary"
+              iconL={<Icon name="plus" size={15} />}
+              onClick={() => navigate('/requests')}
+            >
+              {t('localities.requestLocality')}
+            </Button>
+          ) : undefined
         }
       />
 

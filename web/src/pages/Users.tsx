@@ -61,6 +61,11 @@ const cityIdOf = (u: AdminUserResponse, m: ModuleKind) => (m === 'goal' ? u.goal
 const countryIdsOf = (u: AdminUserResponse, m: ModuleKind) =>
   m === 'goal' ? u.goalCountryIds : u.donationCountryIds;
 
+// 21/07 (décision JP) : le module Goals est réservé aux dirigeants — « Membre » n'est pas
+// proposable pour ce module (le backend le refuse aussi hors super-admin).
+const conferrableRoles = (me: MeResponse | null, m: ModuleKind): ModuleRole[] =>
+  assignableRoles(me).filter((r) => (me?.superAdmin ?? false) || m !== 'goal' || r !== 'MEMBRE');
+
 type Filters = { role: ModuleRole | 'all'; active: 'all' | 'true' | 'false'; search: string };
 const DEFAULT: Filters = { role: 'all', active: 'all', search: '' };
 
@@ -148,7 +153,7 @@ export function UsersPage() {
     }
     if (!filters.search) return all;
     const q = filters.search.toLowerCase();
-    return all.filter((r) => `${r.fullName} ${r.email}`.toLowerCase().includes(q));
+    return all.filter((r) => `${r.fullName} ${r.email ?? ''} ${r.username ?? ''}`.toLowerCase().includes(q));
   }, [usersQ.data, filters.search, filters.role]);
 
   const perimeterLabel = (u: AdminUserResponse, m: ModuleKind): string => {
@@ -174,7 +179,7 @@ export function UsersPage() {
           </div>
           <div>
             <div style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{r.fullName}</div>
-            <div style={{ fontSize: 12, color: 'var(--ink-500)' }}>{r.email}</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-500)' }}>{r.email ?? r.username}</div>
           </div>
         </div>
       ),
@@ -494,10 +499,11 @@ function InviteModal({
 }) {
   const { t } = useTranslation();
   const moduleLabel = (m: ModuleKind) => t(m === 'goal' ? 'users.moduleGoals' : 'users.moduleDonations');
-  const roles = assignableRoles(me);
   const defaultSupervisor = me && !me.superAdmin ? me.id : '';
   const [module, setModule] = useState<ModuleKind>(VISIBLE_MODULES[0]);
   const [email, setEmail] = useState('');
+  // A1 (RG-ID-01) — identifiant de connexion attribué (email désormais facultatif).
+  const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<ModuleRole | ''>('');
   const [unitId, setUnitId] = useState('');
@@ -508,12 +514,14 @@ function InviteModal({
 
   useEffect(() => {
     if (open) {
-      setModule(VISIBLE_MODULES[0]); setEmail(''); setFullName(''); setRole('');
+      setModule(VISIBLE_MODULES[0]); setEmail(''); setUsername(''); setFullName(''); setRole('');
       setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); setSupervisorId(defaultSupervisor);
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const valid = email.includes('@') && fullName.trim().length > 0 && perimeterValid(role, unitId, zoneId, cityId, countryIds);
+  // A1 (RG-ID-02) : identifiant OU email requis (au moins un).
+  const valid = (username.includes('@') || email.includes('@'))
+    && fullName.trim().length > 0 && perimeterValid(role, unitId, zoneId, cityId, countryIds);
 
   return (
     <Modal
@@ -532,7 +540,9 @@ function InviteModal({
               variant="primary"
               disabled={!valid || submitting}
               onClick={() => onSubmit({
-                email: email.trim(), fullName: fullName.trim(),
+                email: email.trim() || undefined,
+                username: username.trim() || undefined,
+                fullName: fullName.trim(),
                 supervisorId: supervisorId || undefined,
                 ...buildAttachment(module, role, unitId, zoneId, cityId, countryIds),
               })}
@@ -568,14 +578,15 @@ function InviteModal({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
             <Field label={t('users.fullName')}><Input placeholder={t('users.fullNamePlaceholder')} value={fullName} onChange={(e) => setFullName(e.target.value)} /></Field>
-            <Field label={t('users.emailLabel')}><Input type="email" placeholder={t('users.emailPlaceholder')} value={email} onChange={(e) => setEmail(e.target.value)} icon={<Icon name="mail" size={14} />} /></Field>
+            <Field label={t('users.usernameLabel')} hint={t('users.usernameHint')}><Input placeholder={t('users.usernamePlaceholder')} value={username} onChange={(e) => setUsername(e.target.value)} /></Field>
+            <Field label={t('users.emailOptionalLabel')}><Input type="email" placeholder={t('users.emailPlaceholder')} value={email} onChange={(e) => setEmail(e.target.value)} icon={<Icon name="mail" size={14} />} /></Field>
           </div>
           <SupervisorField me={me} people={people} value={supervisorId} onChange={setSupervisorId} />
           <ModuleField module={module} onChange={(m) => { setModule(m); setRole(''); setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); }} />
           <Field label={t('users.roleConferred', { module: moduleLabel(module) })}>
             <Select value={role} onChange={(e) => { setRole(e.target.value as ModuleRole | ''); setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); }}>
               <option value="">{t('common.choose')}</option>
-              {roles.map((r) => <option key={r} value={r}>{t(`roles.${r}`)}</option>)}
+              {conferrableRoles(me, module).map((r) => <option key={r} value={r}>{t(`roles.${r}`)}</option>)}
             </Select>
           </Field>
           <PerimeterFields role={role} unitId={unitId} zoneId={zoneId} cityId={cityId} countryIds={countryIds} units={units} zones={zones} cities={cities} countries={countries}
@@ -603,7 +614,6 @@ function EditModal({
 }) {
   const { t } = useTranslation();
   const moduleLabel = (m: ModuleKind) => t(m === 'goal' ? 'users.moduleGoals' : 'users.moduleDonations');
-  const roles = assignableRoles(me);
   const [module, setModule] = useState<ModuleKind>(VISIBLE_MODULES[0]);
   const [role, setRole] = useState<ModuleRole | ''>('');
   const [unitId, setUnitId] = useState('');
@@ -664,7 +674,7 @@ function EditModal({
         <Field label={t('users.roleConferred', { module: moduleLabel(module) })}>
           <Select value={role} onChange={(e) => { setRole(e.target.value as ModuleRole | ''); setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); }}>
             <option value="">{t('common.noneOption')}</option>
-            {roles.map((r) => <option key={r} value={r}>{t(`roles.${r}`)}</option>)}
+            {conferrableRoles(me, module).map((r) => <option key={r} value={r}>{t(`roles.${r}`)}</option>)}
           </Select>
         </Field>
         <PerimeterFields role={role} unitId={unitId} zoneId={zoneId} cityId={cityId} countryIds={countryIds} units={units} zones={zones} cities={cities} countries={countries}

@@ -140,9 +140,9 @@ export default function ProfileScreen() {
           value={language === 'fr' ? 'Français' : 'English'}
           onPress={() => setLanguage(language === 'fr' ? 'en' : 'fr')}
         />
-        <Row icon="notifications-outline" label={t('profile.notifications')} value={t('profile.notificationsValue')} />
+{/*        <Row icon="notifications-outline" label={t('profile.notifications')} value={t('profile.notificationsValue')} />
         <Row icon="receipt-outline" label={t('profile.receipts')} value={t('profile.receiptsValue')} />
-        <Row icon="shield-outline" label={t('profile.privacy')} value={t('profile.privacyValue')} last />
+        <Row icon="shield-outline" label={t('profile.privacy')} value={t('profile.privacyValue')} last />*/}
       </Card>
 
       <Pressable onPress={confirmLogout} style={styles.logout}>

@@ -2,7 +2,7 @@
   "expo": {
     "name": "shephr",
     "slug": "shephr",
-    "version": "0.1.2",
+    "version": "0.1.4",
     "sdkVersion": "54.0.0",
     "extra": {
       "API_URL": "http://localhost:8080",

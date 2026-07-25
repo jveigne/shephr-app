@@ -64,6 +64,7 @@ const NAV: { sectionKey: string; items: NavItem[] }[] = [
       },
       { id: 'users', labelKey: 'nav.users', icon: 'users', to: '/users' },
       { id: 'hierarchy', labelKey: 'nav.hierarchy', icon: 'hierarchy', to: '/hierarchy' },
+      { id: 'requests', labelKey: 'nav.requests', icon: 'inbox', to: '/requests' },
     ],
   },
   {

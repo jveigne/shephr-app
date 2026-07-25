@@ -79,6 +79,27 @@
       "tagline": "The management platform for your ministry."
     }
   },
+  "deleteAccount": {
+    "title": "Delete your Shephr account",
+    "intro": "You can request the deletion of your Shephr account and the data associated with it at any time. This page explains how to proceed, what gets deleted and within which timeframe.",
+    "howTitle": "How to request deletion",
+    "step1": "Send us an email (button below) mentioning the identifier you use to sign in to the app.",
+    "step2": "If possible, include the name of your ministry or church to help us find your account.",
+    "step3": "We confirm that your request has been received, then delete your account and the associated data.",
+    "cta": "Request the deletion of my account",
+    "or": "or write to us at",
+    "mailSubject": "Deletion of my Shephr account",
+    "mailBody": "Hello,\n\nI would like my Shephr account and the associated data to be deleted.\n\nSign-in identifier: \nMinistry / church: \n\nThank you.",
+    "deletedTitle": "Data that gets deleted",
+    "deleted": {
+      "profile": "Your profile: name, sign-in identifier, contact details and password.",
+      "assignments": "Your attachments to the organization (ministry, region, city, assembly) and your roles.",
+      "activity": "Data linked to your activity in the app (declared goals, member care records, preferences)."
+    },
+    "retentionTitle": "Timeframe and retention",
+    "retentionDelay": "Requests are processed within 30 days at most. Once the deletion is done, your account can no longer be accessed and your data is removed from our active systems.",
+    "retentionLegal": "Some data may be kept longer when required by law (for example donation records, for accounting obligations), then deleted once the legal retention period ends."
+  },
   "common": {
     "brand": "shephr",
     "administration": "Administration",
@@ -126,7 +147,8 @@
     "deleteTitle": "Confirm deletion",
     "deleteConfirm": "Are you sure you want to delete {{label}}? This action cannot be undone.",
     "error": "Error",
-    "retryLater": "Please try again later."
+    "retryLater": "Please try again later.",
+    "failure": "Failure"
   },
   "ui": {
     "noResult": "No results",
@@ -153,11 +175,12 @@
     "zones": "Regions",
     "localites": "Cities",
     "unites": "Assemblies",
-    "users": "Users",
+    "users": "Members",
     "hierarchy": "Leader hierarchy",
     "exports": "Exports",
     "settings": "Settings",
-    "language": "Language"
+    "language": "Language",
+    "requests": "Requests"
   },
   "sidebar": {
     "logout": "Log out",
@@ -199,8 +222,8 @@
     "quote": "“Give with joy, receive with gratitude.”",
     "quoteHighlight": "receive with gratitude.",
     "quoteSub": "shephr supports your ministry through the collection, reading and storytelling of generosity.",
-    "emailLabel": "Email address",
-    "emailPlaceholder": "your@email.com",
+    "emailLabel": "Email or username",
+    "emailPlaceholder": "your@email.com or pveigne@shephr.org",
     "passwordLabel": "Password",
     "rememberMe": "Remember me",
     "forgotPassword": "Forgot password?",
@@ -234,14 +257,42 @@
     "activatedToast": "Account activated",
     "activatedMsg": "Welcome to shephr.",
     "activateFailed": "Unable to activate the account.",
-    "invalidExpired": "This invitation is invalid or has expired."
+    "invalidExpired": "This invitation is invalid or has expired.",
+    "usernameLabel": "Login username",
+    "phoneLabel": "Phone number",
+    "phoneHint": "Required — with the country dial code.",
+    "phonePlaceholder": "7XXX XXX XXX",
+    "contactEmailLabel": "Email (optional)",
+    "contactEmailPlaceholder": "you@example.com",
+    "phoneRequired": "The phone number is required.",
+    "countryPlaceholder": "— Country —",
+    "countryRequired": "Choose your country (dial code)."
   },
   "placeholder": {
     "inPreparation": "Screen in preparation",
-    "hierarchyTitle": "Leader hierarchy",
-    "hierarchyDescription": "Leader ↔ assembly assignments and senior-junior supervision.",
     "settingsTitle": "Settings",
     "settingsDescription": "Profile, notifications, security, currencies and categories."
+  },
+  "hierarchy": {
+    "title": "Leader hierarchy",
+    "introSubtree": "Your leadership: your leaders, their assemblies and the members of those assemblies.",
+    "introChain": "Your reporting chain: your leaders up to the root, and your assembly.",
+    "introMinistry": "The ministry's leadership trees.",
+    "leadersCount_one": "{{count}} leader",
+    "leadersCount_other": "{{count}} leaders",
+    "unitsCount_one": "{{count}} assembly",
+    "unitsCount_other": "{{count}} assemblies",
+    "membersCount_one": "{{count}} member",
+    "membersCount_other": "{{count}} members",
+    "unitNoMembers": "No attached member",
+    "unnamedUnit": "Assembly",
+    "you": "You",
+    "empty": "No hierarchy to display",
+    "emptyHint": "No leader or assembly in your scope yet.",
+    "loadError": "Could not load the hierarchy.",
+    "needsLeader": "Leader needed",
+    "unassignedTitle": "Assemblies without a leader",
+    "unassignedHint": "Created (often via an approved request) but with no attached leader — appoint one via Members (invite or manage)."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -381,7 +432,8 @@
     "nameLabel": "Region name",
     "namePlaceholder": "South region…",
     "descPlaceholder": "Description…",
-    "deleteLabel": "the region “{{name}}”"
+    "deleteLabel": "the region “{{name}}”",
+    "requestZone": "Request a region"
   },
   "localities": {
     "title": "Cities",
@@ -410,7 +462,8 @@
     "newSub": "Attach the city to a region in your scope.",
     "nameLabel": "City name",
     "namePlaceholder": "London…",
-    "deleteLabel": "the city “{{name}}”"
+    "deleteLabel": "the city “{{name}}”",
+    "requestLocality": "Request a city"
   },
   "units": {
     "title": "Assemblies",
@@ -439,13 +492,14 @@
     "newSub": "Attach the assembly to a city in your scope.",
     "nameLabel": "Assembly name",
     "namePlaceholder": "London Center…",
-    "deleteLabel": "the assembly “{{name}}”"
+    "deleteLabel": "the assembly “{{name}}”",
+    "requestUnit": "Request an assembly"
   },
   "users": {
-    "title": "Users",
+    "title": "Members",
     "moduleGoals": "Goals",
     "moduleDonations": "Donations",
-    "invite": "Invite a user",
+    "invite": "Invite a member",
     "intro": "Leaders and members within your scope. Invitations are shared by link; the roles you can grant are limited to those strictly below yours.",
     "searchPlaceholder": "Name or email…",
     "colName": "Name",
@@ -453,14 +507,14 @@
     "colRoleSingle": "Role ({{module}})",
     "roleFilter": "Role",
     "colPerimeter": "Scope",
-    "count_one": "{{count}} user",
-    "count_other": "{{count}} users",
+    "count_one": "{{count}} member",
+    "count_other": "{{count}} members",
     "roleWithModule": "{{module}}: {{role}}",
     "perimeterCountry": "Countries",
     "perimeterZone": "Region: {{name}}",
     "manage": "Manage",
     "inviteRefused": "Invitation refused",
-    "updated": "User updated",
+    "updated": "Member updated",
     "updateRefused": "Update refused",
     "createFailed": "Creation failed.",
     "updateFailed": "Update failed.",
@@ -502,12 +556,16 @@
     "deleteTitle": "Permanently delete?",
     "deleteWarning": "Permanent deletion from the database. Blocked if a region/assembly the person leads would be left without any other leader (reassign first), or if data is linked.",
     "confirmDelete": "Delete permanently",
-    "deleted": "User deleted",
+    "deleted": "Member deleted",
     "deleteRefused": "Deletion refused",
     "deleteFailed": "Deletion failed",
     "perimeterCity": "City · {{city}}",
     "cityAttachment": "Attached city",
-    "cityAttachmentHint": "The leader manages every house assembly of their city."
+    "cityAttachmentHint": "The leader manages every house assembly of their city.",
+    "usernameLabel": "Login username",
+    "usernameHint": "Assigned by you (e.g. first.last@shephr.org) — it is not an email.",
+    "usernamePlaceholder": "first.last@shephr.org",
+    "emailOptionalLabel": "Email (optional)"
   },
   "memberCare": {
     "title": "Member care",
@@ -764,5 +822,69 @@
     "submittedRatio": "{{submitted}}/{{total}} submitted · {{percent}}%",
     "achievedInline": "given {{value}}",
     "nationTotal": "Nation grand total"
+  },
+  "requests": {
+    "title": "Structure requests",
+    "intro": "Propose a creation — region, city or assembly, whatever your level. If the attachment does not exist yet, it will be created with your request. The secretariat validates before anything appears in the structure.",
+    "newRequest": "New request",
+    "newRequestSub": "Choose the type, the attachment, then the name to create.",
+    "typeLabel": "What do you want to create?",
+    "parentLabel": {
+      "REGION": "In which country?",
+      "CITY": "In which region?",
+      "ASSEMBLY": "In which city?"
+    },
+    "existingList": "Already in “{{parent}}”: {{list}}.",
+    "existingNone": "Nothing exists in “{{parent}}” yet.",
+    "nameLabel": "Requested name",
+    "namePlaceholder": "Name of the new entity",
+    "submit": "Submit the request",
+    "submitting": "Submitting…",
+    "createdToast": "Request “{{name}}” submitted",
+    "createRefused": "Submission refused",
+    "cancelledToast": "Request cancelled",
+    "cancel": "Cancel the request",
+    "colDate": "Date",
+    "colType": "Type",
+    "colName": "Requested name",
+    "colParent": "Attachment",
+    "colRequester": "Requester",
+    "colStatus": "Status",
+    "status": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "CANCELLED": "Cancelled"
+    },
+    "types": {
+      "REGION": "Region",
+      "CITY": "City",
+      "ASSEMBLY": "Assembly"
+    },
+    "toValidate": "To validate (secretariat)",
+    "mine": "My requests",
+    "noPending": "No pending request",
+    "noMine": "No request",
+    "noMineHint": "Submit your first request with the “New request” button.",
+    "notEligible": "Your role does not allow proposing a creation.",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approvedToast": "“{{name}}” created and request approved",
+    "rejectedToast": "Request “{{name}}” rejected",
+    "rejectTitle": "Reject “{{name}}”?",
+    "rejectSub": "The reason will be visible to the requester in their request history.",
+    "rejectReasonLabel": "Rejection reason",
+    "rejectReasonPlaceholder": "E.g.: duplicate of an existing structure…",
+    "rejectConfirm": "Reject the request",
+    "parentPendingBadge": "to create",
+    "approveChainHint": "Approving will also create the “to create” parents of the chain.",
+    "rejectChainHint": "Rejecting this link will also reject the requests that depend on it.",
+    "toCreate": "To create: {{name}}",
+    "changePick": "Change",
+    "searchPlaceholder": "Search…",
+    "createOption": "Create “{{name}}”",
+    "noOption": "No item — type a name to create it.",
+    "chainNote": "This request will create {{count}} linked items — the secretariat validates the chain in one decision.",
+    "entityCreated": "Created in the structure — visible in your scope."
   }
 }

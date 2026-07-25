@@ -46,6 +46,25 @@ export function canManageStructure(me: MeResponse | null): boolean {
   return me.superAdmin || managerRank(me) >= ROLE_RANK.DIRIGEANT_UNITE;
 }
 
+/** Peut gérer les MEMBRES (inviter/administrer dans son périmètre) : tout manager ou superAdmin. */
+export function canManageUsers(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return me.superAdmin || managerRank(me) >= ROLE_RANK.DIRIGEANT_UNITE;
+}
+
+/**
+ * Rôles DIRIGEANTS conférables à l'invitation (module GOALS) : du DIRIGEANT_UNITE au rang de
+ * l'acteur, plafonné à DIRIGEANT_SENIOR hors superAdmin (COORDINATEUR réservé au superAdmin).
+ * JAMAIS « MEMBRE » : l'app Goals est réservée aux dirigeants (décision JP 21/07).
+ */
+export function assignableLeaderRoles(me: MeResponse | null): ModuleRole[] {
+  if (!me) return [];
+  const LEADERS: ModuleRole[] = ['DIRIGEANT_UNITE', 'DIRIGEANT', 'DIRIGEANT_SENIOR', 'DIRIGEANT_COORDINATEUR'];
+  if (me.superAdmin) return LEADERS;
+  const cap = Math.min(managerRank(me), ROLE_RANK.DIRIGEANT_SENIOR);
+  return LEADERS.filter((r) => ROLE_RANK[r] <= cap);
+}
+
 /** Peut gérer les zones (créer une zone) : COORDINATEUR (ses pays) ou superAdmin. */
 export function canManageZones(me: MeResponse | null): boolean {
   if (!me) return false;
@@ -71,7 +90,9 @@ export interface AuthResponse {
 // Mirrors com.excellence.back.donation.auth.dto.MeResponse
 export interface MeResponse {
   id: string;
-  email: string;
+  email: string | null;
+  /** A1 — identifiant de connexion (null pour les comptes historiques). */
+  username: string | null;
   fullName: string;
   /** Langue préférée du compte ('FR' | 'EN' | …) ; null si non définie côté backend. */
   language?: string | null;
@@ -166,7 +187,9 @@ export async function register(payload: RegisterRequest): Promise<AuthResponse> 
 
 // --- Activation par CODE COURT (Lot 3.4, UC-TRV-10) — endpoints publics ---------------
 export interface InvitationPreview {
-  email: string;
+  email: string | null;
+  /** A1 — identifiant de connexion (comptes créés sans email). */
+  username: string | null;
   fullName: string;
   ministryName: string | null;
 }
@@ -179,11 +202,18 @@ export async function previewInvitationByCode(shortCode: string): Promise<Invita
   return data;
 }
 
-/** Active le compte par code court : définit le mot de passe, active, et connecte (renvoie token+user). */
-export async function acceptInvitationByCode(shortCode: string, password: string): Promise<AuthResponse> {
+/**
+ * Active le compte par code court (A1 — RG-ID-04) : mot de passe + TÉLÉPHONE obligatoire
+ * (avec indicatif) + email facultatif ; active et connecte (renvoie token+user).
+ */
+export async function acceptInvitationByCode(
+  shortCode: string,
+  password: string,
+  contact: { phoneNumber: string; countryCode?: string; email?: string },
+): Promise<AuthResponse> {
   const { data } = await apiClient.post<AuthResponse>(
     '/api/cmfipraise/auth/invitation/code/accept',
-    { shortCode, password },
+    { shortCode, password, ...contact },
   );
   return data;
 }

@@ -31,7 +31,9 @@ export type Language = 'FR' | 'EN';
 // Mirrors com.excellence.back.donation.auth.dto.MeResponse
 export interface MeResponse {
   id: string;
-  email: string;
+  email: string | null;
+  /** A1 — identifiant de connexion (null pour les comptes historiques). */
+  username: string | null;
   fullName: string;
   superAdmin: boolean;
   donationRole: ModuleRole | null;
@@ -207,7 +209,9 @@ export async function fetchMe() {
 
 // --- Invitation (Lot 3.1) — acceptation publique d'une invitation ---
 export interface InvitationPreview {
-  email: string;
+  email: string | null;
+  /** A1 — identifiant de connexion (comptes créés sans email). */
+  username: string | null;
   fullName: string;
   ministryName: string | null;
 }
@@ -219,7 +223,11 @@ export async function previewInvitation(token: string) {
   return data;
 }
 
-export async function acceptInvitation(payload: { token: string; password: string }) {
+export async function acceptInvitation(payload: {
+  token: string; password: string;
+  // A1 (RG-ID-04) — coordonnées fournies à l'activation (téléphone requis côté formulaire).
+  phoneNumber?: string; countryCode?: string; email?: string;
+}) {
   const { data } = await apiClient.post<AuthResponse>(
     '/api/cmfipraise/auth/invitation/accept',
     payload,
