@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
+  fetchMyMemberPledges,
   getActiveGoal,
   getMyPledges,
   getMyProgress,
@@ -61,7 +62,12 @@ export function progressTotal(items: ProgressResponse[]): number {
   return latest.amount ?? latest.count ?? 0;
 }
 
-export function useGoalsData(selectedYear?: number | null): GoalsData {
+/**
+ * Feature A — mode « objectifs personnels du membre » : mêmes lignes, même écran, mais les
+ * engagements viennent de `/goals/member/me/pledges` (niveau MEMBER) au lieu des engagements
+ * de l'assemblée, et il n'y a pas d'avancement (l'avancement se déclare au niveau assemblée).
+ */
+export function useGoalsData(selectedYear?: number | null, member = false): GoalsData {
   const [goal, setGoal] = useState<ActiveGoal | null>(null);
   const [pledges, setPledges] = useState<PledgeResponse[]>([]);
   const [progressByPledge, setProgressByPledge] = useState<
@@ -76,7 +82,10 @@ export function useGoalsData(selectedYear?: number | null): GoalsData {
       // Annualisation Lot 4.6 : année sélectionnée (défaut = année courante du Goal).
       const y = selectedYear ?? g.currentYear;
       // Lot 4.3 : un seul appel /me/progress remplace un listProgress par pledge.
-      const [ps, progress] = await Promise.all([getMyPledges(y), getMyProgress(y)]);
+      const [ps, progress] = await Promise.all([
+        member ? fetchMyMemberPledges(y) : getMyPledges(y),
+        member ? Promise.resolve<ProgressResponse[]>([]) : getMyProgress(y),
+      ]);
       const byPledge: Record<string, ProgressResponse[]> = {};
       for (const p of progress) {
         (byPledge[p.pledgeId] ??= []).push(p);
@@ -90,7 +99,7 @@ export function useGoalsData(selectedYear?: number | null): GoalsData {
     } finally {
       setLoading(false);
     }
-  }, [selectedYear]);
+  }, [selectedYear, member]);
 
   useEffect(() => {
     reload();

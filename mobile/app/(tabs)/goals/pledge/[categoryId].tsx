@@ -24,6 +24,7 @@ import { currencySymbol } from '../../../../utils/format';
 import { notify } from '../../../../utils/dialogs';
 import {
   createPledge,
+  saveMemberPledge,
   updatePledge,
   type PledgeResponse,
 } from '../../../../services/goalsApi';
@@ -33,9 +34,16 @@ const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallb
 export default function PledgeEditScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { categoryId, year: yearParam } = useLocalSearchParams<{ categoryId: string; year?: string }>();
+  const { categoryId, year: yearParam, scope } = useLocalSearchParams<{
+    categoryId: string;
+    year?: string;
+    scope?: string;
+  }>();
   const year = yearParam ? Number(yearParam) : null;
-  const { goal, lines, loading, reload } = useGoalsData(year);
+  // Feature A — `scope=member` : même écran de saisie, mais l'objectif est PERSONNEL
+  // (niveau MEMBER) et non l'engagement de l'assemblée.
+  const member = scope === 'member';
+  const { goal, lines, loading, reload } = useGoalsData(year, member);
 
   const line = lines.find((l) => l.category.id === categoryId) ?? null;
   const category = line?.category ?? null;
@@ -93,6 +101,7 @@ export default function PledgeEditScreen() {
           currency={goal?.defaultCurrency ?? 'EUR'}
           pledge={pledge}
           locked={locked}
+          member={member}
           onSaved={async () => {
             await reload();
             router.back();
@@ -112,6 +121,7 @@ function TargetSection({
   currency,
   pledge,
   locked,
+  member = false,
   onSaved,
 }: {
   categoryId: string;
@@ -121,6 +131,7 @@ function TargetSection({
   currency: string;
   pledge: PledgeResponse | null;
   locked: boolean;
+  member?: boolean;
   onSaved: () => Promise<void>;
 }) {
   const { t } = useLanguage();
@@ -138,7 +149,10 @@ function TargetSection({
     setSaving(true);
     try {
       const payload = isCurrency ? { targetAmount: num } : { targetCount: Math.round(num) };
-      if (pledge) {
+      if (member) {
+        // Upsert côté serveur : un seul appel couvre création et modification.
+        await saveMemberPledge({ categoryId, year, ...payload });
+      } else if (pledge) {
         await updatePledge(pledge.id, payload);
       } else {
         await createPledge({ categoryId, year, ...payload });

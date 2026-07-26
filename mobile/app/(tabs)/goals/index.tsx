@@ -360,14 +360,22 @@ export function YearSelector({
   );
 }
 
-function GoalLineCard({
+/**
+ * Carte d'une catégorie — partagée par la vue assemblée (dirigeant) et la vue « Mes objectifs »
+ * (membre), pour un design identique. {@code showProgress=false} masque le couple
+ * « Engagé / Versé » et la barre : un membre déclare un objectif, l'avancement reste au
+ * niveau de l'assemblée.
+ */
+export function GoalLineCard({
   line,
   currency,
   onPress,
+  showProgress = true,
 }: {
   line: GoalLine;
   currency: string;
   onPress: () => void;
+  showProgress?: boolean;
 }) {
   const { t } = useLanguage();
   const meta = goalCategoryMeta(line.category.code);
@@ -403,7 +411,18 @@ function GoalLineCard({
         {pledge?.locked && <Ionicons name="lock-closed" size={14} color={colors.ink3} />}
         <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
       </View>
-      {pledge != null && (
+      {pledge != null && !showProgress && (
+        <>
+          <HandDivider style={{ marginVertical: 10 }} />
+          <View style={styles.lineFooter}>
+            <View>
+              <Label>{t('goals.pledged')}</Label>
+              <Text style={styles.lineValue}>{target != null ? fmtValue(target) : '—'}</Text>
+            </View>
+          </View>
+        </>
+      )}
+      {pledge != null && showProgress && (
         <>
           <HandDivider style={{ marginVertical: 10 }} />
           <View style={styles.lineFooter}>

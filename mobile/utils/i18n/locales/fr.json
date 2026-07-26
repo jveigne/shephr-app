@@ -694,6 +694,7 @@
     "coordinator": "Coordinateur",
     "leader": "Dirigeant",
     "unit": "Unité",
+    "member": "Personnelle",
     "regionsHeading": "Régions",
     "statesHeading": "États",
     "submittedRatio": "{{submitted}}/{{total}} soumises · {{percent}} %",
