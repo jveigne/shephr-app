@@ -202,7 +202,8 @@ export async function deleteProgress(id: string): Promise<void> {
 /** Chemin d'URL des niveaux agrégeables. */
 export type AggregateLevelPath = 'cities' | 'zones' | 'countries' | 'continents';
 
-export type AggregationSource = 'AGGREGATE' | 'FAITH';
+/** DIRECT = l'engagement du dirigeant l'emporte sur l'agrégat des membres (niveau ASSEMBLY). */
+export type AggregationSource = 'AGGREGATE' | 'DIRECT' | 'FAITH';
 
 export interface AggregateLine {
   categoryId: string;
@@ -215,6 +216,8 @@ export interface AggregateLine {
   effectiveAmount: number | null;
   effectiveCount: number | null;
   source: AggregationSource;
+  /** Feature A — agrégat des engagements des fidèles (niveau ASSEMBLY uniquement). */
+  membersSum?: number | null;
 }
 
 export interface FaithPledgeResponse {
@@ -274,6 +277,71 @@ export async function updateFaithPledge(
 
 export async function deleteFaithPledge(id: string): Promise<void> {
   await apiClient.delete(`/api/church/goals/faith-pledges/${id}`);
+}
+
+// --- Feature A — objectifs personnels des MEMBRES + agrégat des fidèles -------
+
+/** Engagement d'un fidèle dans l'agrégat d'assemblée. */
+export interface MemberPledgeEntry {
+  userId: string;
+  fullName: string;
+  amount: number | null;
+  count: number | null;
+}
+
+export interface MembersAggregateLine {
+  categoryId: string;
+  categoryCode: string;
+  /** Somme des engagements des fidèles de l'assemblée. */
+  membersSum: number | null;
+  /** Engagement DIRECT du dirigeant (montant / nombre selon la catégorie). */
+  leaderAmount: number | null;
+  leaderCount: number | null;
+  /** Retenu = MAX(agrégat des fidèles, engagement du dirigeant, foi). */
+  effectiveAmount: number | null;
+  effectiveCount: number | null;
+  source: AggregationSource;
+  members: MemberPledgeEntry[];
+}
+
+export interface MembersAggregateResponse {
+  unitId: string;
+  year: number;
+  lines: MembersAggregateLine[];
+}
+
+/** Mes engagements personnels de MEMBRE (même forme que les pledges existants). */
+export async function fetchMyMemberPledges(year?: number): Promise<PledgeResponse[]> {
+  const { data } = await apiClient.get<PledgeResponse[]>(
+    `/api/church/goals/member/me/pledges${yq(year)}`,
+  );
+  return data;
+}
+
+/**
+ * Crée / remplace mon engagement personnel de MEMBRE sur une catégorie.
+ * Erreurs 422 : NO_ASSEMBLY_ATTACHMENT, PLEDGE_LOCKED, DEADLINE_PASSED.
+ */
+export async function saveMemberPledge(payload: CreatePledgeRequest): Promise<PledgeResponse> {
+  const { data } = await apiClient.post<PledgeResponse>(
+    '/api/church/goals/member/me/pledges',
+    payload,
+  );
+  return data;
+}
+
+/**
+ * Agrégat des fidèles d'une assemblée (périmètre GOAL habituel + le membre pour SA propre
+ * assemblée) : agrégat / engagement du dirigeant / retenu (MAX) + détail par fidèle.
+ */
+export async function fetchMembersAggregate(
+  unitId: string,
+  year?: number,
+): Promise<MembersAggregateResponse> {
+  const { data } = await apiClient.get<MembersAggregateResponse>(
+    `/api/church/goals/units/${unitId}/members-aggregate${yq(year)}`,
+  );
+  return data;
 }
 
 // --- Vues agrégées manquantes (Lot 4.3 — UC-DIR-13, UC-LDR-06) ---------------

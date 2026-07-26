@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import {
@@ -17,7 +16,7 @@ import {
 } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { canManageLocalities } from '../services/authApi';
+import { canManageLocalities, isSecretariat } from '../services/authApi';
 import {
   createLocality,
   deleteLocality,
@@ -37,10 +36,13 @@ export function LocalitesPage() {
   const queryClient = useQueryClient();
   const { push } = useToast();
   const { me } = useAuth();
-  const navigate = useNavigate();
   const ministryId = me?.ministryId ?? null;
   // Chantier B : la Ville se crée sous une Région (les teams sont dissoutes) — managers de structure.
   const canWrite = canManageLocalities(me);
+  // RDG 25/07 : création/suppression directes réservées au SUPER_ADMIN et au SECRETARIAT.
+  const secretariat = isSecretariat(me);
+  const canDirect = (me?.superAdmin ?? false) || secretariat;
+  const canDelete = canWrite || secretariat;
 
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
@@ -77,7 +79,7 @@ export function LocalitesPage() {
   }, [localitiesQ.data, search]);
 
   const zones = zonesQ.data ?? [];
-  const canCreate = canWrite && ministryId != null && zones.length > 0;
+  const canCreate = canDirect && ministryId != null && zones.length > 0;
 
   const cols: Column<LocalityResponse>[] = [
     { label: t('localities.colLocality'), render: (l) => <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{l.name}</span> },
@@ -86,14 +88,18 @@ export function LocalitesPage() {
       render: (l) => l.zoneName ? <Badge tone="earth">{l.zoneName}</Badge> : <span style={{ color: 'var(--ink-400)' }}>{t('localities.outOfZone')}</span>,
     },
     { label: t('common.country'), render: (l) => l.country ?? <span style={{ color: 'var(--ink-400)' }}>—</span> },
-    ...(canWrite
+    ...(canWrite || canDelete
       ? [{
           label: '',
           style: { width: 90 },
           render: (l: LocalityResponse) => (
             <div className="row-actions">
-              <IconButton icon={<Icon name="edit" size={15} />} title={t('common.edit')} onClick={() => setEditing(l)} />
-              <IconButton icon={<Icon name="trash" size={15} />} danger title={t('common.delete')} onClick={() => setToDelete(l)} />
+              {canWrite && (
+                <IconButton icon={<Icon name="edit" size={15} />} title={t('common.edit')} onClick={() => setEditing(l)} />
+              )}
+              {canDelete && (
+                <IconButton icon={<Icon name="trash" size={15} />} danger title={t('common.delete')} onClick={() => setToDelete(l)} />
+              )}
             </div>
           ),
         } as Column<LocalityResponse>]
@@ -106,9 +112,9 @@ export function LocalitesPage() {
         title={t('localities.title')}
         crumbs={[t('common.brand'), t('nav.structure'), t('localities.title')]}
         actions={
-          // RG-DS-05 (22/07) : la création directe est réservée au SUPER_ADMIN — les dirigeants
-          // déposent une demande validée par le secrétariat (page Demandes).
-          me?.superAdmin ? (
+          // RDG 25/07 : la création d'une ville est réservée au back-office (SUPER_ADMIN) et au
+          // SECRETARIAT — plus de demande possible pour ce niveau.
+          canDirect ? (
             <Button
               variant="primary"
               iconL={<Icon name="plus" size={15} />}
@@ -117,14 +123,6 @@ export function LocalitesPage() {
               onClick={() => setCreating(true)}
             >
               {t('localities.newLocality')}
-            </Button>
-          ) : canWrite ? (
-            <Button
-              variant="primary"
-              iconL={<Icon name="plus" size={15} />}
-              onClick={() => navigate('/requests')}
-            >
-              {t('localities.requestLocality')}
             </Button>
           ) : undefined
         }

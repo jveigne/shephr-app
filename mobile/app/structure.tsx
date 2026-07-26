@@ -20,18 +20,19 @@ import Button from '../components/Button';
 import { colors, fonts } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { canManageStructure, canManageZones } from '../services/authApi';
+import { canManageStructure, canManageZones, isSecretariat } from '../services/authApi';
 import { confirmDialog, notify } from '../utils/dialogs';
 import i18n from '../utils/i18n/i18n';
 import {
-  createLocality, createUnit, createZone,
-  deleteLocality, deleteUnit, deleteZone,
-  listCountries, listLocalities, listUnits, listZones,
+  createCountry, createLocality, createUnit, createZone,
+  deleteCountry, deleteLocality, deleteUnit, deleteZone,
+  listContinents, listCountries, listLocalities, listUnits, listZones,
   updateLocality, updateUnit, updateZone,
-  type CountryResponse, type LocalityResponse, type UnitResponse, type ZoneResponse,
+  type ContinentResponse, type CountryResponse, type LocalityResponse,
+  type UnitResponse, type ZoneResponse,
 } from '../services/adminApi';
 
-type Level = 'zones' | 'localities' | 'units';
+type Level = 'countries' | 'zones' | 'localities' | 'units';
 
 const errMsg = (e: any, fb: string) =>
   e?.response ? e.response.data?.message ?? fb : i18n.t('errors.serverUnreachableShort');
@@ -68,18 +69,27 @@ export default function StructureScreen() {
   };
 
   const isAdmin = me?.superAdmin ?? false;
-  // Modification/suppression : règles inchangées (scopées serveur). Création directe :
-  // RG-DS-05 (22/07) — réservée au SUPER_ADMIN ; les dirigeants (dirigeant d'unité inclus)
-  // déposent une DEMANDE validée par le secrétariat (écran Demandes).
-  const canEdit = level === 'zones' ? canManageZones(me) : canManageStructure(me);
-  const canAdd = isAdmin && canEdit;
+  // RDG 25/07 : la création ET la suppression directes de nation/région/ville sont réservées au
+  // SUPER_ADMIN (back-office) et au SECRETARIAT. Les assemblées gardent leurs règles (création
+  // directe SUPER_ADMIN ; les dirigeants déposent une DEMANDE — écran Demandes).
+  const secretariat = isSecretariat(me);
+  const canDirect = isAdmin || secretariat;
+  const canEdit = level === 'countries' ? false
+    : level === 'zones' ? canManageZones(me)
+    : canManageStructure(me);
+  const canAdd = level === 'units' ? isAdmin && canEdit : canDirect;
+  // Suppression sans passer par la modale d'édition (pas de modification in-app pour les
+  // nations ; le SECRETARIAT ne modifie pas les régions/villes).
+  const canDeleteRow = level === 'countries' ? canDirect
+    : level !== 'units' && secretariat && !canEdit;
   const canPropose = !isAdmin && canManageStructure(me);
 
   const onDelete = async (lvl: Level, id: string, name: string) => {
     const ok = await confirmDialog(t('structure.deleteTitle'), t('structure.deleteConfirm', { name }), t('common.delete'), true);
     if (!ok) return;
     try {
-      if (lvl === 'zones') await deleteZone(id);
+      if (lvl === 'countries') await deleteCountry(id);
+      else if (lvl === 'zones') await deleteZone(id);
       else if (lvl === 'localities') await deleteLocality(id);
       else await deleteUnit(id);
       await load();
@@ -98,7 +108,14 @@ export default function StructureScreen() {
     );
   }
 
-  const rows = level === 'zones' ? zones : level === 'localities' ? localities : units;
+  const rows = level === 'countries' ? countries
+    : level === 'zones' ? zones
+    : level === 'localities' ? localities
+    : units;
+  // Le niveau Pays n'apparaît que pour ceux qui le gèrent (secrétariat / superAdmin).
+  const levels: Level[] = canDirect
+    ? ['countries', 'zones', 'localities', 'units']
+    : ['zones', 'localities', 'units'];
 
   return (
     <ScreenShell
@@ -139,10 +156,10 @@ export default function StructureScreen() {
       )}
 
       <View style={styles.segmentRow}>
-        {(['zones', 'localities', 'units'] as Level[]).map((lv) => (
+        {levels.map((lv) => (
           <Pressable key={lv} onPress={() => setLevel(lv)} style={[styles.segment, level === lv && styles.segmentActive]}>
             <Text style={[styles.segmentText, level === lv && styles.segmentTextActive]}>
-              {lv === 'zones' ? t('structure.zones') : lv === 'localities' ? t('structure.localities') : t('structure.units')}
+              {lv === 'countries' ? t('structure.countriesTab') : lv === 'zones' ? t('structure.zones') : lv === 'localities' ? t('structure.localities') : t('structure.units')}
             </Text>
           </Pressable>
         ))}
@@ -150,7 +167,7 @@ export default function StructureScreen() {
 
       {canAdd && (
         <Button
-          label={level === 'zones' ? t('structure.addZone') : level === 'localities' ? t('structure.addLocality') : t('structure.addUnit')}
+          label={level === 'countries' ? t('structure.addCountry') : level === 'zones' ? t('structure.addZone') : level === 'localities' ? t('structure.addLocality') : t('structure.addUnit')}
           variant="soft"
           onPress={() => setEditing({ level, item: null })}
           style={{ marginTop: 12 }}
@@ -173,11 +190,17 @@ export default function StructureScreen() {
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles.itemName}>{r.name}</Text>
               <Text style={styles.itemMeta}>
+                {level === 'countries' && (r.code ?? '')}
                 {level === 'zones' && (r.countryName ?? '')}
                 {level === 'localities' && (r.zoneName ?? t('structure.noZone'))}
                 {level === 'units' && t('structure.unitMeta', { locality: r.localityName, code: r.joinCode })}
               </Text>
             </View>
+            {canDeleteRow && (
+              <Pressable onPress={() => onDelete(level, r.id, r.name)} hitSlop={8}>
+                <Ionicons name="trash-outline" size={17} color={colors.clay} />
+              </Pressable>
+            )}
             {canEdit && <Ionicons name="chevron-forward" size={16} color={colors.ink3} />}
           </Card>
         ))}
@@ -199,27 +222,134 @@ export default function StructureScreen() {
       </View>
 
       <StructureFormModal
-        editing={editing}
+        editing={editing?.level === 'countries' ? null : editing}
         countries={countries}
         zones={zones}
         localities={localities}
         ministryId={me?.ministryId ?? null}
+        zoneOptional={isAdmin}
         onClose={() => setEditing(null)}
         onSaved={async () => { setEditing(null); await load(); }}
         onDelete={onDelete}
+      />
+
+      <CountryFormModal
+        open={editing?.level === 'countries'}
+        ministryId={me?.ministryId ?? null}
+        onClose={() => setEditing(null)}
+        onSaved={async () => { setEditing(null); await load(); }}
       />
     </ScreenShell>
   );
 }
 
+// RDG 25/07 — création d'une NATION in-app (secrétariat / superAdmin) : continent, nom, code
+// ISO 2 lettres et devise ISO 3 lettres (mêmes contraintes que le back-office).
+function CountryFormModal({
+  open, ministryId, onClose, onSaved,
+}: {
+  open: boolean;
+  ministryId: string | null;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const { t } = useLanguage();
+  const [continents, setContinents] = useState<ContinentResponse[]>([]);
+  const [continentId, setContinentId] = useState('');
+  const [name, setName] = useState('');
+  const [nameEn, setNameEn] = useState('');
+  const [code, setCode] = useState('');
+  const [currency, setCurrency] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setName(''); setNameEn(''); setCode(''); setCurrency(''); setContinentId('');
+      listContinents()
+        .then((list) => { setContinents(list); setContinentId(list[0]?.id ?? ''); })
+        .catch(() => setContinents([]));
+    }
+  }, [open]);
+
+  const valid = ministryId != null && continentId !== ''
+    && name.trim().length > 0
+    && /^[A-Z]{2}$/.test(code.trim().toUpperCase())
+    && /^[A-Z]{3}$/.test(currency.trim().toUpperCase());
+
+  const onSave = async () => {
+    if (!valid) { notify(t('common.appName'), t('structure.fillFields')); return; }
+    setSaving(true);
+    try {
+      await createCountry({
+        ministryId: ministryId!,
+        continentId,
+        code: code.trim().toUpperCase(),
+        name: name.trim(),
+        nameEn: nameEn.trim() || name.trim(),
+        defaultCurrency: currency.trim().toUpperCase(),
+      });
+      await onSaved();
+    } catch (e: any) {
+      notify(t('structure.saveRefusedTitle'), errMsg(e, t('structure.saveRefusedBody')));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isEn = i18n.language?.startsWith('en');
+
+  return (
+    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={styles.backdrop}>
+        <Card style={styles.modalCard}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Text style={styles.modalTitle}>{t('structure.modalAddCountry')}</Text>
+
+            <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.continent')}</Label>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {continents.map((c) => (
+                <Pressable key={c.id} onPress={() => setContinentId(c.id)} style={[styles.chip, continentId === c.id && styles.chipActive]}>
+                  <Text style={[styles.chipText, continentId === c.id && styles.chipTextActive]}>
+                    {isEn ? c.nameEn : c.name}
+                  </Text>
+                </Pressable>
+              ))}
+              {continents.length === 0 && <Text style={styles.empty}>{t('structure.noContinent')}</Text>}
+            </ScrollView>
+
+            <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.countryName')}</Label>
+            <TextInput value={name} onChangeText={setName} style={styles.input} placeholder={t('structure.countryNamePlaceholder')} placeholderTextColor={colors.ink3} />
+
+            <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.countryNameEn')}</Label>
+            <TextInput value={nameEn} onChangeText={setNameEn} style={styles.input} placeholder={t('structure.countryNameEnPlaceholder')} placeholderTextColor={colors.ink3} />
+
+            <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.countryCode')}</Label>
+            <TextInput value={code} onChangeText={(v) => setCode(v.toUpperCase())} style={styles.input} placeholder="CM" autoCapitalize="characters" maxLength={2} placeholderTextColor={colors.ink3} />
+
+            <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.countryCurrency')}</Label>
+            <TextInput value={currency} onChangeText={(v) => setCurrency(v.toUpperCase())} style={styles.input} placeholder="XAF" autoCapitalize="characters" maxLength={3} placeholderTextColor={colors.ink3} />
+
+            <Button label={t('common.create')} onPress={onSave} loading={saving} fullWidth style={{ marginTop: 18 }} />
+            <Pressable onPress={onClose} style={{ marginTop: 10, alignItems: 'center' }}>
+              <Text style={styles.cancelLink}>{t('common.cancel')}</Text>
+            </Pressable>
+          </ScrollView>
+        </Card>
+      </View>
+    </Modal>
+  );
+}
+
 function StructureFormModal({
-  editing, countries, zones, localities, ministryId, onClose, onSaved, onDelete,
+  editing, countries, zones, localities, ministryId, zoneOptional, onClose, onSaved, onDelete,
 }: {
   editing: { level: Level; item: any | null } | null;
   countries: CountryResponse[];
   zones: ZoneResponse[];
   localities: LocalityResponse[];
   ministryId: string | null;
+  /** Ville sans région : réservé au SUPER_ADMIN (le SECRETARIAT doit rattacher — ZONE_REQUIRED). */
+  zoneOptional: boolean;
   onClose: () => void;
   onSaved: () => Promise<void>;
   onDelete: (lvl: Level, id: string, name: string) => Promise<void>;
@@ -251,7 +381,7 @@ function StructureFormModal({
     : localities.map((l) => ({ id: l.id, name: l.name }));
 
   const valid = name.trim().length > 0
-    && (level === 'localities' /* zone optionnelle */ ? true : parentId !== '');
+    && (level === 'localities' ? (zoneOptional || parentId !== '') : parentId !== '');
 
   const onSave = async () => {
     if (!valid) { notify(t('common.appName'), t('structure.fillFields')); return; }
@@ -289,7 +419,7 @@ function StructureFormModal({
           <TextInput value={name} onChangeText={setName} style={styles.input} placeholder={t('structure.namePlaceholder')} placeholderTextColor={colors.ink3} />
 
           <Label style={{ marginTop: 14, marginBottom: 6 }}>
-            {parentLabel}{level === 'localities' ? t('structure.optional') : ''}
+            {parentLabel}{level === 'localities' && zoneOptional ? t('structure.optional') : ''}
           </Label>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
             {parents.map((p) => (

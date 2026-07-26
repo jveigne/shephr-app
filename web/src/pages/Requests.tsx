@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
-import { Badge, Button, Field, Input, Modal, Select, Table, TopBar, type Column } from '../components/ui';
+import { Badge, Button, Field, Input, Modal, Table, TopBar, type Column } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -11,10 +11,14 @@ import {
   type CreateRequestChain, type RequestNodeOption, type StructureRequestContext,
   type StructureRequestResponse, type StructureRequestStatus, type StructureRequestType,
 } from '../services/structureRequestsApi';
+import {
+  approveJoinRequest, cancelJoinRequest, listMyJoinRequests, listPendingJoinRequests,
+  mayReviewJoinRequests, rejectJoinRequest, type JoinRequestResponse,
+} from '../services/joinRequestsApi';
 
-// Lot D3 v2 (RDG 22/07) : dépôt « chercher ou créer » — TOUT utilisateur peut demander une
-// région, ville ou assemblée (RG-DS-01 v2) ; un parent introuvable dans la recherche devient un
-// maillon de la chaîne (RG-DS-08). Le SECRETARIAT valide ici (file « À valider »).
+// RDG 25/07 : nation, région et ville se créent DIRECTEMENT (SECRETARIAT / back-office) — une
+// demande ne porte plus que sur une ASSEMBLÉE rattachée à une ville EXISTANTE. Le SECRETARIAT
+// valide ici (file « À valider ») ; les chaînes déposées avant le 25/07 restent décidables.
 
 const errMsg = (err: unknown, fallback: string) =>
   (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -37,6 +41,9 @@ export function RequestsPage() {
   const [depositOpen, setDepositOpen] = useState(false);
   const [rejecting, setRejecting] = useState<StructureRequestResponse | null>(null);
   const [reason, setReason] = useState('');
+  // Feature B — rejet d'une demande de RATTACHEMENT (motif obligatoire).
+  const [rejectingJoin, setRejectingJoin] = useState<JoinRequestResponse | null>(null);
+  const [joinReason, setJoinReason] = useState('');
 
   const contextQ = useQuery({ queryKey: ['structure-requests', 'context'], queryFn: fetchRequestContext });
   const mineQ = useQuery({ queryKey: ['structure-requests', 'mine'], queryFn: listMyRequests });
@@ -46,8 +53,24 @@ export function RequestsPage() {
     enabled: isValidator,
   });
 
+  // Feature B — rattachements : file pending (403 sauf dirigeant d'assemblée / secrétariat /
+  // superAdmin — géré proprement : la file est masquée) + mes demandes.
+  const mayReviewJoin = mayReviewJoinRequests(me);
+  const joinPendingQ = useQuery({
+    queryKey: ['join-requests', 'pending'],
+    queryFn: listPendingJoinRequests,
+    enabled: mayReviewJoin,
+    retry: false,
+  });
+  const joinPendingForbidden =
+    (joinPendingQ.error as { response?: { status?: number } } | null)?.response?.status === 403;
+  const showJoinPending = mayReviewJoin && !joinPendingForbidden && !joinPendingQ.isError;
+  const joinMineQ = useQuery({ queryKey: ['join-requests', 'mine'], queryFn: listMyJoinRequests });
+
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['structure-requests'] });
-  const canPropose = (contextQ.data?.nations.length ?? 0) > 0;
+  const invalidateJoin = () => queryClient.invalidateQueries({ queryKey: ['join-requests'] });
+  // RDG 25/07 : on ne peut demander qu'une assemblée — il faut une ville existante où la rattacher.
+  const canPropose = (contextQ.data?.cities.length ?? 0) > 0;
 
   const fmtDate = (iso: string) => {
     const d = new Date(iso);
@@ -89,7 +112,116 @@ export function RequestsPage() {
     onError: (err) => push({ kind: 'error', title: t('common.failure'), msg: errMsg(err, t('common.error')) }),
   });
 
+  // Feature B — mutations sur les demandes de rattachement.
+  const joinApproveM = useMutation({
+    mutationFn: approveJoinRequest,
+    onSuccess: (r) => {
+      invalidateJoin();
+      push({ kind: 'ok', title: t('join.approvedToastAdmin', { name: r.userName }) });
+    },
+    onError: (err) => push({ kind: 'error', title: t('common.failure'), msg: errMsg(err, t('common.error')) }),
+  });
+
+  const joinRejectM = useMutation({
+    mutationFn: ({ id, reason: r }: { id: string; reason: string }) => rejectJoinRequest(id, r),
+    onSuccess: (r) => {
+      invalidateJoin();
+      setRejectingJoin(null);
+      setJoinReason('');
+      push({ kind: 'ok', title: t('join.rejectedToastAdmin', { name: r.userName }) });
+    },
+    onError: (err) => push({ kind: 'error', title: t('common.failure'), msg: errMsg(err, t('common.error')) }),
+  });
+
+  const joinCancelM = useMutation({
+    mutationFn: cancelJoinRequest,
+    onSuccess: () => { invalidateJoin(); push({ kind: 'ok', title: t('join.cancelled') }); },
+    onError: (err) => push({ kind: 'error', title: t('common.failure'), msg: errMsg(err, t('common.error')) }),
+  });
+
   const typeLabel = (type: StructureRequestType) => t(`requests.types.${type}`);
+
+  // Assemblée visée d'une demande de rattachement (existante ou « à créer »).
+  const joinAssemblyCell = (r: JoinRequestResponse) => (
+    <div>
+      <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>
+        {r.assemblyName ?? r.newAssemblyName ?? '—'}
+      </span>
+      {r.cityName && <span style={{ color: 'var(--ink-500)' }}> · {r.cityName}</span>}
+      {r.structureRequestId != null && (
+        <span style={{ marginLeft: 6 }}>
+          <Badge tone="gray">{t('join.newAssemblyBadge')}</Badge>
+        </span>
+      )}
+    </div>
+  );
+
+  // Rôle demandé + avertissement co-dirigeant (assemblée déjà pourvue d'un titulaire).
+  const joinRoleCell = (r: JoinRequestResponse) => (
+    <div>
+      <Badge tone={r.requestedRole === 'LEADER' ? 'earth' : 'gray'}>
+        {t(`join.role.${r.requestedRole}`)}
+      </Badge>
+      {r.assemblyHasLeader && r.requestedRole === 'LEADER' && (
+        <div style={{ marginTop: 4, fontSize: 12, color: 'var(--earth-700, #8E6B47)', maxWidth: 260, lineHeight: 1.45 }}>
+          <Icon name="warning" size={11} /> {t('join.coLeaderWarning')}
+        </div>
+      )}
+    </div>
+  );
+
+  const joinPendingCols: Column<JoinRequestResponse>[] = [
+    { label: t('requests.colDate'), render: (r) => <span style={{ color: 'var(--ink-500)' }}>{fmtDate(r.createdAt)}</span> },
+    { label: t('join.colUser'), render: (r) => <span style={{ fontWeight: 500 }}>{r.userName}</span> },
+    { label: t('join.colAssembly'), render: joinAssemblyCell },
+    { label: t('join.colRole'), render: joinRoleCell },
+    {
+      label: '',
+      render: (r) => (
+        <div className="row-actions" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <Button variant="primary" iconL={<Icon name="check" size={14} />} disabled={joinApproveM.isPending}
+            onClick={() => joinApproveM.mutate(r.id)}>
+            {t('requests.approve')}
+          </Button>
+          <Button variant="ghost" iconL={<Icon name="x" size={14} />} disabled={joinRejectM.isPending}
+            onClick={() => { setRejectingJoin(r); setJoinReason(''); }}>
+            {t('requests.reject')}
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const joinMineCols: Column<JoinRequestResponse>[] = [
+    { label: t('requests.colDate'), render: (r) => <span style={{ color: 'var(--ink-500)' }}>{fmtDate(r.createdAt)}</span> },
+    { label: t('join.colAssembly'), render: joinAssemblyCell },
+    { label: t('join.colRole'), render: joinRoleCell },
+    {
+      label: t('requests.colStatus'),
+      render: (r) => (
+        <div>
+          <Badge tone={STATUS_TONE[r.status]}>{t(`join.status.${r.status}`)}</Badge>
+          {r.status === 'REJECTED' && r.decisionReason && (
+            <div style={{ marginTop: 4, fontSize: 12, color: 'var(--ink-500)' }}>{r.decisionReason}</div>
+          )}
+          {r.decidedByName && r.status !== 'PENDING' && r.status !== 'CANCELLED' && (
+            <div style={{ marginTop: 4, fontSize: 12, color: 'var(--ink-500)' }}>
+              {t('join.decidedBy', { name: r.decidedByName })}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      label: '',
+      render: (r) =>
+        r.status === 'PENDING' ? (
+          <Button variant="ghost" disabled={joinCancelM.isPending} onClick={() => joinCancelM.mutate(r.id)}>
+            {t('requests.cancel')}
+          </Button>
+        ) : null,
+    },
+  ];
 
   const parentCell = (r: StructureRequestResponse) => (
     <span style={{ color: 'var(--ink-600)' }}>
@@ -208,6 +340,46 @@ export function RequestsPage() {
             }
           />
         </div>
+
+        {/* Feature B — Rattachements : demandes de rattachement à une assemblée. */}
+        {(showJoinPending || (joinMineQ.data?.length ?? 0) > 0) && (
+          <>
+            <h2 style={{ margin: '28px 0 4px', fontSize: 18 }}>{t('join.sectionTitle')}</h2>
+            <p className="section-sub" style={{ margin: '0 0 10px' }}>{t('join.sectionIntro')}</p>
+
+            {showJoinPending && (
+              <>
+                <h3 style={{ margin: '14px 0 10px' }}>{t('join.pendingTitle')}</h3>
+                <div className="card" style={{ padding: 0, marginBottom: 24 }}>
+                  <Table<JoinRequestResponse>
+                    columns={joinPendingCols}
+                    rows={(joinPendingQ.data ?? []).map((r) => ({ ...r }))}
+                    zebra
+                    empty={
+                      <div className="empty">
+                        <div className="icon-wrap"><Icon name="inbox" size={26} /></div>
+                        <h4>{t('join.noPending')}</h4>
+                      </div>
+                    }
+                  />
+                </div>
+              </>
+            )}
+
+            {(joinMineQ.data?.length ?? 0) > 0 && (
+              <>
+                <h3 style={{ margin: '14px 0 10px' }}>{t('join.mineTitle')}</h3>
+                <div className="card" style={{ padding: 0 }}>
+                  <Table<JoinRequestResponse>
+                    columns={joinMineCols}
+                    rows={(joinMineQ.data ?? []).map((r) => ({ ...r }))}
+                    zebra
+                  />
+                </div>
+              </>
+            )}
+          </>
+        )}
       </div>
 
       <DepositModal
@@ -241,16 +413,38 @@ export function RequestsPage() {
             placeholder={t('requests.rejectReasonPlaceholder')} />
         </Field>
       </Modal>
+
+      {/* Feature B — refus d'une demande de rattachement (motif OBLIGATOIRE). */}
+      <Modal
+        open={rejectingJoin != null}
+        onClose={() => setRejectingJoin(null)}
+        title={rejectingJoin ? t('join.rejectTitle', { name: rejectingJoin.userName }) : ''}
+        sub={t('join.rejectSub')}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setRejectingJoin(null)}>{t('common.cancel')}</Button>
+            <Button
+              variant="primary"
+              disabled={joinReason.trim().length === 0 || joinRejectM.isPending}
+              onClick={() => rejectingJoin && joinRejectM.mutate({ id: rejectingJoin.id, reason: joinReason.trim() })}
+            >
+              {t('requests.rejectConfirm')}
+            </Button>
+          </>
+        }
+      >
+        <Field label={t('join.rejectReasonLabel')}>
+          <Input value={joinReason} onChange={(e) => setJoinReason(e.target.value)}
+            placeholder={t('join.rejectReasonPlaceholder')} />
+        </Field>
+      </Modal>
     </>
   );
 }
 
 // ---------------------------------------------------------------------------------------------
-//  Dépôt « chercher ou créer » (RG-DS-08) — un parent introuvable devient un maillon à créer.
+//  Dépôt (RDG 25/07) — une assemblée, rattachée à une ville EXISTANTE (recherche sans création).
 // ---------------------------------------------------------------------------------------------
-
-/** Sélection d'un niveau : entité existante OU nom à créer. */
-type LevelPick = { kind: 'existing'; option: RequestNodeOption } | { kind: 'create'; name: string } | null;
 
 function DepositModal({
   open, onClose, context, submitting, onSubmit,
@@ -262,87 +456,23 @@ function DepositModal({
   onSubmit: (payload: CreateRequestChain) => void;
 }) {
   const { t } = useTranslation();
-  const [type, setType] = useState<StructureRequestType | ''>('');
-  const [cityPick, setCityPick] = useState<LevelPick>(null);
-  const [regionPick, setRegionPick] = useState<LevelPick>(null);
-  const [nationId, setNationId] = useState('');
+  const [city, setCity] = useState<RequestNodeOption | null>(null);
   const [name, setName] = useState('');
 
   useEffect(() => {
     if (open) {
-      setType('');
-      setCityPick(null);
-      setRegionPick(null);
-      setNationId(context.nations.length === 1 ? context.nations[0].id : '');
+      setCity(null);
       setName('');
     }
   }, [open, context]);
 
-  // Chaîne : quels niveaux sont requis, et lesquels sont « à créer » ?
-  const needCity = type === 'ASSEMBLY';
-  const needRegion = type === 'CITY' || (needCity && cityPick?.kind === 'create');
-  const needNation = type === 'REGION' || (needRegion && regionPick?.kind === 'create');
-
-  // Filtrage en cascade : une région choisie restreint les villes ; une nation restreint les régions.
-  const regionsForNation = useMemo(
-    () => (nationId ? context.regions.filter((r) => r.parentId === nationId) : context.regions),
-    [context.regions, nationId],
-  );
-  const citiesForRegion = useMemo(
-    () => (regionPick?.kind === 'existing'
-      ? context.cities.filter((c) => c.parentId === regionPick.option.id)
-      : context.cities),
-    [context.cities, regionPick],
-  );
-
   const payload: CreateRequestChain | null = useMemo(() => {
-    if (type === '' || name.trim().length === 0) return null;
-    const links: CreateRequestChain['links'] = [];
-    let rootParentId: string | null = null;
+    if (!city || name.trim().length === 0) return null;
+    return { rootParentId: city.id, links: [{ type: 'ASSEMBLY', name: name.trim() }] };
+  }, [city, name]);
 
-    if (type === 'REGION') {
-      if (!nationId) return null;
-      rootParentId = nationId;
-      links.push({ type: 'REGION', name: name.trim() });
-    } else if (type === 'CITY') {
-      if (regionPick?.kind === 'existing') {
-        rootParentId = regionPick.option.id;
-      } else if (regionPick?.kind === 'create') {
-        if (!nationId) return null;
-        rootParentId = nationId;
-        links.push({ type: 'REGION', name: regionPick.name });
-      } else return null;
-      links.push({ type: 'CITY', name: name.trim() });
-    } else {
-      if (cityPick?.kind === 'existing') {
-        rootParentId = cityPick.option.id;
-      } else if (cityPick?.kind === 'create') {
-        if (regionPick?.kind === 'existing') {
-          rootParentId = regionPick.option.id;
-        } else if (regionPick?.kind === 'create') {
-          if (!nationId) return null;
-          rootParentId = nationId;
-          links.push({ type: 'REGION', name: regionPick.name });
-        } else return null;
-        links.push({ type: 'CITY', name: cityPick.name });
-      } else return null;
-      links.push({ type: 'ASSEMBLY', name: name.trim() });
-    }
-    return rootParentId ? { rootParentId, links } : null;
-  }, [type, name, cityPick, regionPick, nationId]);
-
-  // Existant à afficher (RG-DS-06) : celui du parent DIRECT choisi quand il existe déjà.
-  const existingHint = useMemo(() => {
-    const direct = type === 'ASSEMBLY' ? cityPick : type === 'CITY' ? regionPick : null;
-    if (type === 'REGION') {
-      const nation = context.nations.find((n) => n.id === nationId);
-      return nation ? { parent: nation.name, list: nation.existing } : null;
-    }
-    if (direct?.kind === 'existing') {
-      return { parent: direct.option.name, list: direct.option.existing };
-    }
-    return null;
-  }, [type, cityPick, regionPick, nationId, context.nations]);
+  // Existant à afficher (RG-DS-06) : les assemblées de la ville choisie.
+  const existingHint = city ? { parent: city.name, list: city.existing } : null;
 
   return (
     <Modal
@@ -365,47 +495,12 @@ function DepositModal({
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <Field label={t('requests.typeLabel')}>
-          <Select value={type} onChange={(e) => {
-            setType(e.target.value as StructureRequestType | '');
-            setCityPick(null);
-            setRegionPick(null);
-          }}>
-            <option value="">{t('common.choose')}</option>
-            {(['REGION', 'CITY', 'ASSEMBLY'] as StructureRequestType[]).map((tp) => (
-              <option key={tp} value={tp}>{t(`requests.types.${tp}`)}</option>
-            ))}
-          </Select>
-        </Field>
-
-        {needCity && (
-          <SearchOrCreate
-            label={t('requests.parentLabel.ASSEMBLY')}
-            options={citiesForRegion}
-            pick={cityPick}
-            onChange={(p) => { setCityPick(p); if (p?.kind !== 'create') setRegionPick(null); }}
-          />
-        )}
-
-        {needRegion && (
-          <SearchOrCreate
-            label={t('requests.parentLabel.CITY')}
-            options={regionsForNation}
-            pick={regionPick}
-            onChange={setRegionPick}
-          />
-        )}
-
-        {needNation && (
-          <Field label={t('requests.parentLabel.REGION')}>
-            <Select value={nationId} onChange={(e) => setNationId(e.target.value)}>
-              <option value="">{t('common.choose')}</option>
-              {context.nations.map((n) => (
-                <option key={n.id} value={n.id}>{n.name}</option>
-              ))}
-            </Select>
-          </Field>
-        )}
+        <SearchExisting
+          label={t('requests.parentLabel.ASSEMBLY')}
+          options={context.cities}
+          pick={city}
+          onChange={setCity}
+        />
 
         {existingHint && (
           <div style={{ fontSize: 12.5, color: 'var(--ink-500)', lineHeight: 1.6 }}>
@@ -419,24 +514,22 @@ function DepositModal({
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('requests.namePlaceholder')} />
         </Field>
 
-        {payload && payload.links.length > 1 && (
-          <div style={{ fontSize: 12.5, color: 'var(--ink-600)', lineHeight: 1.6 }}>
-            {t('requests.chainNote', { count: payload.links.length })}
-          </div>
-        )}
+        <div style={{ fontSize: 12.5, color: 'var(--ink-500)', lineHeight: 1.6 }}>
+          {t('requests.cityMissingHint')}
+        </div>
       </div>
     </Modal>
   );
 }
 
-/** Recherche dans la liste du niveau ; si introuvable → « Créer "…" » devient un maillon (RG-DS-08). */
-function SearchOrCreate({
+/** Recherche dans les villes EXISTANTES — la création d'une ville est réservée au secrétariat. */
+function SearchExisting({
   label, options, pick, onChange,
 }: {
   label: string;
   options: RequestNodeOption[];
-  pick: LevelPick;
-  onChange: (p: LevelPick) => void;
+  pick: RequestNodeOption | null;
+  onChange: (p: RequestNodeOption | null) => void;
 }) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
@@ -447,9 +540,7 @@ function SearchOrCreate({
     return (
       <Field label={label}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Badge tone={pick.kind === 'existing' ? 'earth' : 'warn'}>
-            {pick.kind === 'existing' ? pick.option.name : t('requests.toCreate', { name: pick.name })}
-          </Badge>
+          <Badge tone="earth">{pick.name}</Badge>
           <Button variant="ghost" iconL={<Icon name="x" size={13} />} onClick={() => onChange(null)}>
             {t('requests.changePick')}
           </Button>
@@ -460,7 +551,6 @@ function SearchOrCreate({
 
   const q = query.trim().toLowerCase();
   const matches = q ? options.filter((o) => o.name.toLowerCase().includes(q)) : options;
-  const exact = options.some((o) => o.name.toLowerCase() === q);
 
   return (
     <Field label={label}>
@@ -477,21 +567,13 @@ function SearchOrCreate({
         {matches.slice(0, 30).map((o) => (
           <div
             key={o.id}
-            onClick={() => onChange({ kind: 'existing', option: o })}
+            onClick={() => onChange(o)}
             style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--line,#f2f2f2)' }}
           >
             {o.name}
           </div>
         ))}
-        {q.length > 0 && !exact && (
-          <div
-            onClick={() => onChange({ kind: 'create', name: query.trim() })}
-            style={{ padding: '8px 12px', cursor: 'pointer', color: 'var(--ink-600)', fontWeight: 600 }}
-          >
-            <Icon name="plus" size={13} /> {t('requests.createOption', { name: query.trim() })}
-          </div>
-        )}
-        {matches.length === 0 && q.length === 0 && (
+        {matches.length === 0 && (
           <div style={{ padding: '8px 12px', color: 'var(--ink-500)' }}>{t('requests.noOption')}</div>
         )}
       </div>

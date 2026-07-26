@@ -17,6 +17,41 @@ export async function listCountries(): Promise<CountryResponse[]> {
   return data;
 }
 
+// RDG 25/07 : création/suppression d'une NATION ouvertes au SECRETARIAT du ministère (garde
+// serveur `requireSuperAdminOrSecretariat`). La modification reste back-office SUPER_ADMIN.
+export type ContinentCode =
+  | 'EUROPE' | 'AFRIQUE' | 'ASIE' | 'AMERIQUE_NORD' | 'AMERIQUE_SUD' | 'OCEANIE';
+
+export interface ContinentResponse {
+  id: string;
+  code: ContinentCode;
+  name: string;
+  nameEn: string;
+}
+
+export async function listContinents(): Promise<ContinentResponse[]> {
+  const { data } = await apiClient.get<ContinentResponse[]>('/api/church/admin/continents');
+  return data;
+}
+
+export async function createCountry(payload: {
+  ministryId: string;
+  continentId: string;
+  /** ISO 3166-1 alpha-2 (2 lettres majuscules). */
+  code: string;
+  name: string;
+  nameEn: string;
+  /** ISO 4217 (3 lettres majuscules). */
+  defaultCurrency: string;
+}) {
+  const { data } = await apiClient.post<CountryResponse>('/api/church/admin/countries', payload);
+  return data;
+}
+
+export async function deleteCountry(id: string): Promise<void> {
+  await apiClient.delete(`/api/church/admin/countries/${id}`);
+}
+
 // ---------------- Zones ----------------
 export interface ZoneResponse {
   id: string;

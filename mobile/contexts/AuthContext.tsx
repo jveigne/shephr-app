@@ -29,7 +29,8 @@ interface AuthContextValue extends AuthState {
   /** Modules accessibles (codes) ; alimente le gating de navigation. */
   modules: string[];
   hasMemberCare: boolean;
-  login: (payload: LoginRequest) => Promise<void>;
+  /** Renvoie le profil chargé (null si /me a échoué) — permet le routage post-login (Feature B). */
+  login: (payload: LoginRequest) => Promise<MeResponse | null>;
   register: (payload: RegisterRequest) => Promise<void>;
   /** Établit une session à partir d'une réponse d'auth (ex. activation par code — Lot 3.4). */
   establishSession: (res: AuthResponse) => Promise<void>;
@@ -99,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       me = null;
     }
     setState({ ready: true, token: res.token, user: res.user, me });
+    return me;
   }, []);
 
   const register = useCallback(async (payload: RegisterRequest) => {

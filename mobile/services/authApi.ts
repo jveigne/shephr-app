@@ -73,6 +73,15 @@ export function canManageZones(me: MeResponse | null): boolean {
     || me.goalRole === 'DIRIGEANT_COORDINATEUR';
 }
 
+/**
+ * RDG 25/07 — rôle SECRETARIAT (Dons ∪ Objectifs). Avec le superAdmin, seul profil autorisé à
+ * CRÉER et SUPPRIMER directement nation / région / ville depuis l'app. Strictement SECRETARIAT.
+ */
+export function isSecretariat(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return me.donationRole === 'SECRETARIAT' || me.goalRole === 'SECRETARIAT';
+}
+
 export interface UserDTO {
   id: string;
   email: string;
@@ -142,6 +151,14 @@ export function isLeaderRole(me: MeResponse | null): boolean {
 export function hasGoalsAccess(me: MeResponse | null): boolean {
   if (!me) return false;
   return me.superAdmin || isElevated(me.goalRole);
+}
+
+/**
+ * Feature A — « Mes objectifs » d'un simple MEMBRE rattaché à une assemblée Goals.
+ * Strictement MEMBRE + goalUnitId : n'élargit AUCUN périmètre dirigeant (hasGoalsAccess inchangé).
+ */
+export function hasMemberGoals(me: MeResponse | null): boolean {
+  return me?.goalRole === 'MEMBRE' && !!me?.goalUnitId;
 }
 
 /** Human label for the user's most significant role ('Fidèle' for a plain member). */
@@ -220,6 +237,21 @@ export async function acceptInvitationByCode(
 
 export async function fetchMe(): Promise<MeResponse> {
   const { data } = await apiClient.get<MeResponse>('/api/church/auth/me');
+  return data;
+}
+
+// --- Feature C — suppression de compte (RGPD) ---------------------------------
+export interface DeleteAccountResponse {
+  /** DELETED = compte supprimé ; ANONYMIZED = données personnelles anonymisées. */
+  mode: 'DELETED' | 'ANONYMIZED';
+}
+
+/**
+ * Supprime (ou anonymise) le compte courant. Erreurs 422 :
+ * USER_LEADS_ORPHAN_NODES (message FR à afficher tel quel), SUPER_ADMIN_SELF_DELETE.
+ */
+export async function deleteMyAccount(): Promise<DeleteAccountResponse> {
+  const { data } = await apiClient.delete<DeleteAccountResponse>('/api/church/auth/me');
   return data;
 }
 

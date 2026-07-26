@@ -172,7 +172,11 @@ export type FaithLevelPath = 'cities' | 'zones' | 'countries' | 'continents';
 /** Niveaux agrégeables ('units' : agrégat seulement, pas de foi — Lot 4.5). */
 export type AggregateLevelPath = FaithLevelPath | 'units';
 
-export type AggregationSource = 'AGGREGATE' | 'FAITH';
+/**
+ * Quelle valeur l'emporte : AGGREGATE (enfants), FAITH (foi du niveau) ou — au niveau
+ * ASSEMBLY (Feature A) — DIRECT (l'engagement du dirigeant l'emporte sur l'agrégat des membres).
+ */
+export type AggregationSource = 'AGGREGATE' | 'DIRECT' | 'FAITH';
 
 export interface AggregateLine {
   categoryId: string;
@@ -181,10 +185,11 @@ export interface AggregateLine {
   entityId: string;
   /** Somme des engagements effectifs des enfants (DIRECT unités / effectifs zones…). */
   aggregateOfChildren: number | null;
+  /** Feature A (niveau ASSEMBLY) — agrégat des fidèles de l'assemblée ; absent ailleurs. */
+  membersSum?: number | null;
   /** Engagement effectif = MAX(agrégat enfants, meilleure foi du niveau) — RG-08. */
   effectiveAmount: number | null;
   effectiveCount: number | null;
-  /** Quelle valeur l'emporte : AGGREGATE (enfants) ou FAITH (foi du niveau). */
   source: AggregationSource;
 }
 
@@ -237,6 +242,72 @@ export async function updateFaithPledge(
 
 export async function deleteFaithPledge(id: string) {
   await apiClient.delete(`/api/church/goals/faith-pledges/${id}`);
+}
+
+// --- Feature A — espace membre : objectifs personnels & agrégat des fidèles ---
+
+/** Engagements personnels du membre connecté (par catégorie, pour l'année). */
+export async function fetchMyMemberPledges(year?: number) {
+  const { data } = await apiClient.get<PledgeResponse[]>(
+    `/api/church/goals/member/me/pledges${yq(year)}`,
+  );
+  return data;
+}
+
+/**
+ * Crée / met à jour l'objectif personnel du membre sur une catégorie.
+ * Erreurs 422 : NO_ASSEMBLY_ATTACHMENT, PLEDGE_LOCKED, DEADLINE_PASSED.
+ */
+export async function saveMemberPledge(payload: {
+  categoryId: string;
+  year?: number;
+  targetAmount?: number;
+  targetCount?: number;
+}) {
+  const { data } = await apiClient.post<PledgeResponse>(
+    '/api/church/goals/member/me/pledges',
+    payload,
+  );
+  return data;
+}
+
+export interface MemberPledgeEntry {
+  userId: string;
+  fullName: string;
+  amount: number | null;
+  count: number | null;
+}
+
+export interface MembersAggregateLine {
+  categoryId: string;
+  categoryCode: string;
+  /** Agrégat des fidèles (somme des objectifs personnels des membres). */
+  membersSum: number | null;
+  /** Engagement direct du dirigeant de l'assemblée. */
+  leaderAmount: number | null;
+  leaderCount: number | null;
+  /** Retenu = MAX(agrégat des fidèles, engagement du dirigeant). */
+  effectiveAmount: number | null;
+  effectiveCount: number | null;
+  source: AggregationSource;
+  members: MemberPledgeEntry[];
+}
+
+export interface MembersAggregateResponse {
+  unitId: string;
+  year: number;
+  lines: MembersAggregateLine[];
+}
+
+/**
+ * Objectifs des membres d'une assemblée + valeurs agrégées (fidèles / dirigeant / retenu).
+ * Accessible au périmètre GOAL habituel ET au membre pour sa propre assemblée.
+ */
+export async function fetchMembersAggregate(unitId: string, year?: number) {
+  const { data } = await apiClient.get<MembersAggregateResponse>(
+    `/api/church/goals/units/${unitId}/members-aggregate${yq(year)}`,
+  );
+  return data;
 }
 
 // --- Vues agrégées manquantes (Lot 4.3 — UC-DIR-13, UC-LDR-06, UC-SEC-01) ----

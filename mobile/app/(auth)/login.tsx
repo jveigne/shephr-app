@@ -36,8 +36,16 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      await login({ email: email.trim(), password });
-      router.replace('/(tabs)/home');
+      const me = await login({ email: email.trim(), password });
+      // Feature B : sans AUCUN rattachement ni rôle → parcours de rattachement.
+      const unattached =
+        !!me &&
+        !me.superAdmin &&
+        !me.goalRole &&
+        !me.donationRole &&
+        !me.goalUnitId &&
+        !me.donationUnitId;
+      router.replace(unattached ? '/(auth)/join' : '/(tabs)/home');
     } catch (e: any) {
       // Sans e.response, la requête n'a pas atteint le backend (URL/réseau), ce n'est pas un 401.
       const msg = e?.response

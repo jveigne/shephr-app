@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import {
@@ -19,7 +18,7 @@ import {
 } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { canManageZones } from '../services/authApi';
+import { canManageZones, isSecretariat } from '../services/authApi';
 import {
   createZone,
   deleteZone,
@@ -37,8 +36,11 @@ export function ZonesPage() {
   const queryClient = useQueryClient();
   const { push } = useToast();
   const { me } = useAuth();
-  const navigate = useNavigate();
   const canWrite = canManageZones(me);
+  // RDG 25/07 : création/suppression directes réservées au SUPER_ADMIN et au SECRETARIAT.
+  const secretariat = isSecretariat(me);
+  const canDirect = (me?.superAdmin ?? false) || secretariat;
+  const canDelete = canWrite || secretariat;
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<ZoneResponse | null>(null);
   const [creating, setCreating] = useState(false);
@@ -88,7 +90,7 @@ export function ZonesPage() {
   }, [zonesQ.data, search]);
 
   const countries = countriesQ.data ?? [];
-  const canCreate = canWrite && countries.length > 0;
+  const canCreate = canDirect && countries.length > 0;
 
   const cols: Column<ZoneResponse>[] = [
     { label: t('zones.colZone'), render: (z) => <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{z.name}</span> },
@@ -106,14 +108,18 @@ export function ZonesPage() {
       render: (z) => z.description ? z.description : <span style={{ color: 'var(--ink-400)' }}>—</span>,
     },
     { label: t('common.status'), render: (z) => <StatusBadge active={z.active} /> },
-    ...(canWrite
+    ...(canWrite || canDelete
       ? [{
           label: '',
           style: { width: 90 },
           render: (z: ZoneResponse) => (
             <div className="row-actions">
-              <IconButton icon={<Icon name="edit" size={15} />} title={t('common.edit')} onClick={() => setEditing(z)} />
-              <IconButton icon={<Icon name="trash" size={15} />} danger title={t('common.delete')} onClick={() => setToDelete(z)} />
+              {canWrite && (
+                <IconButton icon={<Icon name="edit" size={15} />} title={t('common.edit')} onClick={() => setEditing(z)} />
+              )}
+              {canDelete && (
+                <IconButton icon={<Icon name="trash" size={15} />} danger title={t('common.delete')} onClick={() => setToDelete(z)} />
+              )}
             </div>
           ),
         } as Column<ZoneResponse>]
@@ -126,9 +132,9 @@ export function ZonesPage() {
         title={t('zones.title')}
         crumbs={[t('common.brand'), t('nav.structure'), t('zones.title')]}
         actions={
-          // RG-DS-05 (22/07) : la création directe est réservée au SUPER_ADMIN — les dirigeants
-          // déposent une demande validée par le secrétariat (page Demandes).
-          me?.superAdmin ? (
+          // RDG 25/07 : la création d'une région est réservée au back-office (SUPER_ADMIN) et au
+          // SECRETARIAT — plus de demande possible pour ce niveau.
+          canDirect ? (
             <Button
               variant="primary"
               iconL={<Icon name="plus" size={15} />}
@@ -137,14 +143,6 @@ export function ZonesPage() {
               onClick={() => setCreating(true)}
             >
               {t('zones.newZone')}
-            </Button>
-          ) : canWrite ? (
-            <Button
-              variant="primary"
-              iconL={<Icon name="plus" size={15} />}
-              onClick={() => navigate('/requests')}
-            >
-              {t('zones.requestZone')}
             </Button>
           ) : undefined
         }

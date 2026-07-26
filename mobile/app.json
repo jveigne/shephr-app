@@ -40,7 +40,7 @@
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "org.cmfi.shephr",
+      "package": "com.cmfi.shephr",
       "versionCode": 1
     },
     "web": {

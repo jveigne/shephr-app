@@ -60,7 +60,17 @@ export function DeleteAccountPage() {
           {t('deleteAccount.intro')}
         </p>
 
-        {/* Comment demander la suppression */}
+        {/* Feature C — la suppression est désormais possible directement dans l'app (Réglages). */}
+        <section style={{ background: 'var(--ivory-card)', border: '1px solid var(--green-600)', borderRadius: 'var(--radius-lg)', padding: 'clamp(18px, 4vw, 26px)', boxShadow: 'var(--shadow-sm)', marginBottom: 22 }}>
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 10px' }}>
+            {t('deleteAccount.inAppTitle')}
+          </h2>
+          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: 0 }}>
+            {t('deleteAccount.inAppText')}
+          </p>
+        </section>
+
+        {/* Comment demander la suppression (processus e-mail conservé comme alternative) */}
         <section style={{ background: 'var(--ivory-card)', border: '1px solid var(--line-soft)', borderRadius: 'var(--radius-lg)', padding: 'clamp(18px, 4vw, 26px)', boxShadow: 'var(--shadow-sm)', marginBottom: 22 }}>
           <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 14px' }}>
             {t('deleteAccount.howTitle')}

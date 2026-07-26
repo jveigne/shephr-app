@@ -5,7 +5,7 @@ import { Icon } from '../components/Icon';
 import { Button, Checkbox, Field, Input } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../components/Toast';
-import { hasMinistryAccess } from '../services/authApi';
+import { hasMemberSpace, hasMinistryAccess } from '../services/authApi';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -29,12 +29,30 @@ export function LoginPage() {
     setLoading(true);
     try {
       const me = await login({ email: email.trim(), password });
-      if (!hasMinistryAccess(me)) {
-        setError(t('login.memberDenied'));
+      if (hasMinistryAccess(me)) {
+        // Comportement actuel : accès Web Espace ministère.
+        push({ kind: 'ok', title: t('login.welcomeToast'), msg: t('login.welcomeToastMsg') });
+        navigate('/dashboard', { replace: true });
         return;
       }
-      push({ kind: 'ok', title: t('login.welcomeToast'), msg: t('login.welcomeToastMsg') });
-      navigate('/dashboard', { replace: true });
+      if (hasMemberSpace(me)) {
+        // Feature A — MEMBRE Goals rattaché : espace minimal « Mes objectifs ».
+        push({ kind: 'ok', title: t('login.welcomeToast'), msg: t('login.welcomeToastMsg') });
+        navigate('/my-goals', { replace: true });
+        return;
+      }
+      const noAttachmentAtAll =
+        !me.superAdmin &&
+        me.goalRole == null &&
+        me.donationRole == null &&
+        me.goalUnitId == null &&
+        me.donationUnitId == null;
+      if (noAttachmentAtAll) {
+        // Feature B — aucun rattachement ni rôle : onboarding /join.
+        navigate('/join', { replace: true });
+        return;
+      }
+      setError(t('login.memberDenied'));
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
