@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { contactMailto } from '../constants/contact';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './Icon';
@@ -10,6 +11,7 @@ import {
   canManageUnits,
   canManageZones,
   getAccessibleModules,
+  isSecretariat,
   primaryRoleKey,
 } from '../services/authApi';
 import { listUnits, listLocalities } from '../services/adminApi';
@@ -57,6 +59,7 @@ const NAV: { sectionKey: string; items: NavItem[] }[] = [
         icon: 'building',
         children: [
           { id: 'ministeres', labelKey: 'nav.ministeres', to: '/structure/ministeres' },
+          { id: 'pays', labelKey: 'nav.pays', to: '/structure/pays' },
           { id: 'zones', labelKey: 'nav.zones', to: '/structure/zones' },
           { id: 'localites', labelKey: 'nav.localites', to: '/structure/localites' },
           { id: 'unites', labelKey: 'nav.unites', to: '/structure/unites' },
@@ -128,10 +131,14 @@ export function Sidebar() {
   // l'utilisateur ne peut pas administrer (au lieu d'afficher une page vide + bouton inutile).
   // « Mon ministère » reste visible (contexte de rattachement, lecture seule).
   const canSeeStructureChild = useMemo(() => {
+    // RDG 25/07 : le SECRETARIAT crée/supprime directement nation, région et ville —
+    // il voit donc ces trois niveaux (Pays est réservé à lui et au superAdmin).
+    const secretariat = isSecretariat(me);
     const map: Record<string, boolean> = {
       ministeres: true,
-      zones: canManageZones(me),
-      localites: canManageLocalities(me),
+      pays: (me?.superAdmin ?? false) || secretariat,
+      zones: canManageZones(me) || secretariat,
+      localites: canManageLocalities(me) || secretariat,
       unites: canManageUnits(me),
     };
     return (id: string) => map[id] ?? true;
@@ -239,6 +246,16 @@ export function Sidebar() {
               })}
             </div>
           ))}
+          {/* Contact : écrit à l'équipe Shephr, comme le CTA de la landing. */}
+          <div>
+            <a
+              className="nav-item"
+              href={contactMailto(t('nav.contactSubject'))}
+            >
+              <Icon name="mail" size={18} />
+              <span>{t('nav.contact')}</span>
+            </a>
+          </div>
         </nav>
 
         <div className="sidebar-foot">

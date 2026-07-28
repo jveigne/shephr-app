@@ -90,6 +90,14 @@ export function hasMinistryAccess(me: MeResponse | null): boolean {
   return isElevated(me.donationRole) || isElevated(me.goalRole);
 }
 
+/**
+ * Espace membre « Mes objectifs » (Feature A) : un MEMBRE du module Goals rattaché à une
+ * assemblée. Espace minimal séparé — n'ouvre PAS le Web Espace ministère (hasMinistryAccess).
+ */
+export function hasMemberSpace(me: MeResponse | null): boolean {
+  return me?.goalRole === 'MEMBRE' && !!me?.goalUnitId;
+}
+
 /** Accès à la page Objectifs (Lot 4.1) : dirigeant+ du module Goals, ou superAdmin. */
 export function hasGoalsAccess(me: MeResponse | null): boolean {
   if (!me) return false;
@@ -114,6 +122,15 @@ export function canManageZones(me: MeResponse | null): boolean {
   if (!me) return false;
   if (me.superAdmin) return true;
   return me.donationRole === 'DIRIGEANT_COORDINATEUR' || me.goalRole === 'DIRIGEANT_COORDINATEUR';
+}
+
+/**
+ * RDG 25/07 — rôle SECRETARIAT (Dons ∪ Objectifs). Avec le superAdmin, seul profil autorisé à
+ * CRÉER et SUPPRIMER directement nation / région / ville depuis l'app. Strictement SECRETARIAT.
+ */
+export function isSecretariat(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return me.donationRole === 'SECRETARIAT' || me.goalRole === 'SECRETARIAT';
 }
 
 /** Chantier B (décision #7) — l'utilisateur est un dirigeant de VILLE (rattaché à une ville). */
@@ -167,6 +184,18 @@ export function canManageUsers(me: MeResponse | null): boolean {
 }
 
 /**
+ * Dirigeant d'ASSEMBLÉE et rien de plus : DIRIGEANT_UNITE au maximum, hors superAdmin,
+ * SECRETARIAT et LEADER (vues ministère-large). Son périmètre s'arrête à son assemblée :
+ * il valide les rattachements de SES membres, et la structure (création d'assemblée dans sa
+ * ville) ne le concerne pas — ni en dépôt, ni en suivi, ni en validation.
+ */
+export function isAssemblyLeaderOnly(me: MeResponse | null): boolean {
+  if (!me || me.superAdmin || isSecretariat(me)) return false;
+  if (me.donationRole === 'LEADER' || me.goalRole === 'LEADER') return false;
+  return managerRank(me) <= ROLE_RANK.DIRIGEANT_UNITE;
+}
+
+/**
  * Rôles que l'acteur peut CONFÉRER (Lot 3.5) : de rang ≤ au sien (un DIRIGEANT peut conférer DIRIGEANT).
  * SUPER_ADMIN : tous. Le rattachement à des pays (COORDINATEUR) étant réservé au SUPER_ADMIN côté
  * backend, on n'offre pas COORDINATEUR à un non-SUPER_ADMIN. Aligné sur `requireCanAssign`.
@@ -202,8 +231,39 @@ export async function login(payload: { email: string; password: string }) {
   return data;
 }
 
+/**
+ * Feature B — inscription libre (miroir du parcours mobile `(auth)/signup`). Le compte créé
+ * n'est rattaché à rien : l'utilisateur enchaîne sur `/join` pour demander son rattachement.
+ * Erreurs 422 attendues : EMAIL_ALREADY_EXISTS / PHONE_ALREADY_EXISTS.
+ */
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  fullName: string;
+  phoneNumber?: string;
+  countryCode?: string;
+}
+
+export async function register(payload: RegisterRequest) {
+  const { data } = await apiClient.post<AuthResponse>(
+    '/api/cmfipraise/auth/register',
+    payload,
+  );
+  return data;
+}
+
 export async function fetchMe() {
   const { data } = await apiClient.get<MeResponse>('/api/church/auth/me');
+  return data;
+}
+
+/**
+ * Feature C — suppression de compte in-app. Le backend décide : DELETED (suppression) ou
+ * ANONYMIZED (données rattachées à conserver). Erreurs 422 : USER_LEADS_ORPHAN_NODES
+ * (message à afficher tel quel), SUPER_ADMIN_SELF_DELETE.
+ */
+export async function deleteMyAccount() {
+  const { data } = await apiClient.delete<{ mode: 'DELETED' | 'ANONYMIZED' }>('/api/church/auth/me');
   return data;
 }
 

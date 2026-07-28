@@ -12,6 +12,7 @@ import HandDivider from '../../components/HandDivider';
 import DonationRow from '../../components/DonationRow';
 import { colors, fonts, radii } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { hasMemberGoals } from '../../services/authApi';
 import { getSummary, type DonationSummary } from '../../services/statsApi';
 import { listDonations, type DonationResponse } from '../../services/donationApi';
 import { fmtAmount, monthLabel } from '../../utils/format';
@@ -108,7 +109,8 @@ export default function HomeScreen() {
         <Text style={styles.verseRef}>{t('dashboard.verseRef')}</Text>
       </View>*/}
 
-      {!FEATURES.donations && hasGoals && (
+      {/* Feature A — le simple membre accède aussi à SES objectifs depuis l'accueil. */}
+      {!FEATURES.donations && (hasGoals || hasMemberGoals(me)) && (
         <Card onPress={() => router.push('/(tabs)/goals')} style={styles.scopeCta}>
           <Ionicons name="flag" size={26} color={colors.white} />
           <View style={{ flex: 1 }}>
@@ -168,7 +170,9 @@ export default function HomeScreen() {
         />
         )}
 {/* Lot S1 (21/07) : briques visibles de TOUS — le contenu des écrans s'adapte au rôle
-    (listes scopées côté backend ; lecture seule pour un membre simple). */}
+    (listes scopées côté backend ; lecture seule pour un membre simple).
+    RDG 25/07 : le simple fidèle ne voit QUE Structure et Cantiques (+ ses objectifs en haut) —
+    Membres et Hiérarchie sont des outils de dirigeant, sans objet pour lui. */}
         <Tile
           label={t('dashboard.tiles.structure')}
           hint={t('dashboard.tiles.structureHint')}
@@ -176,6 +180,7 @@ export default function HomeScreen() {
           tone={colors.moss}
           onPress={() => router.push('/structure')}
         />
+        {isLeader && (
         <Tile
           label={t('dashboard.tiles.membres')}
           hint={t('dashboard.tiles.membresHint')}
@@ -183,12 +188,24 @@ export default function HomeScreen() {
           tone={colors.earthDeep}
           onPress={() => router.push('/membres')}
         />
+        )}
+        {isLeader && (
         <Tile
           label={t('dashboard.tiles.hierarchie')}
           hint={t('dashboard.tiles.hierarchieHint')}
           icon="git-network-outline"
           tone="#7A8B6F"
           onPress={() => router.push('/hierarchie')}
+        />
+        )}
+        {/* Faiseur de disciple (28/07) : accessible à TOUS — c'est le seul écran où un simple
+            fidèle agit sur sa hiérarchie (il déclare qui l'accompagne). */}
+        <Tile
+          label={t('dashboard.tiles.discipleship')}
+          hint={t('dashboard.tiles.discipleshipHint')}
+          icon="people-circle-outline"
+          tone={colors.mossDeep}
+          onPress={() => router.push('/faiseur-de-disciple')}
         />
 {        <Tile
           label={t('dashboard.tiles.cantique')}

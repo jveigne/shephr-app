@@ -31,8 +31,11 @@ const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallb
 export default function AddProgressScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { year: yearParam } = useLocalSearchParams<{ year?: string }>();
-  const { goal, lines, loading, reload } = useGoalsData(yearParam ? Number(yearParam) : null);
+  // `scope=member` : mêmes écrans, mais on déclare l'état de SES objectifs personnels
+  // (décision JP 28/07 — le membre est sa propre unité d'engagement).
+  const { year: yearParam, scope } = useLocalSearchParams<{ year?: string; scope?: string }>();
+  const member = scope === 'member';
+  const { goal, lines, loading, reload } = useGoalsData(yearParam ? Number(yearParam) : null, member);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [value, setValue] = useState('');
   const [note, setNote] = useState('');

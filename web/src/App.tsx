@@ -3,8 +3,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './hooks/useAuth';
 import { ToastProvider } from './components/Toast';
 import { AppShell } from './AppShell';
+import { MemberShell } from './MemberShell';
 import { LandingPage } from './pages/Landing';
 import { LoginPage } from './pages/Login';
+import { SignupPage } from './pages/Signup';
 import { AcceptInvitationPage } from './pages/AcceptInvitation';
 import { ActivateAccountPage } from './pages/ActivateAccount';
 import { DeleteAccountPage } from './pages/DeleteAccount';
@@ -14,13 +16,16 @@ import { GoalsPage } from './pages/Goals';
 import { MemberCarePage } from './pages/MemberCare';
 import { UsersPage } from './pages/Users';
 import { MonMinisterePage } from './pages/MonMinistere';
+import { PaysPage } from './pages/Pays';
 import { ZonesPage } from './pages/Zones';
 import { LocalitesPage } from './pages/Localites';
 import { UnitesPage } from './pages/Unites';
 import { ExportsPage } from './pages/Exports';
 import { HierarchyPage } from './pages/Hierarchy';
 import { RequestsPage } from './pages/Requests';
-import { Placeholder } from './pages/Placeholder';
+import { MemberGoalsPage } from './pages/MemberGoals';
+import { OnboardingPage } from './pages/Onboarding';
+import { SettingsPage } from './pages/Settings';
 import { FEATURES } from './config/features';
 
 const queryClient = new QueryClient({
@@ -46,11 +51,20 @@ export function App() {
               {/* Landing publique : présentation + fonctionnalités + tarification. */}
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
+              {/* Feature B — inscription libre (miroir du parcours mobile), enchaîne sur /join. */}
+              <Route path="/signup" element={<SignupPage />} />
               <Route path="/activate" element={<ActivateAccountPage />} />
               <Route path="/invitation/:token" element={<AcceptInvitationPage />} />
               {/* Page publique exigée par Google Play : demande de suppression de compte. */}
               <Route path="/delete-account" element={<DeleteAccountPage />} />
               <Route path="/supprimer-compte" element={<DeleteAccountPage />} />
+              {/* Feature B — onboarding : authentifié mais HORS AppShell (aucun rattachement). */}
+              <Route path="/join" element={<OnboardingPage />} />
+              {/* Feature A — espace membre minimal (MEMBRE Goals rattaché), gaté par MemberShell. */}
+              <Route element={<MemberShell />}>
+                <Route path="/my-goals" element={<MemberGoalsPage />} />
+                <Route path="/member-settings" element={<SettingsPage />} />
+              </Route>
               <Route element={<AppShell />}>
                 {FEATURES.donations ? (
                   <>
@@ -71,6 +85,7 @@ export function App() {
                 <Route path="/member-care" element={<MemberCarePage />} />
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/structure/ministeres" element={<MonMinisterePage />} />
+                <Route path="/structure/pays" element={<PaysPage />} />
                 <Route path="/structure/zones" element={<ZonesPage />} />
                 <Route path="/structure/localites" element={<LocalitesPage />} />
                 <Route path="/structure/unites" element={<UnitesPage />} />
@@ -81,16 +96,8 @@ export function App() {
                 ) : (
                   <Route path="/exports" element={<Navigate to={HOME} replace />} />
                 )}
-                <Route
-                  path="/settings"
-                  element={
-                    <Placeholder
-                      titleKey="placeholder.settingsTitle"
-                      crumbKeys={['common.brand', 'placeholder.settingsTitle']}
-                      descriptionKey="placeholder.settingsDescription"
-                    />
-                  }
-                />
+                {/* Feature C — vraie page Réglages (identité + suppression de compte). */}
+                <Route path="/settings" element={<SettingsPage />} />
                 <Route path="*" element={<Navigate to={HOME} replace />} />
               </Route>
             </Routes>

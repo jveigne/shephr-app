@@ -21,12 +21,15 @@ import Wordmark from '../../components/Wordmark';
 import { colors, fonts } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { confirmDialog } from '../../utils/dialogs';
 import { joinUnit, type MyUnitResponse } from '../../services/unitApi';
 
 export default function SignupScreen() {
   const insets = useSafeAreaInsets();
   const { register } = useAuth();
   const { t } = useLanguage();
+  // Feature B : question préalable « Avez-vous déjà un compte CMFIPraise ? » avant le formulaire.
+  const [asked, setAsked] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
 
   const [firstName, setFirstName] = useState('');
@@ -60,12 +63,25 @@ export default function SignupScreen() {
         password,
         fullName: `${firstName.trim()} ${lastName.trim()}`,
       });
-      setStep(2);
+      // Feature B : après inscription → parcours de rattachement (le code d'assemblée
+      // reste accessible depuis ce parcours via « J'ai un code d'assemblée »).
+      router.replace('/(auth)/join');
     } catch (e: any) {
-      Alert.alert(
-        t('signup.signupFailedTitle'),
-        e?.response?.data?.message ?? t('errors.tryAgain'),
-      );
+      const code = e?.response?.data?.error;
+      if (code === 'EMAIL_ALREADY_EXISTS' || code === 'PHONE_ALREADY_EXISTS') {
+        // Contrat 422 : compte déjà existant sur CMFIPraise → proposer la connexion.
+        const goLogin = await confirmDialog(
+          t('join.emailExistsTitle'),
+          e?.response?.data?.message ?? t('join.emailExists'),
+          t('join.goLogin'),
+        );
+        if (goLogin) router.replace('/(auth)/login');
+      } else {
+        Alert.alert(
+          t('signup.signupFailedTitle'),
+          e?.response?.data?.message ?? t('errors.tryAgain'),
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -104,7 +120,9 @@ export default function SignupScreen() {
         >
           <View style={styles.headerRow}>
             <Pressable
-              onPress={() => (step === 1 ? router.back() : setStep(1))}
+              onPress={() =>
+                !asked ? router.back() : step === 1 ? setAsked(false) : setStep(1)
+              }
               style={styles.iconBtn}
               hitSlop={10}
             >
@@ -112,34 +130,60 @@ export default function SignupScreen() {
             </Pressable>
             <Wordmark size={22} />
             <View style={{ flex: 1 }} />
-            <Text style={styles.stepPill}>{step}/2</Text>
+            {asked && <Text style={styles.stepPill}>{step}/2</Text>}
           </View>
 
-          <View style={styles.progressRow}>
-            <View
-              style={[
-                styles.progressBar,
-                { backgroundColor: step >= 1 ? colors.moss : 'rgba(30,58,47,0.15)' },
-              ]}
-            />
-            <View
-              style={[
-                styles.progressBar,
-                { backgroundColor: step >= 2 ? colors.moss : 'rgba(30,58,47,0.15)' },
-              ]}
-            />
-          </View>
+          {asked && (
+            <View style={styles.progressRow}>
+              <View
+                style={[
+                  styles.progressBar,
+                  { backgroundColor: step >= 1 ? colors.moss : 'rgba(30,58,47,0.15)' },
+                ]}
+              />
+              <View
+                style={[
+                  styles.progressBar,
+                  { backgroundColor: step >= 2 ? colors.moss : 'rgba(30,58,47,0.15)' },
+                ]}
+              />
+            </View>
+          )}
 
           <Text style={styles.title}>
-            {step === 1 ? t('signup.title1') : t('signup.title2')}
+            {!asked
+              ? t('join.haveAccountQ')
+              : step === 1
+              ? t('signup.title1')
+              : t('signup.title2')}
           </Text>
           <Text style={styles.subtitle}>
-            {step === 1
+            {!asked
+              ? t('join.haveAccountHint')
+              : step === 1
               ? t('signup.step1Hint')
               : t('signup.step2Hint', { name: firstName })}
           </Text>
 
-          {step === 1 ? (
+          {!asked ? (
+            <View style={{ gap: 12, marginTop: 26 }}>
+              <Button
+                label={t('join.loginInstead')}
+                variant="soft"
+                onPress={() => router.replace('/(auth)/login')}
+                fullWidth
+                height={56}
+                iconLeft={<Ionicons name="log-in-outline" size={18} color={colors.mossDeep} />}
+              />
+              <Button
+                label={t('join.createAccount')}
+                onPress={() => setAsked(true)}
+                fullWidth
+                height={56}
+                iconRight={<Ionicons name="arrow-forward" size={18} color={colors.white} />}
+              />
+            </View>
+          ) : step === 1 ? (
             <View style={{ gap: 14, marginTop: 22 }}>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1 }}>
@@ -180,13 +224,6 @@ export default function SignupScreen() {
                 height={56}
                 iconRight={<Ionicons name="arrow-forward" size={18} color={colors.white} />}
               />
-
-              <View style={styles.hint}>
-                <Text style={styles.hintTitle}>{t('signup.nextStepTitle')}</Text>
-                <Text style={styles.hintBody}>
-                  {t('signup.nextStepBody')}
-                </Text>
-              </View>
             </View>
           ) : (
             <View style={{ marginTop: 22 }}>

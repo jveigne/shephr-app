@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, RefreshControl, ActivityIndicator, Pressable } from 'react-native';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '../../../components/ScreenShell';
 import Card from '../../../components/Card';
@@ -11,13 +11,24 @@ import GoalAggregatesScreen from '../../../components/GoalAggregates';
 import GoalsMinistryOverview from '../../../components/GoalsMinistryOverview';
 import { colors, fonts } from '../../../theme';
 import { useAuth } from '../../../contexts/AuthContext';
+import { hasGoalsAccess, hasMemberGoals } from '../../../services/authApi';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useGoalsData, type GoalLine } from '../../../hooks/useGoalsData';
 import { goalCategoryMeta } from '../../../constants/goalCategories';
 import { fmtAmount, fmtDate } from '../../../utils/format';
+import {
+  fetchMembersAggregate,
+  type ActiveGoal,
+  type MembersAggregateLine,
+} from '../../../services/goalsApi';
 
 export default function GoalsOverviewScreen() {
   const { me } = useAuth();
+
+  // Feature A : le simple MEMBRE rattaché (sans aucun accès dirigeant) va sur « Mes objectifs ».
+  if (hasMemberGoals(me) && !hasGoalsAccess(me)) {
+    return <Redirect href="/(tabs)/goals/member" />;
+  }
 
   // Lot V1 — routage par rôle : Secrétariat/Présentation générale (ministère-large),
   // Coordinateur/Dirigeant (périmètre agrégé), Unité (engagements de l'assemblée).
@@ -43,6 +54,7 @@ export default function GoalsOverviewScreen() {
 
 function UnitGoalsScreen() {
   const { t } = useLanguage();
+  const { me } = useAuth();
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const { goal, lines, submitted, pledges, loading, error, reload } = useGoalsData(selectedYear);
   const [refreshing, setRefreshing] = useState(false);
@@ -183,7 +195,138 @@ function UnitGoalsScreen() {
           />
         </View>
       )}
+
+      {/* Feature A — agrégat des fidèles vs engagement du dirigeant (bloc replié). */}
+      {me?.goalUnitId && goal && year != null && (
+        <MembersAggregateBlock unitId={me.goalUnitId} year={year} goal={goal} />
+      )}
     </ScreenShell>
+  );
+}
+
+/**
+ * Feature A — bloc replié « Agrégat des fidèles / Engagement du dirigeant / Retenu (MAX) »
+ * alimenté par GET units/{unitId}/members-aggregate. Badge de source : AGGREGATE (agrégat
+ * des fidèles), DIRECT (l'engagement du dirigeant l'emporte), FAITH (foi).
+ */
+function MembersAggregateBlock({
+  unitId,
+  year,
+  goal,
+}: {
+  unitId: string;
+  year: number;
+  goal: ActiveGoal;
+}) {
+  const { t } = useLanguage();
+  const [expanded, setExpanded] = useState(false);
+  const [lines, setLines] = useState<MembersAggregateLine[] | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLines(null);
+  }, [unitId, year]);
+
+  useEffect(() => {
+    if (!expanded || lines != null || loading) return;
+    setLoading(true);
+    fetchMembersAggregate(unitId, year)
+      .then((r) => setLines(r.lines))
+      .catch(() => setLines([]))
+      .finally(() => setLoading(false));
+  }, [expanded, lines, loading, unitId, year]);
+
+  const currency = goal.defaultCurrency;
+  const catById = new Map(goal.categories.map((c) => [c.id, c]));
+  const fmtFor = (categoryId: string, v: number | null) => {
+    if (v == null) return '—';
+    const cat = catById.get(categoryId);
+    return cat?.unitType === 'CURRENCY'
+      ? fmtAmount(v, currency)
+      : `${v} ${cat?.unitLabel ?? ''}`.trim();
+  };
+  const sourceLabel: Record<string, string> = {
+    AGGREGATE: t('goals.aggregate.sourceAggregate'),
+    DIRECT: t('goals.aggregate.sourceDirect'),
+    FAITH: t('goals.aggregate.sourceFaith'),
+  };
+
+  return (
+    <Card variant="paper2" style={styles.membersAggCard}>
+      <Pressable
+        onPress={() => setExpanded((e) => !e)}
+        style={styles.membersAggHeader}
+        hitSlop={6}
+      >
+        <Ionicons name="people-outline" size={18} color={colors.mossSoft} />
+        <Text style={styles.membersAggTitle}>
+          {expanded ? t('goals.aggregate.hide') : t('goals.aggregate.show')}
+        </Text>
+        <Ionicons
+          name={expanded ? 'chevron-up' : 'chevron-down'}
+          size={16}
+          color={colors.ink3}
+        />
+      </Pressable>
+
+      {expanded && (
+        <View style={{ marginTop: 10 }}>
+          {loading && <ActivityIndicator color={colors.moss} />}
+          {!loading && (lines?.length ?? 0) === 0 && (
+            <Text style={styles.membersAggEmpty}>{t('goals.aggregate.empty')}</Text>
+          )}
+          {!loading &&
+            (lines ?? []).map((line) => {
+              const cat = catById.get(line.categoryId);
+              const leader = line.leaderAmount ?? line.leaderCount;
+              const retained = line.effectiveAmount ?? line.effectiveCount;
+              return (
+                <View key={line.categoryId} style={styles.membersAggLine}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={styles.membersAggCat}>
+                      {cat?.name ?? line.categoryCode}
+                    </Text>
+                    <View style={styles.sourceBadge}>
+                      <Text style={styles.sourceBadgeText}>
+                        {sourceLabel[line.source] ?? line.source}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.membersAggCols}>
+                    <View>
+                      <Label>{t('goals.aggregate.membersSum')}</Label>
+                      <Text style={styles.membersAggValue}>
+                        {fmtFor(line.categoryId, line.membersSum)}
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: 'center' }}>
+                      <Label>{t('goals.aggregate.leaderPledge')}</Label>
+                      <Text style={styles.membersAggValue}>
+                        {fmtFor(line.categoryId, leader)}
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Label>{t('goals.aggregate.retained')}</Label>
+                      <Text style={[styles.membersAggValue, { fontWeight: '600' }]}>
+                        {fmtFor(line.categoryId, retained)}
+                      </Text>
+                    </View>
+                  </View>
+                  {line.members.length > 0 && (
+                    <View style={{ marginTop: 6 }}>
+                      {line.members.map((m) => (
+                        <Text key={m.userId} style={styles.membersAggMember}>
+                          {m.fullName} · {fmtFor(line.categoryId, m.amount ?? m.count)}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+        </View>
+      )}
+    </Card>
   );
 }
 
@@ -217,14 +360,22 @@ export function YearSelector({
   );
 }
 
-function GoalLineCard({
+/**
+ * Carte d'une catégorie — partagée par la vue assemblée (dirigeant) et la vue « Mes objectifs »
+ * (membre), pour un design identique. {@code showProgress=false} masque le couple
+ * « Engagé / Versé » et la barre : un membre déclare un objectif, l'avancement reste au
+ * niveau de l'assemblée.
+ */
+export function GoalLineCard({
   line,
   currency,
   onPress,
+  showProgress = true,
 }: {
   line: GoalLine;
   currency: string;
   onPress: () => void;
+  showProgress?: boolean;
 }) {
   const { t } = useLanguage();
   const meta = goalCategoryMeta(line.category.code);
@@ -260,7 +411,18 @@ function GoalLineCard({
         {pledge?.locked && <Ionicons name="lock-closed" size={14} color={colors.ink3} />}
         <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
       </View>
-      {pledge != null && (
+      {pledge != null && !showProgress && (
+        <>
+          <HandDivider style={{ marginVertical: 10 }} />
+          <View style={styles.lineFooter}>
+            <View>
+              <Label>{t('goals.pledged')}</Label>
+              <Text style={styles.lineValue}>{target != null ? fmtValue(target) : '—'}</Text>
+            </View>
+          </View>
+        </>
+      )}
+      {pledge != null && showProgress && (
         <>
           <HandDivider style={{ marginVertical: 10 }} />
           <View style={styles.lineFooter}>
@@ -403,6 +565,38 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   pctOver: { color: colors.earthDeep },
+  membersAggCard: { paddingHorizontal: 16, paddingVertical: 14, marginTop: 14 },
+  membersAggHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  membersAggTitle: {
+    flex: 1,
+    fontFamily: fonts.sans,
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: colors.ink,
+  },
+  membersAggEmpty: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, lineHeight: 18 },
+  membersAggLine: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(42,38,32,0.06)',
+  },
+  membersAggCat: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
+  membersAggCols: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  membersAggValue: { fontFamily: fonts.serif, fontSize: 16, color: colors.ink, marginTop: 2 },
+  membersAggMember: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 3 },
+  sourceBadge: {
+    backgroundColor: 'rgba(201,149,107,0.22)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 99,
+  },
+  sourceBadgeText: {
+    fontFamily: fonts.sans,
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: colors.earthDeep,
+  },
   footnote: {
     textAlign: 'center',
     marginTop: 10,

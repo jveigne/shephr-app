@@ -16,12 +16,14 @@ import {
 } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
+import { isSecretariat } from '../services/authApi';
 import {
   addProgress,
   createFaithPledge,
   createPledge,
   deleteFaithPledge,
   deleteProgress,
+  fetchMembersAggregate,
   getActiveGoal,
   getAggregate,
   getGlobalSummary,
@@ -36,6 +38,7 @@ import {
   getZoneUnits,
   listFaithPledges,
   sendReminder,
+  unlockMemberPledges,
   unlockUnit,
   submitMyPledges,
   updateFaithPledge,
@@ -56,6 +59,7 @@ import {
 import { listCountries, listLocalities, listZones } from '../services/adminApi';
 import { NationsMap } from '../components/NationsMap';
 import { GoalTimeline } from '../components/GoalTimeline';
+import { YearPicker } from '../components/YearPicker';
 import { currencySymbol, fmtAmount, fmtDateLabel, toLocalDate } from '../utils/format';
 
 const errMsg = (err: unknown, fallback: string) =>
@@ -420,30 +424,13 @@ export function GoalsPage() {
         crumbs={[t('common.brand'), t('goals.title')]}
         actions={
           <>
+            {/* Lot G1.c : années visibles uniquement (JP 16/07 : le jalon final s'affiche « 2030 », sans libellé spécial). */}
             {goal && ((goal.visibleYears ?? goal.openYears)?.length ?? 0) > 0 && year != null && (
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ink-400)' }}>
-                {t('goals.year')}
-                <select
-                  value={year}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  style={{
-                    padding: '6px 10px',
-                    borderRadius: 8,
-                    border: '1px solid var(--line, rgba(42,38,32,0.15))',
-                    background: 'var(--parchment, #fff)',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: 'var(--ink)',
-                  }}
-                >
-                  {/* Lot G1.c : années visibles uniquement (JP 16/07 : le jalon final s'affiche « 2030 », sans libellé spécial). */}
-                  {(goal.visibleYears ?? goal.openYears).map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <YearPicker
+                years={goal.visibleYears ?? goal.openYears}
+                value={year}
+                onChange={setSelectedYear}
+              />
             )}
             {hasPledges && (
               <>
@@ -525,6 +512,18 @@ export function GoalsPage() {
                   rows={lines.map((l) => ({ ...l, id: l.category.id }))}
                   zebra
                 />
+
+                {/* Feature A — le dirigeant voit les objectifs de SES membres et l'agrégat des
+                    fidèles sur sa propre assemblée (jusqu'ici, ce bloc n'existait que dans le
+                    drill-down des vues de périmètre : il ne le voyait jamais). */}
+                {goal && year != null && me?.goalUnitId && (
+                  <MembersGoalsBlock
+                    unitId={me.goalUnitId}
+                    goal={goal}
+                    currency={currency}
+                    year={year}
+                  />
+                )}
 
                 <div style={{ marginTop: 28 }}>
                   <h3 style={{ margin: '0 0 10px' }}>{t('goals.historyTitle')}</h3>
@@ -1113,8 +1112,12 @@ function PerimeterBlock({
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <strong>{fmtCatValue(r.category, eff, currency)}</strong>
             {line && (
-              <Badge tone={line.source === 'FAITH' ? 'earth' : 'gray'}>
-                {line.source === 'FAITH' ? t('goals.sourceFaith') : t('goals.sourceAggregate')}
+              <Badge tone={line.source === 'FAITH' ? 'earth' : line.source === 'DIRECT' ? 'green' : 'gray'}>
+                {line.source === 'FAITH'
+                  ? t('goals.sourceFaith')
+                  : line.source === 'DIRECT'
+                  ? t('goals.sourceDirect')
+                  : t('goals.sourceAggregate')}
               </Badge>
             )}
           </span>
@@ -1300,8 +1303,12 @@ function AggregateSection({
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <strong>{fmtCatValue(r.category, eff, currency)}</strong>
             {line && (
-              <Badge tone={line.source === 'FAITH' ? 'earth' : 'gray'}>
-                {line.source === 'FAITH' ? t('goals.sourceFaith') : t('goals.sourceAggregate')}
+              <Badge tone={line.source === 'FAITH' ? 'earth' : line.source === 'DIRECT' ? 'green' : 'gray'}>
+                {line.source === 'FAITH'
+                  ? t('goals.sourceFaith')
+                  : line.source === 'DIRECT'
+                  ? t('goals.sourceDirect')
+                  : t('goals.sourceAggregate')}
               </Badge>
             )}
           </span>
@@ -2239,8 +2246,12 @@ function LevelAggregateBlock({
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                   <strong>{fmtCatValue(r.category, eff, currency)}</strong>
                   {line && level !== 'units' && (
-                    <Badge tone={line.source === 'FAITH' ? 'earth' : 'gray'}>
-                      {line.source === 'FAITH' ? t('goals.sourceFaith') : t('goals.sourceAggregate')}
+                    <Badge tone={line.source === 'FAITH' ? 'earth' : line.source === 'DIRECT' ? 'green' : 'gray'}>
+                      {line.source === 'FAITH'
+                        ? t('goals.sourceFaith')
+                        : line.source === 'DIRECT'
+                        ? t('goals.sourceDirect')
+                        : t('goals.sourceAggregate')}
                     </Badge>
                   )}
                 </span>
@@ -2251,6 +2262,13 @@ function LevelAggregateBlock({
         rows={categories.map((c) => ({ id: c.id, category: c }))}
         zebra
       />
+
+      {/* Feature A — au niveau ASSEMBLÉE : objectifs des membres + agrégat des fidèles /
+          engagement du dirigeant / retenu (MAX). */}
+      {level === 'units' && (
+        <MembersGoalsBlock unitId={entityId} goal={goal} currency={currency} year={year} />
+      )}
+
       {faiths.length > 0 && (
         <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--ink-600)' }}>
           {t('goals.faithPledgesInline')}
@@ -2283,6 +2301,156 @@ function LevelAggregateBlock({
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * Feature A — « Objectifs des membres » d'une assemblée : tableau des membres avec leur objectif,
+ * et les 3 valeurs Agrégat des fidèles / Engagement du dirigeant / Retenu (MAX) + badge de source.
+ * Masqué proprement si le backend refuse (403) ou ne connaît pas l'endpoint.
+ */
+function MembersGoalsBlock({
+  unitId, goal, currency, year,
+}: {
+  unitId: string;
+  goal: ActiveGoal;
+  currency: string;
+  year: number;
+}) {
+  const { t } = useTranslation();
+  const { me } = useAuth();
+  const { push } = useToast();
+  const queryClient = useQueryClient();
+  const q = useQuery({
+    queryKey: ['goals', 'members-aggregate', unitId, year],
+    queryFn: () => fetchMembersAggregate(unitId, year),
+    retry: false,
+  });
+
+  // Réouverture des objectifs d'un membre : SECRETARIAT / superAdmin (le backend refait le contrôle).
+  const canUnlockMembers = isSecretariat(me) || (me?.superAdmin ?? false);
+  const unlockM = useMutation({
+    mutationFn: (memberId: string) => unlockMemberPledges(memberId, year),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals', 'members-aggregate', unitId, year] });
+      push({ kind: 'ok', title: t('goals.memberUnlocked') });
+    },
+    onError: (err) =>
+      push({ kind: 'error', title: t('goals.unlockRefused'), msg: errMsg(err, t('common.error')) }),
+  });
+
+  if (q.isLoading) {
+    return <p style={{ margin: '10px 0 0', color: 'var(--ink-400)', fontSize: 13 }}>{t('common.loading')}</p>;
+  }
+  if (q.isError || !q.data) return null;
+
+  const catById = new Map(goal.categories.map((c) => [c.id, c]));
+  const lines = [...q.data.lines].sort(
+    (a, b) => (catById.get(a.categoryId)?.displayOrder ?? 0) - (catById.get(b.categoryId)?.displayOrder ?? 0),
+  );
+  if (lines.length === 0) return null;
+
+  const fmt = (categoryId: string, value: number | null | undefined) => {
+    const cat = catById.get(categoryId);
+    return cat ? fmtCatValue(cat, value ?? 0, currency) : String(value ?? 0);
+  };
+
+  // Pivot membres : une ligne par membre, une colonne par catégorie.
+  const memberMap = new Map<string, { fullName: string; locked: boolean; values: Map<string, number | null> }>();
+  for (const line of lines) {
+    for (const m of line.members) {
+      const entry = memberMap.get(m.userId) ?? { fullName: m.fullName, locked: false, values: new Map() };
+      entry.values.set(line.categoryId, m.amount ?? m.count);
+      // Un membre est « soumis » dès qu'un de ses objectifs est verrouillé (il soumet tout d'un coup).
+      entry.locked = entry.locked || m.locked;
+      memberMap.set(m.userId, entry);
+    }
+  }
+  const memberRows = Array.from(memberMap.entries()).map(([userId, m]) => ({ id: userId, ...m }));
+
+  type Line = (typeof lines)[number];
+  const aggCols: Column<Line & { id: string }>[] = [
+    {
+      label: t('goals.colCategory'),
+      render: (l) => <strong>{catById.get(l.categoryId)?.name ?? l.categoryCode}</strong>,
+    },
+    { label: t('goals.membersAggregate'), render: (l) => fmt(l.categoryId, l.membersSum) },
+    {
+      label: t('goals.leaderPledge'),
+      render: (l) =>
+        l.leaderAmount != null || l.leaderCount != null
+          ? fmt(l.categoryId, l.leaderAmount ?? l.leaderCount)
+          : <span style={{ color: 'var(--ink-400)' }}>—</span>,
+    },
+    {
+      label: t('goals.retainedMax'),
+      render: (l) => (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <strong>{fmt(l.categoryId, l.effectiveAmount ?? l.effectiveCount)}</strong>
+          <Badge tone={l.source === 'FAITH' ? 'earth' : l.source === 'DIRECT' ? 'green' : 'gray'}>
+            {l.source === 'FAITH'
+              ? t('goals.sourceFaith')
+              : l.source === 'DIRECT'
+              ? t('goals.sourceDirect')
+              : t('goals.sourceMembers')}
+          </Badge>
+        </span>
+      ),
+    },
+  ];
+
+  const memberCols: Column<(typeof memberRows)[number]>[] = [
+    { label: t('goals.colMember'), render: (m) => <strong>{m.fullName}</strong> },
+    ...lines.map((l) => ({
+      label: catById.get(l.categoryId)?.name ?? l.categoryCode,
+      render: (m: (typeof memberRows)[number]) => {
+        const v = m.values.get(l.categoryId);
+        return v != null ? fmt(l.categoryId, v) : <span style={{ color: 'var(--ink-400)' }}>—</span>;
+      },
+    } as Column<(typeof memberRows)[number]>)),
+    {
+      label: t('goals.colStatus'),
+      cellStyle: { textAlign: 'right' },
+      render: (m) =>
+        !m.locked ? (
+          <Badge tone="warn" dot>{t('goals.draft')}</Badge>
+        ) : (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
+            <Badge tone="ok" dot>{t('goals.submitted')}</Badge>
+            {/* Décision JP 28/07 : le membre passe par le secrétariat pour corriger après coup. */}
+            {canUnlockMembers && (
+              <Button
+                size="sm"
+                variant="ghost"
+                title={t('goals.unlockMemberTooltip')}
+                disabled={unlockM.isPending}
+                onClick={() => unlockM.mutate(m.id)}
+              >
+                {t('goals.unlockMember')}
+              </Button>
+            )}
+          </span>
+        ),
+    } as Column<(typeof memberRows)[number]>,
+  ];
+
+  return (
+    <div style={{ marginTop: 18 }}>
+      <h4 style={{ margin: '0 0 8px' }}>{t('goals.membersGoalsTitle')}</h4>
+      <Table columns={aggCols} rows={lines.map((l) => ({ ...l, id: l.categoryId }))} zebra />
+      <div style={{ marginTop: 12 }}>
+        <Table
+          columns={memberCols}
+          rows={memberRows}
+          zebra
+          empty={
+            <p style={{ color: 'var(--ink-400)', fontStyle: 'italic', margin: '6px 0 0' }}>
+              {t('goals.noMemberPledges')}
+            </p>
+          }
+        />
+      </div>
+    </div>
   );
 }
 

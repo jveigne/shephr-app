@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { hasMemberGoals } from '../../services/authApi';
 import { colors, fonts } from '../../theme';
 import { FEATURES } from '../../constants/features';
 import NotificationGate from '../../components/NotificationGate';
@@ -71,7 +72,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="goals"
         options={{
-          href: hasGoals ? '/(tabs)/goals' : null,
+          // Feature A : visible aussi pour le simple MEMBRE rattaché (hasMemberGoals).
+          href: hasGoals || hasMemberGoals(me) ? '/(tabs)/goals' : null,
           title: t('tabs.goals'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="flag-outline" size={size} color={color} />

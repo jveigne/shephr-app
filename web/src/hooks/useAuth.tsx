@@ -9,9 +9,12 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import {
   fetchMe,
+  hasMemberSpace,
   hasMinistryAccess,
   login as loginRequest,
+  register as registerRequest,
   type MeResponse,
+  type RegisterRequest,
   type UserDTO,
 } from '../services/authApi';
 import { getAuthToken, setAuthToken } from '../services/apiClient';
@@ -28,9 +31,15 @@ interface AuthContextValue extends AuthState {
   isAuthenticated: boolean;
   /** True when the user may access the Web Espace ministère (dirigeant+ or superAdmin). */
   canAccessWeb: boolean;
+  /** Feature A — espace membre minimal « Mes objectifs » (MEMBRE Goals rattaché à une assemblée). */
+  canAccessMemberSpace: boolean;
   login: (payload: { email: string; password: string }) => Promise<MeResponse>;
+  /** Feature B — inscription libre : crée le compte puis ouvre la session (parcours `/join`). */
+  register: (payload: RegisterRequest) => Promise<MeResponse>;
   /** Établit la session à partir d'un token déjà obtenu (ex. acceptation d'invitation). */
   establishSession: (token: string) => Promise<MeResponse>;
+  /** Recharge le /me (ex. après approbation d'une demande de rattachement — Feature B). */
+  refreshMe: () => Promise<MeResponse>;
   logout: () => Promise<void>;
 }
 
@@ -78,6 +87,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return establishSession(res.token);
   }, [establishSession]);
 
+  const register = useCallback(async (payload: RegisterRequest) => {
+    const res = await registerRequest(payload);
+    return establishSession(res.token);
+  }, [establishSession]);
+
+  const refreshMe = useCallback(async () => {
+    const me = await fetchMe();
+    applyUserLanguage(me.language);
+    setState((s) => ({ ...s, me }));
+    return me;
+  }, []);
+
   const logout = useCallback(async () => {
     setAuthToken(null);
     setState({ ready: true, token: null, user: null, me: null });
@@ -88,8 +109,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ...state,
     isAuthenticated: !!state.token,
     canAccessWeb: hasMinistryAccess(state.me),
+    canAccessMemberSpace: hasMemberSpace(state.me),
     login,
+    register,
     establishSession,
+    refreshMe,
     logout,
   };
 

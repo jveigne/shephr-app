@@ -202,7 +202,8 @@ export async function deleteProgress(id: string): Promise<void> {
 /** Chemin d'URL des niveaux agrégeables. */
 export type AggregateLevelPath = 'cities' | 'zones' | 'countries' | 'continents';
 
-export type AggregationSource = 'AGGREGATE' | 'FAITH';
+/** DIRECT = l'engagement du dirigeant l'emporte sur l'agrégat des membres (niveau ASSEMBLY). */
+export type AggregationSource = 'AGGREGATE' | 'DIRECT' | 'FAITH';
 
 export interface AggregateLine {
   categoryId: string;
@@ -215,6 +216,8 @@ export interface AggregateLine {
   effectiveAmount: number | null;
   effectiveCount: number | null;
   source: AggregationSource;
+  /** Feature A — agrégat des engagements des fidèles (niveau ASSEMBLY uniquement). */
+  membersSum?: number | null;
 }
 
 export interface FaithPledgeResponse {
@@ -276,6 +279,85 @@ export async function deleteFaithPledge(id: string): Promise<void> {
   await apiClient.delete(`/api/church/goals/faith-pledges/${id}`);
 }
 
+// --- Feature A — objectifs personnels des MEMBRES + agrégat des fidèles -------
+
+/** Engagement d'un fidèle dans l'agrégat d'assemblée. */
+export interface MemberPledgeEntry {
+  userId: string;
+  fullName: string;
+  amount: number | null;
+  count: number | null;
+  /** Le membre a soumis ses objectifs : seul le secrétariat peut les rouvrir (JP 28/07). */
+  locked: boolean;
+}
+
+export interface MembersAggregateLine {
+  categoryId: string;
+  categoryCode: string;
+  /** Somme des engagements des fidèles de l'assemblée. */
+  membersSum: number | null;
+  /** Engagement DIRECT du dirigeant (montant / nombre selon la catégorie). */
+  leaderAmount: number | null;
+  leaderCount: number | null;
+  /** Retenu = MAX(agrégat des fidèles, engagement du dirigeant, foi). */
+  effectiveAmount: number | null;
+  effectiveCount: number | null;
+  source: AggregationSource;
+  members: MemberPledgeEntry[];
+}
+
+export interface MembersAggregateResponse {
+  unitId: string;
+  year: number;
+  lines: MembersAggregateLine[];
+}
+
+/** Mes engagements personnels de MEMBRE (même forme que les pledges existants). */
+export async function fetchMyMemberPledges(year?: number): Promise<PledgeResponse[]> {
+  const { data } = await apiClient.get<PledgeResponse[]>(
+    `/api/church/goals/member/me/pledges${yq(year)}`,
+  );
+  return data;
+}
+
+/**
+ * Crée / remplace mon engagement personnel de MEMBRE sur une catégorie.
+ * Erreurs 422 : NO_ASSEMBLY_ATTACHMENT, PLEDGE_LOCKED, DEADLINE_PASSED.
+ */
+export async function saveMemberPledge(payload: CreatePledgeRequest): Promise<PledgeResponse> {
+  const { data } = await apiClient.post<PledgeResponse>(
+    '/api/church/goals/member/me/pledges',
+    payload,
+  );
+  return data;
+}
+
+/**
+ * Décision JP 28/07 — le membre soumet LUI-MÊME ses objectifs de l'année : ils sont verrouillés,
+ * indépendamment de la soumission de son assemblée. Pour les corriger ensuite, il doit passer par
+ * le secrétariat. Erreurs 422 : NO_PLEDGE_TO_SUBMIT, ALREADY_SUBMITTED, DEADLINE_PASSED.
+ */
+export async function submitMyMemberPledges(year?: number): Promise<SubmitResponse> {
+  const { data } = await apiClient.post<SubmitResponse>(
+    `/api/church/goals/member/me/submit${yq(year)}`,
+  );
+  return data;
+}
+
+/**
+ * Agrégat des fidèles d'une assemblée (périmètre GOAL habituel + le membre pour SA propre
+ * assemblée) : agrégat / engagement du dirigeant / retenu (MAX) + détail par fidèle.
+ */
+export async function fetchMembersAggregate(
+  unitId: string,
+  year?: number,
+): Promise<MembersAggregateResponse> {
+  const { data } = await apiClient.get<MembersAggregateResponse>(
+    `/api/church/goals/units/${unitId}/members-aggregate${yq(year)}`,
+  );
+  return data;
+}
+
 // --- Vues agrégées manquantes (Lot 4.3 — UC-DIR-13, UC-LDR-06) ---------------
 
 /** Avancement enrichi de sa catégorie — remplace N appels listProgress (UC-DIR-13). */
@@ -302,6 +384,14 @@ export interface ZoneUnitStatus {
 
 export async function getMyProgress(year?: number): Promise<MyProgressResponse[]> {
   const { data } = await apiClient.get<MyProgressResponse[]>(`/api/church/goals/me/progress${yq(year)}`);
+  return data;
+}
+
+/** Avancements de MES objectifs personnels de membre (décision JP 28/07). */
+export async function getMyMemberProgress(year?: number): Promise<MyProgressResponse[]> {
+  const { data } = await apiClient.get<MyProgressResponse[]>(
+    `/api/church/goals/member/me/progress${yq(year)}`,
+  );
   return data;
 }
 

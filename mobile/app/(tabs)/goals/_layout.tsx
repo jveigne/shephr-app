@@ -5,6 +5,7 @@ export default function GoalsLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
+      <Stack.Screen name="member" />
       <Stack.Screen name="pledge/[categoryId]" />
       <Stack.Screen name="submit" />
       <Stack.Screen name="progress" />

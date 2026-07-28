@@ -1,30 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { setLanguage } from '../i18n';
+import { LangSwitch } from '../components/LangSwitch';
 
 // Page publique exigée par Google Play : URL de demande de suppression de compte
 // et des données associées (Data safety > Account deletion). Accessible sans connexion.
 const CONTACT_EMAIL = 'jexcellence2065@gmail.com';
-
-function LangSwitch() {
-  const { i18n } = useTranslation();
-  const lang = i18n.language.startsWith('en') ? 'en' : 'fr';
-  return (
-    <div style={{ display: 'inline-flex', border: '1px solid var(--line)', borderRadius: 999, overflow: 'hidden' }}>
-      {(['fr', 'en'] as const).map((l) => (
-        <button
-          key={l}
-          onClick={() => setLanguage(l)}
-          style={{
-            padding: '4px 12px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
-            background: lang === l ? 'var(--green-600)' : 'transparent',
-            color: lang === l ? '#fff' : 'var(--ink-500)',
-          }}
-        >{l.toUpperCase()}</button>
-      ))}
-    </div>
-  );
-}
 
 export function DeleteAccountPage() {
   const { t } = useTranslation();
@@ -60,7 +40,17 @@ export function DeleteAccountPage() {
           {t('deleteAccount.intro')}
         </p>
 
-        {/* Comment demander la suppression */}
+        {/* Feature C — la suppression est désormais possible directement dans l'app (Réglages). */}
+        <section style={{ background: 'var(--ivory-card)', border: '1px solid var(--green-600)', borderRadius: 'var(--radius-lg)', padding: 'clamp(18px, 4vw, 26px)', boxShadow: 'var(--shadow-sm)', marginBottom: 22 }}>
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 10px' }}>
+            {t('deleteAccount.inAppTitle')}
+          </h2>
+          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: 0 }}>
+            {t('deleteAccount.inAppText')}
+          </p>
+        </section>
+
+        {/* Comment demander la suppression (processus e-mail conservé comme alternative) */}
         <section style={{ background: 'var(--ivory-card)', border: '1px solid var(--line-soft)', borderRadius: 'var(--radius-lg)', padding: 'clamp(18px, 4vw, 26px)', boxShadow: 'var(--shadow-sm)', marginBottom: 22 }}>
           <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 14px' }}>
             {t('deleteAccount.howTitle')}

@@ -12,6 +12,7 @@ import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg'
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Wordmark from '../../components/Wordmark';
+import LangSwitch from '../../components/LangSwitch';
 import Card from '../../components/Card';
 import Field from '../../components/Field';
 import Label from '../../components/Label';
@@ -36,8 +37,16 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      await login({ email: email.trim(), password });
-      router.replace('/(tabs)/home');
+      const me = await login({ email: email.trim(), password });
+      // Feature B : sans AUCUN rattachement ni rôle → parcours de rattachement.
+      const unattached =
+        !!me &&
+        !me.superAdmin &&
+        !me.goalRole &&
+        !me.donationRole &&
+        !me.goalUnitId &&
+        !me.donationUnitId;
+      router.replace(unattached ? '/(auth)/join' : '/(tabs)/home');
     } catch (e: any) {
       // Sans e.response, la requête n'a pas atteint le backend (URL/réseau), ce n'est pas un 401.
       const msg = e?.response
@@ -63,7 +72,10 @@ export default function LoginScreen() {
           ]}
           keyboardShouldPersistTaps="handled"
         >
-          <Wordmark size={40} color={colors.mossDeep} />
+          <View style={styles.topRow}>
+            <Wordmark size={40} color={colors.mossDeep} />
+            <LangSwitch />
+          </View>
 
           <View style={{ flex: 1, minHeight: 40 }} />
 
@@ -165,6 +177,11 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: 24,
     flexGrow: 1,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   tagline: {
     fontFamily: fonts.serif,

@@ -9,6 +9,7 @@ import {
   IconButton,
   Input,
   Modal,
+  Picker,
   Select,
   StatusBadge,
   Table,
@@ -16,6 +17,7 @@ import {
   TopBar,
   type Column,
 } from '../components/ui';
+import { GeoPicker } from '../components/GeoPicker';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -351,13 +353,13 @@ function PerimeterFields({
   set: (patch: { unitId?: string; zoneId?: string; cityId?: string; countryIds?: string[] }) => void;
 }) {
   const { t } = useTranslation();
+  // Recherche en cascade (nation › région › ville) : la liste du niveau visé se filtre
+  // au fur et à mesure — un simple <select> devenait illisible à l'échelle du ministère.
+  const picker = { units, cities, zones, countries };
   if (role === 'MEMBRE' || role === 'DIRIGEANT_UNITE') {
     return (
-      <Field label={t('users.unitAttachment')}>
-        <Select value={unitId} onChange={(e) => set({ unitId: e.target.value })}>
-          <option value="">{t('common.choose')}</option>
-          {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-        </Select>
+      <Field label={t('users.unitAttachment')} hint={t('users.unitAttachmentHint')}>
+        <GeoPicker level="unit" value={unitId} onChange={(id) => set({ unitId: id })} {...picker} />
       </Field>
     );
   }
@@ -365,23 +367,14 @@ function PerimeterFields({
     // Chantier B (décision #7) : un DIRIGEANT est un dirigeant de VILLE → on le rattache à une Ville.
     return (
       <Field label={t('users.cityAttachment')} hint={t('users.cityAttachmentHint')}>
-        <Select value={cityId} onChange={(e) => set({ cityId: e.target.value })}>
-          <option value="">{t('common.choose')}</option>
-          {cities.map((tm) => (
-            <option key={tm.id} value={tm.id}>{tm.zoneName ? `${tm.name} — ${tm.zoneName}` : tm.name}</option>
-          ))}
-        </Select>
+        <GeoPicker level="city" value={cityId} onChange={(id) => set({ cityId: id })} {...picker} />
       </Field>
     );
   }
   if (role === 'DIRIGEANT_SENIOR') {
     return (
-      <Field label={t('users.zoneFaith')}
-        hint={t('users.zoneFaithHint')}>
-        <Select value={zoneId} onChange={(e) => set({ zoneId: e.target.value })}>
-          <option value="">{t('common.choose')}</option>
-          {zones.map((z) => <option key={z.id} value={z.id}>{z.name} — {z.countryName}</option>)}
-        </Select>
+      <Field label={t('users.zoneFaith')} hint={t('users.zoneFaithHint')}>
+        <GeoPicker level="zone" value={zoneId} onChange={(id) => set({ zoneId: id })} {...picker} />
       </Field>
     );
   }
@@ -423,15 +416,20 @@ function SupervisorField({
   const { t } = useTranslation();
   return (
     <Field label={t('users.supervisor')} hint={t('users.supervisorHint')}>
-      <Select value={value} onChange={(e) => onChange(e.target.value)}>
-        {me?.superAdmin && <option value="">{t('users.supervisorRoot')}</option>}
-        {me && <option value={me.id}>{t('users.supervisorMe', { name: me.fullName })}</option>}
-        {people
-          .filter((p) => p.id !== me?.id && p.id !== excludeId)
-          .map((p) => (
-            <option key={p.id} value={p.id}>{p.fullName} — {p.email}</option>
-          ))}
-      </Select>
+      <Picker
+        value={value}
+        onChange={onChange}
+        placeholder={t('common.choose')}
+        searchPlaceholder={t('users.supervisor')}
+        options={[
+          ...(me?.superAdmin ? [{ id: '', label: t('users.supervisorRoot') }] : []),
+          ...(me ? [{ id: me.id, label: t('users.supervisorMe', { name: me.fullName }) }] : []),
+          // L'email en sous-ligne : deux homonymes ne sont départagés que par lui.
+          ...people
+            .filter((p) => p.id !== me?.id && p.id !== excludeId)
+            .map((p) => ({ id: p.id, label: p.fullName, sub: p.email ?? undefined })),
+        ]}
+      />
     </Field>
   );
 }
@@ -464,11 +462,12 @@ function ModuleField({ module, onChange }: { module: ModuleKind; onChange: (m: M
   if (VISIBLE_MODULES.length < 2) return null;
   return (
     <Field label={t('users.module')}>
-      <Select value={module} onChange={(e) => onChange(e.target.value as ModuleKind)}>
-        {VISIBLE_MODULES.map((m) => (
-          <option key={m} value={m}>{moduleLabel(m)}</option>
-        ))}
-      </Select>
+      <Picker
+        value={module}
+        onChange={(m) => onChange(m as ModuleKind)}
+        placeholder={t('common.choose')}
+        options={VISIBLE_MODULES.map((m) => ({ id: m, label: moduleLabel(m) }))}
+      />
     </Field>
   );
 }
@@ -584,10 +583,12 @@ function InviteModal({
           <SupervisorField me={me} people={people} value={supervisorId} onChange={setSupervisorId} />
           <ModuleField module={module} onChange={(m) => { setModule(m); setRole(''); setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); }} />
           <Field label={t('users.roleConferred', { module: moduleLabel(module) })}>
-            <Select value={role} onChange={(e) => { setRole(e.target.value as ModuleRole | ''); setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); }}>
-              <option value="">{t('common.choose')}</option>
-              {conferrableRoles(me, module).map((r) => <option key={r} value={r}>{t(`roles.${r}`)}</option>)}
-            </Select>
+            <Picker
+              value={role}
+              onChange={(r) => { setRole(r as ModuleRole | ''); setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); }}
+              placeholder={t('common.choose')}
+              options={conferrableRoles(me, module).map((r) => ({ id: r, label: t(`roles.${r}`) }))}
+            />
           </Field>
           <PerimeterFields role={role} unitId={unitId} zoneId={zoneId} cityId={cityId} countryIds={countryIds} units={units} zones={zones} cities={cities} countries={countries}
             set={(p) => { if (p.unitId !== undefined) setUnitId(p.unitId); if (p.zoneId !== undefined) setZoneId(p.zoneId); if (p.cityId !== undefined) setCityId(p.cityId); if (p.countryIds !== undefined) setCountryIds(p.countryIds); }} />
@@ -654,6 +655,7 @@ function EditModal({
       onClose={onClose}
       title={user ? t('users.manageUser', { name: user.fullName }) : t('users.manageDefault')}
       sub={t('users.manageSub')}
+      size="lg"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
@@ -672,10 +674,16 @@ function EditModal({
         <SupervisorField me={me} people={people} value={supervisorId} onChange={setSupervisorId} excludeId={user?.id} />
         <ModuleField module={module} onChange={(m) => { setModule(m); if (user) initFromUser(user, m); }} />
         <Field label={t('users.roleConferred', { module: moduleLabel(module) })}>
-          <Select value={role} onChange={(e) => { setRole(e.target.value as ModuleRole | ''); setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); }}>
-            <option value="">{t('common.noneOption')}</option>
-            {conferrableRoles(me, module).map((r) => <option key={r} value={r}>{t(`roles.${r}`)}</option>)}
-          </Select>
+          <Picker
+            value={role}
+            onChange={(r) => { setRole(r as ModuleRole | ''); setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); }}
+            placeholder={t('common.noneOption')}
+            options={[
+              // Retrait du rôle : choix explicite, pas seulement un placeholder.
+              { id: '', label: t('common.noneOption') },
+              ...conferrableRoles(me, module).map((r) => ({ id: r, label: t(`roles.${r}`) })),
+            ]}
+          />
         </Field>
         <PerimeterFields role={role} unitId={unitId} zoneId={zoneId} cityId={cityId} countryIds={countryIds} units={units} zones={zones} cities={cities} countries={countries}
           set={(p) => { if (p.unitId !== undefined) setUnitId(p.unitId); if (p.zoneId !== undefined) setZoneId(p.zoneId); if (p.cityId !== undefined) setCityId(p.cityId); if (p.countryIds !== undefined) setCountryIds(p.countryIds); }} />

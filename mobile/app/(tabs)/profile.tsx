@@ -8,8 +8,9 @@ import Label from '../../components/Label';
 import HandDivider from '../../components/HandDivider';
 import { colors, fonts } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
-import { canManageStructure, roleLabel } from '../../services/authApi';
+import { canManageStructure, deleteMyAccount, roleLabel } from '../../services/authApi';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { confirmDialog, notify } from '../../utils/dialogs';
 
 export default function ProfileScreen() {
   const { me, isLeader, logout } = useAuth();
@@ -40,6 +41,25 @@ export default function ProfileScreen() {
       { text: t('common.cancel'), style: 'cancel' },
       { text: t('profile.logout'), style: 'destructive', onPress: () => void doLogout() },
     ]);
+  };
+
+  // Feature C — suppression (ou anonymisation) définitive du compte.
+  const confirmDeleteAccount = async () => {
+    const ok = await confirmDialog(
+      t('profile.deleteTitle'),
+      t('profile.deleteMessage'),
+      t('profile.deleteAccount'),
+      true,
+    );
+    if (!ok) return;
+    try {
+      await deleteMyAccount();
+      await logout();
+      router.replace('/(auth)/login');
+    } catch (e: any) {
+      // 422 USER_LEADS_ORPHAN_NODES : message FR explicite (structures à transférer) — tel quel.
+      notify(t('profile.deleteTitle'), e?.response?.data?.message ?? t('profile.deleteError'));
+    }
   };
 
   return (
@@ -145,10 +165,22 @@ export default function ProfileScreen() {
         <Row icon="shield-outline" label={t('profile.privacy')} value={t('profile.privacyValue')} last />*/}
       </Card>
 
-      <Pressable onPress={confirmLogout} style={styles.logout}>
-        <Ionicons name="log-out-outline" size={18} color={colors.ink3} />
-        <Text style={styles.logoutText}>{t('profile.logout')}</Text>
-      </Pressable>
+      <Card style={styles.logoutCard}>
+        <Pressable onPress={confirmLogout} style={styles.logout}>
+          <Ionicons name="log-out-outline" size={18} color={colors.moss} />
+          <Text style={styles.logoutText}>{t('profile.logout')}</Text>
+        </Pressable>
+      </Card>
+
+      <Label style={{ marginTop: 18, marginBottom: 8, paddingHorizontal: 4 }}>
+        {t('profile.dangerZone')}
+      </Label>
+      <Card style={styles.dangerCard}>
+        <Pressable onPress={() => void confirmDeleteAccount()} style={styles.dangerRow}>
+          <Ionicons name="trash-outline" size={18} color={colors.clay} />
+          <Text style={styles.dangerText}>{t('profile.deleteAccount')}</Text>
+        </Pressable>
+      </Card>
 
       <Text style={styles.version}>{t('profile.version')}</Text>
     </ScreenShell>
@@ -288,15 +320,35 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: colors.ink,
   },
+  // Même traitement visuel que la carte « Supprimer mon compte » (carte bordée, texte gras) ;
+  // la couleur terre-cuite (clay) reste réservée à l'action destructrice.
+  logoutCard: {
+    marginTop: 18,
+    paddingVertical: 0,
+    borderColor: colors.mossTint2,
+  },
   logout: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    marginTop: 18,
     paddingVertical: 14,
+    paddingHorizontal: 18,
   },
-  logoutText: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink3 },
+  logoutText: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.moss },
+  dangerCard: {
+    paddingVertical: 0,
+    borderColor: 'rgba(184,106,74,0.3)',
+  },
+  dangerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+  },
+  dangerText: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.clay },
   version: {
     textAlign: 'center',
     marginTop: 16,

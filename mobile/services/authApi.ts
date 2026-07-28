@@ -12,7 +12,7 @@ export type ModuleRole =
   | 'SECRETARIAT';
 
 export const MODULE_ROLE_LABELS: Record<ModuleRole, string> = {
-  MEMBRE: 'Fidèle',
+  MEMBRE: 'Membre',
   DIRIGEANT_UNITE: "Dirigeant d'unité",
   DIRIGEANT: 'Dirigeant',
   DIRIGEANT_SENIOR: 'Dirigeant senior',
@@ -65,12 +65,33 @@ export function assignableLeaderRoles(me: MeResponse | null): ModuleRole[] {
   return LEADERS.filter((r) => ROLE_RANK[r] <= cap);
 }
 
+/**
+ * Dirigeant d'ASSEMBLÉE et rien de plus : DIRIGEANT_UNITE au maximum, hors superAdmin,
+ * SECRETARIAT et LEADER (vues ministère-large). Son périmètre s'arrête à son assemblée :
+ * il valide les rattachements de SES membres, et la structure (création d'assemblée dans sa
+ * ville) ne le concerne pas — ni en dépôt, ni en suivi, ni en validation.
+ */
+export function isAssemblyLeaderOnly(me: MeResponse | null): boolean {
+  if (!me || me.superAdmin || isSecretariat(me)) return false;
+  if (me.donationRole === 'LEADER' || me.goalRole === 'LEADER') return false;
+  return managerRank(me) <= ROLE_RANK.DIRIGEANT_UNITE;
+}
+
 /** Peut gérer les zones (créer une zone) : COORDINATEUR (ses pays) ou superAdmin. */
 export function canManageZones(me: MeResponse | null): boolean {
   if (!me) return false;
   return me.superAdmin
     || me.donationRole === 'DIRIGEANT_COORDINATEUR'
     || me.goalRole === 'DIRIGEANT_COORDINATEUR';
+}
+
+/**
+ * RDG 25/07 — rôle SECRETARIAT (Dons ∪ Objectifs). Avec le superAdmin, seul profil autorisé à
+ * CRÉER et SUPPRIMER directement nation / région / ville depuis l'app. Strictement SECRETARIAT.
+ */
+export function isSecretariat(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return me.donationRole === 'SECRETARIAT' || me.goalRole === 'SECRETARIAT';
 }
 
 export interface UserDTO {
@@ -144,7 +165,15 @@ export function hasGoalsAccess(me: MeResponse | null): boolean {
   return me.superAdmin || isElevated(me.goalRole);
 }
 
-/** Human label for the user's most significant role ('Fidèle' for a plain member). */
+/**
+ * Feature A — « Mes objectifs » d'un simple MEMBRE rattaché à une assemblée Goals.
+ * Strictement MEMBRE + goalUnitId : n'élargit AUCUN périmètre dirigeant (hasGoalsAccess inchangé).
+ */
+export function hasMemberGoals(me: MeResponse | null): boolean {
+  return me?.goalRole === 'MEMBRE' && !!me?.goalUnitId;
+}
+
+/** Human label for the user's most significant role ('Membre' for a plain member). */
 export function roleLabel(me: MeResponse | null): string {
   if (!me) return '—';
   if (me.superAdmin) return 'Super Admin';
@@ -153,7 +182,7 @@ export function roleLabel(me: MeResponse | null): string {
     (isElevated(me.goalRole) ? me.goalRole : null) ??
     me.donationRole ??
     me.goalRole;
-  return role ? MODULE_ROLE_LABELS[role] : 'Fidèle';
+  return role ? MODULE_ROLE_LABELS[role] : 'Membre';
 }
 
 export interface LoginRequest {
@@ -220,6 +249,21 @@ export async function acceptInvitationByCode(
 
 export async function fetchMe(): Promise<MeResponse> {
   const { data } = await apiClient.get<MeResponse>('/api/church/auth/me');
+  return data;
+}
+
+// --- Feature C — suppression de compte (RGPD) ---------------------------------
+export interface DeleteAccountResponse {
+  /** DELETED = compte supprimé ; ANONYMIZED = données personnelles anonymisées. */
+  mode: 'DELETED' | 'ANONYMIZED';
+}
+
+/**
+ * Supprime (ou anonymise) le compte courant. Erreurs 422 :
+ * USER_LEADS_ORPHAN_NODES (message FR à afficher tel quel), SUPER_ADMIN_SELF_DELETE.
+ */
+export async function deleteMyAccount(): Promise<DeleteAccountResponse> {
+  const { data } = await apiClient.delete<DeleteAccountResponse>('/api/church/auth/me');
   return data;
 }
 

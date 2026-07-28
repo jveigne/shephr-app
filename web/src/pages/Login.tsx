@@ -2,10 +2,11 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
+import { LangSwitch } from '../components/LangSwitch';
 import { Button, Checkbox, Field, Input } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../components/Toast';
-import { hasMinistryAccess } from '../services/authApi';
+import { hasMemberSpace, hasMinistryAccess } from '../services/authApi';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -29,12 +30,30 @@ export function LoginPage() {
     setLoading(true);
     try {
       const me = await login({ email: email.trim(), password });
-      if (!hasMinistryAccess(me)) {
-        setError(t('login.memberDenied'));
+      if (hasMinistryAccess(me)) {
+        // Comportement actuel : accès Web Espace ministère.
+        push({ kind: 'ok', title: t('login.welcomeToast'), msg: t('login.welcomeToastMsg') });
+        navigate('/dashboard', { replace: true });
         return;
       }
-      push({ kind: 'ok', title: t('login.welcomeToast'), msg: t('login.welcomeToastMsg') });
-      navigate('/dashboard', { replace: true });
+      if (hasMemberSpace(me)) {
+        // Feature A — MEMBRE Goals rattaché : espace minimal « Mes objectifs ».
+        push({ kind: 'ok', title: t('login.welcomeToast'), msg: t('login.welcomeToastMsg') });
+        navigate('/my-goals', { replace: true });
+        return;
+      }
+      const noAttachmentAtAll =
+        !me.superAdmin &&
+        me.goalRole == null &&
+        me.donationRole == null &&
+        me.goalUnitId == null &&
+        me.donationUnitId == null;
+      if (noAttachmentAtAll) {
+        // Feature B — aucun rattachement ni rôle : onboarding /join.
+        navigate('/join', { replace: true });
+        return;
+      }
+      setError(t('login.memberDenied'));
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
@@ -91,13 +110,6 @@ export function LoginPage() {
             strokeDasharray="2 5"
           />
         </svg>
-
-        <div className="quote">
-          {t('login.quote')}
-          <div className="quote-sub">
-            {t('login.quoteSub')}
-          </div>
-        </div>
       </div>
 
       <div className="login-main" style={{ position: 'relative' }}>
@@ -113,6 +125,9 @@ export function LoginPage() {
           <Icon name="chevRight" size={14} style={{ transform: 'rotate(180deg)' }} />
           {t('login.backToHome')}
         </button>
+        <div style={{ position: 'absolute', top: 24, right: 24 }}>
+          <LangSwitch />
+        </div>
         <div className="login-card">
           <h1>{t('login.welcome')}</h1>
           <div className="sub">{t('login.subtitle')}</div>
@@ -208,11 +223,18 @@ export function LoginPage() {
             </button>
           </div>
 
-          <div className="reserved">
-            <Icon name="shield" size={16} />
-            <span>
-              {t('login.reserved')}
-            </span>
+          <div style={{ marginTop: 8, textAlign: 'center', fontSize: 14, color: 'var(--ink-600)' }}>
+            {t('login.noAccountQuestion')}{' '}
+            <button
+              type="button"
+              onClick={() => navigate('/signup')}
+              style={{
+                background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
+                color: 'var(--accent, #1E3A2F)', fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
+              }}
+            >
+              {t('login.signupCta')}
+            </button>
           </div>
         </div>
       </div>
