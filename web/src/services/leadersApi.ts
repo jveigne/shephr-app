@@ -50,3 +50,46 @@ export async function fetchLeaderHierarchy(rootUserId?: string): Promise<LeaderH
   });
   return { ...data, roots: data?.roots ?? [], unassignedUnits: data?.unassignedUnits ?? [] };
 }
+
+// ---------------- Faiseur de disciple (28/07) ----------------
+// Chacun — du simple membre au coordinateur — déclare LUI-MÊME son superviseur ; le lien
+// descendant (« mes disciples ») ne se construit que par les déclarations des autres.
+
+export interface DiscipleshipPerson {
+  id: string;
+  fullName: string;
+  email: string | null;
+  donationRole: ModuleRole | null;
+  goalRole: ModuleRole | null;
+  /** false = personne invitée qui n'a pas encore activé son compte. */
+  active: boolean;
+  unitName: string | null;
+  cityName: string | null;
+}
+
+export interface MyDiscipleshipResponse {
+  supervisor: DiscipleshipPerson | null;
+  disciples: DiscipleshipPerson[];
+}
+
+export async function fetchMyDiscipleship(): Promise<MyDiscipleshipResponse> {
+  const { data } = await apiClient.get<MyDiscipleshipResponse>('/api/church/leaders/me/discipleship');
+  return { supervisor: data?.supervisor ?? null, disciples: data?.disciples ?? [] };
+}
+
+/** Recherche scopée à MON ministère (min 2 caractères, sinon 422 QUERY_TOO_SHORT). */
+export async function searchSupervisorCandidates(q: string): Promise<DiscipleshipPerson[]> {
+  const { data } = await apiClient.get<DiscipleshipPerson[]>(
+    '/api/church/leaders/me/supervisor/candidates',
+    { params: { q } },
+  );
+  return data ?? [];
+}
+
+/** 422 : SUPERVISOR_SELF, SUPERVISOR_OUT_OF_MINISTRY, SUPERVISOR_CYCLE, NO_MINISTRY. */
+export async function declareMySupervisor(supervisorId: string): Promise<MyDiscipleshipResponse> {
+  const { data } = await apiClient.put<MyDiscipleshipResponse>('/api/church/leaders/me/supervisor', {
+    supervisorId,
+  });
+  return { supervisor: data?.supervisor ?? null, disciples: data?.disciples ?? [] };
+}

@@ -321,6 +321,36 @@
     "unassignedTitle": "Assemblies without a leader",
     "unassignedHint": "Created (often via an approved request) but with no attached leader — appoint one via Members (invite or manage)."
   },
+  "discipleship": {
+    "title": "My disciple maker",
+    "intro": "Declare who mentors you. You only declare your own disciple maker: the people who declare you appear below as your disciples.",
+    "none": "No disciple maker declared",
+    "declare": "Declare",
+    "change": "Change",
+    "declared": "Disciple maker saved",
+    "declareFailed": "Could not save",
+    "searchLabel": "Search for the person",
+    "searchPlaceholder": "Name, email or username",
+    "searchHint": "Only people from your ministry.",
+    "searchTooShort": "Type at least 2 characters.",
+    "noResult": "No one found in your ministry.",
+    "notFound": "Can't find the person?",
+    "inviteHint": "Invite them to create an account: share this sign-up link, then come back and declare them once their account exists.",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "sendMail": "Send by email",
+    "mailSubject": "Join me on Shephr",
+    "mailBody": "Hello,\n\nI would like to declare you as my disciple maker on Shephr. Create your account here: {{link}}\n\nThank you!",
+    "disciplesTitle_one": "{{count}} disciple declared me",
+    "disciplesTitle_other": "{{count}} disciples declared me",
+    "errors": {
+      "SUPERVISOR_SELF": "You cannot be your own disciple maker.",
+      "SUPERVISOR_OUT_OF_MINISTRY": "This person does not belong to your ministry.",
+      "SUPERVISOR_CYCLE": "This person is already one of your disciples.",
+      "NO_MINISTRY": "Your account has no ministry — contact the secretariat.",
+      "QUERY_TOO_SHORT": "Type at least 2 characters."
+    }
+  },
   "dashboard": {
     "title": "Dashboard",
     "thisMonth": "This month",

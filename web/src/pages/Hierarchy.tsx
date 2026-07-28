@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import { Badge, TopBar } from '../components/ui';
+import { DiscipleshipCard } from '../components/DiscipleshipCard';
 import { useAuth } from '../hooks/useAuth';
 import {
   fetchLeaderHierarchy,
@@ -61,6 +62,8 @@ export function HierarchyPage() {
     <>
       <TopBar title={t('hierarchy.title')} crumbs={[t('common.brand'), t('nav.hierarchy')]} />
       <div className="content">
+        <DiscipleshipCard />
+
         <p className="section-sub">{intro}</p>
 
         {data && roots.length > 0 && (

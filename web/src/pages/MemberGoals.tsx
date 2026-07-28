@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import { Badge, Button, Field, Input, Modal, Picker, Table, TopBar, type Column } from '../components/ui';
 import { useToast } from '../components/Toast';
+import { DiscipleshipCard } from '../components/DiscipleshipCard';
 import { YearPicker } from '../components/YearPicker';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -352,6 +353,10 @@ export function MemberGoalsPage() {
       />
 
       <div className="content">
+        {/* L'espace membre n'a pas d'écran Hiérarchie : c'est ici que le fidèle déclare son
+            faiseur de disciple (28/07). */}
+        <DiscipleshipCard />
+
         {goalQ.isLoading || pledgesQ.isLoading ? (
           <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
         ) : noGoal ? (

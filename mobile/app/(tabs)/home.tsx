@@ -198,6 +198,15 @@ export default function HomeScreen() {
           onPress={() => router.push('/hierarchie')}
         />
         )}
+        {/* Faiseur de disciple (28/07) : accessible à TOUS — c'est le seul écran où un simple
+            fidèle agit sur sa hiérarchie (il déclare qui l'accompagne). */}
+        <Tile
+          label={t('dashboard.tiles.discipleship')}
+          hint={t('dashboard.tiles.discipleshipHint')}
+          icon="people-circle-outline"
+          tone={colors.mossDeep}
+          onPress={() => router.push('/faiseur-de-disciple')}
+        />
 {        <Tile
           label={t('dashboard.tiles.cantique')}
           hint={t('dashboard.tiles.cantiqueHint')}

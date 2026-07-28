@@ -112,6 +112,21 @@ export default function HierarchieScreen() {
       </View>
       <Text style={styles.subtitle}>{intro}</Text>
 
+      {/* Accès à SA propre déclaration (28/07) : l'arbre reste en lecture, le rattachement
+          personnel se pose dans l'écran dédié. */}
+      <Card
+        variant="paper2"
+        style={styles.discipleshipCard}
+        onPress={() => router.push('/faiseur-de-disciple')}
+      >
+        <Ionicons name="people-circle-outline" size={18} color={colors.mossDeep} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.unitName} numberOfLines={1}>{t('discipleship.title')}</Text>
+          <Text style={styles.nodeMeta} numberOfLines={2}>{t('discipleship.shortcutHint')}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+      </Card>
+
       <View style={styles.segmentRow}>
         {(['leaders', 'units'] as ViewMode[]).map((v) => (
           <Pressable key={v} onPress={() => setView(v)} style={[styles.segment, view === v && styles.segmentActive]}>
@@ -260,6 +275,10 @@ function UnitRow({ unit, depth, leaderName, hideLocality }: {
 
 const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2 },
+  discipleshipCard: {
+    marginTop: 14, paddingHorizontal: 14, paddingVertical: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+  },
   segmentRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
   segment: { flex: 1, paddingVertical: 9, borderRadius: 99, backgroundColor: 'rgba(42,38,32,0.06)', alignItems: 'center' },
   segmentActive: { backgroundColor: colors.moss },
