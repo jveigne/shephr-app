@@ -19,7 +19,7 @@ import Button from '../../components/Button';
 import { colors, fonts } from '../../theme';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { canManageUsers, isSecretariat } from '../../services/authApi';
+import { canManageUsers, isAssemblyLeaderOnly, isSecretariat } from '../../services/authApi';
 import { confirmDialog, notify } from '../../utils/dialogs';
 import {
   cancelStructureRequest, createStructureRequest, fetchRequestContext, listMyRequests,
@@ -28,7 +28,7 @@ import {
 } from '../../services/structureRequestsApi';
 import {
   approveJoinRequest, cancelJoinRequest, fetchMyJoinRequests, fetchPendingJoinRequests,
-  rejectJoinRequest, type JoinRequestResponse,
+  rejectJoinRequest, reviewableJoinRequests, type JoinRequestResponse,
 } from '../../services/joinRequestsApi';
 
 /**
@@ -53,11 +53,16 @@ export default function DemandesScreen() {
 
   // File de validation : dirigeants (≥ DIRIGEANT_UNITE), secrétariat, superAdmin uniquement.
   const canDecideJoin = canManageUsers(me) || isSecretariat(me);
+  // Un dirigeant d'assemblée ne voit QUE les rattachements à son assemblée : tout le bloc
+  // « demandes de structure » (dépôt + suivi) lui est masqué.
+  const showStructure = !isAssemblyLeaderOnly(me);
 
   const load = useCallback(async () => {
     const [mine, ctx, myJ, pendJ] = await Promise.allSettled([
-      listMyRequests(),
-      fetchRequestContext(),
+      showStructure ? listMyRequests() : Promise.resolve([] as StructureRequestResponse[]),
+      showStructure
+        ? fetchRequestContext()
+        : Promise.resolve({ nations: [], regions: [], cities: [] } as StructureRequestContext),
       fetchMyJoinRequests(),
       // 403 silencieux pour les non-décideurs (règle serveur).
       canDecideJoin ? fetchPendingJoinRequests() : Promise.resolve([] as JoinRequestResponse[]),
@@ -65,9 +70,11 @@ export default function DemandesScreen() {
     if (mine.status === 'fulfilled') setRequests(mine.value);
     if (ctx.status === 'fulfilled') setContext(ctx.value);
     if (myJ.status === 'fulfilled') setMyJoin(myJ.value);
-    setPendingJoin(pendJ.status === 'fulfilled' ? pendJ.value : []);
+    // Un dirigeant d'assemblée ne décide que des rattachements à SON assemblée : les demandes
+    // portant création d'une assemblée (même dans sa ville) restent au secrétariat.
+    setPendingJoin(pendJ.status === 'fulfilled' ? reviewableJoinRequests(me, pendJ.value) : []);
     setLoading(false);
-  }, [canDecideJoin]);
+  }, [canDecideJoin, me, showStructure]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -152,9 +159,9 @@ export default function DemandesScreen() {
       <View style={styles.headerRow}>
         <Text style={styles.title}>{t('requests.title')}</Text>
       </View>
-      <Text style={styles.subtitle}>{t('requests.subtitle')}</Text>
+      {showStructure && <Text style={styles.subtitle}>{t('requests.subtitle')}</Text>}
 
-      {canPropose && (
+      {showStructure && canPropose && (
         <Button
           label={t('requests.newRequest')}
           onPress={() => setDepositOpen(true)}
@@ -163,16 +170,18 @@ export default function DemandesScreen() {
         />
       )}
 
-      <View style={{ gap: 8, marginTop: 16 }}>
-        {requests.length === 0 && (
-          <Text style={styles.empty}>
-            {canPropose ? t('requests.emptyMine') : t('requests.notEligible')}
-          </Text>
-        )}
-        {requests.map((r) => (
-          <RequestRow key={r.id} request={r} onCancel={() => onCancel(r)} />
-        ))}
-      </View>
+      {showStructure && (
+        <View style={{ gap: 8, marginTop: 16 }}>
+          {requests.length === 0 && (
+            <Text style={styles.empty}>
+              {canPropose ? t('requests.emptyMine') : t('requests.notEligible')}
+            </Text>
+          )}
+          {requests.map((r) => (
+            <RequestRow key={r.id} request={r} onCancel={() => onCancel(r)} />
+          ))}
+        </View>
+      )}
 
       {/* Feature B — demandes de rattachement à une assemblée. */}
       <View style={styles.sectionRow}>
@@ -212,7 +221,7 @@ export default function DemandesScreen() {
         onSubmit={onRejectJoin}
       />
 
-      {context && (
+      {showStructure && context && (
         <DepositModal
           open={depositOpen}
           context={context}

@@ -287,6 +287,8 @@ export interface MemberPledgeEntry {
   fullName: string;
   amount: number | null;
   count: number | null;
+  /** Le membre a soumis ses objectifs : seul le secrétariat peut les rouvrir (JP 28/07). */
+  locked: boolean;
 }
 
 export interface MembersAggregateLine {
@@ -331,6 +333,18 @@ export async function saveMemberPledge(payload: CreatePledgeRequest): Promise<Pl
 }
 
 /**
+ * Décision JP 28/07 — le membre soumet LUI-MÊME ses objectifs de l'année : ils sont verrouillés,
+ * indépendamment de la soumission de son assemblée. Pour les corriger ensuite, il doit passer par
+ * le secrétariat. Erreurs 422 : NO_PLEDGE_TO_SUBMIT, ALREADY_SUBMITTED, DEADLINE_PASSED.
+ */
+export async function submitMyMemberPledges(year?: number): Promise<SubmitResponse> {
+  const { data } = await apiClient.post<SubmitResponse>(
+    `/api/church/goals/member/me/submit${yq(year)}`,
+  );
+  return data;
+}
+
+/**
  * Agrégat des fidèles d'une assemblée (périmètre GOAL habituel + le membre pour SA propre
  * assemblée) : agrégat / engagement du dirigeant / retenu (MAX) + détail par fidèle.
  */
@@ -370,6 +384,14 @@ export interface ZoneUnitStatus {
 
 export async function getMyProgress(year?: number): Promise<MyProgressResponse[]> {
   const { data } = await apiClient.get<MyProgressResponse[]>(`/api/church/goals/me/progress${yq(year)}`);
+  return data;
+}
+
+/** Avancements de MES objectifs personnels de membre (décision JP 28/07). */
+export async function getMyMemberProgress(year?: number): Promise<MyProgressResponse[]> {
+  const { data } = await apiClient.get<MyProgressResponse[]>(
+    `/api/church/goals/member/me/progress${yq(year)}`,
+  );
   return data;
 }
 

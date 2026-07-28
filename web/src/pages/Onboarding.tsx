@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
-import { Badge, Button, Field, Input, Select } from '../components/ui';
+import { Badge, Button, Field, Input, Picker, type PickerOption } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
 import { hasMemberSpace, hasMinistryAccess } from '../services/authApi';
-import { fetchRequestContext } from '../services/structureRequestsApi';
+import { fetchRequestContext, type RequestNodeOption } from '../services/structureRequestsApi';
 import {
   cancelJoinRequest,
   createJoinRequest,
@@ -28,6 +28,10 @@ const errMsg = (err: unknown, fallback: string) =>
 
 const errCode = (err: unknown): string | null =>
   (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? null;
+
+/** Nœuds de structure → options du Picker (l'ordre du backend est conservé). */
+const toOptions = (nodes: RequestNodeOption[] | undefined): PickerOption[] =>
+  (nodes ?? []).map((n) => ({ id: n.id, label: n.name }));
 
 const STATUS_TONE: Record<JoinRequestStatus, 'warn' | 'ok' | 'err' | 'gray'> = {
   PENDING: 'warn',
@@ -244,8 +248,19 @@ function SearchFlow({
   const [nationId, setNationId] = useState('');
   const [regionId, setRegionId] = useState('');
   const [cityId, setCityId] = useState('');
-  const regions = (contextQ.data?.regions ?? []).filter((r) => !nationId || r.parentId === nationId);
-  const cities = (contextQ.data?.cities ?? []).filter((c) => !regionId || c.parentId === regionId);
+  const allRegions = contextQ.data?.regions ?? [];
+  const allCities = contextQ.data?.cities ?? [];
+  const regions = allRegions.filter((r) => !nationId || r.parentId === nationId);
+  const cities = allCities.filter((c) => !regionId || c.parentId === regionId);
+
+  // Villes proposées à la CRÉATION d'une assemblée : on ne repart pas du référentiel entier,
+  // on reste dans le périmètre déjà choisi au-dessus (région, sinon nation, sinon tout).
+  const regionNameById = useMemo(() => new Map(allRegions.map((r) => [r.id, r.name])), [allRegions]);
+  const scopedCities = regionId
+    ? cities
+    : nationId
+      ? allCities.filter((c) => c.parentId != null && regions.some((r) => r.id === c.parentId))
+      : allCities;
 
   const canSearch = debouncedQ.length >= 2 || cityId !== '';
   const searchQ = useQuery({
@@ -259,6 +274,16 @@ function SearchFlow({
   const [createOpen, setCreateOpen] = useState(false);
   const [newCityId, setNewCityId] = useState('');
   const [newName, setNewName] = useState('');
+
+  // La ville choisie dans le parcours du haut est celle où l'on crée : on la reprend d'office.
+  useEffect(() => {
+    if (cityId) setNewCityId(cityId);
+  }, [cityId]);
+
+  // Le périmètre a changé (autre nation/région) : une ville hors périmètre ne peut pas rester choisie.
+  useEffect(() => {
+    if (newCityId && !scopedCities.some((c) => c.id === newCityId)) setNewCityId('');
+  }, [scopedCities, newCityId]);
 
   const createM = useMutation({
     mutationFn: createJoinRequest,
@@ -315,19 +340,27 @@ function SearchFlow({
 
         <div style={{ margin: '12px 0 0' }}>
           <div style={{ fontSize: 12.5, color: 'var(--ink-500)', marginBottom: 8 }}>{t('join.browseTitle')}</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            <Select value={nationId} onChange={(e) => { setNationId(e.target.value); setRegionId(''); setCityId(''); }} style={{ minWidth: 160 }}>
-              <option value="">{t('join.nationPlaceholder')}</option>
-              {(contextQ.data?.nations ?? []).map((n) => <option key={n.id} value={n.id}>{n.name}</option>)}
-            </Select>
-            <Select value={regionId} onChange={(e) => { setRegionId(e.target.value); setCityId(''); }} style={{ minWidth: 160 }} disabled={!nationId}>
-              <option value="">{t('join.regionPlaceholder')}</option>
-              {regions.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </Select>
-            <Select value={cityId} onChange={(e) => setCityId(e.target.value)} style={{ minWidth: 160 }} disabled={!regionId}>
-              <option value="">{t('join.cityPlaceholder')}</option>
-              {cities.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </Select>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: 10 }}>
+            <Picker
+              value={nationId}
+              onChange={(id) => { setNationId(id); setRegionId(''); setCityId(''); }}
+              options={toOptions(contextQ.data?.nations)}
+              placeholder={t('join.nationPlaceholder')}
+            />
+            <Picker
+              value={regionId}
+              onChange={(id) => { setRegionId(id); setCityId(''); }}
+              options={toOptions(regions)}
+              placeholder={t('join.regionPlaceholder')}
+              disabled={!nationId}
+            />
+            <Picker
+              value={cityId}
+              onChange={setCityId}
+              options={toOptions(cities)}
+              placeholder={t('join.cityPlaceholder')}
+              disabled={!regionId}
+            />
           </div>
         </div>
 
@@ -389,10 +422,18 @@ function SearchFlow({
           <p style={{ margin: '0 0 14px', fontSize: 13.5, color: 'var(--ink-500)' }}>{t('join.newAssemblySub')}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <Field label={t('join.cityLabel')}>
-              <Select value={newCityId} onChange={(e) => setNewCityId(e.target.value)}>
-                <option value="">{t('common.choose')}</option>
-                {(contextQ.data?.cities ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </Select>
+              <Picker
+                value={newCityId}
+                onChange={setNewCityId}
+                options={scopedCities.map((c) => ({
+                  id: c.id,
+                  label: c.name,
+                  // Hors périmètre d'une région précise, on rappelle la région de chaque ville.
+                  sub: regionId ? undefined : regionNameById.get(c.parentId ?? ''),
+                }))}
+                placeholder={t('common.choose')}
+                searchPlaceholder={t('join.cityLabel')}
+              />
             </Field>
             <Field label={t('join.newAssemblyName')}>
               <Input

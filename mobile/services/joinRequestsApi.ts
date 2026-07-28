@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import { isSecretariat, type MeResponse } from './authApi';
 
 // Feature B — demandes de rattachement à une assemblée (parcours d'inscription).
 // Le fidèle (ou dirigeant) cherche son assemblée de maison, dépose une demande de rattachement
@@ -70,6 +71,21 @@ export async function createJoinRequest(
 export async function fetchMyJoinRequests(): Promise<JoinRequestResponse[]> {
   const { data } = await apiClient.get<JoinRequestResponse[]>('/api/church/join-requests/mine');
   return data;
+}
+
+/**
+ * Périmètre de décision d'un DIRIGEANT D'ASSEMBLÉE : uniquement les rattachements à une
+ * assemblée EXISTANTE (la sienne). Une demande qui CRÉE une assemblée — même dans sa ville —
+ * relève du SECRETARIAT et ne doit pas apparaître dans sa file. Filet côté client : le backend
+ * reste l'autorité sur ce que la file renvoie.
+ */
+export function reviewableJoinRequests(
+  me: MeResponse | null,
+  rows: JoinRequestResponse[],
+): JoinRequestResponse[] {
+  if (!me) return [];
+  if (me.superAdmin || isSecretariat(me)) return rows;
+  return rows.filter((r) => r.assemblyNodeId != null && r.structureRequestId == null);
 }
 
 /** 403 pour les non-décideurs (dirigeants d'assemblée / SECRETARIAT / superAdmin uniquement). */

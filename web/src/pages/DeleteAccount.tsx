@@ -1,30 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { setLanguage } from '../i18n';
+import { LangSwitch } from '../components/LangSwitch';
 
 // Page publique exigée par Google Play : URL de demande de suppression de compte
 // et des données associées (Data safety > Account deletion). Accessible sans connexion.
 const CONTACT_EMAIL = 'jexcellence2065@gmail.com';
-
-function LangSwitch() {
-  const { i18n } = useTranslation();
-  const lang = i18n.language.startsWith('en') ? 'en' : 'fr';
-  return (
-    <div style={{ display: 'inline-flex', border: '1px solid var(--line)', borderRadius: 999, overflow: 'hidden' }}>
-      {(['fr', 'en'] as const).map((l) => (
-        <button
-          key={l}
-          onClick={() => setLanguage(l)}
-          style={{
-            padding: '4px 12px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
-            background: lang === l ? 'var(--green-600)' : 'transparent',
-            color: lang === l ? '#fff' : 'var(--ink-500)',
-          }}
-        >{l.toUpperCase()}</button>
-      ))}
-    </div>
-  );
-}
 
 export function DeleteAccountPage() {
   const { t } = useTranslation();

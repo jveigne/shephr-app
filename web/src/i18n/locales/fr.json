@@ -2,6 +2,7 @@
   "landing": {
     "nav": {
       "login": "Se connecter",
+      "signup": "Créer un compte",
       "account": "Mon espace"
     },
     "hero": {
@@ -9,8 +10,9 @@
       "title": "Pilotez la vie de votre église, en un seul endroit",
       "subtitle": "Shephr réunit les objectifs, les dons, le suivi pastoral et les recueils de votre ministère — du membre jusqu'au secrétariat international.",
       "ctaPrimary": "Se connecter",
+      "ctaSignup": "Créer un compte",
       "ctaSecondary": "Nous contacter",
-      "note": "L'activation se fait avec notre accompagnement — écrivez-nous pour démarrer."
+      "note": "Créez votre compte gratuitement pour rejoindre votre assemblée. L'activation d'un ministère se fait avec notre accompagnement — écrivez-nous pour démarrer."
     },
     "features": {
       "title": "Tout ce dont votre ministère a besoin",
@@ -70,7 +72,7 @@
     },
     "contact": {
       "title": "Activez votre espace Shephr",
-      "desc": "Shephr se déploie avec accompagnement : pas d'inscription en libre-service. Contactez-nous et nous configurons votre ministère, créons votre premier accès et activons les modules dont vous avez besoin.",
+      "desc": "Vous rejoignez une assemblée existante ? Créez votre compte, puis déposez votre demande de rattachement. Pour déployer un ministère entier, nous vous accompagnons : contactez-nous et nous configurons votre structure, créons vos premiers accès et activons les modules dont vous avez besoin.",
       "cta": "Nous contacter pour activer",
       "or": "ou écrivez-nous à",
       "mailSubject": "Activation d'un espace Shephr"
@@ -183,7 +185,9 @@
     "exports": "Exports",
     "settings": "Paramètres",
     "language": "Langue",
-    "requests": "Demandes"
+    "requests": "Demandes",
+    "contact": "Contactez-nous",
+    "contactSubject": "Demande d'assistance Shephr"
   },
   "sidebar": {
     "logout": "Déconnexion",
@@ -222,24 +226,44 @@
     "backToHome": "Accueil",
     "welcome": "Bienvenue",
     "subtitle": "Connectez-vous à votre espace d'administration shephr.",
-    "quote": "« Donner avec joie, recevoir avec gratitude. »",
-    "quoteHighlight": "recevoir avec gratitude.",
-    "quoteSub": "shephr accompagne votre ministère à travers la collecte, la lecture et le récit de la générosité.",
     "emailLabel": "Email ou identifiant",
-    "emailPlaceholder": "votre@email.com ou pveigne@shephr.org",
+    "emailPlaceholder": "votre@email.com",
     "passwordLabel": "Mot de passe",
     "rememberMe": "Se souvenir de moi",
     "forgotPassword": "Mot de passe oublié ?",
     "connecting": "Connexion…",
     "signIn": "Se connecter",
-    "reserved": "Accès réservé aux dirigeants. Les membres utilisent l'application mobile shephr.",
     "validationError": "Vérifiez votre adresse e-mail et votre mot de passe.",
     "memberDenied": "Accès réservé aux dirigeants. Les membres utilisent l'application mobile shephr.",
     "welcomeToast": "Bienvenue",
     "welcomeToastMsg": "Vous êtes connecté à shephr.",
     "invalidCredentials": "Identifiants invalides.",
     "invitedQuestion": "Vous avez reçu une invitation ?",
-    "activateCta": "Activer mon compte"
+    "activateCta": "Activer mon compte",
+    "noAccountQuestion": "Pas encore de compte ?",
+    "signupCta": "Créer un compte"
+  },
+  "signup": {
+    "back": "Retour",
+    "askTitle": "Avez-vous déjà un compte CMFIPraise ?",
+    "askHint": "Si vous utilisez déjà CMFIPraise, connectez-vous avec les mêmes identifiants — un seul compte suffit pour le web et l'application mobile.",
+    "loginInstead": "Oui, me connecter",
+    "createAccount": "Non, créer un compte",
+    "title": "Créer mon compte",
+    "subtitle": "Quelques informations pour démarrer ; vous choisirez ensuite votre assemblée.",
+    "firstName": "Prénom",
+    "firstNamePlaceholder": "Esther",
+    "lastName": "Nom",
+    "lastNamePlaceholder": "Mbeki",
+    "passwordHint": "6 caractères minimum.",
+    "submit": "Créer mon compte",
+    "submitting": "Création…",
+    "validationError": "Renseignez votre prénom, votre nom, une adresse e-mail valide et un mot de passe de 6 caractères minimum.",
+    "failed": "L'inscription a échoué.",
+    "existsTitle": "Compte existant",
+    "exists": "Vous avez déjà un compte sur CMFIPraise, connectez-vous avec vos informations.",
+    "goLogin": "Me connecter",
+    "nextStep": "Prochaine étape : rechercher votre assemblée et déposer votre demande de rattachement."
   },
   "invitation": {
     "loadingInvitation": "Chargement de l'invitation…",
@@ -562,6 +586,7 @@
     "updateFailed": "Mise à jour impossible.",
     "linkCopied": "Lien copié",
     "unitAttachment": "Assemblée de rattachement",
+    "unitAttachmentHint": "Choisissez la nation, la région puis la ville — la liste se filtre au fur et à mesure.",
     "managedUnits": "Assemblées dirigées",
     "managedUnitsHint": "Un dirigeant peut gérer plusieurs assemblées.",
     "zoneFaith": "Région (référentiel / engagements)",
@@ -608,6 +633,36 @@
     "usernameHint": "Attribué par vous (ex. prenom.nom@shephr.org) — ce n'est pas un email.",
     "usernamePlaceholder": "prenom.nom@shephr.org",
     "emailOptionalLabel": "Email (facultatif)"
+  },
+  "geoPicker": {
+    "nation": "Nation",
+    "region": "Région",
+    "city": "Ville",
+    "chooseNation": "Choisir une nation…",
+    "chooseRegion": "Choisir une région…",
+    "chooseCity": "Choisir une ville…",
+    "lockedRegion": "Choisissez d'abord la nation",
+    "lockedCity": "Choisissez d'abord la région",
+    "searchZone": "Rechercher une région…",
+    "searchCity": "Rechercher une ville…",
+    "searchUnit": "Rechercher une assemblée…",
+    "countZone_one": "{{count}} région",
+    "countZone_other": "{{count}} régions",
+    "countCity_one": "{{count}} ville",
+    "countCity_other": "{{count}} villes",
+    "countUnit_one": "{{count}} assemblée",
+    "countUnit_other": "{{count}} assemblées",
+    "metaCities_one": "{{count}} ville",
+    "metaCities_other": "{{count}} villes",
+    "metaUnits_one": "{{count}} assemblée",
+    "metaUnits_other": "{{count}} assemblées",
+    "reset": "Réinitialiser",
+    "emptyZone": "Aucune région",
+    "emptyCity": "Aucune ville",
+    "emptyUnit": "Aucune assemblée",
+    "emptyHint": "Modifiez les filtres ou la recherche.",
+    "noZone": "Sans région",
+    "noCity": "Sans ville"
   },
   "memberCare": {
     "title": "Suivi pastoral",
@@ -827,25 +882,44 @@
     "unitUnlocked": "Assemblée déverrouillée — elle peut compléter puis resoumettre.",
     "unlockFailed": "Déverrouillage impossible",
     "sourceDirect": "Dirigeant",
-    "sourceMembers": "Fidèles",
+    "sourceMembers": "Membres",
     "membersGoalsTitle": "Objectifs des membres",
-    "membersAggregate": "Agrégat des fidèles",
+    "membersAggregate": "Cumul des membres",
     "leaderPledge": "Engagement du dirigeant",
     "retainedMax": "Retenu (MAX)",
     "colMember": "Membre",
-    "noMemberPledges": "Aucun objectif de membre déclaré pour cette assemblée."
+    "noMemberPledges": "Aucun objectif de membre déclaré pour cette assemblée.",
+    "unlockMember": "Rouvrir",
+    "unlockMemberTooltip": "Rouvrir les objectifs de ce membre pour l'année (il pourra les corriger)",
+    "memberUnlocked": "Objectifs du membre rouverts",
+    "unlockRefused": "Réouverture refusée"
   },
   "memberGoals": {
     "title": "Mes objectifs",
     "spaceLabel": "Espace membre",
-    "hint": "Vos objectifs alimentent l'engagement de votre assemblée : ils sont cumulés dans l'agrégat des fidèles, que votre dirigeant retrouve dans le suivi des objectifs.",
+    "hint": "Vos objectifs alimentent l'engagement de votre assemblée : ils s'ajoutent au cumul des membres, que votre dirigeant retrouve dans le suivi des objectifs.",
     "colMyGoal": "Mon objectif",
     "saved": "Objectif enregistré",
     "saveRefused": "Enregistrement refusé",
     "lockedTitle": "Saisie fermée",
     "locked": "Verrouillé",
     "deadlinePast": "Date limite dépassée ({{date}}) — la saisie est fermée.",
-    "noAssembly": "Votre compte n'est rattaché à aucune assemblée pour le module Objectifs. Rapprochez-vous de votre dirigeant ou du secrétariat."
+    "noAssembly": "Votre compte n'est rattaché à aucune assemblée pour le module Objectifs. Rapprochez-vous de votre dirigeant ou du secrétariat.",
+    "submitMyPledges": "Soumettre mes engagements",
+    "submitModalTitle": "Soumettre mes engagements",
+    "submitModalSub": "Après soumission, vos objectifs sont verrouillés : seul le secrétariat pourra les rouvrir à votre demande.",
+    "submitModalBody_one": "{{count}} objectif sera verrouillé pour cette année.",
+    "submitModalBody_other": "{{count}} objectifs seront verrouillés pour cette année.",
+    "submitConfirm": "Confirmer et soumettre",
+    "submittedToast": "Engagements soumis",
+    "submittedMsg_one": "{{count}} objectif verrouillé.",
+    "submittedMsg_other": "{{count}} objectifs verrouillés.",
+    "submittedBanner": "Vos objectifs sont soumis pour cette année. Pour les modifier, adressez une demande au secrétariat.",
+    "submitRefused": "Soumission refusée",
+    "noPledgeToSubmit": "Déclarez au moins un objectif avant de soumettre.",
+    "alreadySubmitted": "Vos objectifs ont déjà été soumis pour cette année.",
+    "lockedAskSecretariat": "Cet objectif est verrouillé depuis votre soumission. Adressez une demande au secrétariat pour le rouvrir.",
+    "progressModalSub": "Déclarez où vous en êtes : le chiffre saisi remplace votre déclaration précédente, il ne s'y ajoute pas. Possible même après avoir soumis vos engagements."
   },
   "settings": {
     "title": "Réglages",
@@ -881,7 +955,7 @@
     "hasLeaderBadge": "Dirigeant en place",
     "roleQuestion": "Quel est votre rôle dans « {{name}} » ?",
     "roleLeader": "Je suis le dirigeant de cette assemblée",
-    "roleMember": "Je suis un simple fidèle",
+    "roleMember": "Je suis un membre",
     "coLeaderWarning": "Cette assemblée a déjà un dirigeant titulaire — l'approbation ajoutera un co-dirigeant.",
     "notFound": "Mon assemblée n'existe pas",
     "newAssemblyTitle": "Demander la création de mon assemblée",
@@ -911,7 +985,7 @@
       "CANCELLED": "Annulée"
     },
     "role": {
-      "MEMBER": "Fidèle",
+      "MEMBER": "Membre",
       "LEADER": "Dirigeant"
     },
     "sectionTitle": "Rattachements",

@@ -3,12 +3,15 @@ import { View, Text, StyleSheet, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import ScreenShell from '../../../components/ScreenShell';
+import Button from '../../../components/Button';
 import Card from '../../../components/Card';
 import { YearSelector, GoalLineCard } from './index';
 import { colors, fonts } from '../../../theme';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useGoalsData } from '../../../hooks/useGoalsData';
+import { submitMyMemberPledges } from '../../../services/goalsApi';
+import { confirmDialog, notify } from '../../../utils/dialogs';
 import { fmtDate } from '../../../utils/format';
 
 /**
@@ -22,9 +25,40 @@ export default function MemberGoalsScreen() {
   const { me } = useAuth();
   const { t } = useLanguage();
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const { goal, lines, loading, error, reload } = useGoalsData(selectedYear, true);
+  const { goal, pledges, lines, submitted, loading, error, reload } = useGoalsData(selectedYear, true);
   const [refreshing, setRefreshing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const year = selectedYear ?? goal?.currentYear ?? null;
+
+  // Décision JP 28/07 : le membre soumet SES objectifs lui-même ; ensuite, seul le
+  // secrétariat peut les rouvrir — d'où la confirmation avant l'appel.
+  const onSubmit = async () => {
+    const ok = await confirmDialog(
+      t('goals.member.submitTitle'),
+      t('goals.member.submitBody'),
+      t('goals.member.submitCta'),
+      true,
+    );
+    if (!ok) return;
+    setSubmitting(true);
+    try {
+      const res = await submitMyMemberPledges(year ?? undefined);
+      await reload();
+      notify(t('goals.member.submittedTitle'), t('goals.member.submittedBody', { count: res.lockedPledges }));
+    } catch (e: any) {
+      const code = e?.response?.data?.error;
+      notify(
+        t('goals.member.submitRefused'),
+        code === 'NO_PLEDGE_TO_SUBMIT'
+          ? t('goals.member.noPledgeToSubmit')
+          : code === 'ALREADY_SUBMITTED'
+            ? t('goals.member.alreadySubmitted')
+            : e?.response?.data?.message ?? t('errors.tryAgain'),
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -124,13 +158,42 @@ export default function MemberGoalsScreen() {
             key={line.category.id}
             line={line}
             currency={goal.defaultCurrency ?? 'EUR'}
-            showProgress={false}
+            showProgress
             onPress={() =>
               router.push(`/(tabs)/goals/pledge/${line.category.id}?year=${year ?? ''}&scope=member`)
             }
           />
         ))}
       </View>
+
+      {pledges.length > 0 && !deadlinePast && (
+        <Button
+          label={t('goals.addProgress')}
+          variant="soft"
+          onPress={() => router.push(`/(tabs)/goals/progress?year=${year ?? ''}&scope=member`)}
+          fullWidth
+          style={{ marginTop: 16 }}
+          iconLeft={<Ionicons name="trending-up-outline" size={18} color={colors.mossDeep} />}
+        />
+      )}
+
+      {submitted ? (
+        <Card variant="paper2" style={styles.banner}>
+          <Ionicons name="lock-closed-outline" size={18} color={colors.moss} />
+          <Text style={styles.bannerText}>{t('goals.member.submittedBanner')}</Text>
+        </Card>
+      ) : (
+        pledges.length > 0 && !deadlinePast && (
+          <Button
+            label={t('goals.member.submitCta')}
+            onPress={onSubmit}
+            loading={submitting}
+            fullWidth
+            style={{ marginTop: 16 }}
+            iconLeft={<Ionicons name="lock-closed-outline" size={18} color={colors.white} />}
+          />
+        )
+      )}
 
       <Text style={styles.footnote}>{t('goals.member.hint')}</Text>
     </ScreenShell>

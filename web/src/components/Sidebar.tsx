@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { contactMailto } from '../constants/contact';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './Icon';
@@ -245,6 +246,16 @@ export function Sidebar() {
               })}
             </div>
           ))}
+          {/* Contact : écrit à l'équipe Shephr, comme le CTA de la landing. */}
+          <div>
+            <a
+              className="nav-item"
+              href={contactMailto(t('nav.contactSubject'))}
+            >
+              <Icon name="mail" size={18} />
+              <span>{t('nav.contact')}</span>
+            </a>
+          </div>
         </nav>
 
         <div className="sidebar-foot">

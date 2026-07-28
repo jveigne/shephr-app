@@ -2,14 +2,19 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
-import { Badge, Button, Table, TopBar, type Column } from '../components/ui';
+import { Badge, Button, Field, Input, Modal, Picker, Table, TopBar, type Column } from '../components/ui';
 import { useToast } from '../components/Toast';
+import { YearPicker } from '../components/YearPicker';
 import { useAuth } from '../hooks/useAuth';
 import {
+  addProgress,
   fetchMyMemberPledges,
   getActiveGoal,
+  getMyMemberProgress,
   saveMemberPledge,
+  submitMyMemberPledges,
   type GoalCategory,
+  type MyProgressResponse,
   type PledgeResponse,
 } from '../services/goalsApi';
 import { currencySymbol, fmtAmount, fmtDateLabel } from '../utils/format';
@@ -23,10 +28,18 @@ const errMsg = (err: unknown, fallback: string) =>
 const errCode = (err: unknown): string | null =>
   (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? null;
 
+/** Valeur d'une ligne selon le type de catégorie (montant ou nombre + libellé d'unité). */
+const fmtLineValue = (line: MemberLine, value: number, currency: string) =>
+  line.category.unitType === 'CURRENCY'
+    ? fmtAmount(value, currency)
+    : `${value} ${line.category.unitLabel ?? ''}`.trim();
+
 interface MemberLine {
   id: string;
   category: GoalCategory;
   pledge: PledgeResponse | null;
+  /** Dernier état déclaré (déclaration d'ÉTAT : elle remplace la précédente, elle ne s'ajoute pas). */
+  achieved: number | null;
 }
 
 export function MemberGoalsPage() {
@@ -47,6 +60,25 @@ export function MemberGoalsPage() {
     enabled: !!me?.goalUnitId && year != null,
     retry: false,
   });
+
+  // Avancements : déclarations d'ÉTAT sur MES objectifs (décision JP 28/07).
+  const progressQ = useQuery({
+    queryKey: ['goals', 'member-progress', year],
+    queryFn: () => getMyMemberProgress(year!),
+    enabled: !!me?.goalUnitId && year != null,
+    retry: false,
+  });
+
+  /** Dernier état déclaré par engagement : le plus récent REMPLACE les précédents, il ne s'y ajoute pas. */
+  const latestByPledge = new Map<string, MyProgressResponse>();
+  for (const p of progressQ.data ?? []) {
+    const kept = latestByPledge.get(p.pledgeId);
+    const newer =
+      kept == null ||
+      p.progressDate > kept.progressDate ||
+      (p.progressDate === kept.progressDate && (p.createdAt ?? '') > (kept.createdAt ?? ''));
+    if (newer) latestByPledge.set(p.pledgeId, p);
+  }
 
   // Saisies en cours (une par catégorie), pré-remplies depuis les engagements existants.
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -88,9 +120,67 @@ export function MemberGoalsPage() {
           code === 'PLEDGE_LOCKED' || code === 'DEADLINE_PASSED'
             ? t('memberGoals.lockedTitle')
             : t('memberGoals.saveRefused'),
-        msg: errMsg(err, t('goals.saveFailed')),
+        // PLEDGE_LOCKED : le message backend est en anglais — on affiche le nôtre, qui dit
+        // en plus quoi faire (passer par le secrétariat).
+        msg:
+          code === 'PLEDGE_LOCKED'
+            ? t('memberGoals.lockedAskSecretariat')
+            : errMsg(err, t('goals.saveFailed')),
       });
     },
+  });
+
+  // Soumission du MEMBRE (décision JP 28/07) : acte personnel, indépendant de son assemblée.
+  // Après coup, seuls le secrétariat peut rouvrir — d'où la confirmation explicite.
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const submitM = useMutation({
+    mutationFn: () => submitMyMemberPledges(year ?? undefined),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['goals', 'member-pledges'] });
+      setSubmitOpen(false);
+      push({
+        kind: 'ok',
+        title: t('memberGoals.submittedToast'),
+        msg: t('memberGoals.submittedMsg', { count: res.lockedPledges }),
+      });
+    },
+    onError: (err) => {
+      const code = errCode(err);
+      push({
+        kind: 'error',
+        title: t('memberGoals.submitRefused'),
+        msg:
+          code === 'NO_PLEDGE_TO_SUBMIT'
+            ? t('memberGoals.noPledgeToSubmit')
+            : code === 'ALREADY_SUBMITTED'
+              ? t('memberGoals.alreadySubmitted')
+              : errMsg(err, t('goals.submitFailed')),
+      });
+    },
+  });
+
+  // Déclaration d'état sur un de MES objectifs : le chiffre saisi remplace le précédent.
+  const [progressOpen, setProgressOpen] = useState(false);
+  const [progressCat, setProgressCat] = useState('');
+  const [progressValue, setProgressValue] = useState('');
+  const [progressNote, setProgressNote] = useState('');
+  const progressM = useMutation({
+    mutationFn: ({ pledgeId, category, value, note }: {
+      pledgeId: string; category: GoalCategory; value: number; note: string;
+    }) =>
+      addProgress(pledgeId, {
+        ...(category.unitType === 'CURRENCY' ? { amount: value } : { count: value }),
+        note: note.trim() || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals', 'member-progress'] });
+      setProgressOpen(false);
+      setProgressValue('');
+      setProgressNote('');
+      push({ kind: 'ok', title: t('goals.progressSaved') });
+    },
+    onError: (err) =>
+      push({ kind: 'error', title: t('memberGoals.saveRefused'), msg: errMsg(err, t('goals.saveFailed')) }),
   });
 
   const [savingCat, setSavingCat] = useState<string | null>(null);
@@ -110,12 +200,33 @@ export function MemberGoalsPage() {
   const lines: MemberLine[] = goal
     ? [...goal.categories]
         .sort((a, b) => a.displayOrder - b.displayOrder)
-        .map((category) => ({
-          id: category.id,
-          category,
-          pledge: (pledgesQ.data ?? []).find((p) => p.categoryId === category.id) ?? null,
-        }))
+        .map((category) => {
+          const pledge = (pledgesQ.data ?? []).find((p) => p.categoryId === category.id) ?? null;
+          const last = pledge ? latestByPledge.get(pledge.id) ?? null : null;
+          return {
+            id: category.id,
+            category,
+            pledge,
+            achieved: last ? last.amount ?? last.count ?? null : null,
+          };
+        })
     : [];
+
+  // État de MA soumission pour l'année : rien de déclaré / en cours / tout soumis.
+  const myPledges = pledgesQ.data ?? [];
+  const openPledges = myPledges.filter((p) => !p.locked);
+  const allSubmitted = myPledges.length > 0 && openPledges.length === 0;
+  const canSubmit = openPledges.length > 0 && !deadlinePast;
+
+  // Sélecteur d'année : les années VISIBLES du Goal (les jalons), et non `openYears` qui porte
+  // le droit d'ÉCRITURE — même source que la vue dirigeant et que le mobile.
+  const selectableYears = goal?.visibleYears ?? goal?.openYears ?? [];
+
+  // L'avancement porte sur un engagement EXISTANT : verrouillé ou non (déclarer où l'on en est
+  // reste possible après la soumission), tant que la date limite n'est pas passée.
+  const declarable = lines.filter((l) => l.pledge != null);
+  const canDeclareProgress = declarable.length > 0 && !deadlinePast;
+  const progressLine = declarable.find((l) => l.category.id === progressCat) ?? null;
 
   const cols: Column<MemberLine>[] = [
     {
@@ -162,6 +273,20 @@ export function MemberGoalsPage() {
       },
     },
     {
+      label: t('goals.colProgress'),
+      style: { width: 140 },
+      render: (l) =>
+        l.achieved == null ? (
+          <span style={{ color: 'var(--ink-400)' }}>—</span>
+        ) : (
+          <strong>
+            {l.category.unitType === 'CURRENCY'
+              ? fmtAmount(l.achieved, currency)
+              : `${l.achieved} ${l.category.unitLabel ?? ''}`.trim()}
+          </strong>
+        ),
+    },
+    {
       label: t('goals.colStatus'),
       render: (l) =>
         l.pledge == null ? (
@@ -198,28 +323,31 @@ export function MemberGoalsPage() {
         title={t('memberGoals.title')}
         crumbs={[t('common.brand'), t('memberGoals.title')]}
         actions={
-          goal && (goal.openYears?.length ?? 0) > 0 && year != null ? (
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ink-400)' }}>
-              {t('goals.year')}
-              <select
-                value={year}
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
-                style={{
-                  padding: '6px 10px',
-                  borderRadius: 8,
-                  border: '1px solid var(--line, rgba(42,38,32,0.15))',
-                  background: 'var(--parchment, #fff)',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: 'var(--ink)',
+          <>
+            {canDeclareProgress && (
+              <Button
+                iconL={<Icon name="plus" size={15} />}
+                onClick={() => {
+                  setProgressCat(declarable[0]?.category.id ?? '');
+                  setProgressOpen(true);
                 }}
               >
-                {goal.openYears.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </label>
-          ) : undefined
+                {t('goals.addProgress')}
+              </Button>
+            )}
+            {canSubmit && (
+              <Button
+                variant="primary"
+                iconL={<Icon name="lock" size={15} />}
+                onClick={() => setSubmitOpen(true)}
+              >
+                {t('memberGoals.submitMyPledges')}
+              </Button>
+            )}
+            {selectableYears.length > 0 && year != null ? (
+              <YearPicker years={selectableYears} value={year} onChange={setSelectedYear} />
+            ) : null}
+          </>
         }
       />
 
@@ -285,10 +413,125 @@ export function MemberGoalsPage() {
               {t('memberGoals.hint')}
             </p>
 
+            {/* Soumis : plus rien n'est modifiable sans passer par le secrétariat. */}
+            {allSubmitted && (
+              <p
+                style={{
+                  margin: '0 0 14px',
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'var(--green-50, #EAF1EC)',
+                  fontSize: 13.5,
+                  color: 'var(--green-800, #14241C)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <Icon name="check" size={15} />
+                {t('memberGoals.submittedBanner')}
+              </p>
+            )}
+
             <Table columns={cols} rows={lines} zebra />
           </>
         ) : null}
       </div>
+
+      <Modal
+        open={progressOpen}
+        onClose={() => setProgressOpen(false)}
+        title={t('goals.progressModalTitle')}
+        sub={t('memberGoals.progressModalSub')}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setProgressOpen(false)}>{t('common.cancel')}</Button>
+            <Button
+              variant="primary"
+              disabled={!progressLine || progressM.isPending}
+              onClick={() => {
+                const raw = progressValue.replace(',', '.').trim();
+                const value = Number(raw);
+                if (!progressLine?.pledge || raw === '' || !Number.isFinite(value) || value < 0) {
+                  push({ kind: 'error', title: t('memberGoals.saveRefused'), msg: t('goals.invalidValue') });
+                  return;
+                }
+                progressM.mutate({
+                  pledgeId: progressLine.pledge.id,
+                  category: progressLine.category,
+                  value,
+                  note: progressNote,
+                });
+              }}
+            >
+              {progressM.isPending ? t('common.saving') : t('common.save')}
+            </Button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Field label={t('goals.colCategory')}>
+            <Picker
+              value={progressCat}
+              onChange={setProgressCat}
+              placeholder={t('common.choose')}
+              options={declarable.map((l) => ({ id: l.category.id, label: l.category.name }))}
+            />
+          </Field>
+          {progressLine && (
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-400)' }}>
+              {t('goals.pledgedPaidRemaining', {
+                pledged: fmtLineValue(progressLine, progressLine.pledge?.targetAmount ?? progressLine.pledge?.targetCount ?? 0, currency),
+                paid: fmtLineValue(progressLine, progressLine.achieved ?? 0, currency),
+                remaining: fmtLineValue(
+                  progressLine,
+                  Math.max(0, (progressLine.pledge?.targetAmount ?? progressLine.pledge?.targetCount ?? 0) - (progressLine.achieved ?? 0)),
+                  currency,
+                ),
+              })}
+            </p>
+          )}
+          <Field
+            label={
+              progressLine?.category.unitType === 'CURRENCY'
+                ? t('goals.paidAmount', { symbol: currencySymbol(currency) })
+                : t('goals.progressValue', { label: progressLine?.category.unitLabel ?? t('goals.labelNumber') })
+            }
+          >
+            <Input
+              value={progressValue}
+              inputMode="decimal"
+              onChange={(e) => setProgressValue(e.target.value.replace(/[^0-9.,]/g, ''))}
+            />
+          </Field>
+          <Field label={t('goals.noteOptional')}>
+            <Input value={progressNote} maxLength={500} onChange={(e) => setProgressNote(e.target.value)} />
+          </Field>
+        </div>
+      </Modal>
+
+      <Modal
+        open={submitOpen}
+        onClose={() => setSubmitOpen(false)}
+        title={t('memberGoals.submitModalTitle')}
+        sub={t('memberGoals.submitModalSub')}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setSubmitOpen(false)}>{t('common.cancel')}</Button>
+            <Button
+              variant="primary"
+              disabled={submitM.isPending}
+              onClick={() => submitM.mutate()}
+            >
+              {submitM.isPending ? t('goals.submitting') : t('memberGoals.submitConfirm')}
+            </Button>
+          </>
+        }
+      >
+        <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-700)' }}>
+          {t('memberGoals.submitModalBody', { count: openPledges.length })}
+        </p>
+      </Modal>
     </>
   );
 }

@@ -327,6 +327,63 @@ input, textarea, select { font: inherit; color: inherit; }
 
 .select { appearance: none; padding-right: 32px; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%237A6B55' stroke-width='1.5'><path d='M1 1.5l5 5 5-5'/></svg>"); background-repeat: no-repeat; background-position: right 12px center; }
 
+/* Picker : liste déroulante rendue dans la page (la liste native s'affiche mal sur mobile). */
+.picker { position: relative; width: 100%; min-width: 0; }
+.picker-btn {
+  width: 100%;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--ivory-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 12px;
+  min-height: 42px;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: var(--ink-800);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.picker-btn:focus-visible { outline: none; border-color: var(--green-700); box-shadow: 0 0 0 3px rgba(42,81,66,.12); }
+.picker-btn[aria-expanded="true"] { border-color: var(--green-700); }
+.picker-btn:disabled { background: rgba(215,199,166,.18); color: var(--ink-400); cursor: not-allowed; }
+.picker-btn.is-placeholder { color: var(--ink-400); }
+.picker-btn .picker-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.picker-panel {
+  position: absolute; z-index: 60;
+  top: calc(100% + 6px); left: 0; right: 0;
+  background: var(--ivory-raised);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 14px 34px rgba(42,38,32,.18);
+  max-height: min(320px, 50vh); /* remplacée en ligne par la place réellement disponible */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 5px;
+}
+/* Pas la place en dessous (modale, bas de page) : le panneau s'ouvre vers le haut. */
+.picker-panel.is-up { top: auto; bottom: calc(100% + 6px); }
+.picker-search { position: sticky; top: -5px; background: var(--ivory-raised); padding: 3px 3px 7px; }
+/* 16px : en dessous, iOS zoome sur le champ à la mise au point. */
+.picker-search .input { font-size: 16px; }
+.picker-opt {
+  display: block; width: 100%;
+  background: none; border: none;
+  padding: 11px 12px;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--ink-800);
+  text-align: left;
+  cursor: pointer;
+}
+.picker-opt.is-cursor { background: var(--parchment); }
+.picker-opt.is-active { background: var(--green-50); color: var(--green-800); font-weight: 600; }
+.picker-opt.is-active.is-cursor { background: var(--green-100, var(--green-50)); }
+.picker-opt-sub { display: block; margin-top: 2px; font-size: 12px; color: var(--ink-400); font-weight: 400; }
+.picker-empty { padding: 12px; font-size: 13px; color: var(--ink-400); font-style: italic; }
+
 /* Toggle */
 .toggle {
   display: inline-flex; align-items: center; gap: 8px;
@@ -1014,4 +1071,100 @@ a:hover { text-decoration: underline; }
 }
 @media (max-width: 640px) {
   .preset-grid { grid-template-columns: 1fr; }
+}
+
+/* ==================== Sélecteur d'assemblée (Nation › Région › Ville › Assemblée) ==================== */
+.upick { display: flex; flex-direction: column; gap: 12px; }
+
+/* Les 3 étapes : reliées par un fin trait, la suivante reste grisée tant que la précédente est vide. */
+.upick-steps { display: grid; grid-template-columns: repeat(var(--upick-cols, 3), 1fr); gap: 10px; }
+.upick-step { display: flex; flex-direction: column; gap: 6px; position: relative; }
+.upick-step + .upick-step::before {
+  content: "";
+  position: absolute;
+  left: -10px; top: 9px;
+  width: 10px; height: 1px;
+  background: var(--line);
+}
+.upick-step-hd {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 500; color: var(--ink-700);
+}
+.upick-step-hd .n {
+  display: grid; place-items: center;
+  width: 17px; height: 17px;
+  border-radius: 50%;
+  background: var(--green-700);
+  color: var(--ivory-raised);
+  font-size: 10.5px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.upick-step.locked .upick-step-hd { color: var(--ink-400); }
+.upick-step.locked .upick-step-hd .n { background: var(--line); color: var(--ink-500); }
+/* Les étapes utilisent le Picker (liste dans la page) : l'état verrouillé vient de `.picker-btn:disabled`. */
+
+/* Barre : recherche + compteur + remise à zéro. */
+.upick-bar { display: flex; align-items: center; gap: 10px; }
+.upick-search { flex: 1; min-width: 0; }
+.upick-count { font-size: 12px; color: var(--ink-500); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.upick-reset {
+  background: none; border: none; padding: 0;
+  font: inherit; font-size: 12px;
+  color: var(--green-700); cursor: pointer; white-space: nowrap;
+}
+.upick-reset:hover { text-decoration: underline; }
+
+/* Liste filtrée. */
+.upick-list {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--ivory-raised);
+  max-height: 244px;
+  overflow-y: auto;
+}
+.upick-row {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  background: none; border: none;
+  border-left: 2px solid transparent;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left; font: inherit; cursor: pointer;
+  transition: background .12s;
+}
+.upick-row:last-child { border-bottom: none; }
+.upick-row:hover { background: rgba(215,199,166,.22); }
+.upick-row.on { background: var(--green-50); border-left-color: var(--green-700); }
+.upick-mark {
+  flex-shrink: 0;
+  display: grid; place-items: center;
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--ivory-raised);
+  color: transparent;
+}
+.upick-row.on .upick-mark { background: var(--green-700); border-color: var(--green-700); color: var(--ivory-raised); }
+.upick-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.upick-txt .nm { font-size: 13.5px; color: var(--ink-900); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upick-row.on .upick-txt .nm { font-weight: 500; color: var(--green-800); }
+.upick-txt .sub { font-size: 11.5px; color: var(--ink-500); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upick-meta {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  color: var(--ink-400);
+}
+/* Le code d'adhésion (assemblées) reste en chasse fixe ; les compteurs, non. */
+.upick-meta.mono { font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em; }
+.upick-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 26px 16px;
+  color: var(--ink-500); font-size: 13px; text-align: center;
+}
+.upick-empty svg { color: var(--ink-300); margin-bottom: 2px; }
+.upick-empty span { font-size: 11.5px; color: var(--ink-400); }
+
+@media (max-width: 640px) {
+  .upick-steps { grid-template-columns: 1fr; }
+  .upick-step + .upick-step::before { display: none; }
 }

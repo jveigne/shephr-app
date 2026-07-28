@@ -4,7 +4,12 @@ import {
   type ReactNode,
   type SelectHTMLAttributes,
   type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
   useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
 } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { Icon } from './Icon';
@@ -102,6 +107,200 @@ export function Select({ children, ...rest }: SelectHTMLAttributes<HTMLSelectEle
     <select className="select" {...rest}>
       {children}
     </select>
+  );
+}
+
+// ---------------- Picker ----------------
+// Liste déroulante rendue DANS la page : la liste native d'un <select> s'affiche mal en
+// navigation téléphone (popup rognée, texte illisible). Mêmes repères visuels que `.select`,
+// options à hauteur tactile, recherche au-delà de `searchFrom` entrées.
+export interface PickerOption {
+  id: string;
+  label: string;
+  /** Ligne secondaire optionnelle (ex. la région d'une ville). */
+  sub?: string;
+}
+
+export function Picker({
+  value,
+  onChange,
+  options,
+  placeholder,
+  disabled,
+  searchFrom = 8,
+  searchPlaceholder,
+  style,
+}: {
+  value: string;
+  onChange: (id: string) => void;
+  options: PickerOption[];
+  placeholder: string;
+  disabled?: boolean;
+  searchFrom?: number;
+  searchPlaceholder?: string;
+  style?: CSSProperties;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  /** Option survolée au clavier (index dans `shown`). */
+  const [cursor, setCursor] = useState(0);
+  /** Le panneau s'ouvre vers le haut quand la place manque en dessous (modale, bas de page). */
+  const [drop, setDrop] = useState<{ up: boolean; maxHeight: number }>({ up: false, maxHeight: 320 });
+  const rootRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const selected = options.find((o) => o.id === value) ?? null;
+  const searchable = options.length >= searchFrom;
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter(
+      (o) => o.label.toLowerCase().includes(q) || (o.sub ?? '').toLowerCase().includes(q),
+    );
+  }, [options, query]);
+
+  // Fermeture au clic extérieur : le panneau vit dans le flux, pas dans un portail.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('touchstart', onDown);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('touchstart', onDown);
+    };
+  }, [open]);
+
+  // Place disponible : sens d'ouverture et hauteur max, mesurés avant peinture pour éviter le saut.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const r = btnRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const margin = 12;
+    const below = window.innerHeight - r.bottom - margin;
+    const above = r.top - margin;
+    const wanted = Math.min(320, window.innerHeight * 0.5);
+    const up = below < Math.min(wanted, 220) && above > below;
+    setDrop({ up, maxHeight: Math.max(150, Math.min(wanted, up ? above : below)) });
+  }, [open, shown.length]);
+
+  // Ouverture : le curseur clavier part de la valeur retenue, et la ligne est amenée à l'écran.
+  useEffect(() => {
+    if (!open) return;
+    const i = shown.findIndex((o) => o.id === value);
+    setCursor(i >= 0 ? i : 0);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!open) return;
+    panelRef.current?.querySelector(`[data-i="${cursor}"]`)?.scrollIntoView({ block: 'nearest' });
+  }, [cursor, open]);
+
+  // Un changement de périmètre amont peut vider la liste : on referme plutôt que d'afficher un vide.
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
+
+  const pick = (id: string) => {
+    onChange(id);
+    setOpen(false);
+    setQuery('');
+    btnRef.current?.focus();
+  };
+
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (!open) {
+      if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (!disabled) setOpen(true);
+      }
+      return;
+    }
+    if (e.key === 'Escape' || e.key === 'Tab') {
+      setOpen(false);
+      if (e.key === 'Escape') btnRef.current?.focus();
+      return;
+    }
+    if (shown.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setCursor((c) => Math.min(shown.length - 1, c + 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setCursor((c) => Math.max(0, c - 1));
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      setCursor(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      setCursor(shown.length - 1);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const o = shown[cursor];
+      if (o) pick(o.id);
+    }
+  };
+
+  return (
+    <div className="picker" ref={rootRef} style={style} onKeyDown={onKeyDown}>
+      <button
+        ref={btnRef}
+        type="button"
+        className={`picker-btn ${selected ? '' : 'is-placeholder'}`}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className="picker-label">{selected?.label ?? placeholder}</span>
+        <Icon name="chevDown" size={13} />
+      </button>
+
+      {open && (
+        <div
+          className={`picker-panel ${drop.up ? 'is-up' : ''}`}
+          style={{ maxHeight: drop.maxHeight }}
+          role="listbox"
+          ref={panelRef}
+        >
+          {searchable && (
+            <div className="picker-search">
+              <input
+                className="input"
+                value={query}
+                onChange={(e) => { setQuery(e.target.value); setCursor(0); }}
+                placeholder={searchPlaceholder ?? t('common.search')}
+                autoFocus
+              />
+            </div>
+          )}
+          {shown.length === 0 ? (
+            <div className="picker-empty">{t('ui.noResult')}</div>
+          ) : (
+            shown.map((o, i) => (
+              <button
+                key={o.id}
+                type="button"
+                role="option"
+                data-i={i}
+                aria-selected={o.id === value}
+                className={`picker-opt ${o.id === value ? 'is-active' : ''} ${i === cursor ? 'is-cursor' : ''}`}
+                onMouseEnter={() => setCursor(i)}
+                onClick={() => pick(o.id)}
+              >
+                <span className="picker-opt-label">{o.label}</span>
+                {o.sub && <span className="picker-opt-sub">{o.sub}</span>}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

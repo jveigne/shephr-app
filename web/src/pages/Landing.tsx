@@ -2,29 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { useAuth } from '../hooks/useAuth';
-import { setLanguage } from '../i18n';
+import { LangSwitch } from '../components/LangSwitch';
 
 const CONTACT_EMAIL = 'jexcellence2065@gmail.com';
-
-function LangSwitch() {
-  const { i18n } = useTranslation();
-  const lang = i18n.language.startsWith('en') ? 'en' : 'fr';
-  return (
-    <div style={{ display: 'inline-flex', border: '1px solid var(--line)', borderRadius: 999, overflow: 'hidden' }}>
-      {(['fr', 'en'] as const).map((l) => (
-        <button
-          key={l}
-          onClick={() => setLanguage(l)}
-          style={{
-            padding: '4px 12px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
-            background: lang === l ? 'var(--green-600)' : 'transparent',
-            color: lang === l ? '#fff' : 'var(--ink-500)',
-          }}
-        >{l.toUpperCase()}</button>
-      ))}
-    </div>
-  );
-}
 
 function Feature({ icon, title, desc }: { icon: string; title: string; desc: string }) {
   return (
@@ -77,6 +57,15 @@ export function LandingPage() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <LangSwitch />
+            {!loggedIn && (
+              <button
+                onClick={() => navigate('/signup')}
+                style={{
+                  padding: '8px 16px', borderRadius: 'var(--radius)', border: '1px solid var(--green-600)',
+                  cursor: 'pointer', background: 'transparent', color: 'var(--green-700)', fontWeight: 600, fontSize: 14,
+                }}
+              >{t('landing.nav.signup')}</button>
+            )}
             <button
               onClick={() => navigate(loggedIn ? '/dashboard' : '/login')}
               style={{
@@ -101,10 +90,17 @@ export function LandingPage() {
           {t('landing.hero.subtitle')}
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          {/* Non connecté : l'inscription libre est l'action principale, la connexion vient ensuite. */}
           <button
-            onClick={() => navigate(loggedIn ? '/dashboard' : '/login')}
+            onClick={() => navigate(loggedIn ? '/dashboard' : '/signup')}
             style={{ padding: '13px 26px', borderRadius: 'var(--radius)', border: 'none', cursor: 'pointer', background: 'var(--green-600)', color: '#fff', fontWeight: 600, fontSize: 15 }}
-          >{loggedIn ? t('landing.nav.account') : t('landing.hero.ctaPrimary')}</button>
+          >{loggedIn ? t('landing.nav.account') : t('landing.hero.ctaSignup')}</button>
+          {!loggedIn && (
+            <button
+              onClick={() => navigate('/login')}
+              style={{ padding: '13px 26px', borderRadius: 'var(--radius)', border: '1px solid var(--green-600)', cursor: 'pointer', background: 'transparent', color: 'var(--green-700)', fontWeight: 600, fontSize: 15 }}
+            >{t('landing.hero.ctaPrimary')}</button>
+          )}
           <a href={mailto} style={{ padding: '13px 26px', borderRadius: 'var(--radius)', border: '1px solid var(--green-600)', background: 'transparent', color: 'var(--green-700)', fontWeight: 600, fontSize: 15, textDecoration: 'none' }}>
             {t('landing.hero.ctaSecondary')}
           </a>
@@ -182,9 +178,17 @@ export function LandingPage() {
       <section style={{ maxWidth: 760, margin: '0 auto', padding: 'clamp(40px, 8vw, 64px) 20px', textAlign: 'center' }}>
         <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(23px, 6vw, 30px)', color: 'var(--green-900)', margin: '0 0 14px' }}>{t('landing.contact.title')}</h2>
         <p style={{ color: 'var(--ink-700)', fontSize: 'clamp(15px, 4vw, 17px)', lineHeight: 1.6, margin: '0 auto 26px', maxWidth: 580 }}>{t('landing.contact.desc')}</p>
-        <a href={mailto} style={{ padding: '14px 30px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--green-600)', color: '#fff', fontWeight: 600, fontSize: 16, textDecoration: 'none', display: 'inline-block' }}>
-          {t('landing.contact.cta')}
-        </a>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <a href={mailto} style={{ padding: '14px 30px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--green-600)', color: '#fff', fontWeight: 600, fontSize: 16, textDecoration: 'none', display: 'inline-block' }}>
+            {t('landing.contact.cta')}
+          </a>
+          {!loggedIn && (
+            <button
+              onClick={() => navigate('/signup')}
+              style={{ padding: '14px 30px', borderRadius: 'var(--radius)', border: '1px solid var(--green-600)', cursor: 'pointer', background: 'transparent', color: 'var(--green-700)', fontWeight: 600, fontSize: 16 }}
+            >{t('landing.nav.signup')}</button>
+          )}
+        </div>
         <p style={{ color: 'var(--ink-400)', fontSize: 14, marginTop: 16 }}>
           {t('landing.contact.or')} <a href={mailto} style={{ color: 'var(--green-700)', fontWeight: 600, wordBreak: 'break-all' }}>{CONTACT_EMAIL}</a>
         </p>

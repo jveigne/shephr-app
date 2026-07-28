@@ -6,6 +6,7 @@ import { AppShell } from './AppShell';
 import { MemberShell } from './MemberShell';
 import { LandingPage } from './pages/Landing';
 import { LoginPage } from './pages/Login';
+import { SignupPage } from './pages/Signup';
 import { AcceptInvitationPage } from './pages/AcceptInvitation';
 import { ActivateAccountPage } from './pages/ActivateAccount';
 import { DeleteAccountPage } from './pages/DeleteAccount';
@@ -50,6 +51,8 @@ export function App() {
               {/* Landing publique : présentation + fonctionnalités + tarification. */}
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
+              {/* Feature B — inscription libre (miroir du parcours mobile), enchaîne sur /join. */}
+              <Route path="/signup" element={<SignupPage />} />
               <Route path="/activate" element={<ActivateAccountPage />} />
               <Route path="/invitation/:token" element={<AcceptInvitationPage />} />
               {/* Page publique exigée par Google Play : demande de suppression de compte. */}

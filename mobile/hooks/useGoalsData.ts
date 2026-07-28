@@ -3,6 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import {
   fetchMyMemberPledges,
   getActiveGoal,
+  getMyMemberProgress,
   getMyPledges,
   getMyProgress,
   type ActiveGoal,
@@ -64,8 +65,8 @@ export function progressTotal(items: ProgressResponse[]): number {
 
 /**
  * Feature A — mode « objectifs personnels du membre » : mêmes lignes, même écran, mais les
- * engagements viennent de `/goals/member/me/pledges` (niveau MEMBER) au lieu des engagements
- * de l'assemblée, et il n'y a pas d'avancement (l'avancement se déclare au niveau assemblée).
+ * engagements ET leurs avancements viennent du niveau MEMBER (`/goals/member/me/...`) au lieu
+ * de ceux de l'assemblée. Décision JP 28/07 : le membre déclare aussi l'état de SES objectifs.
  */
 export function useGoalsData(selectedYear?: number | null, member = false): GoalsData {
   const [goal, setGoal] = useState<ActiveGoal | null>(null);
@@ -84,7 +85,7 @@ export function useGoalsData(selectedYear?: number | null, member = false): Goal
       // Lot 4.3 : un seul appel /me/progress remplace un listProgress par pledge.
       const [ps, progress] = await Promise.all([
         member ? fetchMyMemberPledges(y) : getMyPledges(y),
-        member ? Promise.resolve<ProgressResponse[]>([]) : getMyProgress(y),
+        member ? getMyMemberProgress(y) : getMyProgress(y),
       ]);
       const byPledge: Record<string, ProgressResponse[]> = {};
       for (const p of progress) {

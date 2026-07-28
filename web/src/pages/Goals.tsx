@@ -16,6 +16,7 @@ import {
 } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
+import { isSecretariat } from '../services/authApi';
 import {
   addProgress,
   createFaithPledge,
@@ -37,6 +38,7 @@ import {
   getZoneUnits,
   listFaithPledges,
   sendReminder,
+  unlockMemberPledges,
   unlockUnit,
   submitMyPledges,
   updateFaithPledge,
@@ -57,6 +59,7 @@ import {
 import { listCountries, listLocalities, listZones } from '../services/adminApi';
 import { NationsMap } from '../components/NationsMap';
 import { GoalTimeline } from '../components/GoalTimeline';
+import { YearPicker } from '../components/YearPicker';
 import { currencySymbol, fmtAmount, fmtDateLabel, toLocalDate } from '../utils/format';
 
 const errMsg = (err: unknown, fallback: string) =>
@@ -421,30 +424,13 @@ export function GoalsPage() {
         crumbs={[t('common.brand'), t('goals.title')]}
         actions={
           <>
+            {/* Lot G1.c : années visibles uniquement (JP 16/07 : le jalon final s'affiche « 2030 », sans libellé spécial). */}
             {goal && ((goal.visibleYears ?? goal.openYears)?.length ?? 0) > 0 && year != null && (
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ink-400)' }}>
-                {t('goals.year')}
-                <select
-                  value={year}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  style={{
-                    padding: '6px 10px',
-                    borderRadius: 8,
-                    border: '1px solid var(--line, rgba(42,38,32,0.15))',
-                    background: 'var(--parchment, #fff)',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: 'var(--ink)',
-                  }}
-                >
-                  {/* Lot G1.c : années visibles uniquement (JP 16/07 : le jalon final s'affiche « 2030 », sans libellé spécial). */}
-                  {(goal.visibleYears ?? goal.openYears).map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <YearPicker
+                years={goal.visibleYears ?? goal.openYears}
+                value={year}
+                onChange={setSelectedYear}
+              />
             )}
             {hasPledges && (
               <>
@@ -526,6 +512,18 @@ export function GoalsPage() {
                   rows={lines.map((l) => ({ ...l, id: l.category.id }))}
                   zebra
                 />
+
+                {/* Feature A — le dirigeant voit les objectifs de SES membres et l'agrégat des
+                    fidèles sur sa propre assemblée (jusqu'ici, ce bloc n'existait que dans le
+                    drill-down des vues de périmètre : il ne le voyait jamais). */}
+                {goal && year != null && me?.goalUnitId && (
+                  <MembersGoalsBlock
+                    unitId={me.goalUnitId}
+                    goal={goal}
+                    currency={currency}
+                    year={year}
+                  />
+                )}
 
                 <div style={{ marginTop: 28 }}>
                   <h3 style={{ margin: '0 0 10px' }}>{t('goals.historyTitle')}</h3>
@@ -2320,10 +2318,25 @@ function MembersGoalsBlock({
   year: number;
 }) {
   const { t } = useTranslation();
+  const { me } = useAuth();
+  const { push } = useToast();
+  const queryClient = useQueryClient();
   const q = useQuery({
     queryKey: ['goals', 'members-aggregate', unitId, year],
     queryFn: () => fetchMembersAggregate(unitId, year),
     retry: false,
+  });
+
+  // Réouverture des objectifs d'un membre : SECRETARIAT / superAdmin (le backend refait le contrôle).
+  const canUnlockMembers = isSecretariat(me) || (me?.superAdmin ?? false);
+  const unlockM = useMutation({
+    mutationFn: (memberId: string) => unlockMemberPledges(memberId, year),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['goals', 'members-aggregate', unitId, year] });
+      push({ kind: 'ok', title: t('goals.memberUnlocked') });
+    },
+    onError: (err) =>
+      push({ kind: 'error', title: t('goals.unlockRefused'), msg: errMsg(err, t('common.error')) }),
   });
 
   if (q.isLoading) {
@@ -2343,11 +2356,13 @@ function MembersGoalsBlock({
   };
 
   // Pivot membres : une ligne par membre, une colonne par catégorie.
-  const memberMap = new Map<string, { fullName: string; values: Map<string, number | null> }>();
+  const memberMap = new Map<string, { fullName: string; locked: boolean; values: Map<string, number | null> }>();
   for (const line of lines) {
     for (const m of line.members) {
-      const entry = memberMap.get(m.userId) ?? { fullName: m.fullName, values: new Map() };
+      const entry = memberMap.get(m.userId) ?? { fullName: m.fullName, locked: false, values: new Map() };
       entry.values.set(line.categoryId, m.amount ?? m.count);
+      // Un membre est « soumis » dès qu'un de ses objectifs est verrouillé (il soumet tout d'un coup).
+      entry.locked = entry.locked || m.locked;
       memberMap.set(m.userId, entry);
     }
   }
@@ -2393,6 +2408,30 @@ function MembersGoalsBlock({
         return v != null ? fmt(l.categoryId, v) : <span style={{ color: 'var(--ink-400)' }}>—</span>;
       },
     } as Column<(typeof memberRows)[number]>)),
+    {
+      label: t('goals.colStatus'),
+      cellStyle: { textAlign: 'right' },
+      render: (m) =>
+        !m.locked ? (
+          <Badge tone="warn" dot>{t('goals.draft')}</Badge>
+        ) : (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
+            <Badge tone="ok" dot>{t('goals.submitted')}</Badge>
+            {/* Décision JP 28/07 : le membre passe par le secrétariat pour corriger après coup. */}
+            {canUnlockMembers && (
+              <Button
+                size="sm"
+                variant="ghost"
+                title={t('goals.unlockMemberTooltip')}
+                disabled={unlockM.isPending}
+                onClick={() => unlockM.mutate(m.id)}
+              >
+                {t('goals.unlockMember')}
+              </Button>
+            )}
+          </span>
+        ),
+    } as Column<(typeof memberRows)[number]>,
   ];
 
   return (

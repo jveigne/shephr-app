@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
+import { LangSwitch } from '../components/LangSwitch';
 import { Button, Checkbox, Field, Input } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../components/Toast';
@@ -109,13 +110,6 @@ export function LoginPage() {
             strokeDasharray="2 5"
           />
         </svg>
-
-        <div className="quote">
-          {t('login.quote')}
-          <div className="quote-sub">
-            {t('login.quoteSub')}
-          </div>
-        </div>
       </div>
 
       <div className="login-main" style={{ position: 'relative' }}>
@@ -131,6 +125,9 @@ export function LoginPage() {
           <Icon name="chevRight" size={14} style={{ transform: 'rotate(180deg)' }} />
           {t('login.backToHome')}
         </button>
+        <div style={{ position: 'absolute', top: 24, right: 24 }}>
+          <LangSwitch />
+        </div>
         <div className="login-card">
           <h1>{t('login.welcome')}</h1>
           <div className="sub">{t('login.subtitle')}</div>
@@ -226,11 +223,18 @@ export function LoginPage() {
             </button>
           </div>
 
-          <div className="reserved">
-            <Icon name="shield" size={16} />
-            <span>
-              {t('login.reserved')}
-            </span>
+          <div style={{ marginTop: 8, textAlign: 'center', fontSize: 14, color: 'var(--ink-600)' }}>
+            {t('login.noAccountQuestion')}{' '}
+            <button
+              type="button"
+              onClick={() => navigate('/signup')}
+              style={{
+                background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
+                color: 'var(--accent, #1E3A2F)', fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
+              }}
+            >
+              {t('login.signupCta')}
+            </button>
           </div>
         </div>
       </div>

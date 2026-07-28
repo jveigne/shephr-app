@@ -224,13 +224,6 @@ export default function SignupScreen() {
                 height={56}
                 iconRight={<Ionicons name="arrow-forward" size={18} color={colors.white} />}
               />
-
-              <View style={styles.hint}>
-                <Text style={styles.hintTitle}>{t('signup.nextStepTitle')}</Text>
-                <Text style={styles.hintBody}>
-                  {t('signup.nextStepBody')}
-                </Text>
-              </View>
             </View>
           ) : (
             <View style={{ marginTop: 22 }}>

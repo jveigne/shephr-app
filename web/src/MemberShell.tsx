@@ -2,6 +2,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './components/Icon';
+import { contactMailto } from './constants/contact';
 import { useAuth } from './hooks/useAuth';
 import { setLanguage } from './i18n';
 
@@ -89,6 +90,13 @@ export function MemberShell() {
                 <Icon name="settings" size={18} />
                 <span>{t('settings.title')}</span>
               </NavLink>
+            </div>
+            {/* Contact : même point d'entrée que dans l'espace ministère. */}
+            <div>
+              <a className="nav-item" href={contactMailto(t('nav.contactSubject'))}>
+                <Icon name="mail" size={18} />
+                <span>{t('nav.contact')}</span>
+              </a>
             </div>
           </nav>
 

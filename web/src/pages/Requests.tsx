@@ -5,6 +5,7 @@ import { Icon } from '../components/Icon';
 import { Badge, Button, Field, Input, Modal, Table, TopBar, type Column } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
+import { isAssemblyLeaderOnly } from '../services/authApi';
 import {
   approveStructureRequest, cancelStructureRequest, canValidateRequests, createStructureRequest,
   fetchRequestContext, listMyRequests, listPendingRequests, rejectStructureRequest,
@@ -13,7 +14,7 @@ import {
 } from '../services/structureRequestsApi';
 import {
   approveJoinRequest, cancelJoinRequest, listMyJoinRequests, listPendingJoinRequests,
-  mayReviewJoinRequests, rejectJoinRequest, type JoinRequestResponse,
+  mayReviewJoinRequests, rejectJoinRequest, reviewableJoinRequests, type JoinRequestResponse,
 } from '../services/joinRequestsApi';
 
 // RDG 25/07 : nation, région et ville se créent DIRECTEMENT (SECRETARIAT / back-office) — une
@@ -37,6 +38,9 @@ export function RequestsPage() {
   const queryClient = useQueryClient();
   const dateLocale = (i18n.resolvedLanguage || i18n.language) === 'en' ? 'en-GB' : 'fr-FR';
   const isValidator = canValidateRequests(me);
+  // Un dirigeant d'assemblée ne voit QUE les rattachements à son assemblée : tout le bloc
+  // « demandes de structure » (dépôt, suivi, validation) lui est masqué.
+  const showStructure = !isAssemblyLeaderOnly(me);
 
   const [depositOpen, setDepositOpen] = useState(false);
   const [rejecting, setRejecting] = useState<StructureRequestResponse | null>(null);
@@ -45,12 +49,20 @@ export function RequestsPage() {
   const [rejectingJoin, setRejectingJoin] = useState<JoinRequestResponse | null>(null);
   const [joinReason, setJoinReason] = useState('');
 
-  const contextQ = useQuery({ queryKey: ['structure-requests', 'context'], queryFn: fetchRequestContext });
-  const mineQ = useQuery({ queryKey: ['structure-requests', 'mine'], queryFn: listMyRequests });
+  const contextQ = useQuery({
+    queryKey: ['structure-requests', 'context'],
+    queryFn: fetchRequestContext,
+    enabled: showStructure,
+  });
+  const mineQ = useQuery({
+    queryKey: ['structure-requests', 'mine'],
+    queryFn: listMyRequests,
+    enabled: showStructure,
+  });
   const pendingQ = useQuery({
     queryKey: ['structure-requests', 'pending'],
     queryFn: listPendingRequests,
-    enabled: isValidator,
+    enabled: isValidator && showStructure,
   });
 
   // Feature B — rattachements : file pending (403 sauf dirigeant d'assemblée / secrétariat /
@@ -66,6 +78,12 @@ export function RequestsPage() {
     (joinPendingQ.error as { response?: { status?: number } } | null)?.response?.status === 403;
   const showJoinPending = mayReviewJoin && !joinPendingForbidden && !joinPendingQ.isError;
   const joinMineQ = useQuery({ queryKey: ['join-requests', 'mine'], queryFn: listMyJoinRequests });
+  // Un dirigeant d'assemblée ne décide que des rattachements à SON assemblée : les demandes
+  // portant création d'une assemblée (même dans sa ville) restent au secrétariat.
+  const joinPendingRows = useMemo(
+    () => reviewableJoinRequests(me, joinPendingQ.data ?? []),
+    [me, joinPendingQ.data],
+  );
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['structure-requests'] });
   const invalidateJoin = () => queryClient.invalidateQueries({ queryKey: ['join-requests'] });
@@ -295,7 +313,7 @@ export function RequestsPage() {
         title={t('requests.title')}
         crumbs={[t('common.brand'), t('requests.title')]}
         actions={
-          canPropose ? (
+          canPropose && showStructure ? (
             <Button variant="primary" iconL={<Icon name="plus" size={15} />} onClick={() => setDepositOpen(true)}>
               {t('requests.newRequest')}
             </Button>
@@ -304,9 +322,9 @@ export function RequestsPage() {
       />
 
       <div className="content">
-        <p className="section-sub">{t('requests.intro')}</p>
+        {showStructure && <p className="section-sub">{t('requests.intro')}</p>}
 
-        {isValidator && (
+        {isValidator && showStructure && (
           <>
             <h3 style={{ margin: '18px 0 10px' }}>{t('requests.toValidate')}</h3>
             <div className="card" style={{ padding: 0, marginBottom: 24 }}>
@@ -325,21 +343,25 @@ export function RequestsPage() {
           </>
         )}
 
-        <h3 style={{ margin: '18px 0 10px' }}>{t('requests.mine')}</h3>
-        <div className="card" style={{ padding: 0 }}>
-          <Table<StructureRequestResponse>
-            columns={mineCols}
-            rows={(mineQ.data ?? []).map((r) => ({ ...r }))}
-            zebra
-            empty={
-              <div className="empty">
-                <div className="icon-wrap"><Icon name="inbox" size={26} /></div>
-                <h4>{t('requests.noMine')}</h4>
-                <p>{canPropose ? t('requests.noMineHint') : t('requests.notEligible')}</p>
-              </div>
-            }
-          />
-        </div>
+        {showStructure && (
+          <>
+            <h3 style={{ margin: '18px 0 10px' }}>{t('requests.mine')}</h3>
+            <div className="card" style={{ padding: 0 }}>
+              <Table<StructureRequestResponse>
+                columns={mineCols}
+                rows={(mineQ.data ?? []).map((r) => ({ ...r }))}
+                zebra
+                empty={
+                  <div className="empty">
+                    <div className="icon-wrap"><Icon name="inbox" size={26} /></div>
+                    <h4>{t('requests.noMine')}</h4>
+                    <p>{canPropose ? t('requests.noMineHint') : t('requests.notEligible')}</p>
+                  </div>
+                }
+              />
+            </div>
+          </>
+        )}
 
         {/* Feature B — Rattachements : demandes de rattachement à une assemblée. */}
         {(showJoinPending || (joinMineQ.data?.length ?? 0) > 0) && (
@@ -353,7 +375,7 @@ export function RequestsPage() {
                 <div className="card" style={{ padding: 0, marginBottom: 24 }}>
                   <Table<JoinRequestResponse>
                     columns={joinPendingCols}
-                    rows={(joinPendingQ.data ?? []).map((r) => ({ ...r }))}
+                    rows={joinPendingRows.map((r) => ({ ...r }))}
                     zebra
                     empty={
                       <div className="empty">
@@ -383,7 +405,7 @@ export function RequestsPage() {
       </div>
 
       <DepositModal
-        open={depositOpen}
+        open={depositOpen && showStructure}
         onClose={() => setDepositOpen(false)}
         context={contextQ.data ?? { nations: [], regions: [], cities: [] }}
         submitting={createM.isPending}

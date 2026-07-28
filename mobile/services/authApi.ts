@@ -12,7 +12,7 @@ export type ModuleRole =
   | 'SECRETARIAT';
 
 export const MODULE_ROLE_LABELS: Record<ModuleRole, string> = {
-  MEMBRE: 'Fidèle',
+  MEMBRE: 'Membre',
   DIRIGEANT_UNITE: "Dirigeant d'unité",
   DIRIGEANT: 'Dirigeant',
   DIRIGEANT_SENIOR: 'Dirigeant senior',
@@ -63,6 +63,18 @@ export function assignableLeaderRoles(me: MeResponse | null): ModuleRole[] {
   if (me.superAdmin) return LEADERS;
   const cap = Math.min(managerRank(me), ROLE_RANK.DIRIGEANT_SENIOR);
   return LEADERS.filter((r) => ROLE_RANK[r] <= cap);
+}
+
+/**
+ * Dirigeant d'ASSEMBLÉE et rien de plus : DIRIGEANT_UNITE au maximum, hors superAdmin,
+ * SECRETARIAT et LEADER (vues ministère-large). Son périmètre s'arrête à son assemblée :
+ * il valide les rattachements de SES membres, et la structure (création d'assemblée dans sa
+ * ville) ne le concerne pas — ni en dépôt, ni en suivi, ni en validation.
+ */
+export function isAssemblyLeaderOnly(me: MeResponse | null): boolean {
+  if (!me || me.superAdmin || isSecretariat(me)) return false;
+  if (me.donationRole === 'LEADER' || me.goalRole === 'LEADER') return false;
+  return managerRank(me) <= ROLE_RANK.DIRIGEANT_UNITE;
 }
 
 /** Peut gérer les zones (créer une zone) : COORDINATEUR (ses pays) ou superAdmin. */
@@ -161,7 +173,7 @@ export function hasMemberGoals(me: MeResponse | null): boolean {
   return me?.goalRole === 'MEMBRE' && !!me?.goalUnitId;
 }
 
-/** Human label for the user's most significant role ('Fidèle' for a plain member). */
+/** Human label for the user's most significant role ('Membre' for a plain member). */
 export function roleLabel(me: MeResponse | null): string {
   if (!me) return '—';
   if (me.superAdmin) return 'Super Admin';
@@ -170,7 +182,7 @@ export function roleLabel(me: MeResponse | null): string {
     (isElevated(me.goalRole) ? me.goalRole : null) ??
     me.donationRole ??
     me.goalRole;
-  return role ? MODULE_ROLE_LABELS[role] : 'Fidèle';
+  return role ? MODULE_ROLE_LABELS[role] : 'Membre';
 }
 
 export interface LoginRequest {

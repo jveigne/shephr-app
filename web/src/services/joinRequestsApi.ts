@@ -94,6 +94,26 @@ export async function rejectJoinRequest(id: string, reason: string) {
   return data;
 }
 
+/** Décide de TOUTES les demandes, création d'assemblée comprise : superAdmin ou SECRETARIAT. */
+function reviewsEverything(me: MeResponse): boolean {
+  return me.superAdmin || me.donationRole === 'SECRETARIAT' || me.goalRole === 'SECRETARIAT';
+}
+
+/**
+ * Périmètre de décision d'un DIRIGEANT D'ASSEMBLÉE : uniquement les rattachements à une
+ * assemblée EXISTANTE (la sienne). Une demande qui CRÉE une assemblée — même dans sa ville —
+ * relève du SECRETARIAT et ne doit pas apparaître dans sa file. Filet côté client : le backend
+ * reste l'autorité sur ce que la file renvoie.
+ */
+export function reviewableJoinRequests(
+  me: MeResponse | null,
+  rows: JoinRequestResponse[],
+): JoinRequestResponse[] {
+  if (!me) return [];
+  if (reviewsEverything(me)) return rows;
+  return rows.filter((r) => r.assemblyNodeId != null && r.structureRequestId == null);
+}
+
 /**
  * Pré-filtre client de la file « pending » : superAdmin, SECRETARIAT (Dons ∪ Objectifs) ou
  * dirigeant rattaché à une assemblée. Le backend reste l'autorité (403 géré côté page).
