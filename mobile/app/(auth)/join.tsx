@@ -42,6 +42,14 @@ import {
 
 type Mode = 'search' | 'create' | 'code' | 'pending';
 
+/**
+ * Parcours « mon assemblée n'existe pas » (JP 30/07) : on qualifie D'ABORD le statut.
+ *  • 'role' — deux boutons, et rien d'autre ;
+ *  • 'stop' — cas MEMBRE : le parcours s'arrête ici, sans demande ni ticket ;
+ *  • 'form' — cas DIRIGEANT confirmé : localisation + nom, puis création immédiate.
+ */
+type CreateStep = 'role' | 'stop' | 'form';
+
 /** Miroirs des règles serveur (`AssemblyJoinRequestServiceImpl`). */
 const MIN_QUERY_LENGTH = 2;
 
@@ -79,7 +87,8 @@ export default function JoinScreen() {
   // Choix du rôle sur une assemblée existante.
   const [roleTarget, setRoleTarget] = useState<AssemblySearchResult | null>(null);
 
-  // « Mon assemblée n'existe pas » : ville + nom.
+  // « Mon assemblée n'existe pas » : statut, puis ville + nom.
+  const [createStep, setCreateStep] = useState<CreateStep>('role');
   const [newName, setNewName] = useState('');
 
   // « J'ai un code d'assemblée » (étape joinCode existante, accessible en lien secondaire).
@@ -199,6 +208,20 @@ export default function JoinScreen() {
     submitJoin({ assemblyNodeId: target.id, requestedRole: 'LEADER' });
   };
 
+  /**
+   * Se déclarer dirigeant d'une assemblée à créer engage : l'assemblée sera créée sur simple
+   * déclaration, sans validation du secrétariat (JP 30/07 — on corrige a posteriori dans le
+   * back-office plutôt que de faire attendre une semaine). D'où une confirmation explicite.
+   */
+  const onDeclareNewAssemblyLeader = async () => {
+    const ok = await confirmDialog(
+      t('join.declareLeaderTitle'),
+      t('join.declareLeaderBody'),
+      t('join.declareLeaderConfirm'),
+    );
+    if (ok) setCreateStep('form');
+  };
+
   const onCancelPending = async () => {
     if (!pending) return;
     const ok = await confirmDialog(
@@ -290,15 +313,51 @@ export default function JoinScreen() {
               onPick={setRoleTarget}
               onNotFound={async () => {
                 await ensureContext();
+                setCreateStep('role');
                 setMode('create');
               }}
               onCode={() => setMode('code')}
             />
           )}
 
-          {mode === 'create' && context && (
+          {mode === 'create' && createStep === 'role' && (
             <>
               <Text style={styles.title}>{t('join.notFound')}</Text>
+              <Text style={styles.subtitle}>{t('join.notFoundStatusHint')}</Text>
+              <View style={{ gap: 10, marginTop: 24 }}>
+                <Button
+                  label={t('join.notFoundIamMember')}
+                  variant="soft"
+                  height={54}
+                  onPress={() => setCreateStep('stop')}
+                />
+                <Button
+                  label={t('join.notFoundIamLeader')}
+                  height={54}
+                  onPress={onDeclareNewAssemblyLeader}
+                />
+              </View>
+            </>
+          )}
+
+          {mode === 'create' && createStep === 'stop' && (
+            <>
+              <Text style={styles.title}>{t('join.memberDeadEndTitle')}</Text>
+              <Text style={styles.subtitle}>{t('join.memberDeadEndBody')}</Text>
+              <Button
+                label={t('join.backToSearch')}
+                variant="soft"
+                height={52}
+                style={{ marginTop: 24 }}
+                onPress={() => { setCreateStep('role'); setMode('search'); }}
+                iconLeft={<Ionicons name="arrow-back" size={18} color={colors.mossDeep} />}
+              />
+            </>
+          )}
+
+          {mode === 'create' && createStep === 'form' && context && (
+            <>
+              <Text style={styles.title}>{t('join.newAssemblyTitle')}</Text>
               <Text style={styles.subtitle}>{t('join.chooseCity')}</Text>
               <PlaceDrill
                 context={context}
@@ -315,35 +374,20 @@ export default function JoinScreen() {
                 onChangeText={setNewName}
                 placeholder={t('join.newAssemblyNamePlaceholder')}
               />
-              <Label style={{ marginTop: 18, marginBottom: 8 }}>{t('join.roleQuestion')}</Label>
-              <View style={{ gap: 10 }}>
-                <Button
-                  label={t('join.roleLeader')}
-                  variant="soft"
-                  loading={submitting}
-                  disabled={!city || newName.trim().length === 0}
-                  onPress={() =>
-                    city &&
-                    submitJoin({
-                      newAssembly: { cityId: city.id, name: newName.trim() },
-                      requestedRole: 'LEADER',
-                    })
-                  }
-                />
-                <Button
-                  label={t('join.roleMember')}
-                  variant="soft"
-                  loading={submitting}
-                  disabled={!city || newName.trim().length === 0}
-                  onPress={() =>
-                    city &&
-                    submitJoin({
-                      newAssembly: { cityId: city.id, name: newName.trim() },
-                      requestedRole: 'MEMBER',
-                    })
-                  }
-                />
-              </View>
+              <Button
+                label={t('join.createAssembly')}
+                loading={submitting}
+                height={54}
+                style={{ marginTop: 20 }}
+                disabled={!city || newName.trim().length === 0}
+                onPress={() =>
+                  city &&
+                  submitJoin({
+                    newAssembly: { cityId: city.id, name: newName.trim() },
+                    requestedRole: 'LEADER',
+                  })
+                }
+              />
               {(!city || newName.trim().length === 0) && (
                 <Text style={styles.emptyHint}>{t('join.fillFields')}</Text>
               )}
@@ -462,16 +506,21 @@ export default function JoinScreen() {
       >
         <View style={styles.modalBackdrop}>
           <Card style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{roleTarget?.name}</Text>
+            {/* Modale de CONFIRMATION : le rattachement est immédiat, l'acte est donc nommé
+                pour ce qu'il est — sans étape supplémentaire, le choix du rôle EST la
+                confirmation (un seul geste, zéro friction). */}
+            <Text style={styles.modalTitle}>
+              {t('join.confirmJoinTitle', { name: roleTarget?.name ?? '' })}
+            </Text>
             <Text style={styles.subtitle}>
               {roleTarget
                 ? `${roleTarget.cityName} · ${roleTarget.regionName} · ${roleTarget.nationName}`
                 : ''}
             </Text>
-            <Label style={{ marginTop: 16, marginBottom: 8 }}>{t('join.roleQuestion')}</Label>
+            <Label style={{ marginTop: 16, marginBottom: 8 }}>{t('join.confirmJoinHint')}</Label>
             <View style={{ gap: 10 }}>
               <Button
-                label={t('join.roleLeader')}
+                label={t('join.confirmAsLeader')}
                 variant="soft"
                 loading={submitting}
                 onPress={() =>
@@ -479,7 +528,7 @@ export default function JoinScreen() {
                 }
               />
               <Button
-                label={t('join.roleMember')}
+                label={t('join.confirmAsMember')}
                 variant="soft"
                 loading={submitting}
                 onPress={() =>
@@ -550,17 +599,6 @@ function SearchSection({
       <Text style={styles.title}>{t('join.searchTitle')}</Text>
       <Text style={styles.subtitle}>{t('join.searchHint')}</Text>
 
-      <View style={styles.searchBox}>
-        <Ionicons name="search" size={16} color={colors.ink3} />
-        <Field
-          value={query}
-          onChangeText={onQuery}
-          placeholder={city ? t('join.filterInCity', { city: city.name }) : t('join.searchPlaceholder')}
-          autoCapitalize="none"
-          style={styles.searchField}
-        />
-      </View>
-
       <Text style={styles.drillHint}>{t('join.browseTitle')}</Text>
       {context == null ? (
         <ActivityIndicator color={colors.moss} style={{ marginTop: 10 }} />
@@ -575,6 +613,19 @@ function SearchSection({
           onCity={onCity}
         />
       )}
+
+      {/* Le champ de recherche appartient à la LISTE : il est rendu juste au-dessus d'elle,
+          là où on filtre — pas en tête d'écran, hors de vue dès que la liste s'allonge. */}
+      <View style={styles.searchBox}>
+        <Ionicons name="search" size={16} color={colors.ink3} />
+        <Field
+          value={query}
+          onChangeText={onQuery}
+          placeholder={city ? t('join.filterInCity', { city: city.name }) : t('join.searchPlaceholder')}
+          autoCapitalize="none"
+          style={styles.searchField}
+        />
+      </View>
 
       {searching && <ActivityIndicator color={colors.moss} style={{ marginTop: 14 }} />}
       {!searching && active && results.length === 0 && (
@@ -658,73 +709,121 @@ function PlaceDrill({
   const regions = nation ? context.regions.filter((r) => r.parentId === nation.id) : [];
   const cities = region ? context.cities.filter((c) => c.parentId === region.id) : [];
   return (
-    <View style={{ marginTop: 12 }}>
-      <DrillLevel
+    <View style={{ marginTop: 4 }}>
+      <SelectField
         label={t('join.pickNation')}
         options={context.nations}
         pick={nation}
         onChange={onNation}
       />
-      {nation && (
-        <DrillLevel
-          label={t('join.pickRegion')}
-          options={regions}
-          pick={region}
-          onChange={onRegion}
-        />
-      )}
-      {region && (
-        <DrillLevel
-          label={t('join.pickCity')}
-          options={cities}
-          pick={city}
-          onChange={onCity}
-        />
-      )}
+      <SelectField
+        label={t('join.pickRegion')}
+        options={regions}
+        pick={region}
+        onChange={onRegion}
+        disabled={!nation}
+      />
+      <SelectField
+        label={t('join.pickCity')}
+        options={cities}
+        pick={city}
+        onChange={onCity}
+        disabled={!region}
+      />
     </View>
   );
 }
 
-function DrillLevel({
+/**
+ * Sélecteur en LISTE — parité avec le `Picker` du web : un champ qui montre la valeur choisie,
+ * et une modale déroulante avec recherche dès que la liste est longue. Remplace les pastilles,
+ * qui débordaient dès qu'un niveau comptait plus de quelques entrées.
+ */
+function SelectField({
   label,
   options,
   pick,
   onChange,
+  disabled,
 }: {
   label: string;
   options: RequestNodeOption[];
   pick: RequestNodeOption | null;
   onChange: (p: RequestNodeOption | null) => void;
+  disabled?: boolean;
 }) {
   const { t } = useLanguage();
-  if (pick) {
-    return (
-      <View style={{ marginTop: 10 }}>
-        <Label style={{ marginBottom: 6 }}>{label}</Label>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <View style={[styles.chip, styles.chipActive]}>
-            <Text style={[styles.chipText, styles.chipTextActive]}>{pick.name}</Text>
-          </View>
-          <Pressable onPress={() => onChange(null)} hitSlop={8}>
-            <Text style={styles.cancelLink}>{t('requests.changePick')}</Text>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  const shown = q.length === 0 ? options : options.filter((o) => o.name.toLowerCase().includes(q));
+  const SEARCH_FROM = 8;
+
+  const close = () => {
+    setOpen(false);
+    setQuery('');
+  };
+
   return (
     <View style={{ marginTop: 10 }}>
       <Label style={{ marginBottom: 6 }}>{label}</Label>
-      <View style={styles.chipRow}>
-        {options.length === 0 && (
-          <Text style={styles.emptyHint}>{t('requests.noOption')}</Text>
-        )}
-        {options.map((o) => (
-          <Pressable key={o.id} onPress={() => onChange(o)} style={styles.chip}>
-            <Text style={styles.chipText}>{o.name}</Text>
-          </Pressable>
-        ))}
-      </View>
+      <Pressable
+        onPress={() => !disabled && options.length > 0 && setOpen(true)}
+        style={[styles.selectField, disabled && styles.selectFieldDisabled]}
+      >
+        <Text
+          style={[styles.selectValue, !pick && styles.selectPlaceholder]}
+          numberOfLines={1}
+        >
+          {pick ? pick.name : t('common.choose')}
+        </Text>
+        <Ionicons name="chevron-down" size={16} color={colors.ink3} />
+      </Pressable>
+
+      <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
+        <View style={styles.pickerBackdrop}>
+          <Card style={styles.pickerCard}>
+            <Label style={{ marginBottom: 8 }}>{label}</Label>
+            {options.length >= SEARCH_FROM && (
+              <View style={styles.pickerSearch}>
+                <Ionicons name="search" size={15} color={colors.ink3} />
+                <Field
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder={label}
+                  autoCapitalize="none"
+                  style={styles.pickerSearchInput}
+                />
+              </View>
+            )}
+            <ScrollView style={{ marginTop: 8, maxHeight: 360 }}>
+              {shown.length === 0 && (
+                <Text style={styles.emptyHint}>{t('join.noOption')}</Text>
+              )}
+              {shown.map((o) => (
+                <Pressable
+                  key={o.id}
+                  onPress={() => { onChange(o); close(); }}
+                  style={styles.pickerRow}
+                >
+                  <Text
+                    style={[styles.pickerName, pick?.id === o.id && styles.pickerNameActive]}
+                    numberOfLines={1}
+                  >
+                    {o.name}
+                  </Text>
+                  {pick?.id === o.id && (
+                    <Ionicons name="checkmark" size={16} color={colors.moss} />
+                  )}
+                </Pressable>
+              ))}
+            </ScrollView>
+            <Pressable onPress={close} style={{ marginTop: 12, alignItems: 'center' }}>
+              <Text style={styles.cancelLink}>{t('common.cancel')}</Text>
+            </Pressable>
+          </Card>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -782,6 +881,55 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     paddingHorizontal: 0,
   },
+  selectField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    height: 50,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(42,38,32,0.15)',
+    backgroundColor: colors.paper,
+  },
+  selectFieldDisabled: { opacity: 0.45 },
+  selectValue: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: colors.ink },
+  selectPlaceholder: { color: colors.ink3 },
+  pickerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(22,41,31,0.45)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  pickerCard: { paddingHorizontal: 18, paddingVertical: 18, maxHeight: '85%' },
+  pickerSearch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(42,38,32,0.15)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    backgroundColor: colors.paper,
+  },
+  pickerSearchInput: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    paddingHorizontal: 0,
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(42,38,32,0.06)',
+  },
+  pickerName: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: colors.ink2 },
+  pickerNameActive: { color: colors.mossDeep, fontWeight: '600' },
   drillHint: {
     fontFamily: fonts.sans,
     fontSize: 12.5,
@@ -853,16 +1001,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     lineHeight: 18,
   },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 99,
-    backgroundColor: 'rgba(42,38,32,0.06)',
-  },
-  chipActive: { backgroundColor: colors.moss },
-  chipText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink2 },
-  chipTextActive: { color: colors.white },
   cancelLink: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink3, fontWeight: '600' },
   pendingCard: {
     marginTop: 18,

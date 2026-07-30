@@ -260,6 +260,7 @@ function SearchFlow({
   const regions = allRegions.filter((r) => !nationId || r.parentId === nationId);
   const cities = allCities.filter((c) => !regionId || c.parentId === regionId);
 
+  const cityNameById = useMemo(() => new Map(allCities.map((c) => [c.id, c.name])), [allCities]);
   const canSearch = debouncedQ.length >= 2 || cityId !== '';
   const searchQ = useQuery({
     queryKey: ['join-requests', 'assemblies', debouncedQ, cityId],
@@ -272,6 +273,15 @@ function SearchFlow({
   /** Confirmation avant de prendre la place d'un dirigeant en poste. */
   const [confirmReplace, setConfirmReplace] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  /**
+   * Parcours « mon assemblée n'existe pas » (JP 30/07) : on qualifie D'ABORD le statut.
+   *  • 'role' — deux boutons, et rien d'autre ;
+   *  • 'stop' — cas MEMBRE : le parcours s'arrête ici, sans demande ni ticket ;
+   *  • 'form' — cas DIRIGEANT confirmé : localisation + nom, puis création immédiate.
+   */
+  const [createStep, setCreateStep] = useState<'role' | 'stop' | 'form'>('role');
+  /** Confirmation de la déclaration de direction, avant la saisie de la nouvelle assemblée. */
+  const [confirmDeclare, setConfirmDeclare] = useState(false);
   const [newName, setNewName] = useState('');
 
   const createM = useMutation({
@@ -331,6 +341,13 @@ function SearchFlow({
     submitExisting('LEADER');
   };
 
+  /**
+   * Se déclarer dirigeant d'une assemblée à créer engage : elle sera créée sur simple
+   * déclaration, sans validation du secrétariat (JP 30/07 — on corrige a posteriori dans le
+   * back-office plutôt que de faire attendre une semaine). D'où une confirmation explicite.
+   */
+  const declareNewAssemblyLeader = () => setConfirmDeclare(true);
+
   const submitNew = (role: JoinRequestRole) => {
     if (!cityId || newName.trim().length === 0) return;
     createM.mutate({ requestedRole: role, newAssembly: { cityId, name: newName.trim() } });
@@ -345,15 +362,6 @@ function SearchFlow({
         <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 12px' }}>
           {t('join.searchTitle')}
         </h2>
-        <Field label={t('join.searchLabel')} hint={debouncedQ.length > 0 && debouncedQ.length < 2 && !cityId ? t('join.searchTooShort') : undefined}>
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('join.searchPlaceholder')}
-            icon={<Icon name="search" size={14} />}
-          />
-        </Field>
-
         <div style={{ margin: '12px 0 0' }}>
           <div style={{ fontSize: 12.5, color: 'var(--ink-500)', marginBottom: 8 }}>{t('join.browseTitle')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: 10 }}>
@@ -378,6 +386,26 @@ function SearchFlow({
               disabled={!regionId}
             />
           </div>
+        </div>
+
+        {/* Le champ de recherche appartient à la LISTE : il est rendu juste au-dessus d'elle,
+            là où on filtre — pas en tête d'écran, hors de vue dès que la liste s'allonge. */}
+        <div style={{ marginTop: 14 }}>
+          <Field
+            label={cityId ? t('join.filterLabel') : t('join.searchLabel')}
+            hint={debouncedQ.length > 0 && debouncedQ.length < 2 && !cityId ? t('join.searchTooShort') : undefined}
+          >
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={
+                cityId
+                  ? t('join.filterInCity', { city: cityNameById.get(cityId) ?? '' })
+                  : t('join.searchPlaceholder')
+              }
+              icon={<Icon name="search" size={14} />}
+            />
+          </Field>
         </div>
 
         {canSearch && (
@@ -422,7 +450,7 @@ function SearchFlow({
         <div style={{ marginTop: 16, textAlign: 'center' }}>
           <button
             type="button"
-            onClick={() => setCreateOpen((v) => !v)}
+            onClick={() => { setCreateStep('role'); setCreateOpen((v) => !v); }}
             style={{
               background: 'transparent', border: 'none', cursor: 'pointer', padding: 4,
               color: 'var(--green-700, #1E3A2F)', fontFamily: 'inherit', fontSize: 14, fontWeight: 600,
@@ -434,7 +462,38 @@ function SearchFlow({
         </div>
       </div>
 
-      {createOpen && (
+      {createOpen && createStep === 'role' && (
+        <div style={cardStyle}>
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 6px' }}>
+            {t('join.notFound')}
+          </h2>
+          <p style={{ margin: '0 0 16px', fontSize: 13.5, color: 'var(--ink-500)' }}>{t('join.notFoundStatusHint')}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <Button onClick={() => setCreateStep('stop')} style={{ justifyContent: 'center' }}>
+              {t('join.notFoundIamMember')}
+            </Button>
+            <Button variant="primary" onClick={declareNewAssemblyLeader} style={{ justifyContent: 'center' }}>
+              {t('join.notFoundIamLeader')}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {createOpen && createStep === 'stop' && (
+        <div style={cardStyle}>
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 6px' }}>
+            {t('join.memberDeadEndTitle')}
+          </h2>
+          <p style={{ margin: '0 0 16px', fontSize: 14.5, color: 'var(--ink-600)', lineHeight: 1.6 }}>
+            {t('join.memberDeadEndBody')}
+          </p>
+          <Button onClick={() => { setCreateStep('role'); setCreateOpen(false); }}>
+            {t('join.backToSearch')}
+          </Button>
+        </div>
+      )}
+
+      {createOpen && createStep === 'form' && (
         <div style={cardStyle}>
           <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 6px' }}>
             {t('join.newAssemblyTitle')}
@@ -475,22 +534,14 @@ function SearchFlow({
                 placeholder={t('join.newAssemblyNamePlaceholder')}
               />
             </Field>
-            <div style={{ fontSize: 13, color: 'var(--ink-500)' }}>{t('join.newAssemblyRoleHint')}</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-              <Button
-                variant="primary"
-                disabled={!cityId || newName.trim().length === 0 || createM.isPending}
-                onClick={() => submitNew('LEADER')}
-              >
-                {createM.isPending ? t('join.submitting') : t('join.roleLeader')}
-              </Button>
-              <Button
-                disabled={!cityId || newName.trim().length === 0 || createM.isPending}
-                onClick={() => submitNew('MEMBER')}
-              >
-                {t('join.roleMember')}
-              </Button>
-            </div>
+            <Button
+              variant="primary"
+              disabled={!cityId || newName.trim().length === 0 || createM.isPending}
+              onClick={() => submitNew('LEADER')}
+              style={{ justifyContent: 'center' }}
+            >
+              {createM.isPending ? t('join.submitting') : t('join.createAssembly')}
+            </Button>
 
             {/* Nation / région / ville absente : on ne laisse pas l'utilisateur sans issue. */}
             <div style={{ marginTop: 4, paddingTop: 14, borderTop: '1px solid var(--line-soft)' }}>
@@ -518,12 +569,43 @@ function SearchFlow({
         </div>
       )}
 
+      {confirmDeclare && (
+        <div className="modal-backdrop" onClick={() => setConfirmDeclare(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <div className="ttl">{t('join.declareLeaderTitle')}</div>
+            </div>
+            <div className="modal-body">
+              <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: 'var(--ink-700)' }}>
+                {t('join.declareLeaderBody')}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+                <Button
+                  variant="primary"
+                  onClick={() => { setConfirmDeclare(false); setCreateStep('form'); }}
+                  style={{ justifyContent: 'center' }}
+                >
+                  {t('join.declareLeaderConfirm')}
+                </Button>
+                <Button onClick={() => setConfirmDeclare(false)} style={{ justifyContent: 'center' }}>
+                  {t('common.cancel')}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* (2) Choix du rôle pour l'assemblée sélectionnée */}
       {picked && (
         <div className="modal-backdrop" onClick={() => { setPicked(null); setConfirmReplace(false); }}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
-              <div className="ttl">{t('join.roleQuestion', { name: picked.name })}</div>
+              <div className="ttl">
+                {confirmReplace
+                  ? t('join.replaceLeaderTitle')
+                  : t('join.confirmJoinTitle', { name: picked.name })}
+              </div>
               <div className="sub">
                 {[picked.cityName, picked.regionName, picked.nationName].filter(Boolean).join(' · ')}
               </div>
@@ -554,20 +636,25 @@ function SearchFlow({
                 </div>
               ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {/* Le rattachement est immédiat : l'acte est nommé pour ce qu'il est, et le
+                    choix du rôle EST la confirmation — un seul geste, zéro friction. */}
+                <p style={{ margin: '0 0 4px', fontSize: 13.5, color: 'var(--ink-500)', lineHeight: 1.55 }}>
+                  {t('join.confirmJoinHint')}
+                </p>
                 <Button
                   variant="primary"
                   disabled={createM.isPending}
                   onClick={declareLeader}
                   style={{ justifyContent: 'center' }}
                 >
-                  {t('join.roleLeader')}
+                  {t('join.confirmAsLeader')}
                 </Button>
                 <Button
                   disabled={createM.isPending}
                   onClick={() => submitExisting('MEMBER')}
                   style={{ justifyContent: 'center' }}
                 >
-                  {t('join.roleMember')}
+                  {t('join.confirmAsMember')}
                 </Button>
               </div>
               )}
