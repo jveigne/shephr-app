@@ -16,8 +16,10 @@ export interface AssemblyOption {
   cityName: string;
   regionName: string;
   nationName: string;
-  /** true si l'assemblée a déjà un dirigeant titulaire (avertissement co-dirigeant). */
+  /** true si l'assemblée a déjà un dirigeant titulaire. */
   hasLeader: boolean;
+  /** Nom du dirigeant titulaire, null si le poste est vacant. */
+  leaderName: string | null;
 }
 
 export interface JoinRequestResponse {
@@ -27,8 +29,6 @@ export interface JoinRequestResponse {
   assemblyNodeId: string | null;
   assemblyName: string | null;
   cityName: string | null;
-  /** L'assemblée visée a déjà un dirigeant titulaire (badge d'avertissement si rôle LEADER). */
-  assemblyHasLeader: boolean;
   requestedRole: JoinRequestRole;
   status: JoinRequestStatus;
   /** Demande de structure liée quand l'assemblée n'existe pas encore. */

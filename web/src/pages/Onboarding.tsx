@@ -23,6 +23,10 @@ import {
 // assemblée (recherche + drill nation→région→ville), choisit son rôle, ou demande la création
 // de son assemblée, puis suit sa demande (validée par le dirigeant de l'assemblée ou le secrétariat).
 
+/** Contact JExcellence — même canal que la landing (JP 30/07). */
+const CONTACT_EMAIL = 'jexcellence2065@gmail.com';
+const CONTACT_WHATSAPP = 'https://wa.me/33754596796';
+
 const errMsg = (err: unknown, fallback: string) =>
   (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
 
@@ -177,6 +181,7 @@ export function OnboardingPage() {
               onSubmitted={() => invalidateMine()}
               onAlreadyPending={() => invalidateMine()}
               onAlreadyAttached={() => void refreshMe()}
+              onAttached={() => void reloadSession()}
             />
           </>
         )}
@@ -227,11 +232,13 @@ function WaitingCard({
 // ---------------------------------------------------------------------------------------------
 
 function SearchFlow({
-  onSubmitted, onAlreadyPending, onAlreadyAttached,
+  onSubmitted, onAlreadyPending, onAlreadyAttached, onAttached,
 }: {
   onSubmitted: () => void;
   onAlreadyPending: () => void;
   onAlreadyAttached: () => void;
+  /** Rattachement immédiat (dirigeant OU fidèle) : session rechargée, entrée dans l'app. */
+  onAttached: () => void;
 }) {
   const { t } = useTranslation();
   const { push } = useToast();
@@ -253,15 +260,6 @@ function SearchFlow({
   const regions = allRegions.filter((r) => !nationId || r.parentId === nationId);
   const cities = allCities.filter((c) => !regionId || c.parentId === regionId);
 
-  // Villes proposées à la CRÉATION d'une assemblée : on ne repart pas du référentiel entier,
-  // on reste dans le périmètre déjà choisi au-dessus (région, sinon nation, sinon tout).
-  const regionNameById = useMemo(() => new Map(allRegions.map((r) => [r.id, r.name])), [allRegions]);
-  const scopedCities = regionId
-    ? cities
-    : nationId
-      ? allCities.filter((c) => c.parentId != null && regions.some((r) => r.id === c.parentId))
-      : allCities;
-
   const canSearch = debouncedQ.length >= 2 || cityId !== '';
   const searchQ = useQuery({
     queryKey: ['join-requests', 'assemblies', debouncedQ, cityId],
@@ -271,25 +269,29 @@ function SearchFlow({
 
   // (2) Choix du rôle sur une assemblée sélectionnée / (3) création d'assemblée.
   const [picked, setPicked] = useState<AssemblyOption | null>(null);
+  /** Confirmation avant de prendre la place d'un dirigeant en poste. */
+  const [confirmReplace, setConfirmReplace] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [newCityId, setNewCityId] = useState('');
   const [newName, setNewName] = useState('');
-
-  // La ville choisie dans le parcours du haut est celle où l'on crée : on la reprend d'office.
-  useEffect(() => {
-    if (cityId) setNewCityId(cityId);
-  }, [cityId]);
-
-  // Le périmètre a changé (autre nation/région) : une ville hors périmètre ne peut pas rester choisie.
-  useEffect(() => {
-    if (newCityId && !scopedCities.some((c) => c.id === newCityId)) setNewCityId('');
-  }, [scopedCities, newCityId]);
 
   const createM = useMutation({
     mutationFn: createJoinRequest,
-    onSuccess: () => {
+    onSuccess: (created) => {
       setPicked(null);
       setCreateOpen(false);
+      // Se déclarer dirigeant d'une assemblée EXISTANTE est titularisé sur-le-champ (JP 30/07) :
+      // le serveur renvoie la demande DÉJÀ approuvée — on entre dans l'app, sans attente.
+      if (created.status === 'APPROVED') {
+        const asLeader = created.requestedRole === 'LEADER';
+        const name = created.assemblyName ?? created.newAssemblyName ?? '';
+        push({
+          kind: 'ok',
+          title: asLeader ? t('join.nowLeaderTitle') : t('join.nowMemberTitle'),
+          msg: asLeader ? t('join.nowLeaderBody', { name }) : t('join.nowMemberBody', { name }),
+        });
+        onAttached();
+        return;
+      }
       push({ kind: 'ok', title: t('join.created') });
       onSubmitted();
     },
@@ -315,9 +317,23 @@ function SearchFlow({
     createM.mutate({ assemblyNodeId: picked.id, requestedRole: role });
   };
 
+  /**
+   * Se déclarer dirigeant titularise sur-le-champ, et REMPLACE le titulaire s'il y en a un
+   * (JP 30/07). Sur une assemblée déjà dirigée, la modale bascule sur une confirmation
+   * explicite — elle ne bloque pas l'inscription, elle évite la reprise par mégarde.
+   */
+  const declareLeader = () => {
+    if (!picked) return;
+    if (picked.hasLeader) {
+      setConfirmReplace(true);
+      return;
+    }
+    submitExisting('LEADER');
+  };
+
   const submitNew = (role: JoinRequestRole) => {
-    if (!newCityId || newName.trim().length === 0) return;
-    createM.mutate({ requestedRole: role, newAssembly: { cityId: newCityId, name: newName.trim() } });
+    if (!cityId || newName.trim().length === 0) return;
+    createM.mutate({ requestedRole: role, newAssembly: { cityId, name: newName.trim() } });
   };
 
   const results = searchQ.data ?? [];
@@ -389,7 +405,11 @@ function SearchFlow({
                         {[a.cityName, a.regionName, a.nationName].filter(Boolean).join(' · ')}
                       </div>
                     </div>
-                    {a.hasLeader && <Badge tone="earth">{t('join.hasLeaderBadge')}</Badge>}
+                    {a.hasLeader && (
+                      <Badge tone="earth">
+                        {a.leaderName ? t('join.ledBy', { name: a.leaderName }) : t('join.hasLeaderBadge')}
+                      </Badge>
+                    )}
                     <Icon name="chevRight" size={13} />
                   </button>
                 ))}
@@ -421,19 +441,32 @@ function SearchFlow({
           </h2>
           <p style={{ margin: '0 0 14px', fontSize: 13.5, color: 'var(--ink-500)' }}>{t('join.newAssemblySub')}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Field label={t('join.cityLabel')}>
-              <Picker
-                value={newCityId}
-                onChange={setNewCityId}
-                options={scopedCities.map((c) => ({
-                  id: c.id,
-                  label: c.name,
-                  // Hors périmètre d'une région précise, on rappelle la région de chaque ville.
-                  sub: regionId ? undefined : regionNameById.get(c.parentId ?? ''),
-                }))}
-                placeholder={t('common.choose')}
-                searchPlaceholder={t('join.cityLabel')}
-              />
+            {/* Nation → région → ville : on situe l'assemblée entièrement, pas seulement la ville.
+                Ces sélecteurs partagent l'état du parcours du haut : ce qui a déjà été choisi
+                est repris tel quel. */}
+            <Field label={t('join.placeLabel')}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: 10 }}>
+                <Picker
+                  value={nationId}
+                  onChange={(id) => { setNationId(id); setRegionId(''); setCityId(''); }}
+                  options={toOptions(contextQ.data?.nations)}
+                  placeholder={t('join.nationPlaceholder')}
+                />
+                <Picker
+                  value={regionId}
+                  onChange={(id) => { setRegionId(id); setCityId(''); }}
+                  options={toOptions(regions)}
+                  placeholder={t('join.regionPlaceholder')}
+                  disabled={!nationId}
+                />
+                <Picker
+                  value={cityId}
+                  onChange={setCityId}
+                  options={toOptions(cities)}
+                  placeholder={t('join.cityPlaceholder')}
+                  disabled={!regionId}
+                />
+              </div>
             </Field>
             <Field label={t('join.newAssemblyName')}>
               <Input
@@ -442,20 +475,44 @@ function SearchFlow({
                 placeholder={t('join.newAssemblyNamePlaceholder')}
               />
             </Field>
+            <div style={{ fontSize: 13, color: 'var(--ink-500)' }}>{t('join.newAssemblyRoleHint')}</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               <Button
                 variant="primary"
-                disabled={!newCityId || newName.trim().length === 0 || createM.isPending}
+                disabled={!cityId || newName.trim().length === 0 || createM.isPending}
                 onClick={() => submitNew('LEADER')}
               >
                 {createM.isPending ? t('join.submitting') : t('join.roleLeader')}
               </Button>
               <Button
-                disabled={!newCityId || newName.trim().length === 0 || createM.isPending}
+                disabled={!cityId || newName.trim().length === 0 || createM.isPending}
                 onClick={() => submitNew('MEMBER')}
               >
                 {t('join.roleMember')}
               </Button>
+            </div>
+
+            {/* Nation / région / ville absente : on ne laisse pas l'utilisateur sans issue. */}
+            <div style={{ marginTop: 4, paddingTop: 14, borderTop: '1px solid var(--line-soft)' }}>
+              <div style={{ fontSize: 13.5, color: 'var(--ink-600)', lineHeight: 1.6, marginBottom: 10 }}>
+                {t('join.missingPlaceHint')}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                <a
+                  href={CONTACT_WHATSAPP}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ padding: '10px 18px', borderRadius: 'var(--radius, 10px)', border: '1px solid var(--green-600)', color: 'var(--green-700)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}
+                >
+                  {t('join.contactWhatsapp')}
+                </a>
+                <a
+                  href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(t('join.contactMailSubject'))}`}
+                  style={{ padding: '10px 18px', borderRadius: 'var(--radius, 10px)', border: '1px solid var(--line-soft)', color: 'var(--ink-700)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}
+                >
+                  {t('join.contactMail')}
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -463,7 +520,7 @@ function SearchFlow({
 
       {/* (2) Choix du rôle pour l'assemblée sélectionnée */}
       {picked && (
-        <div className="modal-backdrop" onClick={() => setPicked(null)}>
+        <div className="modal-backdrop" onClick={() => { setPicked(null); setConfirmReplace(false); }}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <div className="ttl">{t('join.roleQuestion', { name: picked.name })}</div>
@@ -472,20 +529,39 @@ function SearchFlow({
               </div>
             </div>
             <div className="modal-body">
+              {confirmReplace ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: 'var(--ink-700)' }}>
+                    <Icon name="warning" size={14} />{' '}
+                    {t('join.replaceLeaderBody', { name: picked.leaderName ?? t('join.theCurrentLeader') })}
+                  </p>
+                  <Button
+                    variant="primary"
+                    disabled={createM.isPending}
+                    onClick={() => submitExisting('LEADER')}
+                    style={{ justifyContent: 'center' }}
+                  >
+                    {t('join.replaceLeaderConfirm')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={createM.isPending}
+                    onClick={() => setConfirmReplace(false)}
+                    style={{ justifyContent: 'center' }}
+                  >
+                    {t('common.cancel')}
+                  </Button>
+                </div>
+              ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <Button
                   variant="primary"
                   disabled={createM.isPending}
-                  onClick={() => submitExisting('LEADER')}
+                  onClick={declareLeader}
                   style={{ justifyContent: 'center' }}
                 >
                   {t('join.roleLeader')}
                 </Button>
-                {picked.hasLeader && (
-                  <p style={{ margin: 0, fontSize: 12.5, color: 'var(--earth-700, #8E6B47)', lineHeight: 1.5 }}>
-                    <Icon name="warning" size={12} /> {t('join.coLeaderWarning')}
-                  </p>
-                )}
                 <Button
                   disabled={createM.isPending}
                   onClick={() => submitExisting('MEMBER')}
@@ -494,9 +570,12 @@ function SearchFlow({
                   {t('join.roleMember')}
                 </Button>
               </div>
+              )}
             </div>
             <div className="modal-foot">
-              <Button variant="ghost" onClick={() => setPicked(null)}>{t('common.cancel')}</Button>
+              <Button variant="ghost" onClick={() => { setPicked(null); setConfirmReplace(false); }}>
+                {t('common.cancel')}
+              </Button>
             </div>
           </div>
         </div>

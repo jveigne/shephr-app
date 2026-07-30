@@ -180,11 +180,6 @@ export function RequestsPage() {
       <Badge tone={r.requestedRole === 'LEADER' ? 'earth' : 'gray'}>
         {t(`join.role.${r.requestedRole}`)}
       </Badge>
-      {r.assemblyHasLeader && r.requestedRole === 'LEADER' && (
-        <div style={{ marginTop: 4, fontSize: 12, color: 'var(--earth-700, #8E6B47)', maxWidth: 260, lineHeight: 1.45 }}>
-          <Icon name="warning" size={11} /> {t('join.coLeaderWarning')}
-        </div>
-      )}
     </div>
   );
 

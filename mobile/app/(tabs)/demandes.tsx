@@ -113,13 +113,9 @@ export default function DemandesScreen() {
   };
 
   const onApproveJoin = async (r: JoinRequestResponse) => {
-    // Avertissement co-dirigeant : l'assemblée a déjà un titulaire et la demande est LEADER.
-    const conflict = r.assemblyHasLeader && r.requestedRole === 'LEADER';
-    const body = conflict
-      ? `${t('requests.leaderConflict')}\n\n${t('requests.approveConfirm', {
-          name: r.userName, role: t(`requests.joinRole.${r.requestedRole}`) })}`
-      : t('requests.approveConfirm', {
-          name: r.userName, role: t(`requests.joinRole.${r.requestedRole}`) });
+    const body = t('requests.approveConfirm', {
+      name: r.userName, role: t(`requests.joinRole.${r.requestedRole}`),
+    });
     const ok = await confirmDialog(t('requests.approveTitle'), body, t('requests.approveJoin'));
     if (!ok) return;
     try {
@@ -319,7 +315,6 @@ function JoinPendingCard({
   onReject: () => void;
 }) {
   const { t } = useLanguage();
-  const leaderConflict = request.assemblyHasLeader && request.requestedRole === 'LEADER';
   return (
     <Card style={styles.joinPendingCard}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -339,9 +334,6 @@ function JoinPendingCard({
           )}
         </View>
       </View>
-      {leaderConflict && (
-        <Text style={styles.joinWarn}>{t('requests.leaderConflict')}</Text>
-      )}
       <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
         <Button label={t('requests.approveJoin')} height={42} onPress={onApprove} style={{ flex: 1 }} />
         <Button label={t('requests.rejectJoin')} variant="danger" height={42} onPress={onReject} style={{ flex: 1 }} />
@@ -587,16 +579,6 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   joinPendingCard: { paddingHorizontal: 14, paddingVertical: 12 },
-  joinWarn: {
-    fontFamily: fonts.sans,
-    fontSize: 12,
-    color: colors.clay,
-    lineHeight: 17,
-    marginTop: 10,
-    backgroundColor: 'rgba(184,106,74,0.10)',
-    padding: 10,
-    borderRadius: 10,
-  },
   itemCard: { paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
   itemName: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: colors.ink },
   itemMeta: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginTop: 2, lineHeight: 17 },

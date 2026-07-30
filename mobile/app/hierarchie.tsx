@@ -114,7 +114,7 @@ export default function HierarchieScreen() {
 
       {/* Accès à SA propre déclaration (28/07) : l'arbre reste en lecture, le rattachement
           personnel se pose dans l'écran dédié. */}
-      <Card
+    {/*  <Card
         variant="paper2"
         style={styles.discipleshipCard}
         onPress={() => router.push('/faiseur-de-disciple')}
@@ -125,7 +125,7 @@ export default function HierarchieScreen() {
           <Text style={styles.nodeMeta} numberOfLines={2}>{t('discipleship.shortcutHint')}</Text>
         </View>
         <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
-      </Card>
+      </Card>*/}
 
       <View style={styles.segmentRow}>
         {(['leaders', 'units'] as ViewMode[]).map((v) => (
