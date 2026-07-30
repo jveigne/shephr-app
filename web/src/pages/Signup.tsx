@@ -1,17 +1,25 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { DIAL_COUNTRIES, flagEmoji, sortedDialCountries } from '../constants/dialCodes';
 import { Icon } from '../components/Icon';
 import { LangSwitch } from '../components/LangSwitch';
 import { Button, Field, Input } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
-import { hasMemberSpace, hasMinistryAccess } from '../services/authApi';
+import { hasMemberSpace, hasMinistryAccess, type MeResponse } from '../services/authApi';
 
 /**
- * Feature B — inscription libre côté Web (miroir de `mobile/app/(auth)/signup.tsx`).
- * Étape « ask » : on demande d'abord si la personne a déjà un compte CMFIPraise (un seul compte
- * pour les deux applications), puis le formulaire. Le compte créé n'a aucun rattachement :
- * on enchaîne sur `/join` (recherche d'assemblée + demande de rattachement).
+ * Inscription libre côté Web (miroir de `mobile/app/(auth)/signup.tsx`) : identité, email,
+ * téléphone (RG-ID-04/05), mot de passe confirmé. Le compte créé n'a aucun rattachement →
+ * on enchaîne sur `/join`, qui fait partie intégrante de l'inscription.
+ *
+ * Identifiant déjà pris : on NE quitte PAS l'écran. Le mot de passe saisi est probablement celui
+ * du compte existant → tentative de connexion silencieuse ; si elle échoue, on le redemande sur
+ * place. Aucune session n'est jamais émise sur la seule existence de l'identifiant.
+ *
+ * Le champ s'affiche « Email » mais part dans `identifier` : depuis la séparation des identités
+ * par application (JP 30/07), Shephr a son propre espace de noms — s'inscrire ici n'entre jamais
+ * en collision avec un compte d'une autre application.
  */
 
 const errData = (err: unknown) =>
@@ -19,25 +27,31 @@ const errData = (err: unknown) =>
 
 export function SignupPage() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
-  const { register } = useAuth();
+  const { t, i18n } = useTranslation();
+  const { register, login } = useAuth();
 
-  const [step, setStep] = useState<'ask' | 'form'>('ask');
+  const [mode, setMode] = useState<'form' | 'existing'>('form');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [countryIso, setCountryIso] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  /** Contrat 422 : le compte existe déjà sur CMFIPraise → on propose la connexion. */
-  const [existing, setExisting] = useState<string | null>(null);
+
+  /** Un compte déjà rattaché va à son espace ; sinon il finit son inscription. */
+  const routeAfterAuth = (me: MeResponse) => {
+    if (hasMinistryAccess(me)) return navigate('/dashboard', { replace: true });
+    if (hasMemberSpace(me)) return navigate('/my-goals', { replace: true });
+    return navigate('/join', { replace: true });
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    setExisting(null);
     if (
       firstName.trim().length === 0 ||
       lastName.trim().length === 0 ||
@@ -47,46 +61,73 @@ export function SignupPage() {
       setError(t('signup.validationError'));
       return;
     }
+    if (!countryIso) {
+      setError(t('invitation.countryRequired'));
+      return;
+    }
+    if (phone.trim().replace(/\D/g, '').length < 6) {
+      setError(t('invitation.phoneRequired'));
+      return;
+    }
     if (password !== confirm) {
       setError(t('invitation.mismatch'));
       return;
     }
     setLoading(true);
     try {
-      const me = await register({
-        email: email.trim(),
+      await register({
+        identifier: email.trim(),
         password,
         fullName: `${firstName.trim()} ${lastName.trim()}`,
+        phoneNumber: phone.trim(),
+        countryCode: DIAL_COUNTRIES.find((c) => c.iso === countryIso)?.dial,
       });
-      // Un compte fraîchement créé n'est rattaché à rien ; on garde néanmoins l'aiguillage
-      // complet du login au cas où le backend rattacherait déjà (invitation pré-existante).
-      if (hasMinistryAccess(me)) {
-        navigate('/dashboard', { replace: true });
-        return;
-      }
-      if (hasMemberSpace(me)) {
-        navigate('/my-goals', { replace: true });
-        return;
-      }
+      // Compte neuf : aucun rattachement possible → rattachement à une assemblée.
       navigate('/join', { replace: true });
     } catch (err: unknown) {
       const data = errData(err);
-      if (data?.error === 'EMAIL_ALREADY_EXISTS' || data?.error === 'PHONE_ALREADY_EXISTS') {
-        setExisting(data.message ?? t('signup.exists'));
-        return;
+      if (data?.error === 'USERNAME_ALREADY_EXISTS') {
+        try {
+          routeAfterAuth(await login({ identifier: email.trim(), password }));
+          return;
+        } catch {
+          // Mot de passe différent de celui du compte existant : on le redemande, en place.
+          setMode('existing');
+          setPassword('');
+          setConfirm('');
+        }
+      } else if (data?.error === 'PHONE_ALREADY_EXISTS') {
+        setError(t('signup.phoneTaken'));
+      } else {
+        setError(data?.message ?? t('signup.failed'));
       }
-      setError(data?.message ?? t('signup.failed'));
     } finally {
       setLoading(false);
     }
   };
+
+  const submitExisting = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (password.length < 6) return;
+    setLoading(true);
+    try {
+      routeAfterAuth(await login({ identifier: email.trim(), password }));
+    } catch (err: unknown) {
+      setError(errData(err)?.message ?? t('login.invalidCredentials'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const lang = i18n.resolvedLanguage === 'en' ? 'en' : 'fr';
 
   return (
     <div className="login-shell">
       <div className="login-main" style={{ margin: '0 auto', position: 'relative' }}>
         <button
           type="button"
-          onClick={() => (step === 'form' ? setStep('ask') : navigate('/login'))}
+          onClick={() => (mode === 'existing' ? setMode('form') : navigate('/login'))}
           style={{
             position: 'absolute', top: 24, left: 24, display: 'inline-flex', alignItems: 'center', gap: 6,
             background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--ink-500)',
@@ -106,41 +147,50 @@ export function SignupPage() {
             <span className="word">shephr</span>
           </div>
 
-          {step === 'ask' ? (
+          {mode === 'existing' ? (
             <>
-              <h1>{t('signup.askTitle')}</h1>
-              <div className="sub">{t('signup.askHint')}</div>
+              <h1>{t('signup.existingTitle')}</h1>
+              <div className="sub">{t('signup.existingHint')}</div>
 
-              <div style={{ display: 'grid', gap: 10, marginTop: 22 }}>
+              <form className="form" onSubmit={submitExisting}>
+                <Field label={t('login.emailLabel')}>
+                  <Input type="email" value={email} readOnly icon={<Icon name="mail" size={15} />} />
+                </Field>
+
+                <Field label={t('login.passwordLabel')}>
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    icon={<Icon name="lock" size={15} />}
+                    autoComplete="current-password"
+                    autoFocus
+                    required
+                  />
+                </Field>
+
                 <Button
-                  variant="secondary"
-                  onClick={() => navigate('/login')}
-                  iconL={<Icon name="user" size={15} />}
-                  style={{ justifyContent: 'center', padding: '12px 14px' }}
-                >
-                  {t('signup.loginInstead')}
-                </Button>
-                <Button
+                  type="submit"
                   variant="primary"
-                  onClick={() => setStep('form')}
-                  iconR={<Icon name="arrowRight" size={15} />}
-                  style={{ justifyContent: 'center', padding: '12px 14px' }}
+                  disabled={loading}
+                  style={{ justifyContent: 'center', marginTop: 6, padding: '12px 14px' }}
                 >
-                  {t('signup.createAccount')}
+                  {loading ? t('login.connecting') : t('login.signIn')}
                 </Button>
-              </div>
 
-              <div style={{ marginTop: 16, textAlign: 'center', fontSize: 14, color: 'var(--ink-600)' }}>
-                {t('login.invitedQuestion')}{' '}
+                {error && <div className="err">{error}</div>}
+              </form>
+
+              <div style={{ marginTop: 14, textAlign: 'center' }}>
                 <button
                   type="button"
-                  onClick={() => navigate('/activate')}
+                  onClick={() => setMode('form')}
                   style={{
                     background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
-                    color: 'var(--accent, #1E3A2F)', fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
+                    color: 'var(--ink-600)', fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
                   }}
                 >
-                  {t('login.activateCta')}
+                  {t('signup.useAnotherEmail')}
                 </button>
               </div>
             </>
@@ -182,6 +232,32 @@ export function SignupPage() {
                     autoComplete="email"
                     required
                   />
+                </Field>
+
+                <Field label={t('invitation.phoneLabel')} hint={t('invitation.phoneHint')}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <select
+                      className="input"
+                      style={{ width: 190 }}
+                      value={countryIso}
+                      onChange={(e) => setCountryIso(e.target.value)}
+                      required
+                    >
+                      <option value="">{t('invitation.countryPlaceholder')}</option>
+                      {sortedDialCountries(lang).map((c) => (
+                        <option key={c.iso} value={c.iso}>
+                          {flagEmoji(c.iso)} {lang === 'en' ? c.nameEn : c.name} ({c.dial})
+                        </option>
+                      ))}
+                    </select>
+                    <Input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder={t('invitation.phonePlaceholder')}
+                      autoComplete="tel-national"
+                      required
+                    />
+                  </div>
                 </Field>
 
                 <Field label={t('login.passwordLabel')} hint={t('signup.passwordHint')}>
@@ -242,30 +318,6 @@ export function SignupPage() {
                 </Button>
 
                 {error && <div className="err">{error}</div>}
-
-                {existing && (
-                  <div
-                    style={{
-                      marginTop: 4,
-                      padding: 12,
-                      borderRadius: 'var(--radius-md, 10px)',
-                      border: '1px solid var(--line-soft, rgba(42,38,32,0.12))',
-                      background: 'var(--sand-50, rgba(201,149,107,0.08))',
-                      fontSize: 14,
-                      color: 'var(--ink-700)',
-                    }}
-                  >
-                    <strong style={{ display: 'block', marginBottom: 4 }}>{t('signup.existsTitle')}</strong>
-                    {existing}
-                    <Button
-                      variant="secondary"
-                      onClick={() => navigate('/login')}
-                      style={{ marginTop: 10, justifyContent: 'center', width: '100%' }}
-                    >
-                      {t('signup.goLogin')}
-                    </Button>
-                  </div>
-                )}
               </form>
 
               <div className="reserved">

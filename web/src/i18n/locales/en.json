@@ -245,10 +245,6 @@
   },
   "signup": {
     "back": "Back",
-    "askTitle": "Do you already have a CMFIPraise account?",
-    "askHint": "If you already use CMFIPraise, sign in with the same credentials — one account covers both the web and the mobile app.",
-    "loginInstead": "Yes, sign me in",
-    "createAccount": "No, create an account",
     "title": "Create my account",
     "subtitle": "A few details to get started; you will pick your assembly next.",
     "firstName": "First name",
@@ -260,10 +256,11 @@
     "submitting": "Creating…",
     "validationError": "Enter your first name, last name, a valid email address and a password of at least 6 characters.",
     "failed": "Sign-up failed.",
-    "existsTitle": "Existing account",
-    "exists": "You already have a CMFIPraise account — sign in with your credentials.",
-    "goLogin": "Sign in",
-    "nextStep": "Next step: find your assembly and submit your join request."
+    "nextStep": "Next step: find your assembly and submit your join request.",
+    "existingTitle": "This account already exists",
+    "existingHint": "An account already exists with this email. Enter your password to continue.",
+    "phoneTaken": "An account already exists with this phone number.",
+    "useAnotherEmail": "Use another email address"
   },
   "invitation": {
     "loadingInvitation": "Loading the invitation…",

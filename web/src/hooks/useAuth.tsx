@@ -33,7 +33,7 @@ interface AuthContextValue extends AuthState {
   canAccessWeb: boolean;
   /** Feature A — espace membre minimal « Mes objectifs » (MEMBRE Goals rattaché à une assemblée). */
   canAccessMemberSpace: boolean;
-  login: (payload: { email: string; password: string }) => Promise<MeResponse>;
+  login: (payload: { identifier: string; password: string }) => Promise<MeResponse>;
   /** Feature B — inscription libre : crée le compte puis ouvre la session (parcours `/join`). */
   register: (payload: RegisterRequest) => Promise<MeResponse>;
   /** Établit la session à partir d'un token déjà obtenu (ex. acceptation d'invitation). */
@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return me;
   }, [queryClient]);
 
-  const login = useCallback(async (payload: { email: string; password: string }) => {
+  const login = useCallback(async (payload: { identifier: string; password: string }) => {
     const res = await loginRequest(payload);
     return establishSession(res.token);
   }, [establishSession]);

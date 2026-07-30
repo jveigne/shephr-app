@@ -223,21 +223,26 @@ export function primaryRoleKey(me: MeResponse | null): 'superAdmin' | ModuleRole
   return role ?? '';
 }
 
-export async function login(payload: { email: string; password: string }) {
+/**
+ * Identités séparées par application (JP 30/07) : Shephr s'authentifie sur son PROPRE
+ * identifiant (`t_user.username` côté backend), jamais sur l'email. Les écrans continuent
+ * d'afficher « Email » — c'est un libellé, pas un contrat : la saisie part dans `identifier`.
+ */
+export async function login(payload: { identifier: string; password: string }) {
   const { data } = await apiClient.post<AuthResponse>(
-    '/api/cmfipraise/auth/login',
+    '/api/church/auth/login',
     payload,
   );
   return data;
 }
 
 /**
- * Feature B — inscription libre (miroir du parcours mobile `(auth)/signup`). Le compte créé
- * n'est rattaché à rien : l'utilisateur enchaîne sur `/join` pour demander son rattachement.
- * Erreurs 422 attendues : EMAIL_ALREADY_EXISTS / PHONE_ALREADY_EXISTS.
+ * Inscription libre (miroir du parcours mobile `(auth)/signup`). Le compte créé n'est rattaché
+ * à rien : l'utilisateur enchaîne sur `/join` pour demander son rattachement.
+ * Erreurs 422 attendues : USERNAME_ALREADY_EXISTS / PHONE_ALREADY_EXISTS.
  */
 export interface RegisterRequest {
-  email: string;
+  identifier: string;
   password: string;
   fullName: string;
   phoneNumber?: string;
@@ -246,7 +251,7 @@ export interface RegisterRequest {
 
 export async function register(payload: RegisterRequest) {
   const { data } = await apiClient.post<AuthResponse>(
-    '/api/cmfipraise/auth/register',
+    '/api/church/auth/register',
     payload,
   );
   return data;

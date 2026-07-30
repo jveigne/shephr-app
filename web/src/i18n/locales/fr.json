@@ -245,10 +245,6 @@
   },
   "signup": {
     "back": "Retour",
-    "askTitle": "Avez-vous déjà un compte CMFIPraise ?",
-    "askHint": "Si vous utilisez déjà CMFIPraise, connectez-vous avec les mêmes identifiants — un seul compte suffit pour le web et l'application mobile.",
-    "loginInstead": "Oui, me connecter",
-    "createAccount": "Non, créer un compte",
     "title": "Créer mon compte",
     "subtitle": "Quelques informations pour démarrer ; vous choisirez ensuite votre assemblée.",
     "firstName": "Prénom",
@@ -260,10 +256,11 @@
     "submitting": "Création…",
     "validationError": "Renseignez votre prénom, votre nom, une adresse e-mail valide et un mot de passe de 6 caractères minimum.",
     "failed": "L'inscription a échoué.",
-    "existsTitle": "Compte existant",
-    "exists": "Vous avez déjà un compte sur CMFIPraise, connectez-vous avec vos informations.",
-    "goLogin": "Me connecter",
-    "nextStep": "Prochaine étape : rechercher votre assemblée et déposer votre demande de rattachement."
+    "nextStep": "Prochaine étape : rechercher votre assemblée et déposer votre demande de rattachement.",
+    "existingTitle": "Un compte existe déjà",
+    "existingHint": "Un compte existe déjà avec cet email. Saisissez votre mot de passe pour continuer.",
+    "phoneTaken": "Un compte existe déjà avec ce numéro de téléphone.",
+    "useAnotherEmail": "Utiliser une autre adresse"
   },
   "invitation": {
     "loadingInvitation": "Chargement de l'invitation…",
