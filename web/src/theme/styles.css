@@ -349,6 +349,7 @@ input, textarea, select { font: inherit; color: inherit; }
 .picker-btn:disabled { background: rgba(215,199,166,.18); color: var(--ink-400); cursor: not-allowed; }
 .picker-btn.is-placeholder { color: var(--ink-400); }
 .picker-btn .picker-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker-btn-end { display: inline-flex; align-items: center; gap: 8px; flex: none; color: var(--ink-400); }
 
 .picker-panel {
   position: absolute; z-index: 60;
@@ -368,7 +369,8 @@ input, textarea, select { font: inherit; color: inherit; }
 /* 16px : en dessous, iOS zoome sur le champ à la mise au point. */
 .picker-search .input { font-size: 16px; }
 .picker-opt {
-  display: block; width: 100%;
+  display: grid; width: 100%;
+  grid-template-columns: 1fr auto; align-items: center; column-gap: 10px;
   background: none; border: none;
   padding: 11px 12px;
   border-radius: 8px;
@@ -378,10 +380,13 @@ input, textarea, select { font: inherit; color: inherit; }
   text-align: left;
   cursor: pointer;
 }
+.picker-opt-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker-opt-meta { font-size: 13px; color: var(--ink-400); font-variant-numeric: tabular-nums; }
+.picker-opt.is-active .picker-opt-meta { color: var(--green-800); }
 .picker-opt.is-cursor { background: var(--parchment); }
 .picker-opt.is-active { background: var(--green-50); color: var(--green-800); font-weight: 600; }
 .picker-opt.is-active.is-cursor { background: var(--green-100, var(--green-50)); }
-.picker-opt-sub { display: block; margin-top: 2px; font-size: 12px; color: var(--ink-400); font-weight: 400; }
+.picker-opt-sub { grid-column: 1 / -1; margin-top: 2px; font-size: 12px; color: var(--ink-400); font-weight: 400; }
 .picker-empty { padding: 12px; font-size: 13px; color: var(--ink-400); font-style: italic; }
 
 /* Toggle */

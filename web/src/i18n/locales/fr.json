@@ -291,6 +291,7 @@
     "contactEmailPlaceholder": "vous@exemple.com",
     "phoneRequired": "Le numéro de téléphone est obligatoire.",
     "countryPlaceholder": "— Pays —",
+    "countrySearch": "Rechercher un pays ou un indicatif…",
     "countryRequired": "Choisissez votre pays (indicatif)."
   },
   "placeholder": {

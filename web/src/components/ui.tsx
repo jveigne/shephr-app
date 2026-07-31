@@ -119,7 +119,13 @@ export interface PickerOption {
   label: string;
   /** Ligne secondaire optionnelle (ex. la région d'une ville). */
   sub?: string;
+  /** Valeur alignée à droite de la ligne (ex. l'indicatif d'un pays). */
+  meta?: string;
 }
+
+/** Comparaison sans accents : « senegal » doit trouver « Sénégal ». */
+const foldAccents = (s: string) =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 export function Picker({
   value,
@@ -155,10 +161,10 @@ export function Picker({
   const searchable = options.length >= searchFrom;
 
   const shown = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = foldAccents(query.trim());
     if (!q) return options;
-    return options.filter(
-      (o) => o.label.toLowerCase().includes(q) || (o.sub ?? '').toLowerCase().includes(q),
+    return options.filter((o) =>
+      foldAccents(`${o.label} ${o.sub ?? ''} ${o.meta ?? ''}`).includes(q),
     );
   }, [options, query]);
 
@@ -258,7 +264,10 @@ export function Picker({
         onClick={() => setOpen((o) => !o)}
       >
         <span className="picker-label">{selected?.label ?? placeholder}</span>
-        <Icon name="chevDown" size={13} />
+        <span className="picker-btn-end">
+          {selected?.meta && <span className="picker-opt-meta">{selected.meta}</span>}
+          <Icon name="chevDown" size={13} />
+        </span>
       </button>
 
       {open && (
@@ -294,6 +303,7 @@ export function Picker({
                 onClick={() => pick(o.id)}
               >
                 <span className="picker-opt-label">{o.label}</span>
+                {o.meta && <span className="picker-opt-meta">{o.meta}</span>}
                 {o.sub && <span className="picker-opt-sub">{o.sub}</span>}
               </button>
             ))

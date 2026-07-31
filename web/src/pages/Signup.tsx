@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { DIAL_COUNTRIES, flagEmoji, sortedDialCountries } from '../constants/dialCodes';
+import { DIAL_COUNTRIES } from '../constants/dialCodes';
+import { CountryDialPicker } from '../components/CountryDialPicker';
 import { Icon } from '../components/Icon';
 import { LangSwitch } from '../components/LangSwitch';
 import { Button, Field, Input } from '../components/ui';
@@ -27,7 +28,7 @@ const errData = (err: unknown) =>
 
 export function SignupPage() {
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { register, login } = useAuth();
 
   const [mode, setMode] = useState<'form' | 'existing'>('form');
@@ -119,8 +120,6 @@ export function SignupPage() {
       setLoading(false);
     }
   };
-
-  const lang = i18n.resolvedLanguage === 'en' ? 'en' : 'fr';
 
   return (
     <div className="login-shell">
@@ -235,21 +234,8 @@ export function SignupPage() {
                 </Field>
 
                 <Field label={t('invitation.phoneLabel')} hint={t('invitation.phoneHint')}>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <select
-                      className="input"
-                      style={{ width: 190 }}
-                      value={countryIso}
-                      onChange={(e) => setCountryIso(e.target.value)}
-                      required
-                    >
-                      <option value="">{t('invitation.countryPlaceholder')}</option>
-                      {sortedDialCountries(lang).map((c) => (
-                        <option key={c.iso} value={c.iso}>
-                          {flagEmoji(c.iso)} {lang === 'en' ? c.nameEn : c.name} ({c.dial})
-                        </option>
-                      ))}
-                    </select>
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    <CountryDialPicker value={countryIso} onChange={setCountryIso} />
                     <Input
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}

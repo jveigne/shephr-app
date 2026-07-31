@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { DIAL_COUNTRIES, flagEmoji, sortedDialCountries } from '../constants/dialCodes';
+import { DIAL_COUNTRIES } from '../constants/dialCodes';
+import { CountryDialPicker } from '../components/CountryDialPicker';
 import { Icon } from '../components/Icon';
 import { Button, Field, Input } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
@@ -24,7 +25,7 @@ export function AcceptInvitationPage() {
   const { establishSession } = useAuth();
   const { push } = useToast();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState<InvitationPreview | null>(null);
@@ -137,21 +138,8 @@ export function AcceptInvitationPage() {
                 </Field>
 
                 <Field label={t('invitation.phoneLabel')} hint={t('invitation.phoneHint')}>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <select
-                      className="input"
-                      style={{ width: 190 }}
-                      value={countryIso}
-                      onChange={(e) => setCountryIso(e.target.value)}
-                      required
-                    >
-                      <option value="">{t('invitation.countryPlaceholder')}</option>
-                      {sortedDialCountries(i18n.resolvedLanguage === 'en' ? 'en' : 'fr').map((c) => (
-                        <option key={c.iso} value={c.iso}>
-                          {flagEmoji(c.iso)} {i18n.resolvedLanguage === 'en' ? c.nameEn : c.name} ({c.dial})
-                        </option>
-                      ))}
-                    </select>
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    <CountryDialPicker value={countryIso} onChange={setCountryIso} />
                     <Input
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
