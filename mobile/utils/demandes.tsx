@@ -12,24 +12,24 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ScreenShell from '../../components/ScreenShell';
-import Card from '../../components/Card';
-import Label from '../../components/Label';
-import Button from '../../components/Button';
-import { colors, fonts } from '../../theme';
-import { useLanguage } from '../../contexts/LanguageContext';
-import { useAuth } from '../../contexts/AuthContext';
-import { canManageUsers, isAssemblyLeaderOnly, isSecretariat } from '../../services/authApi';
-import { confirmDialog, notify } from '../../utils/dialogs';
+import ScreenShell from '../components/ScreenShell';
+import Card from '../components/Card';
+import Label from '../components/Label';
+import Button from '../components/Button';
+import { colors, fonts } from '../theme';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
+import { canManageUsers, isAssemblyLeaderOnly, isSecretariat } from '../services/authApi';
+import { confirmDialog, notify } from './dialogs';
 import {
   cancelStructureRequest, createStructureRequest, fetchRequestContext, listMyRequests,
   type CreateRequestChain, type RequestNodeOption, type StructureRequestContext,
   type StructureRequestResponse, type StructureRequestStatus,
-} from '../../services/structureRequestsApi';
+} from '../services/structureRequestsApi';
 import {
   approveJoinRequest, cancelJoinRequest, fetchMyJoinRequests, fetchPendingJoinRequests,
   rejectJoinRequest, reviewableJoinRequests, type JoinRequestResponse,
-} from '../../services/joinRequestsApi';
+} from '../services/joinRequestsApi';
 
 /**
  * Demandes de structure (RDG 22/07, restreintes par le RDG 25/07) : une demande ne porte plus

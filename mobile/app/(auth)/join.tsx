@@ -26,6 +26,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { confirmDialog, notify } from '../../utils/dialogs';
 import { joinUnit } from '../../services/unitApi';
+import { contactMailto, useContactSettings } from '../../services/contactApi';
 import {
   fetchRequestContext,
   type RequestNodeOption,
@@ -55,8 +56,6 @@ type CreateStep = 'role' | 'stop' | 'form';
 const MIN_QUERY_LENGTH = 2;
 
 /** Contact JExcellence — même canal que la landing (JP 30/07). */
-const CONTACT_EMAIL = 'jexcellence2065@gmail.com';
-const CONTACT_WHATSAPP = 'https://wa.me/33754596796';
 const RESULT_CAP = 50;
 
 /**
@@ -67,6 +66,8 @@ const RESULT_CAP = 50;
 export default function JoinScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
+  // Coordonnées d'aide (pays / région / ville manquants) — pilotées depuis le back-office.
+  const contact = useContactSettings();
   const { refreshMe } = useAuth();
 
   const [booting, setBooting] = useState(true);
@@ -400,16 +401,14 @@ export default function JoinScreen() {
                   <Button
                     label={t('join.contactWhatsapp')}
                     variant="soft"
-                    onPress={() => Linking.openURL(CONTACT_WHATSAPP).catch(() => {})}
+                    onPress={() => Linking.openURL(contact.whatsappUrl).catch(() => {})}
                     iconLeft={<Ionicons name="logo-whatsapp" size={18} color={colors.mossDeep} />}
                   />
                   <Button
                     label={t('join.contactMail')}
                     variant="ghost"
                     onPress={() =>
-                      Linking.openURL(
-                        `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(t('join.contactMailSubject'))}`,
-                      ).catch(() => {})
+                      Linking.openURL(contactMailto(t('join.contactMailSubject'))).catch(() => {})
                     }
                     iconLeft={<Ionicons name="mail-outline" size={18} color={colors.mossDeep} />}
                   />

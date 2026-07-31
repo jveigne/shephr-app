@@ -8,6 +8,8 @@ import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
 import { hasMemberSpace, hasMinistryAccess } from '../services/authApi';
 import { fetchRequestContext, type RequestNodeOption } from '../services/structureRequestsApi';
+// Contact JExcellence — piloté depuis le back-office, même canal que la landing (JP 31/07).
+import { contactMailto, useContactSettings } from '../services/contactApi';
 import {
   cancelJoinRequest,
   createJoinRequest,
@@ -22,10 +24,6 @@ import {
 // Feature B — onboarding /join : un utilisateur AUTHENTIFIÉ mais sans rattachement cherche son
 // assemblée (recherche + drill nation→région→ville), choisit son rôle, ou demande la création
 // de son assemblée, puis suit sa demande (validée par le dirigeant de l'assemblée ou le secrétariat).
-
-/** Contact JExcellence — même canal que la landing (JP 30/07). */
-const CONTACT_EMAIL = 'jexcellence2065@gmail.com';
-const CONTACT_WHATSAPP = 'https://wa.me/33754596796';
 
 const errMsg = (err: unknown, fallback: string) =>
   (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -242,6 +240,8 @@ function SearchFlow({
 }) {
   const { t } = useTranslation();
   const { push } = useToast();
+  // Coordonnées d'aide (pays / région / ville manquants) — pilotées depuis le back-office.
+  const contact = useContactSettings();
 
   const [query, setQuery] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
@@ -550,7 +550,7 @@ function SearchFlow({
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                 <a
-                  href={CONTACT_WHATSAPP}
+                  href={contact.whatsappUrl}
                   target="_blank"
                   rel="noreferrer"
                   style={{ padding: '10px 18px', borderRadius: 'var(--radius, 10px)', border: '1px solid var(--green-600)', color: 'var(--green-700)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}
@@ -558,7 +558,7 @@ function SearchFlow({
                   {t('join.contactWhatsapp')}
                 </a>
                 <a
-                  href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(t('join.contactMailSubject'))}`}
+                  href={contactMailto(t('join.contactMailSubject'))}
                   style={{ padding: '10px 18px', borderRadius: 'var(--radius, 10px)', border: '1px solid var(--line-soft)', color: 'var(--ink-700)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}
                 >
                   {t('join.contactMail')}

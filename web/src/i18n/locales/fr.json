@@ -1170,5 +1170,10 @@
       "QUERY_TOO_SHORT": "Saisissez au moins 2 caractères."
     },
     "shortcutHint": "Déclarer à qui vous rendez compte, ou voir qui vous supervisez."
+  },
+  "contact": {
+    "intro": "Une question, un blocage, un besoin d'assistance ? Écris-nous sur WhatsApp — c'est le canal le plus rapide — ou envoie-nous un e-mail. Nous te répondons directement.",
+    "whatsappText": "Bonjour, j'ai besoin d'aide sur Shephr.",
+    "emailFallback": "Ou directement à"
   }
 }

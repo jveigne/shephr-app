@@ -174,7 +174,7 @@ export default function StructureScreen() {
           iconLeft={<Ionicons name="add" size={18} color={colors.mossDeep} />}
         />
       )}
-      {canPropose && (
+{/*      {canPropose && (
         <Button
           label={t('structure.requestCreate')}
           variant="soft"
@@ -182,7 +182,7 @@ export default function StructureScreen() {
           style={{ marginTop: 12 }}
           iconLeft={<Ionicons name="add" size={18} color={colors.mossDeep} />}
         />
-      )}
+      )}*/}
 
       <View style={{ gap: 8, marginTop: 12 }}>
         {rows.map((r: any) => (

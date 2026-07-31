@@ -234,7 +234,11 @@
     "deleteTitle": "Delete the account?",
     "deleteMessage": "This action is final: your personal data will be deleted or anonymised.",
     "deleteError": "Could not delete the account.",
-    "version": "SHEPHR"
+    "version": "SHEPHR",
+    "help": "Help",
+    "contactHint": "A question, a blocker, or need a hand? Message us on WhatsApp — the fastest channel — or send us an email.",
+    "contactWhatsappText": "Hello, I need help with Shephr.",
+    "contactMailSubject": "Shephr — support request"
   },
   "leader": {
     "title": "My scope",

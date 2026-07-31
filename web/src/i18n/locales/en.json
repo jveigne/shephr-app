@@ -1170,5 +1170,10 @@
       "QUERY_TOO_SHORT": "Type at least 2 characters."
     },
     "shortcutHint": "Declare who you report to, or see who you supervise."
+  },
+  "contact": {
+    "intro": "A question, a blocker, or need a hand? Message us on WhatsApp — the fastest channel — or send us an email. We answer you directly.",
+    "whatsappText": "Hello, I need help with Shephr.",
+    "emailFallback": "Or directly at"
   }
 }

@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { useAuth } from '../hooks/useAuth';
 import { LangSwitch } from '../components/LangSwitch';
+import { contactMailto, useContactSettings } from '../services/contactApi';
 
-const CONTACT_EMAIL = 'jexcellence2065@gmail.com';
 
 function Feature({ icon, title, desc }: { icon: string; title: string; desc: string }) {
   return (
@@ -30,7 +30,8 @@ export function LandingPage() {
   const { isAuthenticated, canAccessWeb } = useAuth();
   const loggedIn = isAuthenticated && canAccessWeb;
 
-  const mailto = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(t('landing.contact.mailSubject'))}`;
+  const contact = useContactSettings();
+  const mailto = contactMailto(t('landing.contact.mailSubject'));
 
   const features = [
     { icon: 'sparkle', key: 'goals' },
@@ -190,7 +191,7 @@ export function LandingPage() {
           )}
         </div>
         <p style={{ color: 'var(--ink-400)', fontSize: 14, marginTop: 16 }}>
-          {t('landing.contact.or')} <a href={mailto} style={{ color: 'var(--green-700)', fontWeight: 600, wordBreak: 'break-all' }}>{CONTACT_EMAIL}</a>
+          {t('landing.contact.or')} <a href={mailto} style={{ color: 'var(--green-700)', fontWeight: 600, wordBreak: 'break-all' }}>{contact.email}</a>
         </p>
       </section>
 
