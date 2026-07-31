@@ -95,14 +95,14 @@ export default function FaiseurDeDiscipleScreen() {
       setData(await declareMySupervisor(person.id));
       setSearchOpen(false);
       setQuery('');
-      notify(t('common.appName'), t('discipleship.declared'));
+      notify(t('common.appName'), t('supervisor.declared'));
     } catch (e: any) {
       // Un code métier inconnu du dictionnaire retomberait sur la clé brute : on garde alors
       // le message du serveur, déjà rédigé en clair.
-      const key = `discipleship.errors.${errCode(e)}`;
+      const key = `supervisor.errors.${errCode(e)}`;
       const translated = t(key);
       notify(
-        t('discipleship.declareFailed'),
+        t('supervisor.declareFailed'),
         translated !== key ? translated : (e?.response?.data?.message ?? t('errors.saveFailed')),
       );
     } finally {
@@ -112,7 +112,7 @@ export default function FaiseurDeDiscipleScreen() {
 
   const shareInvitation = async () => {
     try {
-      await Share.share({ message: t('discipleship.shareMessage') });
+      await Share.share({ message: t('supervisor.shareMessage') });
     } catch {
       // partage annulé — rien à signaler
     }
@@ -138,14 +138,14 @@ export default function FaiseurDeDiscipleScreen() {
           <Pressable onPress={() => router.back()} hitSlop={10}>
             <Ionicons name="arrow-back" size={24} color={colors.ink2} />
           </Pressable>
-          <Text style={styles.title}>{t('discipleship.title')}</Text>
+          <Text style={styles.title}>{t('supervisor.title')}</Text>
         </View>
-        <Text style={styles.subtitle}>{t('discipleship.intro')}</Text>
+        <Text style={styles.subtitle}>{t('supervisor.intro')}</Text>
 
-        {error && <Text style={styles.empty}>{t('discipleship.loadError')}</Text>}
+        {error && <Text style={styles.empty}>{t('supervisor.loadError')}</Text>}
 
         <Card style={styles.block}>
-          <Label style={{ color: colors.mossSoft }}>{t('discipleship.mine')}</Label>
+          <Label style={{ color: colors.mossSoft }}>{t('supervisor.mine')}</Label>
           {supervisor ? (
             <View style={{ marginTop: 8 }}>
               <View style={styles.nameRow}>
@@ -162,10 +162,10 @@ export default function FaiseurDeDiscipleScreen() {
               </Text>
             </View>
           ) : (
-            <Text style={styles.none}>{t('discipleship.none')}</Text>
+            <Text style={styles.none}>{t('supervisor.none')}</Text>
           )}
           <Button
-            label={supervisor ? t('discipleship.change') : t('discipleship.declare')}
+            label={supervisor ? t('supervisor.change') : t('supervisor.declare')}
             variant={supervisor ? 'ghost' : 'primary'}
             onPress={() => setSearchOpen((v) => !v)}
             fullWidth
@@ -183,24 +183,24 @@ export default function FaiseurDeDiscipleScreen() {
 
         {searchOpen && (
           <Card variant="paper2" style={styles.block}>
-            <Label style={{ marginBottom: 8 }}>{t('discipleship.searchLabel')}</Label>
+            <Label style={{ marginBottom: 8 }}>{t('supervisor.searchLabel')}</Label>
             <Field
               value={query}
               onChangeText={setQuery}
-              placeholder={t('discipleship.searchPlaceholder')}
+              placeholder={t('supervisor.searchPlaceholder')}
               autoCapitalize="none"
               autoCorrect={false}
               autoFocus
             />
             <Text style={styles.hint}>
               {query.trim().length > 0 && query.trim().length < 2
-                ? t('discipleship.searchTooShort')
-                : t('discipleship.searchHint')}
+                ? t('supervisor.searchTooShort')
+                : t('supervisor.searchHint')}
             </Text>
 
             {searching && <ActivityIndicator color={colors.moss} style={{ marginTop: 12 }} />}
             {!searching && query.trim().length >= 2 && results.length === 0 && (
-              <Text style={styles.empty}>{t('discipleship.noResult')}</Text>
+              <Text style={styles.empty}>{t('supervisor.noResult')}</Text>
             )}
 
             <View style={{ gap: 8, marginTop: 10 }}>
@@ -223,10 +223,10 @@ export default function FaiseurDeDiscipleScreen() {
 
             <View style={styles.noteBox}>
               <Ionicons name="information-circle-outline" size={16} color={colors.mossSoft} />
-              <Text style={styles.noteText}>{t('discipleship.inviteHint')}</Text>
+              <Text style={styles.noteText}>{t('supervisor.inviteHint')}</Text>
             </View>
             <Button
-              label={t('discipleship.invite')}
+              label={t('supervisor.invite')}
               variant="ghost"
               onPress={shareInvitation}
               fullWidth
@@ -237,11 +237,11 @@ export default function FaiseurDeDiscipleScreen() {
           </Card>
         )}
 
-        <Text style={styles.sectionTitle}>{t('discipleship.disciplesTitle')}</Text>
-        <Text style={styles.subtitle}>{t('discipleship.disciplesHint')}</Text>
+        <Text style={styles.sectionTitle}>{t('supervisor.superviseesTitle')}</Text>
+        <Text style={styles.subtitle}>{t('supervisor.superviseesHint')}</Text>
         <View style={{ gap: 8, marginTop: 10 }}>
           {disciples.length === 0 ? (
-            <Text style={styles.empty}>{t('discipleship.noDisciple')}</Text>
+            <Text style={styles.empty}>{t('supervisor.noSupervisee')}</Text>
           ) : (
             disciples.map((p) => (
               <Card key={p.id} variant="paper2" style={styles.discipleCard}>

@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import { Badge, TopBar } from '../components/ui';
-import { DiscipleshipCard } from '../components/DiscipleshipCard';
+import { SupervisorCard } from '../components/SupervisorCard';
 import { useAuth } from '../hooks/useAuth';
 import {
   fetchLeaderHierarchy,
   type HierarchyUnitView,
   type LeaderHierarchyNode,
 } from '../services/leadersApi';
-import type { ModuleRole } from '../services/authApi';
+import { canManageUsers, type ModuleRole } from '../services/authApi';
 import { FEATURES } from '../config/features';
 
 // Hiérarchie des dirigeants (21/07) — arbre du leadership renvoyé par le backend, déjà scopé
@@ -62,7 +62,28 @@ export function HierarchyPage() {
     <>
       <TopBar title={t('hierarchy.title')} crumbs={[t('common.brand'), t('nav.hierarchy')]} />
       <div className="content">
-        <DiscipleshipCard />
+        {/* JP 30/07 : SEUL un dirigeant déclare son superviseur. Un membre ne le voit jamais —
+            son rattachement à une assemblée détermine implicitement son dirigeant. */}
+        {canManageUsers(me) && <SupervisorCard />}
+
+        {/* « À qui je rends compte » : une mention AU-DESSUS de la vue — l'arbre, lui, ne
+            contient que ce qui est en dessous du dirigeant (JP 30/07). */}
+        {data?.supervisor && (
+          <div
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12,
+              padding: '10px 14px', borderRadius: 'var(--radius-md, 10px)',
+              background: 'var(--sand-50, rgba(201,149,107,0.10))',
+              border: '1px solid var(--line-soft, rgba(42,38,32,0.10))',
+              fontSize: 13.5, color: 'var(--ink-700)',
+            }}
+          >
+            <Icon name="arrowUp" size={14} />
+            <span>
+              {t('hierarchy.reportsTo')} <strong>{data.supervisor.fullName}</strong>
+            </span>
+          </div>
+        )}
 
         <p className="section-sub">{intro}</p>
 

@@ -1,17 +1,16 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { LangSwitch } from '../components/LangSwitch';
+import { contactMailto, useContactSettings } from '../services/contactApi';
 
 // Page publique exigée par Google Play : URL de demande de suppression de compte
 // et des données associées (Data safety > Account deletion). Accessible sans connexion.
-const CONTACT_EMAIL = 'jexcellence2065@gmail.com';
 
 export function DeleteAccountPage() {
   const { t } = useTranslation();
 
-  const mailto = `mailto:${CONTACT_EMAIL}`
-    + `?subject=${encodeURIComponent(t('deleteAccount.mailSubject'))}`
-    + `&body=${encodeURIComponent(t('deleteAccount.mailBody'))}`;
+  const contact = useContactSettings();
+  const mailto = contactMailto(t('deleteAccount.mailSubject'), t('deleteAccount.mailBody'));
 
   const steps = ['step1', 'step2', 'step3'];
   const deleted = ['profile', 'assignments', 'activity'];
@@ -65,7 +64,7 @@ export function DeleteAccountPage() {
           </a>
           <p style={{ color: 'var(--ink-400)', fontSize: 14, marginTop: 14, marginBottom: 0 }}>
             {t('deleteAccount.or')}{' '}
-            <a href={mailto} style={{ color: 'var(--green-700)', fontWeight: 600, wordBreak: 'break-all' }}>{CONTACT_EMAIL}</a>
+            <a href={mailto} style={{ color: 'var(--green-700)', fontWeight: 600, wordBreak: 'break-all' }}>{contact.email}</a>
           </p>
         </section>
 

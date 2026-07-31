@@ -185,13 +185,20 @@ export function roleLabel(me: MeResponse | null): string {
   return role ? MODULE_ROLE_LABELS[role] : 'Membre';
 }
 
+/**
+ * Identités séparées par application (JP 30/07) : Shephr s'authentifie sur son PROPRE
+ * identifiant (`t_user.username` côté backend), jamais sur l'email. Les écrans continuent
+ * d'afficher « Email » — c'est un libellé, pas un contrat : ce que la personne saisit part
+ * dans `identifier`. Deux comptes distincts peuvent donc porter la même chaîne, un par
+ * application, sans collision.
+ */
 export interface LoginRequest {
-  email: string;
+  identifier: string;
   password: string;
 }
 
 export interface RegisterRequest {
-  email: string;
+  identifier: string;
   password: string;
   fullName: string;
   phoneNumber?: string;
@@ -200,7 +207,7 @@ export interface RegisterRequest {
 
 export async function login(payload: LoginRequest): Promise<AuthResponse> {
   const { data } = await apiClient.post<AuthResponse>(
-    '/api/cmfipraise/auth/login',
+    '/api/church/auth/login',
     payload,
   );
   return data;
@@ -208,7 +215,7 @@ export async function login(payload: LoginRequest): Promise<AuthResponse> {
 
 export async function register(payload: RegisterRequest): Promise<AuthResponse> {
   const { data } = await apiClient.post<AuthResponse>(
-    '/api/cmfipraise/auth/register',
+    '/api/church/auth/register',
     payload,
   );
   return data;

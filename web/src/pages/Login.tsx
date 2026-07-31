@@ -29,7 +29,7 @@ export function LoginPage() {
     }
     setLoading(true);
     try {
-      const me = await login({ email: email.trim(), password });
+      const me = await login({ identifier: email.trim(), password });
       if (hasMinistryAccess(me)) {
         // Comportement actuel : accès Web Espace ministère.
         push({ kind: 'ok', title: t('login.welcomeToast'), msg: t('login.welcomeToastMsg') });

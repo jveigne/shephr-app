@@ -42,6 +42,11 @@ export interface LeaderHierarchyResponse {
   roots: LeaderHierarchyNode[];
   /** Assemblées du périmètre SANS dirigeant rattaché (22/07) — label « dirigeant requis ». */
   unassignedUnits: HierarchyUnitView[];
+  /**
+   * Superviseur DIRECT — « à qui je rends compte » (JP 30/07). HORS de `roots` : un dirigeant ne
+   * voit que la hiérarchie en dessous de lui ; celui-ci n'est qu'une mention au-dessus de la vue.
+   */
+  supervisor?: LeaderHierarchyNode | null;
 }
 
 export async function fetchLeaderHierarchy(rootUserId?: string): Promise<LeaderHierarchyResponse> {

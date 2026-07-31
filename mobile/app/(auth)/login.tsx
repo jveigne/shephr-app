@@ -37,7 +37,7 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      const me = await login({ email: email.trim(), password });
+      const me = await login({ identifier: email.trim(), password });
       // Feature B : sans AUCUN rattachement ni rôle → parcours de rattachement.
       const unattached =
         !!me &&

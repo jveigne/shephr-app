@@ -22,6 +22,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '../contexts/AuthContext';
 import { LanguageProvider } from '../contexts/LanguageContext';
+import { loadContactSettings } from '../services/contactApi';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -49,6 +50,10 @@ export default function RootLayout() {
       setAppReady(true);
     })();
   }, []);
+
+  // Coordonnées de support pilotées depuis le back-office : on les récupère au démarrage.
+  // L'appel ne bloque PAS l'ouverture de l'app — en cas d'échec, le repli codé en dur sert.
+  useEffect(() => { void loadContactSettings(); }, []);
 
   useEffect(() => {
     if (appReady && fontsLoaded) {
@@ -86,7 +91,7 @@ export default function RootLayout() {
               <Stack.Screen name="structure" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="membres" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="hierarchie" options={{ animation: 'slide_from_right' }} />
-              <Stack.Screen name="faiseur-de-disciple" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="superviseur" options={{ animation: 'slide_from_right' }} />
             </Stack>
           </AuthProvider>
         </LanguageProvider>

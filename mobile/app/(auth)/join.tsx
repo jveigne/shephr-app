@@ -9,6 +9,7 @@ import {
   Pressable,
   Modal,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { router } from 'expo-router';
 import Svg, { Circle, Path } from 'react-native-svg';
@@ -19,11 +20,13 @@ import Field from '../../components/Field';
 import Label from '../../components/Label';
 import Button from '../../components/Button';
 import Wordmark from '../../components/Wordmark';
+import SelectField from '../../components/SelectField';
 import { colors, fonts } from '../../theme';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { confirmDialog, notify } from '../../utils/dialogs';
 import { joinUnit } from '../../services/unitApi';
+import { contactMailto, useContactSettings } from '../../services/contactApi';
 import {
   fetchRequestContext,
   type RequestNodeOption,
@@ -39,7 +42,21 @@ import {
   type JoinRequestedRole,
 } from '../../services/joinRequestsApi';
 
-type Mode = 'search' | 'browse' | 'create' | 'code' | 'pending';
+type Mode = 'search' | 'create' | 'code' | 'pending';
+
+/**
+ * Parcours « mon assemblée n'existe pas » (JP 30/07) : on qualifie D'ABORD le statut.
+ *  • 'role' — deux boutons, et rien d'autre ;
+ *  • 'stop' — cas MEMBRE : le parcours s'arrête ici, sans demande ni ticket ;
+ *  • 'form' — cas DIRIGEANT confirmé : localisation + nom, puis création immédiate.
+ */
+type CreateStep = 'role' | 'stop' | 'form';
+
+/** Miroirs des règles serveur (`AssemblyJoinRequestServiceImpl`). */
+const MIN_QUERY_LENGTH = 2;
+
+/** Contact JExcellence — même canal que la landing (JP 30/07). */
+const RESULT_CAP = 50;
 
 /**
  * Feature B — parcours de rattachement après inscription : trouver son assemblée de maison
@@ -49,14 +66,17 @@ type Mode = 'search' | 'browse' | 'create' | 'code' | 'pending';
 export default function JoinScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
+  // Coordonnées d'aide (pays / région / ville manquants) — pilotées depuis le back-office.
+  const contact = useContactSettings();
   const { refreshMe } = useAuth();
 
   const [booting, setBooting] = useState(true);
   const [mode, setMode] = useState<Mode>('search');
   const [pending, setPending] = useState<JoinRequestResponse | null>(null);
 
-  // Recherche par nom (debounce, min 2 caractères).
+  // Recherche par nom (debounce, min 2 caractères hors ville choisie).
   const [query, setQuery] = useState('');
+  const [debouncedQ, setDebouncedQ] = useState('');
   const [results, setResults] = useState<AssemblySearchResult[]>([]);
   const [searching, setSearching] = useState(false);
 
@@ -65,12 +85,12 @@ export default function JoinScreen() {
   const [nation, setNation] = useState<RequestNodeOption | null>(null);
   const [region, setRegion] = useState<RequestNodeOption | null>(null);
   const [city, setCity] = useState<RequestNodeOption | null>(null);
-  const [cityResults, setCityResults] = useState<AssemblySearchResult[] | null>(null);
 
   // Choix du rôle sur une assemblée existante.
   const [roleTarget, setRoleTarget] = useState<AssemblySearchResult | null>(null);
 
-  // « Mon assemblée n'existe pas » : ville + nom.
+  // « Mon assemblée n'existe pas » : statut, puis ville + nom.
+  const [createStep, setCreateStep] = useState<CreateStep>('role');
   const [newName, setNewName] = useState('');
 
   // « J'ai un code d'assemblée » (étape joinCode existante, accessible en lien secondaire).
@@ -89,27 +109,21 @@ export default function JoinScreen() {
         }
       } catch {
         // Pas bloquant : on démarre sur la recherche.
-      } finally {
-        setBooting(false);
       }
+      // Le drill nation→région→ville est affiché EN LIGNE sous la recherche (parité web) :
+      // son référentiel est donc chargé au démarrage, plus à l'entrée dans un mode dédié.
+      try {
+        setContext(await fetchRequestContext());
+      } catch {
+        setContext({ nations: [], regions: [], cities: [] });
+      }
+      setBooting(false);
     })();
   }, []);
 
-  // Recherche debouncée (min 2 caractères — règle serveur QUERY_TOO_SHORT).
+  // Debounce commun aux deux voies (nom / ville).
   useEffect(() => {
-    const q = query.trim();
-    if (q.length < 2) {
-      setResults([]);
-      setSearching(false);
-      return;
-    }
-    setSearching(true);
-    const timer = setTimeout(() => {
-      searchAssemblies({ q })
-        .then(setResults)
-        .catch(() => setResults([]))
-        .finally(() => setSearching(false));
-    }, 300);
+    const timer = setTimeout(() => setDebouncedQ(query.trim()), 300);
     return () => clearTimeout(timer);
   }, [query]);
 
@@ -122,23 +136,28 @@ export default function JoinScreen() {
     }
   }, [context]);
 
-  // Assemblées de la ville choisie (drill).
+  /**
+   * Une seule liste de résultats, alimentée par deux voies :
+   *  • ville choisie → ses assemblées, ET le texte saisi FILTRE DEDANS (le serveur combine
+   *    cityId + q, sans minimum de longueur) — indispensable au-delà de quelques dizaines,
+   *    le serveur ne renvoyant que les 50 premières par ordre alphabétique ;
+   *  • sinon → recherche par nom sur tout le ministère, à partir de 2 caractères
+   *    (règle serveur QUERY_TOO_SHORT).
+   */
   useEffect(() => {
-    if (mode !== 'browse' || !city) {
-      setCityResults(null);
+    if (!city && debouncedQ.length < MIN_QUERY_LENGTH) {
+      setResults([]);
+      setSearching(false);
       return;
     }
-    searchAssemblies({ cityId: city.id })
-      .then(setCityResults)
-      .catch(() => setCityResults([]));
-  }, [mode, city]);
-
-  const resetDrill = () => {
-    setNation(null);
-    setRegion(null);
-    setCity(null);
-    setCityResults(null);
-  };
+    let cancelled = false;
+    setSearching(true);
+    searchAssemblies(city ? { cityId: city.id, q: debouncedQ || undefined } : { q: debouncedQ })
+      .then((r) => { if (!cancelled) setResults(r); })
+      .catch(() => { if (!cancelled) setResults([]); })
+      .finally(() => { if (!cancelled) setSearching(false); });
+    return () => { cancelled = true; };
+  }, [city, debouncedQ]);
 
   const submitJoin = async (payload: {
     assemblyNodeId?: string;
@@ -148,8 +167,21 @@ export default function JoinScreen() {
     setSubmitting(true);
     try {
       const r = await createJoinRequest(payload);
-      setPending(r);
       setRoleTarget(null);
+      // Se déclarer dirigeant d'une assemblée EXISTANTE est titularisé sur-le-champ (JP 30/07) :
+      // le serveur renvoie alors la demande DÉJÀ approuvée — on entre dans l'app, sans attente.
+      if (r.status === 'APPROVED') {
+        await refreshMe();
+        const asLeader = r.requestedRole === 'LEADER';
+        const name = r.assemblyName ?? r.newAssemblyName ?? '';
+        notify(
+          asLeader ? t('join.nowLeaderTitle') : t('join.nowMemberTitle'),
+          asLeader ? t('join.nowLeaderBody', { name }) : t('join.nowMemberBody', { name }),
+        );
+        router.replace('/(tabs)/home');
+        return;
+      }
+      setPending(r);
       setMode('pending');
       notify(t('common.appName'), t('join.requestSent'));
     } catch (e: any) {
@@ -158,6 +190,38 @@ export default function JoinScreen() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  /**
+   * Se déclarer dirigeant titularise sur-le-champ, et REMPLACE le titulaire s'il y en a un
+   * (JP 30/07). Sur une assemblée déjà dirigée, on demande donc une confirmation explicite —
+   * elle ne bloque pas l'inscription, elle évite juste la reprise par mégarde.
+   */
+  const onDeclareLeader = async (target: AssemblySearchResult) => {
+    if (target.hasLeader) {
+      const ok = await confirmDialog(
+        t('join.replaceLeaderTitle'),
+        t('join.replaceLeaderBody', { name: target.leaderName ?? t('join.theCurrentLeader') }),
+        t('join.replaceLeaderConfirm'),
+        true,
+      );
+      if (!ok) return;
+    }
+    submitJoin({ assemblyNodeId: target.id, requestedRole: 'LEADER' });
+  };
+
+  /**
+   * Se déclarer dirigeant d'une assemblée à créer engage : l'assemblée sera créée sur simple
+   * déclaration, sans validation du secrétariat (JP 30/07 — on corrige a posteriori dans le
+   * back-office plutôt que de faire attendre une semaine). D'où une confirmation explicite.
+   */
+  const onDeclareNewAssemblyLeader = async () => {
+    const ok = await confirmDialog(
+      t('join.declareLeaderTitle'),
+      t('join.declareLeaderBody'),
+      t('join.declareLeaderConfirm'),
+    );
+    if (ok) setCreateStep('form');
   };
 
   const onCancelPending = async () => {
@@ -222,10 +286,9 @@ export default function JoinScreen() {
           <View style={styles.headerRow}>
             {mode !== 'search' && mode !== 'pending' && (
               <Pressable
-                onPress={() => {
-                  if (mode === 'create' || mode === 'browse') resetDrill();
-                  setMode('search');
-                }}
+                // Le drill est partagé avec la recherche : on le CONSERVE en revenant,
+                // pour ne pas faire re-choisir nation/région/ville à l'utilisateur.
+                onPress={() => setMode('search')}
                 style={styles.iconBtn}
                 hitSlop={10}
               >
@@ -241,57 +304,62 @@ export default function JoinScreen() {
               onQuery={setQuery}
               searching={searching}
               results={results}
+              context={context}
+              nation={nation}
+              region={region}
+              city={city}
+              debouncedQ={debouncedQ}
+              onNation={(n) => { setNation(n); setRegion(null); setCity(null); }}
+              onRegion={(r) => { setRegion(r); setCity(null); }}
+              onCity={setCity}
               onPick={setRoleTarget}
-              onBrowse={async () => {
-                await ensureContext();
-                setMode('browse');
-              }}
               onNotFound={async () => {
                 await ensureContext();
+                setCreateStep('role');
                 setMode('create');
               }}
               onCode={() => setMode('code')}
             />
           )}
 
-          {mode === 'browse' && context && (
+          {mode === 'create' && createStep === 'role' && (
             <>
-              <Text style={styles.title}>{t('join.browseByPlace')}</Text>
-              <PlaceDrill
-                context={context}
-                nation={nation}
-                region={region}
-                city={city}
-                onNation={(n) => { setNation(n); setRegion(null); setCity(null); }}
-                onRegion={(r) => { setRegion(r); setCity(null); }}
-                onCity={setCity}
-              />
-              {city && (
-                <View style={{ marginTop: 16 }}>
-                  <Label style={{ marginBottom: 8 }}>
-                    {t('join.assembliesIn', { city: city.name })}
-                  </Label>
-                  {cityResults == null ? (
-                    <ActivityIndicator color={colors.moss} />
-                  ) : cityResults.length === 0 ? (
-                    <Text style={styles.emptyHint}>{t('join.noAssemblyInCity')}</Text>
-                  ) : (
-                    cityResults.map((a) => (
-                      <AssemblyRow key={a.id} assembly={a} onPress={() => setRoleTarget(a)} />
-                    ))
-                  )}
-                  <Pressable onPress={() => setMode('create')} style={styles.secondaryLink}>
-                    <Ionicons name="add-circle-outline" size={16} color={colors.earthDeep} />
-                    <Text style={styles.secondaryLinkText}>{t('join.notFound')}</Text>
-                  </Pressable>
-                </View>
-              )}
+              <Text style={styles.title}>{t('join.notFound')}</Text>
+              <Text style={styles.subtitle}>{t('join.notFoundStatusHint')}</Text>
+              <View style={{ gap: 10, marginTop: 24 }}>
+                <Button
+                  label={t('join.notFoundIamMember')}
+                  variant="soft"
+                  height={54}
+                  onPress={() => setCreateStep('stop')}
+                />
+                <Button
+                  label={t('join.notFoundIamLeader')}
+                  height={54}
+                  onPress={onDeclareNewAssemblyLeader}
+                />
+              </View>
             </>
           )}
 
-          {mode === 'create' && context && (
+          {mode === 'create' && createStep === 'stop' && (
             <>
-              <Text style={styles.title}>{t('join.notFound')}</Text>
+              <Text style={styles.title}>{t('join.memberDeadEndTitle')}</Text>
+              <Text style={styles.subtitle}>{t('join.memberDeadEndBody')}</Text>
+              <Button
+                label={t('join.backToSearch')}
+                variant="soft"
+                height={52}
+                style={{ marginTop: 24 }}
+                onPress={() => { setCreateStep('role'); setMode('search'); }}
+                iconLeft={<Ionicons name="arrow-back" size={18} color={colors.mossDeep} />}
+              />
+            </>
+          )}
+
+          {mode === 'create' && createStep === 'form' && context && (
+            <>
+              <Text style={styles.title}>{t('join.newAssemblyTitle')}</Text>
               <Text style={styles.subtitle}>{t('join.chooseCity')}</Text>
               <PlaceDrill
                 context={context}
@@ -308,38 +376,44 @@ export default function JoinScreen() {
                 onChangeText={setNewName}
                 placeholder={t('join.newAssemblyNamePlaceholder')}
               />
-              <Label style={{ marginTop: 18, marginBottom: 8 }}>{t('join.roleQuestion')}</Label>
-              <View style={{ gap: 10 }}>
-                <Button
-                  label={t('join.roleLeader')}
-                  variant="soft"
-                  loading={submitting}
-                  disabled={!city || newName.trim().length === 0}
-                  onPress={() =>
-                    city &&
-                    submitJoin({
-                      newAssembly: { cityId: city.id, name: newName.trim() },
-                      requestedRole: 'LEADER',
-                    })
-                  }
-                />
-                <Button
-                  label={t('join.roleMember')}
-                  variant="soft"
-                  loading={submitting}
-                  disabled={!city || newName.trim().length === 0}
-                  onPress={() =>
-                    city &&
-                    submitJoin({
-                      newAssembly: { cityId: city.id, name: newName.trim() },
-                      requestedRole: 'MEMBER',
-                    })
-                  }
-                />
-              </View>
+              <Button
+                label={t('join.createAssembly')}
+                loading={submitting}
+                height={54}
+                style={{ marginTop: 20 }}
+                disabled={!city || newName.trim().length === 0}
+                onPress={() =>
+                  city &&
+                  submitJoin({
+                    newAssembly: { cityId: city.id, name: newName.trim() },
+                    requestedRole: 'LEADER',
+                  })
+                }
+              />
               {(!city || newName.trim().length === 0) && (
                 <Text style={styles.emptyHint}>{t('join.fillFields')}</Text>
               )}
+
+              {/* Nation / région / ville absente : on ne laisse pas l'utilisateur sans issue. */}
+              <View style={styles.contactBlock}>
+                <Text style={styles.contactHint}>{t('join.missingPlaceHint')}</Text>
+                <View style={{ gap: 8, marginTop: 10 }}>
+                  <Button
+                    label={t('join.contactWhatsapp')}
+                    variant="soft"
+                    onPress={() => Linking.openURL(contact.whatsappUrl).catch(() => {})}
+                    iconLeft={<Ionicons name="logo-whatsapp" size={18} color={colors.mossDeep} />}
+                  />
+                  <Button
+                    label={t('join.contactMail')}
+                    variant="ghost"
+                    onPress={() =>
+                      Linking.openURL(contactMailto(t('join.contactMailSubject'))).catch(() => {})
+                    }
+                    iconLeft={<Ionicons name="mail-outline" size={18} color={colors.mossDeep} />}
+                  />
+                </View>
+              </View>
             </>
           )}
 
@@ -432,25 +506,29 @@ export default function JoinScreen() {
       >
         <View style={styles.modalBackdrop}>
           <Card style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{roleTarget?.name}</Text>
+            {/* Modale de CONFIRMATION : le rattachement est immédiat, l'acte est donc nommé
+                pour ce qu'il est — sans étape supplémentaire, le choix du rôle EST la
+                confirmation (un seul geste, zéro friction). */}
+            <Text style={styles.modalTitle}>
+              {t('join.confirmJoinTitle', { name: roleTarget?.name ?? '' })}
+            </Text>
             <Text style={styles.subtitle}>
               {roleTarget
                 ? `${roleTarget.cityName} · ${roleTarget.regionName} · ${roleTarget.nationName}`
                 : ''}
             </Text>
-            <Label style={{ marginTop: 16, marginBottom: 8 }}>{t('join.roleQuestion')}</Label>
+            <Label style={{ marginTop: 16, marginBottom: 8 }}>{t('join.confirmJoinHint')}</Label>
             <View style={{ gap: 10 }}>
               <Button
-                label={t('join.roleLeader')}
+                label={t('join.confirmAsLeader')}
                 variant="soft"
                 loading={submitting}
                 onPress={() =>
-                  roleTarget &&
-                  submitJoin({ assemblyNodeId: roleTarget.id, requestedRole: 'LEADER' })
+                  roleTarget && onDeclareLeader(roleTarget)
                 }
               />
               <Button
-                label={t('join.roleMember')}
+                label={t('join.confirmAsMember')}
                 variant="soft"
                 loading={submitting}
                 onPress={() =>
@@ -472,13 +550,25 @@ export default function JoinScreen() {
   );
 }
 
+/**
+ * Recherche + parcours de la structure sur UN SEUL écran (parité web) : le champ de recherche
+ * et le drill nation→région→ville coexistent. Choisir une ville liste ses assemblées ; taper au
+ * moins 2 caractères cherche par nom. Les deux voies alimentent la même liste de résultats.
+ */
 function SearchSection({
   query,
   onQuery,
   searching,
   results,
+  context,
+  nation,
+  region,
+  city,
+  debouncedQ,
+  onNation,
+  onRegion,
+  onCity,
   onPick,
-  onBrowse,
   onNotFound,
   onCode,
 }: {
@@ -486,45 +576,77 @@ function SearchSection({
   onQuery: (q: string) => void;
   searching: boolean;
   results: AssemblySearchResult[];
+  context: StructureRequestContext | null;
+  nation: RequestNodeOption | null;
+  region: RequestNodeOption | null;
+  city: RequestNodeOption | null;
+  debouncedQ: string;
+  onNation: (n: RequestNodeOption | null) => void;
+  onRegion: (r: RequestNodeOption | null) => void;
+  onCity: (c: RequestNodeOption | null) => void;
   onPick: (a: AssemblySearchResult) => void;
-  onBrowse: () => void;
   onNotFound: () => void;
   onCode: () => void;
 }) {
   const { t } = useLanguage();
-  const q = query.trim();
+  // Une recherche est « active » dès qu'une ville est choisie, ou dès 2 caractères saisis.
+  const active = city != null || debouncedQ.length >= MIN_QUERY_LENGTH;
+  // Le serveur plafonne à 50 : au plafond, la liste est forcément incomplète — on le dit.
+  const capped = results.length >= RESULT_CAP;
+
   return (
     <>
       <Text style={styles.title}>{t('join.searchTitle')}</Text>
       <Text style={styles.subtitle}>{t('join.searchHint')}</Text>
 
+      <Text style={styles.drillHint}>{t('join.browseTitle')}</Text>
+      {context == null ? (
+        <ActivityIndicator color={colors.moss} style={{ marginTop: 10 }} />
+      ) : (
+        <PlaceDrill
+          context={context}
+          nation={nation}
+          region={region}
+          city={city}
+          onNation={onNation}
+          onRegion={onRegion}
+          onCity={onCity}
+        />
+      )}
+
+      {/* Le champ de recherche appartient à la LISTE : il est rendu juste au-dessus d'elle,
+          là où on filtre — pas en tête d'écran, hors de vue dès que la liste s'allonge. */}
       <View style={styles.searchBox}>
         <Ionicons name="search" size={16} color={colors.ink3} />
         <Field
           value={query}
           onChangeText={onQuery}
-          placeholder={t('join.searchPlaceholder')}
+          placeholder={city ? t('join.filterInCity', { city: city.name }) : t('join.searchPlaceholder')}
           autoCapitalize="none"
           style={styles.searchField}
         />
       </View>
 
       {searching && <ActivityIndicator color={colors.moss} style={{ marginTop: 14 }} />}
-      {!searching && q.length >= 2 && results.length === 0 && (
-        <Text style={styles.emptyHint}>{t('join.noResults')}</Text>
-      )}
-      <View style={{ marginTop: 10 }}>
-        {results.map((a) => (
-          <AssemblyRow key={a.id} assembly={a} onPress={() => onPick(a)} />
-        ))}
-      </View>
-
-      <Pressable onPress={onBrowse} style={styles.secondaryLink}>
-        <Ionicons name="map-outline" size={16} color={colors.mossDeep} />
-        <Text style={[styles.secondaryLinkText, { color: colors.mossDeep }]}>
-          {t('join.browseByPlace')}
+      {!searching && active && results.length === 0 && (
+        <Text style={styles.emptyHint}>
+          {city ? t('join.noAssemblyInCity') : t('join.noResults')}
         </Text>
-      </Pressable>
+      )}
+      {!searching && active && results.length > 0 && (
+        <View style={{ marginTop: 12 }}>
+          <Label style={{ marginBottom: 8 }}>
+            {city
+              ? t('join.assembliesIn', { city: city.name })
+              : t('join.resultCount', { count: results.length })}
+          </Label>
+          {results.map((a) => (
+            <AssemblyRow key={a.id} assembly={a} onPress={() => onPick(a)} />
+          ))}
+          {capped && <Text style={styles.cappedHint}>{t('join.tooMany', { count: RESULT_CAP })}</Text>}
+        </View>
+      )}
+
       <Pressable onPress={onNotFound} style={styles.secondaryLink}>
         <Ionicons name="add-circle-outline" size={16} color={colors.earthDeep} />
         <Text style={styles.secondaryLinkText}>{t('join.notFound')}</Text>
@@ -553,7 +675,11 @@ function AssemblyRow({
           {assembly.cityName} · {assembly.regionName} · {assembly.nationName}
         </Text>
         {assembly.hasLeader && (
-          <Text style={styles.leaderTag}>{t('join.hasLeaderTag')}</Text>
+          <Text style={styles.leaderTag}>
+            {assembly.leaderName
+              ? t('join.ledBy', { name: assembly.leaderName })
+              : t('join.hasLeaderTag')}
+          </Text>
         )}
       </View>
       <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
@@ -583,76 +709,31 @@ function PlaceDrill({
   const regions = nation ? context.regions.filter((r) => r.parentId === nation.id) : [];
   const cities = region ? context.cities.filter((c) => c.parentId === region.id) : [];
   return (
-    <View style={{ marginTop: 12 }}>
-      <DrillLevel
+    <View style={{ marginTop: 4 }}>
+      <SelectField
         label={t('join.pickNation')}
         options={context.nations}
         pick={nation}
         onChange={onNation}
       />
-      {nation && (
-        <DrillLevel
-          label={t('join.pickRegion')}
-          options={regions}
-          pick={region}
-          onChange={onRegion}
-        />
-      )}
-      {region && (
-        <DrillLevel
-          label={t('join.pickCity')}
-          options={cities}
-          pick={city}
-          onChange={onCity}
-        />
-      )}
+      <SelectField
+        label={t('join.pickRegion')}
+        options={regions}
+        pick={region}
+        onChange={onRegion}
+        disabled={!nation}
+      />
+      <SelectField
+        label={t('join.pickCity')}
+        options={cities}
+        pick={city}
+        onChange={onCity}
+        disabled={!region}
+      />
     </View>
   );
 }
 
-function DrillLevel({
-  label,
-  options,
-  pick,
-  onChange,
-}: {
-  label: string;
-  options: RequestNodeOption[];
-  pick: RequestNodeOption | null;
-  onChange: (p: RequestNodeOption | null) => void;
-}) {
-  const { t } = useLanguage();
-  if (pick) {
-    return (
-      <View style={{ marginTop: 10 }}>
-        <Label style={{ marginBottom: 6 }}>{label}</Label>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <View style={[styles.chip, styles.chipActive]}>
-            <Text style={[styles.chipText, styles.chipTextActive]}>{pick.name}</Text>
-          </View>
-          <Pressable onPress={() => onChange(null)} hitSlop={8}>
-            <Text style={styles.cancelLink}>{t('requests.changePick')}</Text>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
-  return (
-    <View style={{ marginTop: 10 }}>
-      <Label style={{ marginBottom: 6 }}>{label}</Label>
-      <View style={styles.chipRow}>
-        {options.length === 0 && (
-          <Text style={styles.emptyHint}>{t('requests.noOption')}</Text>
-        )}
-        {options.map((o) => (
-          <Pressable key={o.id} onPress={() => onChange(o)} style={styles.chip}>
-            <Text style={styles.chipText}>{o.name}</Text>
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
-}
 
 function Hills() {
   return (
@@ -707,6 +788,34 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     paddingHorizontal: 0,
   },
+  drillHint: {
+    fontFamily: fonts.sans,
+    fontSize: 12.5,
+    color: colors.ink3,
+    marginTop: 16,
+  },
+  contactBlock: {
+    marginTop: 22,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(42,38,32,0.10)',
+  },
+  contactHint: {
+    fontFamily: fonts.sans,
+    fontSize: 13,
+    color: colors.ink2,
+    lineHeight: 19,
+  },
+  cappedHint: {
+    fontFamily: fonts.sans,
+    fontSize: 12,
+    color: colors.earthDeep,
+    lineHeight: 18,
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(201,149,107,0.14)',
+  },
   resultCard: {
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -750,16 +859,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     lineHeight: 18,
   },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 99,
-    backgroundColor: 'rgba(42,38,32,0.06)',
-  },
-  chipActive: { backgroundColor: colors.moss },
-  chipText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink2 },
-  chipTextActive: { color: colors.white },
   cancelLink: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink3, fontWeight: '600' },
   pendingCard: {
     marginTop: 18,

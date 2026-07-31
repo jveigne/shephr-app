@@ -10,7 +10,6 @@ import {
   Input,
   Modal,
   Picker,
-  Select,
   StatusBadge,
   Table,
   Toggle,
@@ -18,6 +17,13 @@ import {
   type Column,
 } from '../components/ui';
 import { GeoPicker } from '../components/GeoPicker';
+import {
+  fetchMemberGoals,
+  getActiveGoal,
+  type MemberGoalsResponse,
+  type PledgeResponse,
+} from '../services/goalsApi';
+import { fetchRequestContext } from '../services/structureRequestsApi';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -68,12 +74,12 @@ const countryIdsOf = (u: AdminUserResponse, m: ModuleKind) =>
 const conferrableRoles = (me: MeResponse | null, m: ModuleKind): ModuleRole[] =>
   assignableRoles(me).filter((r) => (me?.superAdmin ?? false) || m !== 'goal' || r !== 'MEMBRE');
 
-type Filters = { role: ModuleRole | 'all'; active: 'all' | 'true' | 'false'; search: string };
-const DEFAULT: Filters = { role: 'all', active: 'all', search: '' };
-
-const ROLE_FILTER_OPTIONS: ModuleRole[] = [
-  'MEMBRE', 'DIRIGEANT_UNITE', 'DIRIGEANT', 'DIRIGEANT_SENIOR', 'DIRIGEANT_COORDINATEUR', 'LEADER', 'SECRETARIAT',
-];
+// JP 31/07 — la recherche web est alignée sur le mobile : filtre géographique en cascade
+// (nation › région › ville) + un champ nom soumis explicitement. Les filtres RÔLE et STATUT
+// ont été retirés — ils compliquaient l'écran sans servir le cas d'usage réel (retrouver
+// une personne).
+type Filters = { search: string };
+const DEFAULT: Filters = { search: '' };
 
 export function UsersPage() {
   const { t } = useTranslation();
@@ -84,24 +90,38 @@ export function UsersPage() {
   const moduleLabel = (m: ModuleKind) => t(m === 'goal' ? 'users.moduleGoals' : 'users.moduleDonations');
 
   const [filters, setFilters] = useState<Filters>(DEFAULT);
+  // JP 31/07 — filtrage et pagination CÔTÉ SERVEUR (milliers d'utilisateurs).
+  // `submittedSearch` n'est alimenté qu'au clic sur « Rechercher » : la recherche par noms
+  // approchés est explicite, et elle IGNORE le filtre géographique.
+  const [submittedSearch, setSubmittedSearch] = useState('');
+  const [placeNodeId, setPlaceNodeId] = useState('');
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 30;
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editing, setEditing] = useState<AdminUserResponse | null>(null);
   const [deleting, setDeleting] = useState<AdminUserResponse | null>(null);
   const [inviteResult, setInviteResult] = useState<{ email: string; link: string; code: string | null } | null>(null);
+  const [openedMember, setOpenedMember] = useState<AdminUserResponse | null>(null);
 
   const unitsQ = useQuery({ queryKey: ['admin', 'units'], queryFn: () => listUnits() });
   const zonesQ = useQuery({ queryKey: ['admin', 'zones'], queryFn: () => listZones() });
   const citiesQ = useQuery({ queryKey: ['admin', 'localities'], queryFn: () => listLocalities() });
   const countriesQ = useQuery({ queryKey: ['admin', 'countries'], queryFn: listCountries });
 
+  const contextQ = useQuery({ queryKey: ['structure-requests', 'context'], queryFn: fetchRequestContext });
+  const [nationId, setNationId] = useState('');
+  const [regionId, setRegionId] = useState('');
+  const placeRegions = (contextQ.data?.regions ?? []).filter((r) => !nationId || r.parentId === nationId);
+  const placeCities = (contextQ.data?.cities ?? []).filter((c) => !regionId || c.parentId === regionId);
+
   const usersQ = useQuery({
-    queryKey: ['admin', 'users', filters.active],
+    queryKey: ['admin', 'users', placeNodeId, submittedSearch, page],
     queryFn: () =>
       listUsers({
-        // Le filtre rôle est appliqué côté client, tous modules visibles confondus
-        // (le backend ne sait filtrer que donationRole).
-        active: filters.active === 'all' ? undefined : filters.active === 'true',
-        size: 200,
+        placeNodeId: submittedSearch ? undefined : placeNodeId || undefined,
+        search: submittedSearch || undefined,
+        page,
+        size: PAGE_SIZE,
       }),
   });
 
@@ -148,15 +168,9 @@ export function UsersPage() {
   const zoneName = (id: string | null) => zones.find((z) => z.id === id)?.name ?? (id ? '…' : null);
   const cityOf = (id: string | null) => cities.find((c) => c.id === id) ?? null;
 
-  const rows = useMemo(() => {
-    let all = usersQ.data?.content ?? [];
-    if (filters.role !== 'all') {
-      all = all.filter((r) => VISIBLE_MODULES.some((m) => roleOf(r, m) === filters.role));
-    }
-    if (!filters.search) return all;
-    const q = filters.search.toLowerCase();
-    return all.filter((r) => `${r.fullName} ${r.email ?? ''} ${r.username ?? ''}`.toLowerCase().includes(q));
-  }, [usersQ.data, filters.search, filters.role]);
+  // Tout est filtré, trié et paginé par le SERVEUR : on affiche ce qu'il renvoie, dans son
+  // ordre (la pertinence prime sur l'alphabétique quand une recherche approchée est active).
+  const rows = usersQ.data?.content ?? [];
 
   const perimeterLabel = (u: AdminUserResponse, m: ModuleKind): string => {
     const cIds = countryIdsOf(u, m);
@@ -224,7 +238,8 @@ export function UsersPage() {
           style: { width: 60 },
           render: (r: AdminUserResponse) =>
             r.superAdmin ? null : (
-              <div className="row-actions">
+              // stopPropagation : sans ça, éditer/supprimer ouvrirait aussi les engagements.
+              <div className="row-actions" onClick={(e) => e.stopPropagation()}>
                 <IconButton icon={<Icon name="edit" size={15} />} title={t('users.manage')} onClick={() => setEditing(r)} />
                 <IconButton icon={<Icon name="trash" size={15} />} title={t('users.delete')} onClick={() => setDeleting(r)} />
               </div>
@@ -238,8 +253,11 @@ export function UsersPage() {
       <TopBar
         title={t('users.title')}
         crumbs={[t('common.brand'), t('users.title')]}
+        /* JP 31/07 — invitation MASQUÉE : tout se joue désormais à la création du compte
+           (inscription libre + rattachement immédiat). La modale et les endpoints restent
+           en place pour être rouverts sans travail. */
         actions={
-          canWrite ? (
+          false && canWrite ? (
             <Button variant="primary" iconL={<Icon name="plus" size={15} />} onClick={() => { setInviteResult(null); setInviteOpen(true); }}>
               {t('users.invite')}
             </Button>
@@ -252,38 +270,101 @@ export function UsersPage() {
           {t('users.intro')}
         </p>
 
-        <div className="filters">
-          <Field label={t('common.searchLabel')} style={{ minWidth: 260, flex: 1 }}>
+        {/* Recherche alignée sur le mobile (JP 31/07) : pays › région › ville empilés, puis le
+            champ nom et un bouton « Rechercher » pleine largeur. La recherche par noms approchés
+            est INDÉPENDANTE du filtre géographique — on cherche une personne où qu'elle soit. */}
+        <div className="card" style={{ maxWidth: 460, display: 'grid', gap: 12, marginBottom: 18 }}>
+          <div style={{ opacity: submittedSearch ? 0.45 : 1 }}>
+            <Field label={t('join.pickNation')}>
+              <Picker
+                value={nationId}
+                onChange={(id) => { setNationId(id); setRegionId(''); setPlaceNodeId(id); setPage(0); }}
+                options={(contextQ.data?.nations ?? []).map((n) => ({ id: n.id, label: n.name }))}
+                placeholder={t('common.all')}
+                disabled={!!submittedSearch}
+              />
+            </Field>
+            <Field label={t('join.pickRegion')}>
+              <Picker
+                value={regionId}
+                onChange={(id) => { setRegionId(id); setPlaceNodeId(id); setPage(0); }}
+                options={placeRegions.map((r) => ({ id: r.id, label: r.name }))}
+                placeholder={t('common.all')}
+                disabled={!nationId || !!submittedSearch}
+              />
+            </Field>
+            <Field label={t('join.pickCity')}>
+              <Picker
+                value={placeCities.some((c) => c.id === placeNodeId) ? placeNodeId : ''}
+                onChange={(id) => { setPlaceNodeId(id || regionId || nationId); setPage(0); }}
+                options={placeCities.map((c) => ({ id: c.id, label: c.name }))}
+                placeholder={t('common.all')}
+                disabled={!regionId || !!submittedSearch}
+              />
+            </Field>
+          </div>
+
+          <form
+            onSubmit={(e) => { e.preventDefault(); setPage(0); setSubmittedSearch(filters.search.trim()); }}
+            style={{ display: 'grid', gap: 8 }}
+          >
             <Input
               placeholder={t('users.searchPlaceholder')}
               icon={<Icon name="search" size={14} />}
               value={filters.search}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              onChange={(e) => setFilters({ search: e.target.value })}
             />
-          </Field>
-          <Field label={t('users.roleFilter')}>
-            <Select value={filters.role} onChange={(e) => setFilters({ ...filters, role: e.target.value as Filters['role'] })}>
-              <option value="all">{t('common.all')}</option>
-              {ROLE_FILTER_OPTIONS.map((r) => <option key={r} value={r}>{t(`roles.${r}`)}</option>)}
-            </Select>
-          </Field>
-          <Field label={t('common.status')}>
-            <Select value={filters.active} onChange={(e) => setFilters({ ...filters, active: e.target.value as Filters['active'] })}>
-              <option value="all">{t('common.all')}</option>
-              <option value="true">{t('common.active')}</option>
-              <option value="false">{t('common.inactive')}</option>
-            </Select>
-          </Field>
+            <Button type="submit" variant="primary" style={{ width: '100%', justifyContent: 'center' }}>
+              {t('users.searchAction')}
+            </Button>
+            {submittedSearch && (
+              <Button
+                variant="ghost"
+                style={{ width: '100%', justifyContent: 'center' }}
+                onClick={() => { setFilters({ search: '' }); setSubmittedSearch(''); setPage(0); }}
+              >
+                {t('users.clearSearch')}
+              </Button>
+            )}
+          </form>
         </div>
 
+        {/* Le total vient du SERVEUR : `rows` n'est qu'une page de 30. */}
         <div style={{ color: 'var(--ink-500)', fontSize: 13, marginBottom: 10 }}>
-          {t('users.count', { count: rows.length })}
+          {t('users.count', { count: usersQ.data?.totalElements ?? rows.length })}
         </div>
 
         <div className="card" style={{ padding: 0 }}>
-          <Table<AdminUserResponse> columns={cols} rows={rows} zebra />
+          {/* JP 31/07 — cliquer sur une personne ouvre SES engagements du But Quinquennal. */}
+          <Table<AdminUserResponse> columns={cols} rows={rows} zebra onRowClick={(r) => setOpenedMember(r)} />
         </div>
+
+        {/* Pagination serveur : sans ces boutons, tout ce qui dépasse la 1re page de 30 est
+            inatteignable dès qu'un périmètre compte des milliers de personnes. */}
+        {(usersQ.data?.totalPages ?? 1) > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 14 }}>
+            <Button
+              variant="secondary"
+              disabled={usersQ.data?.first ?? true}
+              onClick={() => setPage((n) => Math.max(0, n - 1))}
+            >
+              {t('users.pagePrev')}
+            </Button>
+            <span style={{ color: 'var(--ink-500)', fontSize: 13 }}>
+              {t('users.pageOf', { page: (usersQ.data?.number ?? 0) + 1, total: usersQ.data?.totalPages ?? 1 })}
+            </span>
+            <Button
+              variant="secondary"
+              disabled={usersQ.data?.last ?? true}
+              onClick={() => setPage((n) => n + 1)}
+            >
+              {t('users.pageNext')}
+            </Button>
+          </div>
+        )}
       </div>
+
+      <MemberGoalsModal member={openedMember} onClose={() => setOpenedMember(null)} />
 
       <InviteModal
         open={inviteOpen}
@@ -338,6 +419,88 @@ export function UsersPage() {
 // Lot 3.5 : MEMBRE/DIRIGEANT_UNITE = 1 unité ; DIRIGEANT = N unités ; DIRIGEANT_SENIOR = zone (référentiel
 // d'adressage pour ses engagements de FOI — sa visibilité « données » vient du sous-arbre) ;
 // COORDINATEUR = pays (SUPER_ADMIN) ; LEADER/SECRETARIAT = ministère (pas de rattachement).
+/**
+ * Engagements d'une personne (JP 31/07) — ouverts en cliquant sur sa ligne.
+ *
+ * <p>Deux volets quand ils existent : ses engagements PERSONNELS, et l'engagement de l'assemblée
+ * qu'elle dirige. Si les deux sont vides, on le DIT explicitement — c'est la demande de JP, pas
+ * un écran vide.
+ */
+function MemberGoalsModal({ member, onClose }: { member: AdminUserResponse | null; onClose: () => void }) {
+  const { t } = useTranslation();
+
+  const goalsQ = useQuery({
+    queryKey: ['member-goals', member?.id],
+    queryFn: () => fetchMemberGoals(member!.id),
+    enabled: !!member,
+  });
+  const activeQ = useQuery({ queryKey: ['goals', 'active'], queryFn: getActiveGoal, enabled: !!member });
+
+  const catByCode = useMemo(
+    () => new Map((activeQ.data?.categories ?? []).map((c) => [c.code, c])),
+    [activeQ.data],
+  );
+
+  const line = (p: PledgeResponse) => {
+    const cat = catByCode.get(p.categoryCode);
+    const value = p.targetAmount != null
+      ? `${p.targetAmount.toLocaleString('fr-FR')} ${activeQ.data?.defaultCurrency ?? ''}`.trim()
+      : `${p.targetCount ?? 0}${cat?.unitLabel ? ` ${cat.unitLabel}` : ''}`;
+    return (
+      <div
+        key={p.id}
+        style={{
+          display: 'flex', justifyContent: 'space-between', gap: 12,
+          padding: '7px 0', borderBottom: '1px solid var(--line)',
+        }}
+      >
+        <span style={{ color: 'var(--ink-600)' }}>{cat?.name ?? p.categoryCode}</span>
+        <strong style={{ color: 'var(--ink-900)' }}>{value}</strong>
+      </div>
+    );
+  };
+
+  const data: MemberGoalsResponse | undefined = goalsQ.data;
+  const empty = !!data && data.memberPledges.length === 0 && data.assemblyPledges.length === 0;
+  const forbidden =
+    (goalsQ.error as { response?: { status?: number } } | null)?.response?.status === 403;
+
+  return (
+    <Modal
+      open={!!member}
+      onClose={onClose}
+      title={t('users.goalsTitle', { name: member?.fullName ?? '' })}
+      footer={<Button variant="secondary" onClick={onClose}>{t('common.close')}</Button>}
+    >
+      {goalsQ.isLoading && <p className="section-sub">{t('common.loading')}</p>}
+      {goalsQ.isError && (
+        <p className="section-sub">{forbidden ? t('users.goalsNoAccess') : t('users.goalsError')}</p>
+      )}
+      {!goalsQ.isLoading && !goalsQ.isError && empty && (
+        <p className="section-sub">{t('users.goalsEmpty')}</p>
+      )}
+      {!goalsQ.isLoading && !goalsQ.isError && !empty && data && (
+        <div style={{ display: 'grid', gap: 18 }}>
+          {data.memberPledges.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', color: 'var(--ink-500)', marginBottom: 6 }}>{t('users.goalsPersonal')}</div>
+              {data.memberPledges.map(line)}
+            </div>
+          )}
+          {data.assemblyPledges.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', color: 'var(--ink-500)', marginBottom: 6 }}>
+                {t('users.goalsAssembly', { name: data.assemblyName ?? '' })}
+              </div>
+              {data.assemblyPledges.map(line)}
+            </div>
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 function PerimeterFields({
   role, unitId, zoneId, cityId, countryIds, units, zones, cities, countries, set,
 }: {

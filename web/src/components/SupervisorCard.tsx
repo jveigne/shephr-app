@@ -12,8 +12,12 @@ import {
 } from '../services/leadersApi';
 
 // ---------------------------------------------------------------------------------------------
-//  Faiseur de disciple (28/07) — chacun déclare SON superviseur ; ses disciples n'apparaissent
-//  que par les déclarations des autres (aucune action possible dans ce sens, décision client).
+//  Superviseur (28/07, révisé JP 30/07) — un DIRIGEANT déclare SON superviseur ; ses subordonnés
+//  n'apparaissent que par les déclarations des autres (aucune action dans ce sens).
+//
+//  Réservé aux DIRIGEANTS : un simple membre ne déclare pas de superviseur — son rattachement à
+//  une assemblée détermine implicitement son dirigeant. Le rendu est gardé par l'appelant.
+//  « Faiseur de disciples » est du jargon interne : l'interface dit « superviseur ».
 // ---------------------------------------------------------------------------------------------
 
 const errCode = (err: unknown): string | null =>
@@ -23,7 +27,7 @@ function personLine(p: DiscipleshipPerson): string {
   return [p.unitName, p.cityName, p.email].filter(Boolean).join(' · ');
 }
 
-export function DiscipleshipCard() {
+export function SupervisorCard() {
   const { t } = useTranslation();
   const { push } = useToast();
   const queryClient = useQueryClient();
@@ -53,14 +57,14 @@ export function DiscipleshipCard() {
       queryClient.invalidateQueries({ queryKey: ['leaders', 'hierarchy'] });
       setSearchOpen(false);
       setQuery('');
-      push({ kind: 'ok', title: t('discipleship.declared') });
+      push({ kind: 'ok', title: t('supervisor.declared') });
     },
     onError: (err) => {
       const code = errCode(err);
       push({
         kind: 'error',
-        title: t('discipleship.declareFailed'),
-        msg: code ? t(`discipleship.errors.${code}`, { defaultValue: t('common.error') }) : t('common.error'),
+        title: t('supervisor.declareFailed'),
+        msg: code ? t(`supervisor.errors.${code}`, { defaultValue: t('common.error') }) : t('common.error'),
       });
     },
   });
@@ -76,9 +80,9 @@ export function DiscipleshipCard() {
     <div className="card" style={{ padding: 16, marginBottom: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <Icon name="user" size={16} />
-        <h3 style={{ margin: 0, fontSize: 16 }}>{t('discipleship.title')}</h3>
+        <h3 style={{ margin: 0, fontSize: 16 }}>{t('supervisor.title')}</h3>
       </div>
-      <p className="section-sub" style={{ margin: '6px 0 12px' }}>{t('discipleship.intro')}</p>
+      <p className="section-sub" style={{ margin: '6px 0 12px' }}>{t('supervisor.intro')}</p>
 
       {mineQ.isLoading ? (
         <p style={{ color: 'var(--ink-500)', margin: 0 }}>{t('common.loading')}</p>
@@ -92,7 +96,7 @@ export function DiscipleshipCard() {
               {!supervisor.active && <Badge tone="gray">{t('users.statusInactive')}</Badge>}
             </>
           ) : (
-            <span style={{ color: 'var(--ink-500)', fontSize: 13.5 }}>{t('discipleship.none')}</span>
+            <span style={{ color: 'var(--ink-500)', fontSize: 13.5 }}>{t('supervisor.none')}</span>
           )}
           <Button
             variant="secondary"
@@ -100,7 +104,7 @@ export function DiscipleshipCard() {
             onClick={() => { setSearchOpen((v) => !v); setInviteOpen(false); }}
             style={{ marginLeft: 'auto' }}
           >
-            {supervisor ? t('discipleship.change') : t('discipleship.declare')}
+            {supervisor ? t('supervisor.change') : t('supervisor.declare')}
           </Button>
         </div>
       )}
@@ -108,13 +112,13 @@ export function DiscipleshipCard() {
       {searchOpen && (
         <div style={{ marginTop: 14, borderTop: '1px solid var(--line-soft, rgba(42,38,32,0.08))', paddingTop: 14 }}>
           <Field
-            label={t('discipleship.searchLabel')}
-            hint={debouncedQ.length > 0 && debouncedQ.length < 2 ? t('discipleship.searchTooShort') : t('discipleship.searchHint')}
+            label={t('supervisor.searchLabel')}
+            hint={debouncedQ.length > 0 && debouncedQ.length < 2 ? t('supervisor.searchTooShort') : t('supervisor.searchHint')}
           >
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={t('discipleship.searchPlaceholder')}
+              placeholder={t('supervisor.searchPlaceholder')}
               icon={<Icon name="search" size={14} />}
               autoFocus
             />
@@ -125,7 +129,7 @@ export function DiscipleshipCard() {
               {candidatesQ.isLoading ? (
                 <p style={{ color: 'var(--ink-400)', margin: 0 }}>{t('common.loading')}</p>
               ) : results.length === 0 ? (
-                <p style={{ color: 'var(--ink-400)', margin: 0, fontStyle: 'italic' }}>{t('discipleship.noResult')}</p>
+                <p style={{ color: 'var(--ink-400)', margin: 0, fontStyle: 'italic' }}>{t('supervisor.noResult')}</p>
               ) : (
                 <div style={{ border: '1px solid var(--line-soft, rgba(42,38,32,0.08))', borderRadius: 10, overflow: 'hidden' }}>
                   {results.map((p) => (
@@ -166,11 +170,11 @@ export function DiscipleshipCard() {
                 fontWeight: 600, textDecoration: 'underline',
               }}
             >
-              {t('discipleship.notFound')}
+              {t('supervisor.notFound')}
             </button>
             {inviteOpen && (
               <div style={{ marginTop: 8, fontSize: 13.5, color: 'var(--ink-600)' }}>
-                <p style={{ margin: '0 0 8px' }}>{t('discipleship.inviteHint')}</p>
+                <p style={{ margin: '0 0 8px' }}>{t('supervisor.inviteHint')}</p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                   <code style={{ fontSize: 12.5, color: 'var(--ink-500)' }}>{signupLink}</code>
                   <Button
@@ -178,20 +182,20 @@ export function DiscipleshipCard() {
                     iconL={<Icon name="copy" size={14} />}
                     onClick={() => {
                       navigator.clipboard?.writeText(signupLink);
-                      push({ kind: 'ok', title: t('discipleship.linkCopied') });
+                      push({ kind: 'ok', title: t('supervisor.linkCopied') });
                     }}
                   >
-                    {t('discipleship.copyLink')}
+                    {t('supervisor.copyLink')}
                   </Button>
                   <Button
                     variant="secondary"
                     iconL={<Icon name="mail" size={14} />}
                     onClick={() => {
-                      window.location.href = `mailto:?subject=${encodeURIComponent(t('discipleship.mailSubject'))}`
-                        + `&body=${encodeURIComponent(t('discipleship.mailBody', { link: signupLink }))}`;
+                      window.location.href = `mailto:?subject=${encodeURIComponent(t('supervisor.mailSubject'))}`
+                        + `&body=${encodeURIComponent(t('supervisor.mailBody', { link: signupLink }))}`;
                     }}
                   >
-                    {t('discipleship.sendMail')}
+                    {t('supervisor.sendMail')}
                   </Button>
                 </div>
               </div>
@@ -203,7 +207,7 @@ export function DiscipleshipCard() {
       {disciples.length > 0 && (
         <div style={{ marginTop: 16, borderTop: '1px solid var(--line-soft, rgba(42,38,32,0.08))', paddingTop: 12 }}>
           <div style={{ fontSize: 12.5, color: 'var(--ink-500)', marginBottom: 8 }}>
-            {t('discipleship.disciplesTitle', { count: disciples.length })}
+            {t('supervisor.superviseesTitle', { count: disciples.length })}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {disciples.map((p) => (

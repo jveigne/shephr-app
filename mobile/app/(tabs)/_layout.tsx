@@ -91,7 +91,7 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
+{/*      <Tabs.Screen
         name="demandes"
         options={{
           // Demandes de structure (RDG 22/07) : ouvertes à tous, validées par le secrétariat.
@@ -100,7 +100,7 @@ export default function TabLayout() {
             <Ionicons name="paper-plane-outline" size={size} color={color} />
           ),
         }}
-      />
+      />*/}
       <Tabs.Screen
         name="care"
         options={{

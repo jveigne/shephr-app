@@ -2,8 +2,9 @@
  * Coordonnées de repli de l'équipe Shephr.
  *
  * <p>Depuis le 31/07, les coordonnées RÉELLES viennent du back-office (`services/contactApi`) —
- * ces valeurs ne servent que tant que le serveur n'a pas répondu, ou s'il est injoignable. Un
- * écran d'aide ne doit jamais se retrouver sans canal de contact.
+ * ces valeurs ne servent que tant que le serveur n'a pas répondu, ou s'il est injoignable
+ * (l'app mobile peut très bien s'ouvrir hors réseau). Un écran d'aide ne doit jamais se
+ * retrouver sans canal de contact.
  *
  * <p>Pour changer les coordonnées, passe par le back-office, PAS par ce fichier.
  */

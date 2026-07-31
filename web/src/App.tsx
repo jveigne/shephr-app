@@ -26,6 +26,7 @@ import { RequestsPage } from './pages/Requests';
 import { MemberGoalsPage } from './pages/MemberGoals';
 import { OnboardingPage } from './pages/Onboarding';
 import { SettingsPage } from './pages/Settings';
+import { ContactPage } from './pages/Contact';
 import { FEATURES } from './config/features';
 
 const queryClient = new QueryClient({
@@ -64,6 +65,7 @@ export function App() {
               <Route element={<MemberShell />}>
                 <Route path="/my-goals" element={<MemberGoalsPage />} />
                 <Route path="/member-settings" element={<SettingsPage />} />
+                <Route path="/member-contact" element={<ContactPage />} />
               </Route>
               <Route element={<AppShell />}>
                 {FEATURES.donations ? (
@@ -98,6 +100,7 @@ export function App() {
                 )}
                 {/* Feature C — vraie page Réglages (identité + suppression de compte). */}
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/contact" element={<ContactPage />} />
                 <Route path="*" element={<Navigate to={HOME} replace />} />
               </Route>
             </Routes>

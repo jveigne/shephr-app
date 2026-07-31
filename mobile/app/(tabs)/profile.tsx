@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, Platform, Linking } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '../../components/ScreenShell';
+import Button from '../../components/Button';
 import Card from '../../components/Card';
 import Label from '../../components/Label';
 import HandDivider from '../../components/HandDivider';
@@ -11,9 +12,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { canManageStructure, deleteMyAccount, roleLabel } from '../../services/authApi';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { confirmDialog, notify } from '../../utils/dialogs';
+import { contactMailto, contactWhatsapp, useContactSettings } from '../../services/contactApi';
 
 export default function ProfileScreen() {
   const { me, isLeader, logout } = useAuth();
+  // Coordonnées d'assistance pilotées depuis le back-office.
+  const contact = useContactSettings();
   const { language, setLanguage, t } = useLanguage();
 
   const initials = (me?.fullName ?? '')
@@ -165,6 +169,32 @@ export default function ProfileScreen() {
         <Row icon="shield-outline" label={t('profile.privacy')} value={t('profile.privacyValue')} last />*/}
       </Card>
 
+      {/* Contactez-nous (JP 31/07) — mêmes canaux et même mise en forme que le bloc d'aide du
+          rattachement à une assemblée : WhatsApp mis en avant, e-mail en second. */}
+      <Label style={{ marginTop: 26, marginBottom: 8, paddingHorizontal: 4 }}>
+        {t('profile.help')}
+      </Label>
+      <Card style={{ paddingVertical: 16, paddingHorizontal: 16 }}>
+        <Text style={styles.contactHint}>{t('profile.contactHint')}</Text>
+        <View style={{ gap: 8, marginTop: 12 }}>
+          <Button
+            label={t('join.contactWhatsapp')}
+            variant="soft"
+            onPress={() =>
+              Linking.openURL(contactWhatsapp(t('profile.contactWhatsappText')))
+                .catch(() => Linking.openURL(contact.whatsappUrl).catch(() => {}))
+            }
+            iconLeft={<Ionicons name="logo-whatsapp" size={18} color={colors.mossDeep} />}
+          />
+          <Button
+            label={t('join.contactMail')}
+            variant="ghost"
+            onPress={() => Linking.openURL(contactMailto(t('profile.contactMailSubject'))).catch(() => {})}
+            iconLeft={<Ionicons name="mail-outline" size={18} color={colors.mossDeep} />}
+          />
+        </View>
+      </Card>
+
       <Card style={styles.logoutCard}>
         <Pressable onPress={confirmLogout} style={styles.logout}>
           <Ionicons name="log-out-outline" size={18} color={colors.moss} />
@@ -272,6 +302,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   email: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, marginTop: 2 },
+  contactHint: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink2, lineHeight: 19 },
   pillRow: { flexDirection: 'row', gap: 6, marginTop: 14 },
   pill: {
     flexDirection: 'row',

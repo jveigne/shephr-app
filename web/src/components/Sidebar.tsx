@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { contactMailto } from '../constants/contact';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './Icon';
@@ -67,7 +66,6 @@ const NAV: { sectionKey: string; items: NavItem[] }[] = [
       },
       { id: 'users', labelKey: 'nav.users', icon: 'users', to: '/users' },
       { id: 'hierarchy', labelKey: 'nav.hierarchy', icon: 'hierarchy', to: '/hierarchy' },
-      { id: 'requests', labelKey: 'nav.requests', icon: 'inbox', to: '/requests' },
     ],
   },
   {
@@ -246,15 +244,16 @@ export function Sidebar() {
               })}
             </div>
           ))}
-          {/* Contact : écrit à l'équipe Shephr, comme le CTA de la landing. */}
+          {/* Contact : page dédiée qui laisse le choix WhatsApp / e-mail (JP 31/07) — avant,
+              le lien ouvrait directement le client mail, sans issue pour qui n'en a pas. */}
           <div>
-            <a
-              className="nav-item"
-              href={contactMailto(t('nav.contactSubject'))}
+            <NavLink
+              to="/contact"
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
             >
               <Icon name="mail" size={18} />
               <span>{t('nav.contact')}</span>
-            </a>
+            </NavLink>
           </div>
         </nav>
 
