@@ -291,6 +291,7 @@
     "contactEmailPlaceholder": "you@example.com",
     "phoneRequired": "The phone number is required.",
     "countryPlaceholder": "— Country —",
+    "countrySearch": "Search a country or dial code…",
     "countryRequired": "Choose your country (dial code)."
   },
   "placeholder": {
