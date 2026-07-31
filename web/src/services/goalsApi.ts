@@ -288,6 +288,29 @@ export async function unlockMemberPledges(memberId: string, year?: number) {
   await apiClient.post(`/api/church/goals/member/${memberId}/unlock${yq(year)}`);
 }
 
+/**
+ * Objectifs d'UNE personne (JP 31/07) — ouverts depuis la liste des membres.
+ *
+ * <p>Deux volets : ses engagements PERSONNELS, et l'engagement de l'assemblée dont elle est
+ * dirigeante (absent si elle n'en dirige aucune). Le backend borne la lecture au périmètre de
+ * l'appelant — un 403 signifie « pas dans votre périmètre », pas « pas d'engagement ».
+ */
+export interface MemberGoalsResponse {
+  memberId: string;
+  fullName: string;
+  year: number;
+  memberPledges: PledgeResponse[];
+  assemblyName: string | null;
+  assemblyPledges: PledgeResponse[];
+}
+
+export async function fetchMemberGoals(memberId: string, year?: number): Promise<MemberGoalsResponse> {
+  const { data } = await apiClient.get<MemberGoalsResponse>(
+    `/api/church/goals/member/${memberId}/goals${yq(year)}`,
+  );
+  return data;
+}
+
 export interface MemberPledgeEntry {
   userId: string;
   fullName: string;

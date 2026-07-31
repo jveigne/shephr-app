@@ -20,6 +20,19 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { canManageUsers, MODULE_ROLE_LABELS, type ModuleRole } from '../services/authApi';
 import { listUsers, listUnits, type AdminUserResponse, type UnitResponse } from '../services/adminApi';
+import SelectField from '../components/SelectField';
+import {
+  fetchMemberGoals,
+  getActiveGoal,
+  type ActiveGoal,
+  type MemberGoalsResponse,
+  type PledgeResponse,
+} from '../services/goalsApi';
+import {
+  fetchRequestContext,
+  type RequestNodeOption,
+  type StructureRequestContext,
+} from '../services/structureRequestsApi';
 
 /**
  * Membres (Lot S1 — 21/07) : annuaire du périmètre de la personne connectée. La liste est SCOPÉE
@@ -34,19 +47,62 @@ export default function MembresScreen() {
   const [units, setUnits] = useState<UnitResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [search, setSearch] = useState('');
+  // JP 31/07 — tout est filtré et paginé CÔTÉ SERVEUR : la liste peut compter des milliers de
+  // personnes, on ne la charge plus d'un bloc pour filtrer en mémoire.
+  const [searchInput, setSearchInput] = useState('');   // ce qui est tapé
+  const [search, setSearch] = useState('');             // ce qui a été SOUMIS (bouton Rechercher)
+  const [context, setContext] = useState<StructureRequestContext | null>(null);
+  const [nation, setNation] = useState<RequestNodeOption | null>(null);
+  const [region, setRegion] = useState<RequestNodeOption | null>(null);
+  const [city, setCity] = useState<RequestNodeOption | null>(null);
+  const [page, setPage] = useState(0);
+  const [last, setLast] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [pickingUnit, setPickingUnit] = useState(false);
+  // JP 31/07 — cliquer sur une personne ouvre SES engagements du But Quinquennal.
+  const [openedMember, setOpenedMember] = useState<AdminUserResponse | null>(null);
+
+  // La recherche par noms approchés ignore le filtre géographique (décision JP).
+  const placeNodeId = search ? undefined : (city ?? region ?? nation)?.id;
 
   const canInvite = canManageUsers(me);
 
+  const PAGE_SIZE = 30;
+
   const load = useCallback(async () => {
-    const [u, un] = await Promise.allSettled([listUsers({ size: 200 }), listUnits()]);
-    if (u.status === 'fulfilled') setUsers(u.value.content);
+    const [u, un, ctx] = await Promise.allSettled([
+      listUsers({ size: PAGE_SIZE, page: 0, placeNodeId, search: search || undefined }),
+      listUnits(),
+      fetchRequestContext(),
+    ]);
+    if (u.status === 'fulfilled') {
+      setUsers(u.value.content);
+      setLast(u.value.last ?? u.value.content.length < PAGE_SIZE);
+    }
     if (un.status === 'fulfilled') setUnits(un.value);
+    if (ctx.status === 'fulfilled') setContext(ctx.value);
+    setPage(0);
     setLoading(false);
-  }, []);
+  }, [placeNodeId, search]);
 
   useEffect(() => { load(); }, [load]);
+
+  /** Page suivante — le serveur pagine, on empile. */
+  const loadMore = async () => {
+    if (last || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const next = page + 1;
+      const res = await listUsers({ size: PAGE_SIZE, page: next, placeNodeId, search: search || undefined });
+      setUsers((prev) => [...prev, ...res.content]);
+      setLast(res.last ?? res.content.length < PAGE_SIZE);
+      setPage(next);
+    } catch {
+      setLast(true);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -61,13 +117,9 @@ export default function MembresScreen() {
     };
   }, [units]);
 
-  const rows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const filtered = q
-      ? users.filter((u) => u.fullName.toLowerCase().includes(q) || (u.email ?? u.username ?? '').toLowerCase().includes(q))
-      : users;
-    return [...filtered].sort((a, b) => a.fullName.localeCompare(b.fullName));
-  }, [users, search]);
+  // Le serveur filtre, trie et pagine : on affiche ce qu'il renvoie, dans son ordre (la
+  // pertinence prime sur l'alphabétique quand une recherche approchée est active).
+  const rows = users;
 
   if (loading) {
     return (
@@ -93,19 +145,68 @@ export default function MembresScreen() {
       </View>
       <Text style={styles.subtitle}>{t('membres.subtitle')}</Text>
 
+      {/* Filtre géographique — nation → région → ville. Il est IGNORÉ pendant une recherche
+          par nom : on cherche une personne où qu'elle soit (décision JP 31/07). */}
+      {context && (
+        <View style={{ opacity: search ? 0.45 : 1 }} pointerEvents={search ? 'none' : 'auto'}>
+          <SelectField
+            label={t('join.pickNation')}
+            options={context.nations}
+            pick={nation}
+            onChange={(n) => { setNation(n); setRegion(null); setCity(null); }}
+          />
+          <SelectField
+            label={t('join.pickRegion')}
+            options={nation ? context.regions.filter((r) => r.parentId === nation.id) : []}
+            pick={region}
+            onChange={(r) => { setRegion(r); setCity(null); }}
+            disabled={!nation}
+          />
+          <SelectField
+            label={t('join.pickCity')}
+            options={region ? context.cities.filter((c) => c.parentId === region.id) : []}
+            pick={city}
+            onChange={setCity}
+            disabled={!region}
+          />
+        </View>
+      )}
+
+      {/* Recherche par noms approchés : déclenchée par le bouton, pas à la frappe. */}
       <View style={styles.searchBox}>
         <Ionicons name="search" size={16} color={colors.ink3} />
         <TextInput
-          value={search}
-          onChangeText={setSearch}
+          value={searchInput}
+          onChangeText={setSearchInput}
           style={styles.searchInput}
           placeholder={t('membres.searchPlaceholder')}
           placeholderTextColor={colors.ink3}
           autoCapitalize="none"
+          returnKeyType="search"
+          onSubmitEditing={() => setSearch(searchInput.trim())}
         />
       </View>
+      <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+        <Button
+          label={t('membres.searchAction')}
+          onPress={() => setSearch(searchInput.trim())}
+          style={{ flex: 1 }}
+          height={44}
+        />
+        {search.length > 0 && (
+          <Button
+            label={t('membres.clearSearch')}
+            variant="soft"
+            height={44}
+            onPress={() => { setSearchInput(''); setSearch(''); }}
+          />
+        )}
+      </View>
 
-      {canInvite && (
+      {/* JP 31/07 — invitation MASQUÉE : tout se joue désormais à la création du compte
+          (inscription libre + rattachement immédiat). Le flux reste en place derrière
+          (`app/invite.tsx`, endpoints `admin/users/invite`) pour être rouvert sans travail. */}
+      {false && canInvite && (
         <Button
           label={t('membres.invite')}
           variant="soft"
@@ -122,7 +223,7 @@ export default function MembresScreen() {
           const role: ModuleRole | null = u.goalRole ?? u.donationRole;
           const unit = unitName(u);
           return (
-            <Card key={u.id} style={styles.itemCard}>
+            <Card key={u.id} style={styles.itemCard} onPress={() => setOpenedMember(u)}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
                   {u.fullName.split(' ').filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase() ?? '').join('')}
@@ -136,11 +237,24 @@ export default function MembresScreen() {
                 </Text>
               </View>
               {!u.active && <Text style={styles.inactivePill}>{t('membres.inactive')}</Text>}
+              <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
             </Card>
           );
         })}
         {rows.length === 0 && <Text style={styles.empty}>{t('membres.empty')}</Text>}
+        {!last && (
+          <Button
+            label={t('membres.loadMore')}
+            variant="soft"
+            height={46}
+            loading={loadingMore}
+            onPress={loadMore}
+            style={{ marginTop: 12 }}
+          />
+        )}
       </View>
+
+      <MemberGoalsModal member={openedMember} onClose={() => setOpenedMember(null)} />
 
       <UnitPickerModal
         open={pickingUnit}
@@ -152,6 +266,106 @@ export default function MembresScreen() {
         }}
       />
     </ScreenShell>
+  );
+}
+
+/**
+ * Engagements d'une personne (JP 31/07) — ouverts en cliquant sur son nom dans la liste.
+ *
+ * <p>Deux volets quand ils existent : ses engagements PERSONNELS, et l'engagement de l'assemblée
+ * qu'elle dirige. Si les deux sont vides, on le DIT explicitement plutôt que d'afficher une carte
+ * vide — c'est la demande de JP.
+ */
+function MemberGoalsModal({ member, onClose }: { member: AdminUserResponse | null; onClose: () => void }) {
+  const { t } = useLanguage();
+  const [loading, setLoading] = useState(false);
+  // On stocke la NATURE de l'erreur, pas son libellé : la traduction se fait au rendu, ce qui
+  // garde l'effet indépendant de `t` (une dépendance instable relancerait le chargement).
+  const [error, setError] = useState<'forbidden' | 'other' | null>(null);
+  const [data, setData] = useState<MemberGoalsResponse | null>(null);
+  const [goal, setGoal] = useState<ActiveGoal | null>(null);
+
+  useEffect(() => {
+    if (!member) { setData(null); setError(null); return; }
+    let alive = true;
+    setLoading(true);
+    setError(null);
+    (async () => {
+      try {
+        const [g, a] = await Promise.all([fetchMemberGoals(member.id), getActiveGoal()]);
+        if (!alive) return;
+        setData(g);
+        setGoal(a);
+      } catch (e) {
+        if (!alive) return;
+        const status = (e as { response?: { status?: number } })?.response?.status;
+        setError(status === 403 ? 'forbidden' : 'other');
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [member]);
+
+  const catByCode = useMemo(
+    () => new Map((goal?.categories ?? []).map((c) => [c.code, c])),
+    [goal],
+  );
+
+  const line = (p: PledgeResponse) => {
+    const cat = catByCode.get(p.categoryCode);
+    const value = p.targetAmount != null
+      ? `${p.targetAmount.toLocaleString('fr-FR')} ${goal?.defaultCurrency ?? ''}`.trim()
+      : `${p.targetCount ?? 0}${cat?.unitLabel ? ` ${cat.unitLabel}` : ''}`;
+    return (
+      <View key={p.id} style={styles.pledgeRow}>
+        <Text style={styles.pledgeLabel} numberOfLines={2}>{cat?.name ?? p.categoryCode}</Text>
+        <Text style={styles.pledgeValue}>{value}</Text>
+      </View>
+    );
+  };
+
+  const empty = !!data && data.memberPledges.length === 0 && data.assemblyPledges.length === 0;
+
+  return (
+    <Modal visible={!!member} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={styles.backdrop}>
+        <Card style={styles.modalCard}>
+          <Text style={styles.modalTitle}>{t('membres.goalsTitle', { name: member?.fullName ?? '' })}</Text>
+
+          {loading && <ActivityIndicator color={colors.moss} style={{ marginTop: 20 }} />}
+          {!loading && error && (
+            <Text style={styles.empty}>
+              {error === 'forbidden' ? t('membres.goalsNoAccess') : t('membres.goalsError')}
+            </Text>
+          )}
+          {!loading && !error && empty && <Text style={styles.empty}>{t('membres.goalsEmpty')}</Text>}
+
+          {!loading && !error && !empty && data && (
+            <View style={{ marginTop: 14, gap: 16 }}>
+              {data.memberPledges.length > 0 && (
+                <View>
+                  <Text style={styles.sectionLabel}>{t('membres.goalsPersonal')}</Text>
+                  {data.memberPledges.map(line)}
+                </View>
+              )}
+              {data.assemblyPledges.length > 0 && (
+                <View>
+                  <Text style={styles.sectionLabel}>
+                    {t('membres.goalsAssembly', { name: data.assemblyName ?? '' })}
+                  </Text>
+                  {data.assemblyPledges.map(line)}
+                </View>
+              )}
+            </View>
+          )}
+
+          <Pressable onPress={onClose} style={{ marginTop: 18, alignItems: 'center' }}>
+            <Text style={styles.cancelLink}>{t('common.ok')}</Text>
+          </Pressable>
+        </Card>
+      </View>
+    </Modal>
   );
 }
 
@@ -222,4 +436,14 @@ const styles = StyleSheet.create({
   modalCard: { paddingHorizontal: 20, paddingVertical: 20, maxHeight: '80%' },
   modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink },
   cancelLink: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink3 },
+  sectionLabel: {
+    fontFamily: fonts.mono, fontSize: 10, color: colors.ink3, letterSpacing: 0.8,
+    textTransform: 'uppercase', marginBottom: 6,
+  },
+  pledgeRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+    paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: 'rgba(42,38,32,0.07)',
+  },
+  pledgeLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2 },
+  pledgeValue: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
 });

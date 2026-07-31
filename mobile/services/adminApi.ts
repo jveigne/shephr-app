@@ -202,10 +202,14 @@ export interface AdminUserResponse {
 export interface UsersPage {
   content: AdminUserResponse[];
   totalElements: number;
+  /** Enveloppe Page de Spring : vrai sur la dernière page (pagination serveur, JP 31/07). */
+  last?: boolean;
 }
 
 export async function listUsers(
-  params: { active?: boolean; page?: number; size?: number } = {},
+  // JP 31/07 — filtrage et pagination CÔTÉ SERVEUR : `placeNodeId` (nation, région ou ville)
+  // et `search` (noms approchés, indépendant du filtre géographique) sont résolus par le backend.
+  params: { active?: boolean; page?: number; size?: number; placeNodeId?: string; search?: string } = {},
 ): Promise<UsersPage> {
   const { data } = await apiClient.get<UsersPage>('/api/church/admin/users', { params });
   return data;

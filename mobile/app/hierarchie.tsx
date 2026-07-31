@@ -15,7 +15,7 @@ import Card from '../components/Card';
 import { colors, fonts } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { MODULE_ROLE_LABELS } from '../services/authApi';
+import { canManageUsers, MODULE_ROLE_LABELS } from '../services/authApi';
 import {
   fetchLeaderHierarchy,
   type HierarchyUnitView,
@@ -112,20 +112,34 @@ export default function HierarchieScreen() {
       </View>
       <Text style={styles.subtitle}>{intro}</Text>
 
-      {/* Accès à SA propre déclaration (28/07) : l'arbre reste en lecture, le rattachement
-          personnel se pose dans l'écran dédié. */}
-    {/*  <Card
-        variant="paper2"
-        style={styles.discipleshipCard}
-        onPress={() => router.push('/faiseur-de-disciple')}
-      >
-        <Ionicons name="people-circle-outline" size={18} color={colors.mossDeep} />
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.unitName} numberOfLines={1}>{t('discipleship.title')}</Text>
-          <Text style={styles.nodeMeta} numberOfLines={2}>{t('discipleship.shortcutHint')}</Text>
+      {/* « À qui je rends compte » : une mention AU-DESSUS de la vue — l'arbre, lui, ne contient
+          que ce qui est en dessous du dirigeant (JP 30/07). */}
+      {data?.supervisor && (
+        <View style={styles.reportsToRow}>
+          <Ionicons name="arrow-up" size={14} color={colors.earthDeep} />
+          <Text style={styles.reportsToText} numberOfLines={2}>
+            {t('hierarchy.reportsTo')} <Text style={styles.reportsToName}>{data.supervisor.fullName}</Text>
+          </Text>
         </View>
-        <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
-      </Card>*/}
+      )}
+
+      {/* Déclaration de SON superviseur (JP 30/07) : réservée aux DIRIGEANTS, et logée ici —
+          jamais dans le parcours de création d'assemblée, qu'elle alourdirait. Un membre ne la
+          voit pas : son rattachement à une assemblée détermine implicitement son dirigeant. */}
+      {canManageUsers(me) && (
+        <Card
+          variant="paper2"
+          style={styles.supervisorCard}
+          onPress={() => router.push('/superviseur')}
+        >
+          <Ionicons name="people-circle-outline" size={18} color={colors.mossDeep} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.unitName} numberOfLines={1}>{t('supervisor.title')}</Text>
+            <Text style={styles.nodeMeta} numberOfLines={2}>{t('supervisor.shortcutHint')}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+        </Card>
+      )}
 
       <View style={styles.segmentRow}>
         {(['leaders', 'units'] as ViewMode[]).map((v) => (
@@ -275,7 +289,19 @@ function UnitRow({ unit, depth, leaderName, hideLocality }: {
 
 const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2 },
-  discipleshipCard: {
+  reportsToRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(201,149,107,0.14)',
+  },
+  reportsToText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
+  reportsToName: { fontWeight: '700', color: colors.ink },
+  supervisorCard: {
     marginTop: 14, paddingHorizontal: 14, paddingVertical: 12,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },

@@ -43,6 +43,10 @@ export interface ListUsersParams {
   active?: boolean;
   page?: number;
   size?: number;
+  /** Nation, région OU ville — le backend en déduit les assemblées (JP 31/07). */
+  placeNodeId?: string;
+  /** Recherche par noms approchés, INDÉPENDANTE du filtre géographique. */
+  search?: string;
 }
 
 export interface InviteUserRequest {

@@ -187,7 +187,8 @@
     "language": "Language",
     "requests": "Requests",
     "contact": "Contact us",
-    "contactSubject": "Shephr support request"
+    "contactSubject": "Shephr support request",
+    "menu": "Menu"
   },
   "sidebar": {
     "logout": "Log out",
@@ -316,37 +317,8 @@
     "loadError": "Could not load the hierarchy.",
     "needsLeader": "Leader needed",
     "unassignedTitle": "Assemblies without a leader",
-    "unassignedHint": "Created (often via an approved request) but with no attached leader — appoint one via Members (invite or manage)."
-  },
-  "discipleship": {
-    "title": "My disciple maker",
-    "intro": "Declare who mentors you. You only declare your own disciple maker: the people who declare you appear below as your disciples.",
-    "none": "No disciple maker declared",
-    "declare": "Declare",
-    "change": "Change",
-    "declared": "Disciple maker saved",
-    "declareFailed": "Could not save",
-    "searchLabel": "Search for the person",
-    "searchPlaceholder": "Name, email or username",
-    "searchHint": "Only people from your ministry.",
-    "searchTooShort": "Type at least 2 characters.",
-    "noResult": "No one found in your ministry.",
-    "notFound": "Can't find the person?",
-    "inviteHint": "Invite them to create an account: share this sign-up link, then come back and declare them once their account exists.",
-    "copyLink": "Copy link",
-    "linkCopied": "Link copied",
-    "sendMail": "Send by email",
-    "mailSubject": "Join me on Shephr",
-    "mailBody": "Hello,\n\nI would like to declare you as my disciple maker on Shephr. Create your account here: {{link}}\n\nThank you!",
-    "disciplesTitle_one": "{{count}} disciple declared me",
-    "disciplesTitle_other": "{{count}} disciples declared me",
-    "errors": {
-      "SUPERVISOR_SELF": "You cannot be your own disciple maker.",
-      "SUPERVISOR_OUT_OF_MINISTRY": "This person does not belong to your ministry.",
-      "SUPERVISOR_CYCLE": "This person is already one of your disciples.",
-      "NO_MINISTRY": "Your account has no ministry — contact the secretariat.",
-      "QUERY_TOO_SHORT": "Type at least 2 characters."
-    }
+    "unassignedHint": "Created (often via an approved request) but with no attached leader — appoint one via Members (invite or manage).",
+    "reportsTo": "You report to"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -659,7 +631,18 @@
     "usernameLabel": "Login username",
     "usernameHint": "Assigned by you (e.g. first.last@shephr.org) — it is not an email.",
     "usernamePlaceholder": "first.last@shephr.org",
-    "emailOptionalLabel": "Email (optional)"
+    "emailOptionalLabel": "Email (optional)",
+    "searchAction": "Search",
+    "clearSearch": "Clear",
+    "goalsTitle": "{{name}}'s pledges",
+    "goalsPersonal": "Personal pledges",
+    "goalsAssembly": "Pledge of {{name}}",
+    "goalsEmpty": "This member has no pledge yet.",
+    "goalsError": "Could not load the pledges.",
+    "goalsNoAccess": "This person is outside your perimeter.",
+    "pagePrev": "Previous",
+    "pageNext": "Next",
+    "pageOf": "Page {{page}} of {{total}}"
   },
   "geoPicker": {
     "nation": "Nation",
@@ -1054,7 +1037,11 @@
     "confirmJoinHint": "You will be attached right away — no approval to wait for.",
     "confirmAsLeader": "Confirm — I am the leader",
     "confirmAsMember": "Confirm — I am a member",
-    "filterLabel": "Filter the list"
+    "filterLabel": "Filter the list",
+    "pickNation": "Nation",
+    "pickRegion": "Region",
+    "pickCity": "City",
+    "filterInCity": "Filter within {{city}}…"
   },
   "map": {
     "searchCountry": "Search a country…",
@@ -1152,5 +1139,36 @@
     "searchPlaceholder": "Search…",
     "noOption": "No city found.",
     "entityCreated": "Created in the structure — visible in your scope."
+  },
+  "supervisor": {
+    "title": "My supervisor",
+    "intro": "Declare who you report to. You only declare YOUR supervisor: the people you supervise appear once they declare you in turn.",
+    "none": "No supervisor declared",
+    "declare": "Declare my supervisor",
+    "change": "Change supervisor",
+    "declared": "Supervisor saved.",
+    "declareFailed": "Could not save",
+    "searchLabel": "Search for the person",
+    "searchPlaceholder": "Name, email or username",
+    "searchHint": "Only people from your ministry.",
+    "searchTooShort": "Type at least 2 characters.",
+    "noResult": "No one found in your ministry.",
+    "notFound": "Can't find the person?",
+    "inviteHint": "Invite them to create an account: share this sign-up link, then come back and declare them once their account exists.",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "sendMail": "Send by email",
+    "mailSubject": "Join me on Shephr",
+    "mailBody": "Hello,\n\nI would like to declare you as my supervisor on Shephr. Create your account here: {{link}}\n\nThank you!",
+    "superviseesTitle_one": "{{count}} leader declared me as supervisor",
+    "superviseesTitle_other": "{{count}} leaders declared me as supervisor",
+    "errors": {
+      "SUPERVISOR_SELF": "You cannot be your own supervisor.",
+      "SUPERVISOR_OUT_OF_MINISTRY": "This person does not belong to your ministry.",
+      "SUPERVISOR_CYCLE": "This person is already someone you supervise.",
+      "NO_MINISTRY": "Your account has no ministry — contact the secretariat.",
+      "QUERY_TOO_SHORT": "Type at least 2 characters."
+    },
+    "shortcutHint": "Declare who you report to, or see who you supervise."
   }
 }

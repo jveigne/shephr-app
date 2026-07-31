@@ -134,8 +134,6 @@
       "membresHint": "Your scope's directory",
       "hierarchie": "Hierarchy",
       "hierarchieHint": "Your leadership",
-      "discipleship": "Disciple maker",
-      "discipleshipHint": "Who mentors you",
       "cantique": "Hymn",
       "cantiqueHint": "Chris The Victor",
       "priere": "Prayer",
@@ -504,7 +502,16 @@
     "empty": "No member in your scope.",
     "pickUnitTitle": "Choose an assembly",
     "pickUnitSub": "The invited leader will be attached to this assembly.",
-    "pickUnitEmpty": "No assembly in your scope."
+    "pickUnitEmpty": "No assembly in your scope.",
+    "searchAction": "Search",
+    "clearSearch": "Clear",
+    "loadMore": "Load more",
+    "goalsTitle": "{{name}}'s pledges",
+    "goalsPersonal": "Personal pledges",
+    "goalsAssembly": "Pledge of {{name}}",
+    "goalsEmpty": "This member has no pledge yet.",
+    "goalsError": "Could not load the pledges.",
+    "goalsNoAccess": "This person is outside your perimeter."
   },
   "requests": {
     "title": "Requests",
@@ -651,37 +658,8 @@
     "leaderPrefix": "Leader: {{name}}",
     "noUnits": "No assembly under your leadership.",
     "ungrouped": "Other",
-    "needsLeader": "Leader needed"
-  },
-  "discipleship": {
-    "title": "My disciple maker",
-    "intro": "Declare who mentors you. You only declare your own disciple maker: the people who declare you appear as your disciples.",
-    "shortcutHint": "Declare who mentors you, or see your disciples.",
-    "mine": "My disciple maker",
-    "none": "No disciple maker declared",
-    "declare": "Declare my disciple maker",
-    "change": "Change disciple maker",
-    "declared": "Disciple maker saved.",
-    "declareFailed": "Could not save",
-    "loadError": "Could not load your attachment.",
-    "searchLabel": "Search for the person",
-    "searchPlaceholder": "Name, email or username",
-    "searchHint": "Only people from your ministry.",
-    "searchTooShort": "Type at least 2 characters.",
-    "noResult": "No one found in your ministry.",
-    "inviteHint": "Can't find the person? Invite them to create an account, then come back and declare them.",
-    "invite": "Invite this person",
-    "shareMessage": "Hello, join me on the shephr app: install it and create your account. I will then be able to declare you as my disciple maker.",
-    "disciplesTitle": "My disciples",
-    "disciplesHint": "The people who declared you as their disciple maker.",
-    "noDisciple": "Nobody has declared you yet.",
-    "errors": {
-      "SUPERVISOR_SELF": "You cannot be your own disciple maker.",
-      "SUPERVISOR_OUT_OF_MINISTRY": "This person does not belong to your ministry.",
-      "SUPERVISOR_CYCLE": "This person is already one of your disciples.",
-      "NO_MINISTRY": "Your account has no ministry — contact the secretariat.",
-      "QUERY_TOO_SHORT": "Type at least 2 characters."
-    }
+    "needsLeader": "Leader needed",
+    "reportsTo": "You report to"
   },
   "invite": {
     "title": "Invite a leader",
@@ -765,5 +743,35 @@
     "ministryTotals": "Ministry totals",
     "nationsHeading": "Nations",
     "manageOnWeb": "(deadline and year management on the web)"
+  },
+  "supervisor": {
+    "title": "My supervisor",
+    "intro": "Declare who you report to. You only declare YOUR supervisor: the people you supervise appear once they declare you in turn.",
+    "shortcutHint": "Declare who you report to, or see who you supervise.",
+    "mine": "My supervisor",
+    "none": "No supervisor declared",
+    "declare": "Declare my supervisor",
+    "change": "Change supervisor",
+    "declared": "Supervisor saved.",
+    "declareFailed": "Could not save",
+    "loadError": "Could not load your attachment.",
+    "searchLabel": "Search for the person",
+    "searchPlaceholder": "Name, email or username",
+    "searchHint": "Only people from your ministry.",
+    "searchTooShort": "Type at least 2 characters.",
+    "noResult": "No one found in your ministry.",
+    "inviteHint": "Can't find the person? Invite them to create an account, then come back and declare them.",
+    "invite": "Invite this person",
+    "shareMessage": "Hello, join me on the shephr app: install it and create your account. I will then be able to declare you as my supervisor.",
+    "superviseesTitle": "Leaders I supervise",
+    "superviseesHint": "People who declared you as their supervisor.",
+    "noSupervisee": "Nobody has declared you yet.",
+    "errors": {
+      "SUPERVISOR_SELF": "You cannot be your own supervisor.",
+      "SUPERVISOR_OUT_OF_MINISTRY": "This person does not belong to your ministry.",
+      "SUPERVISOR_CYCLE": "This person is already someone you supervise.",
+      "NO_MINISTRY": "Your account has no ministry — contact the secretariat.",
+      "QUERY_TOO_SHORT": "Type at least 2 characters."
+    }
   }
 }

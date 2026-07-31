@@ -187,7 +187,8 @@
     "language": "Langue",
     "requests": "Demandes",
     "contact": "Contactez-nous",
-    "contactSubject": "Demande d'assistance Shephr"
+    "contactSubject": "Demande d'assistance Shephr",
+    "menu": "Menu"
   },
   "sidebar": {
     "logout": "Déconnexion",
@@ -316,37 +317,8 @@
     "loadError": "Impossible de charger la hiérarchie.",
     "needsLeader": "Dirigeant requis",
     "unassignedTitle": "Assemblées sans dirigeant",
-    "unassignedHint": "Créées (souvent via une demande approuvée) mais sans dirigeant rattaché — nommez-en un via Membres (inviter ou gérer)."
-  },
-  "discipleship": {
-    "title": "Mon faiseur de disciple",
-    "intro": "Déclarez qui vous accompagne. Vous ne déclarez que votre propre faiseur de disciple : les personnes qui vous déclarent apparaissent ci-dessous comme vos disciples.",
-    "none": "Aucun faiseur de disciple déclaré",
-    "declare": "Déclarer",
-    "change": "Changer",
-    "declared": "Faiseur de disciple enregistré",
-    "declareFailed": "Déclaration impossible",
-    "searchLabel": "Chercher la personne",
-    "searchPlaceholder": "Nom, email ou identifiant",
-    "searchHint": "Uniquement les personnes de votre ministère.",
-    "searchTooShort": "Saisissez au moins 2 caractères.",
-    "noResult": "Aucune personne trouvée dans votre ministère.",
-    "notFound": "Vous ne trouvez pas la personne ?",
-    "inviteHint": "Invitez-la à créer son compte : partagez-lui ce lien d'inscription, puis revenez la déclarer une fois son compte créé.",
-    "copyLink": "Copier le lien",
-    "linkCopied": "Lien copié",
-    "sendMail": "Envoyer par email",
-    "mailSubject": "Rejoignez-moi sur Shephr",
-    "mailBody": "Bonjour,\n\nJe souhaite vous déclarer comme mon faiseur de disciple sur Shephr. Créez votre compte ici : {{link}}\n\nMerci !",
-    "disciplesTitle_one": "{{count}} disciple m'a déclaré",
-    "disciplesTitle_other": "{{count}} disciples m'ont déclaré",
-    "errors": {
-      "SUPERVISOR_SELF": "Vous ne pouvez pas être votre propre faiseur de disciple.",
-      "SUPERVISOR_OUT_OF_MINISTRY": "Cette personne n'appartient pas à votre ministère.",
-      "SUPERVISOR_CYCLE": "Cette personne fait déjà partie de vos disciples.",
-      "NO_MINISTRY": "Votre compte n'est rattaché à aucun ministère — contactez le secrétariat.",
-      "QUERY_TOO_SHORT": "Saisissez au moins 2 caractères."
-    }
+    "unassignedHint": "Créées (souvent via une demande approuvée) mais sans dirigeant rattaché — nommez-en un via Membres (inviter ou gérer).",
+    "reportsTo": "Vous rendez compte à"
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -659,7 +631,18 @@
     "usernameLabel": "Identifiant de connexion",
     "usernameHint": "Attribué par vous (ex. prenom.nom@shephr.org) — ce n'est pas un email.",
     "usernamePlaceholder": "prenom.nom@shephr.org",
-    "emailOptionalLabel": "Email (facultatif)"
+    "emailOptionalLabel": "Email (facultatif)",
+    "searchAction": "Rechercher",
+    "clearSearch": "Effacer",
+    "goalsTitle": "Engagements de {{name}}",
+    "goalsPersonal": "Ses engagements personnels",
+    "goalsAssembly": "Engagement de {{name}}",
+    "goalsEmpty": "Pas d'engagement du membre pour le moment.",
+    "goalsError": "Impossible de charger les engagements.",
+    "goalsNoAccess": "Cette personne n'est pas dans votre périmètre.",
+    "pagePrev": "Précédent",
+    "pageNext": "Suivant",
+    "pageOf": "Page {{page}} sur {{total}}"
   },
   "geoPicker": {
     "nation": "Nation",
@@ -1054,7 +1037,11 @@
     "confirmJoinHint": "Le rattachement est immédiat : aucune validation à attendre.",
     "confirmAsLeader": "Confirmer — je suis le dirigeant",
     "confirmAsMember": "Confirmer — je suis un membre",
-    "filterLabel": "Filtrer la liste"
+    "filterLabel": "Filtrer la liste",
+    "pickNation": "Nation",
+    "pickRegion": "Région",
+    "pickCity": "Ville",
+    "filterInCity": "Filtrer dans {{city}}…"
   },
   "map": {
     "searchCountry": "Rechercher un pays…",
@@ -1152,5 +1139,36 @@
     "searchPlaceholder": "Rechercher…",
     "noOption": "Aucune ville trouvée.",
     "entityCreated": "Créée dans la structure — visible dans votre périmètre."
+  },
+  "supervisor": {
+    "title": "Mon superviseur",
+    "intro": "Déclarez à qui vous rendez compte. Vous ne déclarez que VOTRE superviseur : les personnes que vous supervisez apparaissent quand elles vous déclarent à leur tour.",
+    "none": "Aucun superviseur déclaré",
+    "declare": "Déclarer mon superviseur",
+    "change": "Changer de superviseur",
+    "declared": "Superviseur enregistré.",
+    "declareFailed": "Déclaration impossible",
+    "searchLabel": "Chercher la personne",
+    "searchPlaceholder": "Nom, email ou identifiant",
+    "searchHint": "Uniquement les personnes de votre ministère.",
+    "searchTooShort": "Saisissez au moins 2 caractères.",
+    "noResult": "Aucune personne trouvée dans votre ministère.",
+    "notFound": "Vous ne trouvez pas la personne ?",
+    "inviteHint": "Invitez-la à créer son compte : partagez-lui ce lien d'inscription, puis revenez la déclarer une fois son compte créé.",
+    "copyLink": "Copier le lien",
+    "linkCopied": "Lien copié",
+    "sendMail": "Envoyer par email",
+    "mailSubject": "Rejoignez-moi sur Shephr",
+    "mailBody": "Bonjour,\n\nJe souhaite vous déclarer comme mon superviseur sur Shephr. Créez votre compte ici : {{link}}\n\nMerci !",
+    "superviseesTitle_one": "{{count}} dirigeant m'a déclaré comme superviseur",
+    "superviseesTitle_other": "{{count}} dirigeants m'ont déclaré comme superviseur",
+    "errors": {
+      "SUPERVISOR_SELF": "Vous ne pouvez pas être votre propre superviseur.",
+      "SUPERVISOR_OUT_OF_MINISTRY": "Cette personne n'appartient pas à votre ministère.",
+      "SUPERVISOR_CYCLE": "Cette personne fait déjà partie des dirigeants que vous supervisez.",
+      "NO_MINISTRY": "Votre compte n'est rattaché à aucun ministère — contactez le secrétariat.",
+      "QUERY_TOO_SHORT": "Saisissez au moins 2 caractères."
+    },
+    "shortcutHint": "Déclarer à qui vous rendez compte, ou voir qui vous supervisez."
   }
 }
