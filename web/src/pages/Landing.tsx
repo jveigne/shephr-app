@@ -27,8 +27,11 @@ function Feature({ icon, title, desc }: { icon: string; title: string; desc: str
 export function LandingPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { isAuthenticated, canAccessWeb } = useAuth();
-  const loggedIn = isAuthenticated && canAccessWeb;
+  const { ready, isAuthenticated, canAccessWeb } = useAuth();
+  // `ready` est indispensable : tant que le /me n'a pas répondu, l'état est « déconnecté »
+  // par défaut. Sans ce garde, les CTA s'affichent en version visiteur puis changent de
+  // destination sous le curseur une fois la session résolue.
+  const loggedIn = ready && isAuthenticated && canAccessWeb;
 
   const contact = useContactSettings();
   const mailto = contactMailto(t('landing.contact.mailSubject'));
@@ -58,6 +61,10 @@ export function LandingPage() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <LangSwitch />
+            {/* Même garde que le hero : la barre passe de « Créer un compte + Se connecter »
+                à « Mon espace » une fois la session résolue, ce qui déplace les boutons sous
+                le curseur en plus d'en changer la destination. */}
+            <span style={{ display: 'flex', alignItems: 'center', gap: 14, visibility: ready ? 'visible' : 'hidden' }}>
             {!loggedIn && (
               <button
                 onClick={() => navigate('/signup')}
@@ -74,6 +81,7 @@ export function LandingPage() {
                 background: 'var(--green-600)', color: '#fff', fontWeight: 600, fontSize: 14,
               }}
             >{loggedIn ? t('landing.nav.account') : t('landing.nav.login')}</button>
+            </span>
           </div>
         </div>
       </header>
@@ -90,7 +98,10 @@ export function LandingPage() {
         <p style={{ fontSize: 'clamp(16px, 4.5vw, 19px)', lineHeight: 1.55, color: 'var(--ink-700)', maxWidth: 640, margin: '0 auto 32px' }}>
           {t('landing.hero.subtitle')}
         </p>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+        {/* Neutralisé tant que la session n'est pas résolue : ce bouton change de destination
+            avec `loggedIn`, un clic dans l'intervalle partait sur /dashboard → /goals alors que
+            l'écran affichait encore « Créer un compte ». `visibility` conserve la hauteur. */}
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', visibility: ready ? 'visible' : 'hidden' }}>
           {/* Non connecté : l'inscription libre est l'action principale, la connexion vient ensuite. */}
           <button
             onClick={() => navigate(loggedIn ? '/dashboard' : '/signup')}

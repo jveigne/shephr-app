@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
 import { LangSwitch } from '../components/LangSwitch';
@@ -8,11 +8,23 @@ import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../components/Toast';
 import { hasMemberSpace, hasMinistryAccess } from '../services/authApi';
 
+/**
+ * Destination à reprendre après une session expirée. N'accepte qu'un chemin interne :
+ * une URL absolue ou protocol-relative (`//ailleurs`) serait une redirection ouverte.
+ * L'accès reste arbitré par les gardes d'AppShell/MemberShell à l'arrivée.
+ */
+function safeNext(raw: string | null): string | null {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return null;
+  return raw.startsWith('/login') ? null : raw;
+}
+
 export function LoginPage() {
   const { login } = useAuth();
   const { push } = useToast();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const nextPath = safeNext(searchParams.get('next'));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -33,13 +45,13 @@ export function LoginPage() {
       if (hasMinistryAccess(me)) {
         // Comportement actuel : accès Web Espace ministère.
         push({ kind: 'ok', title: t('login.welcomeToast'), msg: t('login.welcomeToastMsg') });
-        navigate('/dashboard', { replace: true });
+        navigate(nextPath ?? '/dashboard', { replace: true });
         return;
       }
       if (hasMemberSpace(me)) {
         // Feature A — MEMBRE Goals rattaché : espace minimal « Mes objectifs ».
         push({ kind: 'ok', title: t('login.welcomeToast'), msg: t('login.welcomeToastMsg') });
-        navigate('/my-goals', { replace: true });
+        navigate(nextPath ?? '/my-goals', { replace: true });
         return;
       }
       const noAttachmentAtAll =
