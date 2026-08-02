@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   fetchMe,
@@ -17,7 +18,7 @@ import {
   type RegisterRequest,
   type UserDTO,
 } from '../services/authApi';
-import { getAuthToken, setAuthToken } from '../services/apiClient';
+import { getAuthToken, setAuthToken, setSessionExpiredHandler } from '../services/apiClient';
 import { applyUserLanguage } from '../i18n';
 
 interface AuthState {
@@ -47,12 +48,27 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [state, setState] = useState<AuthState>({
     ready: false,
     token: null,
     user: null,
     me: null,
   });
+
+  // Session expirée (401 sur un appel authentifié) : on purge et on renvoie vers /login
+  // par une navigation SPA. L'ancien `window.location.assign` rechargeait toute l'appli et
+  // détruisait l'écran en cours ; le cache React Query est purgé ici, explicitement, puisque
+  // ce n'est plus le rechargement qui s'en charge.
+  useEffect(() => {
+    setSessionExpiredHandler((from) => {
+      queryClient.clear();
+      setState({ ready: true, token: null, user: null, me: null });
+      const next = from && !from.startsWith('/login') ? `?next=${encodeURIComponent(from)}` : '';
+      navigate(`/login${next}`, { replace: true });
+    });
+    return () => setSessionExpiredHandler(null);
+  }, [navigate, queryClient]);
 
   useEffect(() => {
     (async () => {
