@@ -10,6 +10,7 @@ import { SignupPage } from './pages/Signup';
 import { AcceptInvitationPage } from './pages/AcceptInvitation';
 import { ActivateAccountPage } from './pages/ActivateAccount';
 import { DeleteAccountPage } from './pages/DeleteAccount';
+import { PrivacyPage } from './pages/Privacy';
 import { DashboardPage } from './pages/Dashboard';
 import { DonationsPage } from './pages/Donations';
 import { GoalsPage } from './pages/Goals';
@@ -59,6 +60,9 @@ export function App() {
               {/* Page publique exigée par Google Play : demande de suppression de compte. */}
               <Route path="/delete-account" element={<DeleteAccountPage />} />
               <Route path="/supprimer-compte" element={<DeleteAccountPage />} />
+              {/* Page publique exigée par Google Play : règles de confidentialité. */}
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/confidentialite" element={<PrivacyPage />} />
               {/* Feature B — onboarding : authentifié mais HORS AppShell (aucun rattachement). */}
               <Route path="/join" element={<OnboardingPage />} />
               {/* Feature A — espace membre minimal (MEMBRE Goals rattaché), gaté par MemberShell. */}

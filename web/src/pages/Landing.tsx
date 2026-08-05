@@ -221,6 +221,9 @@ export function LandingPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             {/* Lien exigé par Google Play : la demande de suppression de compte doit être
                 atteignable publiquement depuis le site, sans connexion. */}
+            <Link to="/privacy" style={{ color: 'var(--ink-400)', fontSize: 13, textDecoration: 'none' }}>
+              {t('landing.footer.privacy')}
+            </Link>
             <Link to="/delete-account" style={{ color: 'var(--ink-400)', fontSize: 13, textDecoration: 'none' }}>
               {t('landing.footer.deleteAccount')}
             </Link>
