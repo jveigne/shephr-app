@@ -73,12 +73,13 @@
     "contact": {
       "title": "Activez votre espace Shephr",
       "desc": "Vous rejoignez une assemblée existante ? Créez votre compte, puis déposez votre demande de rattachement. Pour déployer un ministère entier, nous vous accompagnons : contactez-nous et nous configurons votre structure, créons vos premiers accès et activons les modules dont vous avez besoin.",
-      "cta": "Nous contacter pour activer",
       "or": "ou écrivez-nous à",
-      "mailSubject": "Activation d'un espace Shephr"
+      "mailSubject": "Activation d'un espace Shephr",
+      "whatsappText": "Bonjour, je souhaite activer un espace Shephr pour mon ministère."
     },
     "footer": {
-      "tagline": "La plateforme de gestion pour votre ministère."
+      "tagline": "La plateforme de gestion pour votre ministère.",
+      "deleteAccount": "Supprimer mon compte"
     }
   },
   "deleteAccount": {

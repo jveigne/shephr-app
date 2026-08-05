@@ -73,12 +73,13 @@
     "contact": {
       "title": "Activate your Shephr space",
       "desc": "Joining an existing assembly? Create your account, then submit your join request. To roll out a whole ministry, we support you: contact us and we'll set up your structure, create your first accesses and enable the modules you need.",
-      "cta": "Contact us to activate",
       "or": "or write to us at",
-      "mailSubject": "Shephr space activation"
+      "mailSubject": "Shephr space activation",
+      "whatsappText": "Hello, I would like to activate a Shephr space for my ministry."
     },
     "footer": {
-      "tagline": "The management platform for your ministry."
+      "tagline": "The management platform for your ministry.",
+      "deleteAccount": "Delete my account"
     }
   },
   "deleteAccount": {
