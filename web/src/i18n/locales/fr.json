@@ -79,8 +79,81 @@
     },
     "footer": {
       "tagline": "La plateforme de gestion pour votre ministère.",
+      "privacy": "Confidentialité",
       "deleteAccount": "Supprimer mon compte"
     }
+  },
+  "privacy": {
+    "title": "Politique de confidentialité",
+    "updated": "Dernière mise à jour : 5 août 2026",
+    "intro": "Shephr est une plateforme de gestion pour les ministères et les églises. Cette politique explique quelles données nous collectons, pourquoi, qui peut les consulter et comment vous en gardez le contrôle. Elle s'applique à l'application mobile Shephr comme au site web.",
+    "controllerTitle": "Qui est responsable de vos données",
+    "controllerText": "Shephr est édité par JEXCELLENCE SAS, 9 rue des Colonnes, 75002 Paris, France, responsable du traitement des données décrites ici. Votre ministère ou votre église, qui décide des personnes à inscrire et des modules activés, en est responsable conjointement pour les données de ses membres.",
+    "controllerContact": "Pour toute question relative à vos données, écrivez-nous à",
+    "collectedTitle": "Données que nous collectons",
+    "collectedIntro": "Nous ne collectons que ce dont l'application a besoin pour fonctionner. Aucune donnée n'est collectée à votre insu en arrière-plan.",
+    "collected": {
+      "account": "Compte : nom et prénom, identifiant de connexion (adresse e-mail), numéro de téléphone et indicatif pays, mot de passe (conservé sous forme chiffrée, jamais en clair).",
+      "org": "Organisation : votre rattachement (ministère, région, ville, assemblée), vos rôles et le périmètre sur lequel vous avez des droits.",
+      "goals": "Objectifs : les engagements que vous déclarez, leurs montants et leur suivi dans le temps.",
+      "donations": "Dons : les contributions que vous déclarez — montant, devise, date et catégorie. Shephr n'encaisse aucun paiement et ne collecte aucune donnée bancaire.",
+      "memberCare": "Suivi pastoral : lorsqu'un dirigeant vous accompagne, les informations de suivi qu'il saisit (état d'avancement, date de première rencontre, coordonnées, notes).",
+      "technical": "Technique : journaux de connexion et données de sécurité (date de connexion, adresse IP, type d'appareil) nécessaires au bon fonctionnement et à la protection des comptes."
+    },
+    "noTrackingTitle": "Ce que nous ne faisons pas",
+    "noTracking": {
+      "sale": "Nous ne vendons ni ne louons vos données à qui que ce soit.",
+      "ads": "Nous n'affichons aucune publicité et n'alimentons aucun réseau publicitaire.",
+      "analytics": "L'application n'intègre aucun outil de mesure d'audience ni de pistage tiers.",
+      "sensors": "L'application n'accède ni à votre position, ni à vos contacts, ni à votre appareil photo, ni à votre microphone."
+    },
+    "purposeTitle": "Pourquoi nous utilisons ces données",
+    "purpose": {
+      "service": "Créer votre compte, vous authentifier et vous donner accès aux modules de votre ministère — sans ces données, le service ne peut pas fonctionner.",
+      "org": "Rattacher chaque personne à son assemblée, appliquer les rôles et consolider les objectifs et les dons aux différents niveaux de l'organisation.",
+      "support": "Répondre à vos demandes d'assistance lorsque vous nous écrivez.",
+      "security": "Détecter les accès anormaux, prévenir les abus et garantir la sécurité des comptes.",
+      "legal": "Respecter nos obligations légales, notamment comptables pour les registres de dons."
+    },
+    "sensitiveTitle": "Données sensibles",
+    "sensitiveText": "Votre appartenance à une église et les informations de suivi pastoral révèlent des convictions religieuses. Ce sont des données sensibles et nous les traitons comme telles : accès restreint aux seuls responsables de votre périmètre, aucun partage à des fins commerciales, aucune utilisation en dehors de la vie de votre ministère.",
+    "sensitiveBasis": "Ces données ne sont traitées que dans le cadre de votre participation volontaire à votre ministère, et vous pouvez en demander la suppression à tout moment.",
+    "visibilityTitle": "Qui peut voir vos données dans l'application",
+    "visibilityText": "Shephr reproduit l'organisation de votre ministère : chaque dirigeant ne voit que le périmètre dont il a la responsabilité. Le responsable de votre assemblée voit les membres de son assemblée, celui d'une région voit les assemblées de sa région, et ainsi de suite jusqu'au secrétariat international.",
+    "visibilityScope": "Les autres membres n'ont pas accès à vos objectifs, à vos dons ni à votre suivi pastoral. Aucune de ces données n'est publique ni accessible en dehors de votre organisation.",
+    "sharingTitle": "Partage et prestataires",
+    "sharingText": "Nous ne partageons vos données avec aucun tiers à des fins commerciales. Nous faisons uniquement appel aux prestataires techniques nécessaires pour faire fonctionner le service, qui agissent sur nos instructions et n'ont pas le droit d'utiliser vos données pour leur compte.",
+    "sharing": {
+      "hosting": "Hébergement : nos serveurs et notre base de données sont hébergés chez Railway, notre prestataire d'infrastructure cloud. Railway intervient comme sous-traitant : il héberge les données sans y accéder pour son propre compte.",
+      "region": "Localisation : vos données sont hébergées dans l'Union européenne, dans la région EU West de Railway, à Amsterdam (Pays-Bas). Elles ne sont pas stockées en dehors de l'Union européenne. Railway étant une société établie aux États-Unis, toute intervention technique de sa part depuis un autre pays est encadrée par les clauses contractuelles types de la Commission européenne.",
+      "transfer": "Nous pouvons également communiquer des données si la loi nous y oblige, sur demande d'une autorité compétente."
+    },
+    "retentionTitle": "Durée de conservation",
+    "retentionText": "Nous conservons vos données tant que votre compte est actif. Après une demande de suppression, votre compte et les données associées sont retirés de nos systèmes actifs sous 30 jours au maximum.",
+    "retentionLegal": "Certaines données peuvent être conservées plus longtemps lorsque la loi l'exige — par exemple les registres liés aux dons, pour des obligations comptables — puis supprimées à l'issue du délai légal.",
+    "rightsTitle": "Vos droits",
+    "rightsIntro": "Conformément au RGPD et aux réglementations équivalentes, vous disposez des droits suivants :",
+    "rights": {
+      "access": "Accéder aux données que nous détenons sur vous et en obtenir une copie.",
+      "rectify": "Corriger les informations inexactes — la plupart sont modifiables directement dans l'application, dans vos réglages.",
+      "delete": "Demander la suppression de votre compte et des données associées.",
+      "portability": "Recevoir vos données dans un format lisible et réutilisable.",
+      "object": "Vous opposer à un traitement ou en demander la limitation.",
+      "complaint": "Introduire une réclamation auprès de l'autorité de protection des données de votre pays."
+    },
+    "rightsHow": "Pour exercer l'un de ces droits, écrivez-nous à l'adresse ci-dessous. La suppression peut aussi se faire directement dans l'application, dans Réglages :",
+    "deleteLink": "demander la suppression de mon compte",
+    "securityTitle": "Sécurité",
+    "securityText": "Les échanges entre l'application et nos serveurs sont chiffrés (HTTPS), les mots de passe sont stockés sous forme de condensats non réversibles, et l'accès aux données est cloisonné par périmètre et par rôle.",
+    "securityBreach": "En cas de violation de données susceptible de vous exposer à un risque, nous vous en informons ainsi que les autorités compétentes, dans les délais prévus par la réglementation.",
+    "childrenTitle": "Mineurs",
+    "childrenText": "Shephr s'adresse aux membres et aux responsables d'un ministère. Un mineur ne peut y être inscrit qu'avec l'accord de ses parents ou de son représentant légal, qui peut à tout moment demander la suppression du compte.",
+    "changesTitle": "Modifications de cette politique",
+    "changesText": "Cette politique peut évoluer avec l'application. En cas de changement significatif, nous mettons à jour la date en haut de page et vous en informons dans l'application.",
+    "contactTitle": "Nous contacter",
+    "contactText": "Une question sur vos données, une demande d'accès ou de suppression ? Écrivez-nous, nous vous répondons.",
+    "mailSubject": "Shephr — question sur mes données personnelles",
+    "whatsappText": "Bonjour, j'ai une question sur la confidentialité de mes données Shephr."
   },
   "deleteAccount": {
     "title": "Suppression de votre compte Shephr",

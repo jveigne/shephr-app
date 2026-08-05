@@ -79,8 +79,81 @@
     },
     "footer": {
       "tagline": "The management platform for your ministry.",
+      "privacy": "Privacy",
       "deleteAccount": "Delete my account"
     }
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "updated": "Last updated: 5 August 2026",
+    "intro": "Shephr is a management platform for ministries and churches. This policy explains what data we collect, why, who can see it and how you stay in control of it. It applies to the Shephr mobile app as well as to the website.",
+    "controllerTitle": "Who is responsible for your data",
+    "controllerText": "Shephr is published by JEXCELLENCE SAS, 9 rue des Colonnes, 75002 Paris, France, the controller for the processing described here. Your ministry or church, which decides who is enrolled and which modules are enabled, is a joint controller for its members' data.",
+    "controllerContact": "For any question about your data, write to us at",
+    "collectedTitle": "Data we collect",
+    "collectedIntro": "We only collect what the app needs to work. No data is collected in the background without your knowledge.",
+    "collected": {
+      "account": "Account: first and last name, sign-in identifier (email address), phone number and country code, password (stored encrypted, never in clear text).",
+      "org": "Organization: your attachments (ministry, region, city, assembly), your roles and the scope you have rights over.",
+      "goals": "Goals: the commitments you declare, their amounts and how they progress over time.",
+      "donations": "Donations: the contributions you declare — amount, currency, date and category. Shephr processes no payments and collects no banking data.",
+      "memberCare": "Member care: when a leader supports you, the follow-up information they record (progress status, first meeting date, contact details, notes).",
+      "technical": "Technical: sign-in logs and security data (sign-in date, IP address, device type) needed to run the service and protect accounts."
+    },
+    "noTrackingTitle": "What we do not do",
+    "noTracking": {
+      "sale": "We do not sell or rent your data to anyone.",
+      "ads": "We display no advertising and feed no advertising network.",
+      "analytics": "The app embeds no audience-measurement or third-party tracking tool.",
+      "sensors": "The app accesses neither your location, nor your contacts, nor your camera, nor your microphone."
+    },
+    "purposeTitle": "Why we use this data",
+    "purpose": {
+      "service": "Create your account, authenticate you and give you access to your ministry's modules — the service cannot work without this data.",
+      "org": "Attach each person to their assembly, apply roles, and consolidate goals and donations across the levels of the organization.",
+      "support": "Answer your support requests when you write to us.",
+      "security": "Detect abnormal access, prevent abuse and keep accounts secure.",
+      "legal": "Meet our legal obligations, in particular accounting ones for donation records."
+    },
+    "sensitiveTitle": "Sensitive data",
+    "sensitiveText": "Your membership of a church and member care records reveal religious beliefs. This is sensitive data and we treat it as such: access is restricted to the leaders responsible for your scope, it is never shared for commercial purposes and never used outside the life of your ministry.",
+    "sensitiveBasis": "This data is only processed as part of your voluntary participation in your ministry, and you can request its deletion at any time.",
+    "visibilityTitle": "Who can see your data in the app",
+    "visibilityText": "Shephr mirrors your ministry's organization: each leader only sees the scope they are responsible for. Your assembly's leader sees the members of that assembly, a regional leader sees the assemblies in their region, and so on up to the international secretariat.",
+    "visibilityScope": "Other members have no access to your goals, your donations or your member care records. None of this data is public or reachable outside your organization.",
+    "sharingTitle": "Sharing and service providers",
+    "sharingText": "We share your data with no third party for commercial purposes. We only rely on the technical providers needed to run the service, which act on our instructions and may not use your data for their own purposes.",
+    "sharing": {
+      "hosting": "Hosting: our servers and database are hosted with Railway, our cloud infrastructure provider. Railway acts as a processor: it hosts the data without accessing it for its own purposes.",
+      "region": "Location: your data is hosted in the European Union, in Railway's EU West region, in Amsterdam (Netherlands). It is not stored outside the European Union. As Railway is a company established in the United States, any technical intervention on its part from another country is governed by the European Commission's standard contractual clauses.",
+      "transfer": "We may also disclose data where the law requires it, at the request of a competent authority."
+    },
+    "retentionTitle": "Retention period",
+    "retentionText": "We keep your data for as long as your account is active. After a deletion request, your account and the associated data are removed from our active systems within 30 days at most.",
+    "retentionLegal": "Some data may be kept longer when required by law — for example donation records, for accounting obligations — then deleted once the legal retention period ends.",
+    "rightsTitle": "Your rights",
+    "rightsIntro": "Under the GDPR and equivalent regulations, you have the following rights:",
+    "rights": {
+      "access": "Access the data we hold about you and obtain a copy of it.",
+      "rectify": "Correct inaccurate information — most of it can be edited directly in the app, in your settings.",
+      "delete": "Request the deletion of your account and the associated data.",
+      "portability": "Receive your data in a readable, reusable format.",
+      "object": "Object to a processing activity or request that it be restricted.",
+      "complaint": "Lodge a complaint with the data protection authority in your country."
+    },
+    "rightsHow": "To exercise any of these rights, write to us at the address below. Deletion can also be done directly in the app, under Settings:",
+    "deleteLink": "request the deletion of my account",
+    "securityTitle": "Security",
+    "securityText": "Traffic between the app and our servers is encrypted (HTTPS), passwords are stored as non-reversible hashes, and access to data is partitioned by scope and by role.",
+    "securityBreach": "Should a data breach put you at risk, we will notify you and the competent authorities within the timeframes set by the regulation.",
+    "childrenTitle": "Minors",
+    "childrenText": "Shephr is intended for the members and leaders of a ministry. A minor may only be enrolled with the consent of their parents or legal guardian, who can request the deletion of the account at any time.",
+    "changesTitle": "Changes to this policy",
+    "changesText": "This policy may evolve along with the app. In case of a significant change, we update the date at the top of this page and notify you in the app.",
+    "contactTitle": "Contact us",
+    "contactText": "A question about your data, an access or deletion request? Write to us and we will get back to you.",
+    "mailSubject": "Shephr — question about my personal data",
+    "whatsappText": "Hello, I have a question about the privacy of my Shephr data."
   },
   "deleteAccount": {
     "title": "Delete your Shephr account",

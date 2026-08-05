@@ -94,7 +94,9 @@ export function DeleteAccountPage() {
       <footer style={{ borderTop: '1px solid var(--line-soft)', background: 'var(--ivory)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <span style={{ fontFamily: 'var(--font-serif)', fontSize: 16, color: 'var(--green-800)', fontWeight: 600 }}>shephr</span>
-          <span style={{ color: 'var(--ink-400)', fontSize: 13 }}>{t('landing.footer.tagline')}</span>
+          <Link to="/privacy" style={{ color: 'var(--ink-400)', fontSize: 13, textDecoration: 'none' }}>
+            {t('landing.footer.privacy')}
+          </Link>
         </div>
       </footer>
     </div>
