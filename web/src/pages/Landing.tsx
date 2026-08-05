@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { useAuth } from '../hooks/useAuth';
 import { LangSwitch } from '../components/LangSwitch';
-import { contactMailto, useContactSettings } from '../services/contactApi';
+import { contactMailto, contactWhatsapp, useContactSettings } from '../services/contactApi';
 
 
 function Feature({ icon, title, desc }: { icon: string; title: string; desc: string }) {
@@ -35,6 +35,7 @@ export function LandingPage() {
 
   const contact = useContactSettings();
   const mailto = contactMailto(t('landing.contact.mailSubject'));
+  const whatsapp = contactWhatsapp(t('landing.contact.whatsappText'));
 
   const features = [
     { icon: 'sparkle', key: 'goals' },
@@ -113,7 +114,9 @@ export function LandingPage() {
               style={{ padding: '13px 26px', borderRadius: 'var(--radius)', border: '1px solid var(--green-600)', cursor: 'pointer', background: 'transparent', color: 'var(--green-700)', fontWeight: 600, fontSize: 15 }}
             >{t('landing.hero.ctaPrimary')}</button>
           )}
-          <a href={mailto} style={{ padding: '13px 26px', borderRadius: 'var(--radius)', border: '1px solid var(--green-600)', background: 'transparent', color: 'var(--green-700)', fontWeight: 600, fontSize: 15, textDecoration: 'none' }}>
+          {/* Ne part plus directement sur le client mail : on renvoie au bloc de contact, qui
+              laisse choisir entre WhatsApp et e-mail (même traitement que la page Contact). */}
+          <a href="#contact" style={{ padding: '13px 26px', borderRadius: 'var(--radius)', border: '1px solid var(--green-600)', background: 'transparent', color: 'var(--green-700)', fontWeight: 600, fontSize: 15, textDecoration: 'none' }}>
             {t('landing.hero.ctaSecondary')}
           </a>
         </div>
@@ -187,12 +190,17 @@ export function LandingPage() {
       {/*</section>*/}
 
       {/* Activation / contact */}
-      <section style={{ maxWidth: 760, margin: '0 auto', padding: 'clamp(40px, 8vw, 64px) 20px', textAlign: 'center' }}>
+      <section id="contact" style={{ maxWidth: 760, margin: '0 auto', padding: 'clamp(40px, 8vw, 64px) 20px', textAlign: 'center', scrollMarginTop: 80 }}>
         <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(23px, 6vw, 30px)', color: 'var(--green-900)', margin: '0 0 14px' }}>{t('landing.contact.title')}</h2>
         <p style={{ color: 'var(--ink-700)', fontSize: 'clamp(15px, 4vw, 17px)', lineHeight: 1.6, margin: '0 auto 26px', maxWidth: 580 }}>{t('landing.contact.desc')}</p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <a href={mailto} style={{ padding: '14px 30px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--green-600)', color: '#fff', fontWeight: 600, fontSize: 16, textDecoration: 'none', display: 'inline-block' }}>
-            {t('landing.contact.cta')}
+          {/* Deux canaux comme pour un utilisateur connecté : un visiteur sans client mail
+              configuré restait sinon sans issue. WhatsApp en avant, e-mail en second. */}
+          <a href={whatsapp} target="_blank" rel="noreferrer" style={{ padding: '14px 30px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--green-600)', color: '#fff', fontWeight: 600, fontSize: 16, textDecoration: 'none', display: 'inline-block' }}>
+            {t('join.contactWhatsapp')}
+          </a>
+          <a href={mailto} style={{ padding: '14px 30px', borderRadius: 'var(--radius)', border: '1px solid var(--line-soft)', background: 'transparent', color: 'var(--ink-700)', fontWeight: 600, fontSize: 16, textDecoration: 'none', display: 'inline-block' }}>
+            {t('join.contactMail')}
           </a>
           {!loggedIn && (
             <button
@@ -210,7 +218,14 @@ export function LandingPage() {
       <footer style={{ borderTop: '1px solid var(--line-soft)', background: 'var(--ivory)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <span style={{ fontFamily: 'var(--font-serif)', fontSize: 16, color: 'var(--green-800)', fontWeight: 600 }}>shephr</span>
-          <span style={{ color: 'var(--ink-400)', fontSize: 13 }}>{t('landing.footer.tagline')}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            {/* Lien exigé par Google Play : la demande de suppression de compte doit être
+                atteignable publiquement depuis le site, sans connexion. */}
+            <Link to="/delete-account" style={{ color: 'var(--ink-400)', fontSize: 13, textDecoration: 'none' }}>
+              {t('landing.footer.deleteAccount')}
+            </Link>
+            <span style={{ color: 'var(--ink-400)', fontSize: 13 }}>{t('landing.footer.tagline')}</span>
+          </div>
         </div>
       </footer>
     </div>
