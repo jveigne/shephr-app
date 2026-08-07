@@ -308,7 +308,11 @@ export async function previewInvitationByCode(shortCode: string) {
   return data;
 }
 
-export async function acceptInvitationByCode(payload: { shortCode: string; password: string }) {
+export async function acceptInvitationByCode(payload: {
+  shortCode: string; password: string;
+  // A1 (RG-ID-04) — mêmes coordonnées que l'activation par lien (téléphone requis côté formulaire).
+  phoneNumber?: string; countryCode?: string; email?: string;
+}) {
   const { data } = await apiClient.post<AuthResponse>(
     '/api/cmfipraise/auth/invitation/code/accept',
     payload,

@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { DIAL_COUNTRIES } from '../constants/dialCodes';
+import { CountryDialPicker } from '../components/CountryDialPicker';
 import { Icon } from '../components/Icon';
 import { Button, Field, Input } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
@@ -37,6 +39,10 @@ export function ActivateAccountPage() {
 
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  // A1 (RG-ID-04) : téléphone OBLIGATOIRE — le PAYS choisi porte l'indicatif (JP 23/07).
+  const [countryIso, setCountryIso] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +81,14 @@ export function ActivateAccountPage() {
   const onActivate = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (!countryIso) {
+      setError(t('invitation.countryRequired'));
+      return;
+    }
+    if (phone.trim().replace(/\D/g, '').length < 6) {
+      setError(t('invitation.phoneRequired'));
+      return;
+    }
     if (password.length < 8) {
       setError(t('invitation.tooShort'));
       return;
@@ -85,7 +99,13 @@ export function ActivateAccountPage() {
     }
     setSubmitting(true);
     try {
-      const res = await acceptInvitationByCode({ shortCode: code.trim().toUpperCase(), password });
+      const res = await acceptInvitationByCode({
+        shortCode: code.trim().toUpperCase(),
+        password,
+        phoneNumber: phone.trim(),
+        countryCode: DIAL_COUNTRIES.find((c) => c.iso === countryIso)?.dial,
+        email: email.trim() || undefined,
+      });
       const me = await establishSession(res.token);
       if (!hasMinistryAccess(me)) {
         setError(t('invitation.noAccess'));
@@ -157,8 +177,36 @@ export function ActivateAccountPage() {
               </div>
 
               <form className="form" onSubmit={onActivate}>
-                <Field label={t('invitation.emailLabel')}>
-                  <Input type="email" value={preview.email ?? ''} readOnly icon={<Icon name="mail" size={15} />} />
+                {/* A1 — les comptes invités n'ont pas toujours d'email : on retombe sur l'identifiant. */}
+                <Field label={preview.email ? t('invitation.emailLabel') : t('invitation.usernameLabel')}>
+                  <Input
+                    type="text"
+                    value={preview.email ?? preview.username ?? ''}
+                    readOnly
+                    icon={<Icon name={preview.email ? 'mail' : 'user'} size={15} />}
+                  />
+                </Field>
+
+                <Field label={t('invitation.phoneLabel')} hint={t('invitation.phoneHint')}>
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    <CountryDialPicker value={countryIso} onChange={setCountryIso} />
+                    <Input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder={t('invitation.phonePlaceholder')}
+                      required
+                    />
+                  </div>
+                </Field>
+
+                <Field label={t('invitation.contactEmailLabel')}>
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={t('invitation.contactEmailPlaceholder')}
+                    icon={<Icon name="mail" size={15} />}
+                  />
                 </Field>
 
                 <Field label={t('invitation.passwordLabel')} hint={t('invitation.passwordHint')}>
@@ -222,7 +270,15 @@ export function ActivateAccountPage() {
 
               <button
                 type="button"
-                onClick={() => { setPreview(null); setError(null); }}
+                onClick={() => {
+                  setPreview(null);
+                  setError(null);
+                  setPassword('');
+                  setConfirm('');
+                  setCountryIso('');
+                  setPhone('');
+                  setEmail('');
+                }}
                 style={{
                   marginTop: 14, background: 'transparent', border: 'none', cursor: 'pointer',
                   color: 'var(--ink-500)', fontFamily: 'var(--font-sans)', fontSize: 14, padding: 6,
