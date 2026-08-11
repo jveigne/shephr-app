@@ -6,17 +6,63 @@
       "account": "Mon espace"
     },
     "hero": {
-      "badge": "Plateforme de gestion d'église",
-      "title": "Pilotez la vie de votre église, en un seul endroit",
-      "subtitle": "Shephr réunit les objectifs, les dons, le suivi pastoral et les recueils de votre ministère — du membre jusqu'au secrétariat international.",
+      "badge": "But Quinquennal CMCI · 2026 → 2030",
+      "title": "Le But Quinquennal, porté par chacun de nous",
+      "subtitle": "Quatorze axes, quarante actions, cinq années. Shephr est l'outil qui permet à chaque membre, chaque assemblée et chaque pays de déclarer ses engagements, de les cumuler et d'en suivre l'accomplissement jusqu'au 31 décembre 2030.",
       "ctaPrimary": "Se connecter",
       "ctaSignup": "Créer un compte",
       "ctaSecondary": "Nous contacter",
-      "note": "Créez votre compte gratuitement pour rejoindre votre assemblée. L'activation d'un ministère se fait avec notre accompagnement — écrivez-nous pour démarrer."
+      "note": "Créez votre compte gratuitement pour rejoindre votre assemblée et déclarer vos engagements. Le déploiement d'un ministère entier se fait avec notre accompagnement — écrivez-nous pour démarrer."
+    },
+    "quinquennat": {
+      "kicker": "Parole d'encouragement du Seigneur — RAM 2025",
+      "quote1": "Prenez le but quinquennal comme une joie, comme un don que Je vous fais. Je vous ai rendu grands et regardez ce que J'ai fait de vous et pour vous ; ce n'est qu'un début.",
+      "quote2": "Lorsque cet objectif sera accompli, il ne marquera pas seulement l'achèvement d'activités et de projets ; il révélera des personnes transformées — des hommes et des femmes de poids, de référence et de fruit durable.",
+      "source": "RAM 2025, Ndoumbi (Bertoua — Cameroun), sous la direction de notre Leader le Frère Theodore Andoseh",
+      "contextTitle": "Une planification pour toute la vie du Ministère",
+      "context": "Le But Quinquennal est le fruit des travaux tenus du 22 au 27 décembre 2025 à Abidjan par les délégués du Sommet Spécial Abidjan 2024, élargis à d'autres dirigeants du Ministère : quatorze axes couvrant l'ensemble de la vie de notre Ministère, déclinés en quarante actions précises à mener de 2026 à 2030.",
+      "figures": {
+        "axes": "axes de la vie du Ministère",
+        "actions": "actions précises à mener",
+        "years": "années, de 2026 à 2030",
+        "deadlineValue": "31 déc. 2030",
+        "deadline": "le But Quinquennal offert accompli"
+      }
+    },
+    "goals": {
+      "kicker": "Module Objectifs",
+      "title": "De la foi de chacun au But accompli",
+      "subtitle": "Trouves-y ce que tu vas personnellement porter. Shephr recueille l'engagement de chacun, le fait remonter niveau par niveau et rend visible, chaque année, où nous en sommes réellement.",
+      "faith": {
+        "title": "L'engagement par la foi",
+        "desc": "Chacun déclare ce qu'il porte — par la foi, pas par le calcul. Une fois soumis, l'engagement est verrouillé : un acte unique, posé devant le Seigneur."
+      },
+      "aggregate": {
+        "title": "Le cumul à chaque niveau",
+        "desc": "L'objectif retenu est le maximum entre le cumul des sous-niveaux et l'engagement de foi du dirigeant : personne ne vise en dessous de ce que portent les siens."
+      },
+      "progress": {
+        "title": "L'état réel, année après année",
+        "desc": "Le But se joue sur cinq ans. Chaque année, on déclare où l'on en est vraiment, avant la date limite fixée par le secrétariat — et l'évolution reste visible."
+      },
+      "levels": {
+        "title": "Du membre au continent",
+        "desc": "Membre, assemblée, région, pays, continent : la même déclaration remonte toute la chaîne, sans ressaisie ni tableur, avec tableaux de bord et exports à chaque étage."
+      },
+      "chainTitle": "La chaîne du cumul",
+      "chain": {
+        "member": "Membre",
+        "unit": "Assemblée",
+        "zone": "Région",
+        "country": "Pays",
+        "continent": "Continent"
+      },
+      "cta": "Voir mes objectifs",
+      "ctaVisitor": "Déclarer mes engagements"
     },
     "features": {
-      "title": "Tout ce dont votre ministère a besoin",
-      "subtitle": "Des modules activables à la carte, pensés pour chaque niveau de responsabilité.",
+      "title": "Et tout le reste de la vie du ministère",
+      "subtitle": "Autour des objectifs, les modules qui portent le quotidien de votre assemblée.",
       "goals": {
         "title": "Objectifs",
         "desc": "Déclarez et suivez les engagements à chaque niveau hiérarchique, avec cumul automatique."
@@ -71,8 +117,8 @@
       "cta": "Demander un devis"
     },
     "contact": {
-      "title": "Activez votre espace Shephr",
-      "desc": "Vous rejoignez une assemblée existante ? Créez votre compte, puis déposez votre demande de rattachement. Pour déployer un ministère entier, nous vous accompagnons : contactez-nous et nous configurons votre structure, créons vos premiers accès et activons les modules dont vous avez besoin.",
+      "title": "Portez le But Quinquennal avec Shephr",
+      "desc": "Vous rejoignez une assemblée existante ? Créez votre compte, déposez votre demande de rattachement, puis déclarez vos engagements. Pour déployer le But Quinquennal sur un ministère entier, nous vous accompagnons : nous configurons votre structure, créons vos premiers accès et activons les modules dont vous avez besoin.",
       "or": "ou écrivez-nous à",
       "mailSubject": "Activation d'un espace Shephr",
       "whatsappText": "Bonjour, je souhaite activer un espace Shephr pour mon ministère."

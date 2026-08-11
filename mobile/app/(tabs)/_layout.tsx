@@ -6,13 +6,12 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { hasMemberGoals } from '../../services/authApi';
 import { colors, fonts } from '../../theme';
-import { FEATURES } from '../../constants/features';
 import NotificationGate from '../../components/NotificationGate';
 
 export default function TabLayout() {
   const { t, applyAccountLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { isLeader, hasGoals, hasMemberCare, me } = useAuth();
+  const { isLeader, hasGoals, hasMemberCare, hasDonations, me } = useAuth();
 
   // Initialise la langue depuis le compte (me.language) tant que l'utilisateur
   // n'a pas choisi explicitement une langue dans l'app (cf. LanguageContext).
@@ -61,8 +60,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="donations"
         options={{
-          // Livraison « Goals only » : onglet Dons masqué (FEATURES.donations).
-          href: FEATURES.donations ? '/(tabs)/donations' : null,
+          // RG-06 : visible seulement si un abonnement DONATIONS couvre l'utilisateur.
+          href: hasDonations ? '/(tabs)/donations' : null,
           title: t('tabs.donations'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="list-outline" size={size} color={color} />
@@ -83,8 +82,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="leader"
         options={{
-          // « Périmètre » = vues de lecture des DONS → masqué avec le flag donations.
-          href: FEATURES.donations && isLeader ? '/(tabs)/leader' : null,
+          // « Périmètre » = vues de lecture des DONS → suit l'accès au module.
+          href: hasDonations && isLeader ? '/(tabs)/leader' : null,
           title: t('tabs.leader'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />

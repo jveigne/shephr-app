@@ -24,6 +24,37 @@ function Feature({ icon, title, desc }: { icon: string; title: string; desc: str
   );
 }
 
+/** Chiffre clé du But Quinquennal (14 axes, 40 actions, 5 ans, échéance). */
+function Figure({ value, label }: { value: string; label: string }) {
+  return (
+    <div style={{
+      background: 'var(--ivory-card)', border: '1px solid var(--line-soft)', borderRadius: 'var(--radius-lg)',
+      padding: '20px 18px', textAlign: 'center', boxShadow: 'var(--shadow-sm)',
+    }}>
+      <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(26px, 7vw, 34px)', lineHeight: 1.1, color: 'var(--green-700)' }}>{value}</div>
+      <div style={{ color: 'var(--ink-500)', fontSize: 13, lineHeight: 1.4, marginTop: 6 }}>{label}</div>
+    </div>
+  );
+}
+
+/** Un des quatre principes du module Objectifs (foi, cumul, état, niveaux). */
+function Principle({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+  return (
+    <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+      <div style={{
+        flexShrink: 0, width: 38, height: 38, borderRadius: 'var(--radius)', background: 'var(--green-50)',
+        display: 'grid', placeItems: 'center', color: 'var(--green-700)',
+      }}>
+        <Icon name={icon} size={18} />
+      </div>
+      <div>
+        <h3 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 18, color: 'var(--green-800)', margin: '0 0 6px' }}>{title}</h3>
+        <p style={{ color: 'var(--ink-500)', fontSize: 14, lineHeight: 1.55, margin: 0 }}>{desc}</p>
+      </div>
+    </div>
+  );
+}
+
 export function LandingPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -37,14 +68,24 @@ export function LandingPage() {
   const mailto = contactMailto(t('landing.contact.mailSubject'));
   const whatsapp = contactWhatsapp(t('landing.contact.whatsappText'));
 
+  // Le module Objectifs a sa propre section en vedette : il ne réapparaît pas dans
+  // la grille, qui regroupe ce qui gravite autour du But Quinquennal.
   const features = [
-    { icon: 'sparkle', key: 'goals' },
     { icon: 'donation', key: 'donations' },
     { icon: 'users', key: 'memberCare' },
     { icon: 'building', key: 'songbooks' },
     { icon: 'hierarchy', key: 'hierarchy' },
     { icon: 'export', key: 'reports' },
   ];
+
+  const principles = [
+    { icon: 'sparkle', key: 'faith' },
+    { icon: 'tree', key: 'aggregate' },
+    { icon: 'history', key: 'progress' },
+    { icon: 'globe', key: 'levels' },
+  ];
+
+  const chain = ['member', 'unit', 'zone', 'country', 'continent'];
 
   const factors = ['size', 'zone', 'cmci', 'bundle'];
 
@@ -121,6 +162,98 @@ export function LandingPage() {
           </a>
         </div>
         <p style={{ fontSize: 13, color: 'var(--ink-400)', marginTop: 18 }}>{t('landing.hero.note')}</p>
+      </section>
+
+      {/* Parole reçue à la RAM 2025 — c'est le fondement du But Quinquennal, il passe
+          avant la présentation de l'outil. Fond vert profond pour le détacher du reste. */}
+      <section style={{ background: 'var(--green-900)', color: 'var(--ivory)' }}>
+        <div style={{ maxWidth: 820, margin: '0 auto', padding: 'clamp(40px, 8vw, 64px) 20px' }}>
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 56, lineHeight: 0.6, color: 'var(--earth-400)', marginBottom: 6 }} aria-hidden>“</div>
+          <blockquote style={{ margin: 0 }}>
+            <p style={{ fontFamily: 'var(--font-serif)', fontWeight: 400, fontSize: 'clamp(18px, 4.6vw, 23px)', lineHeight: 1.5, margin: '0 0 18px' }}>
+              {t('landing.quinquennat.quote1')}
+            </p>
+            <p style={{ fontFamily: 'var(--font-serif)', fontWeight: 400, fontSize: 'clamp(18px, 4.6vw, 23px)', lineHeight: 1.5, margin: 0 }}>
+              {t('landing.quinquennat.quote2')}
+            </p>
+          </blockquote>
+          <p style={{ fontSize: 13, color: 'var(--green-100)', marginTop: 24, lineHeight: 1.5 }}>
+            <span style={{ display: 'block', fontWeight: 600, letterSpacing: '.02em', marginBottom: 3 }}>{t('landing.quinquennat.kicker')}</span>
+            {t('landing.quinquennat.source')}
+          </p>
+        </div>
+      </section>
+
+      {/* Chiffres clés + genèse du document */}
+      <section style={{ maxWidth: 1100, margin: '0 auto', padding: 'clamp(40px, 8vw, 64px) 20px clamp(24px, 5vw, 40px)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: 14, marginBottom: 28 }}>
+          <Figure value="14" label={t('landing.quinquennat.figures.axes')} />
+          <Figure value="40" label={t('landing.quinquennat.figures.actions')} />
+          <Figure value="5" label={t('landing.quinquennat.figures.years')} />
+          <Figure value={t('landing.quinquennat.figures.deadlineValue')} label={t('landing.quinquennat.figures.deadline')} />
+        </div>
+        <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(21px, 5.5vw, 27px)', color: 'var(--green-800)', margin: '0 0 12px' }}>
+            {t('landing.quinquennat.contextTitle')}
+          </h2>
+          <p style={{ color: 'var(--ink-700)', fontSize: 'clamp(15px, 4vw, 16px)', lineHeight: 1.6, margin: 0 }}>
+            {t('landing.quinquennat.context')}
+          </p>
+        </div>
+      </section>
+
+      {/* Module Objectifs — la vedette de la page */}
+      <section style={{ background: 'var(--ivory)', borderTop: '1px solid var(--line-soft)', borderBottom: '1px solid var(--line-soft)' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: 'clamp(44px, 9vw, 72px) 20px' }}>
+          <div style={{ textAlign: 'center', marginBottom: 40 }}>
+            <span style={{
+              display: 'inline-block', padding: '5px 14px', borderRadius: 999, background: 'var(--green-600)',
+              color: '#fff', fontSize: 12, fontWeight: 600, letterSpacing: '.02em', marginBottom: 18,
+            }}>{t('landing.goals.kicker')}</span>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(25px, 6.5vw, 34px)', lineHeight: 1.15, color: 'var(--green-900)', margin: '0 0 12px' }}>
+              {t('landing.goals.title')}
+            </h2>
+            <p style={{ color: 'var(--ink-700)', fontSize: 'clamp(15px, 4vw, 17px)', lineHeight: 1.6, maxWidth: 640, margin: '0 auto' }}>
+              {t('landing.goals.subtitle')}
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 'clamp(22px, 4vw, 34px)', marginBottom: 40 }}>
+            {principles.map((p) => (
+              <Principle key={p.key} icon={p.icon} title={t(`landing.goals.${p.key}.title`)} desc={t(`landing.goals.${p.key}.desc`)} />
+            ))}
+          </div>
+
+          {/* Chaîne du cumul : rend concret le « du membre au continent ». */}
+          <div style={{ background: 'var(--parchment-deep)', borderRadius: 'var(--radius-lg)', padding: 'clamp(18px, 4vw, 26px)' }}>
+            <h3 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 15, color: 'var(--green-800)', margin: '0 0 14px', textAlign: 'center' }}>
+              {t('landing.goals.chainTitle')}
+            </h3>
+            <ol style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', alignItems: 'center', listStyle: 'none', margin: 0, padding: 0 }}>
+              {chain.map((level, i) => (
+                <li key={level} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{
+                    display: 'inline-block', padding: '7px 15px', borderRadius: 999, background: 'var(--ivory-raised)',
+                    border: '1px solid var(--line)', color: 'var(--green-800)', fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap',
+                  }}>{t(`landing.goals.chain.${level}`)}</span>
+                  {i < chain.length - 1 && (
+                    <span style={{ color: 'var(--green-600)', display: 'grid', placeItems: 'center' }} aria-hidden>
+                      <Icon name="arrowRight" size={14} />
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          {/* Même garde que le hero : la destination dépend de la session résolue. */}
+          <div style={{ textAlign: 'center', marginTop: 34, visibility: ready ? 'visible' : 'hidden' }}>
+            <button
+              onClick={() => navigate(loggedIn ? '/goals' : '/signup')}
+              style={{ padding: '13px 28px', borderRadius: 'var(--radius)', border: 'none', cursor: 'pointer', background: 'var(--green-600)', color: '#fff', fontWeight: 600, fontSize: 15 }}
+            >{loggedIn ? t('landing.goals.cta') : t('landing.goals.ctaVisitor')}</button>
+          </div>
+        </div>
       </section>
 
       {/* Features */}
