@@ -6,17 +6,63 @@
       "account": "My account"
     },
     "hero": {
-      "badge": "Church management platform",
-      "title": "Run your church's life, all in one place",
-      "subtitle": "Shephr brings together your ministry's goals, giving, pastoral care and songbooks — from the member to the international secretariat.",
+      "badge": "CMCI Five-Year Goal · 2026 → 2030",
+      "title": "The Five-Year Goal, carried by each one of us",
+      "subtitle": "Fourteen axes, forty actions, five years. Shephr is the tool that lets every member, every assembly and every country declare their commitments, roll them up and track their fulfilment through to 31 December 2030.",
       "ctaPrimary": "Sign in",
       "ctaSignup": "Create an account",
       "ctaSecondary": "Contact us",
-      "note": "Create your account for free to join your assembly. Activating a whole ministry is done with our support — write to us to get started."
+      "note": "Create your account for free to join your assembly and declare your commitments. Rolling out a whole ministry is done with our support — write to us to get started."
+    },
+    "quinquennat": {
+      "kicker": "A word of encouragement from the Lord — RAM 2025",
+      "quote1": "Take the five-year goal as a joy, as a gift I am giving you. I have made you great, and look at what I have done of you and for you; this is only a beginning.",
+      "quote2": "When this goal is accomplished, it will not only mark the completion of activities and projects; it will reveal transformed people — men and women of weight, of reference and of lasting fruit.",
+      "source": "RAM 2025, Ndoumbi (Bertoua — Cameroon), under the direction of our Leader Brother Theodore Andoseh",
+      "contextTitle": "A plan for the whole life of the Ministry",
+      "context": "The Five-Year Goal is the fruit of the work held from 22 to 27 December 2025 in Abidjan by the delegates of the Abidjan 2024 Special Summit, joined by other leaders of the Ministry: fourteen axes covering the entire life of our Ministry, broken down into forty precise actions to be carried out from 2026 to 2030.",
+      "figures": {
+        "axes": "axes of the Ministry's life",
+        "actions": "precise actions to carry out",
+        "years": "years, from 2026 to 2030",
+        "deadlineValue": "31 Dec. 2030",
+        "deadline": "the Five-Year Goal offered fulfilled"
+      }
+    },
+    "goals": {
+      "kicker": "Goals module",
+      "title": "From each one's faith to the Goal accomplished",
+      "subtitle": "Find in it what you will personally carry. Shephr gathers each person's commitment, rolls it up level by level and makes visible, year after year, where we truly stand.",
+      "faith": {
+        "title": "Commitment by faith",
+        "desc": "Everyone declares what they carry — by faith, not by calculation. Once submitted, the commitment is locked: a single act, laid before the Lord."
+      },
+      "aggregate": {
+        "title": "Roll-up at every level",
+        "desc": "The goal retained is the maximum between the roll-up of the sub-levels and the leader's own commitment of faith: no one aims below what their own people carry."
+      },
+      "progress": {
+        "title": "The real state, year after year",
+        "desc": "The Goal plays out over five years. Each year, you declare where you truly stand, before the deadline set by the secretariat — and the trend stays visible."
+      },
+      "levels": {
+        "title": "From the member to the continent",
+        "desc": "Member, assembly, region, country, continent: the same declaration travels up the whole chain, with no re-entry or spreadsheets, with dashboards and exports at every level."
+      },
+      "chainTitle": "The roll-up chain",
+      "chain": {
+        "member": "Member",
+        "unit": "Assembly",
+        "zone": "Region",
+        "country": "Country",
+        "continent": "Continent"
+      },
+      "cta": "View my goals",
+      "ctaVisitor": "Declare my commitments"
     },
     "features": {
-      "title": "Everything your ministry needs",
-      "subtitle": "Modules you can turn on à la carte, designed for every level of responsibility.",
+      "title": "And everything else in the life of the ministry",
+      "subtitle": "Around the goals, the modules that carry your assembly's daily life.",
       "goals": {
         "title": "Goals",
         "desc": "Declare and track commitments at every level of the hierarchy, with automatic totals."
@@ -71,8 +117,8 @@
       "cta": "Request a quote"
     },
     "contact": {
-      "title": "Activate your Shephr space",
-      "desc": "Joining an existing assembly? Create your account, then submit your join request. To roll out a whole ministry, we support you: contact us and we'll set up your structure, create your first accesses and enable the modules you need.",
+      "title": "Carry the Five-Year Goal with Shephr",
+      "desc": "Joining an existing assembly? Create your account, submit your join request, then declare your commitments. To roll the Five-Year Goal out across a whole ministry, we support you: we set up your structure, create your first accesses and enable the modules you need.",
       "or": "or write to us at",
       "mailSubject": "Shephr space activation",
       "whatsappText": "Hello, I would like to activate a Shephr space for my ministry."

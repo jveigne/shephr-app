@@ -29,6 +29,8 @@ interface AuthContextValue extends AuthState {
   /** Modules accessibles (codes) ; alimente le gating de navigation. */
   modules: string[];
   hasMemberCare: boolean;
+  /** Module Dons accessible : abonnement DONATIONS actif couvrant l'utilisateur (RG-06). */
+  hasDonations: boolean;
   /** Renvoie le profil chargé (null si /me a échoué) — permet le routage post-login (Feature B). */
   login: (payload: LoginRequest) => Promise<MeResponse | null>;
   register: (payload: RegisterRequest) => Promise<void>;
@@ -139,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     hasUnit: !!state.me?.donationUnitId,
     modules,
     hasMemberCare: modules.includes('MEMBER_CARE'),
+    hasDonations: modules.includes('DONATIONS'),
     login,
     register,
     establishSession,

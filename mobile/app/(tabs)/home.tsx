@@ -16,7 +16,6 @@ import { hasMemberGoals } from '../../services/authApi';
 import { getSummary, type DonationSummary } from '../../services/statsApi';
 import { listDonations, type DonationResponse } from '../../services/donationApi';
 import { fmtAmount, monthLabel } from '../../utils/format';
-import { FEATURES } from '../../constants/features';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
@@ -26,22 +25,25 @@ const PRIMARY_CURRENCY = 'GBP';
 const YEAR_GOAL = 3000;
 
 export default function HomeScreen() {
-  const { me, isLeader, hasGoals } = useAuth();
+  const { me, isLeader, hasGoals, hasDonations } = useAuth();
   const { t } = useLanguage();
   const [summary, setSummary] = useState<DonationSummary | null>(null);
   const [recent, setRecent] = useState<DonationResponse[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [coming, setComing] = useState<ComingKind | null>(null);
 
+  // `hasDonations` arrive après coup (les modules accessibles sont chargés en asynchrone après le
+  // token) : il DOIT être en dépendance, sinon `load` reste figé sur la valeur `false` du 1er rendu
+  // et les données de dons ne se chargent jamais.
   const load = useCallback(async () => {
-    if (!FEATURES.donations) return; // livraison « Goals only » : pas de données dons
+    if (!hasDonations) return; // module Dons non couvert par un abonnement : rien à charger
     const [s, list] = await Promise.allSettled([
       getSummary(),
       listDonations({ size: 5 }),
     ]);
     if (s.status === 'fulfilled') setSummary(s.value);
     if (list.status === 'fulfilled') setRecent(list.value.content);
-  }, []);
+  }, [hasDonations]);
 
   useEffect(() => {
     load();
@@ -110,7 +112,7 @@ export default function HomeScreen() {
       </View>*/}
 
       {/* Feature A — le simple membre accède aussi à SES objectifs depuis l'accueil. */}
-      {!FEATURES.donations && (hasGoals || hasMemberGoals(me)) && (
+      {!hasDonations && (hasGoals || hasMemberGoals(me)) && (
         <Card onPress={() => router.push('/(tabs)/goals')} style={styles.scopeCta}>
           <Ionicons name="flag" size={26} color={colors.white} />
           <View style={{ flex: 1 }}>
@@ -121,7 +123,7 @@ export default function HomeScreen() {
         </Card>
       )}
 
-      {FEATURES.donations && (
+      {hasDonations && (
       <Card style={styles.hero}>
         <Label style={{ color: colors.mossSoft }}>{t('dashboard.thisMonth')}</Label>
         <Amount value={thisMonth} currency={PRIMARY_CURRENCY} size={54} showDecimals />
@@ -159,7 +161,7 @@ export default function HomeScreen() {
       )}
 
       <View style={styles.tileGrid}>
-        {FEATURES.donations && (
+        {hasDonations && (
         <Tile
           label={t('dashboard.tiles.declare')}
           hint={t('dashboard.tiles.declareHint')}
@@ -224,7 +226,7 @@ export default function HomeScreen() {
         />*/}
       </View>
 
-      {FEATURES.donations && (
+      {hasDonations && (
       <>
       <View style={styles.sectionRow}>
         <Text style={styles.sectionTitle}>{t('dashboard.recent')}</Text>
@@ -249,7 +251,7 @@ export default function HomeScreen() {
       </>
       )}
 
-      {FEATURES.donations && isLeader && (
+      {hasDonations && isLeader && (
         <Card
           onPress={() => router.push('/(tabs)/leader')}
           style={styles.scopeCta}
