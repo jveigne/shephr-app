@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -29,6 +29,7 @@ import {
   getAggregate,
   getMyUnits,
   getRegionsSummary,
+  getUnitDetail,
   listFaithPledges,
   updateFaithPledge,
   type ActiveGoal,
@@ -36,6 +37,7 @@ import {
   type AggregateLine,
   type FaithPledgeResponse,
   type GoalCategory,
+  type UnitPledgeDetail,
   type ZoneUnitStatus,
 } from '../services/goalsApi';
 import { listCountries, listLocalities, listZones } from '../services/orgApi';
@@ -223,7 +225,7 @@ export default function GoalAggregatesScreen({
 
       {/* Lot 3.5 — mon sous-arbre d'assemblées (indépendant du niveau de mes nœuds de périmètre) :
           villes → assemblées si plusieurs villes, sinon liste directe. */}
-      {year != null && <MyUnitsBlock key={`my-units-${year}-${refreshKey}`} year={year} />}
+      {year != null && <MyUnitsBlock key={`my-units-${year}-${refreshKey}`} year={year} goal={goal} />}
 
       {/* Lot V1 — vue Coordinateur : cumuls PAR RÉGION + somme totale (borné à la Région). */}
       {year != null && countryIds.map((id) => (
@@ -374,11 +376,20 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
  * périmètre (zone ou ville) : régions → villes → assemblées pour un dirigeant senior sur zone,
  * assemblées directes pour un dirigeant déjà scopé à une seule ville.
  */
-function MyUnitsBlock({ year }: { year: number }) {
+function MyUnitsBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
   const { t } = useLanguage();
   const [units, setUnits] = useState<ZoneUnitStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [cityAggregates, setCityAggregates] = useState<Record<string, AggregateLine[]>>({});
+  const [detailUnit, setDetailUnit] = useState<ZoneUnitStatus | null>(null);
+  const [detail, setDetail] = useState<UnitPledgeDetail[] | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const currency = goal.defaultCurrency;
+  const categories = [...goal.categories].sort((a, b) => a.displayOrder - b.displayOrder);
+  const fmtValue = (category: GoalCategory, v: number) =>
+    category.unitType === 'CURRENCY' ? fmtAmount(v, currency) : `${v} ${category.unitLabel ?? ''}`.trim();
 
   useEffect(() => {
     let cancelled = false;
@@ -394,69 +405,194 @@ function MyUnitsBlock({ year }: { year: number }) {
     setSelectedCity(null);
   }, [year]);
 
+  const cityGroups = useMemo(() => groupUnitsByCity(units), [units]);
+  const showCityStep = cityGroups.length > 1;
+  const showingCityList = showCityStep && selectedCity == null;
+  const cityKeysSignature = cityGroups.map((g) => g.key).join('|');
+
+  // Résumé « comme un coordinateur » (UC-LDR-06 ter) : cumul + engagement effectif par catégorie,
+  // par ville — sans le versé (pas d'endpoint bulk équivalent à getRegionsSummary pour les villes).
+  useEffect(() => {
+    if (!showingCityList) return;
+    let cancelled = false;
+    (async () => {
+      const localities = await listLocalities().catch(() => []);
+      const idByName = new Map(localities.map((l) => [l.name, l.id]));
+      const entries = await Promise.all(
+        cityGroups.map(async (g) => {
+          const localityId = g.name ? idByName.get(g.name) : undefined;
+          if (!localityId) return [g.key, [] as AggregateLine[]] as const;
+          const lines = await getAggregate('cities', localityId, year).catch(() => [] as AggregateLine[]);
+          return [g.key, lines] as const;
+        }),
+      );
+      if (!cancelled) setCityAggregates(Object.fromEntries(entries));
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showingCityList, cityKeysSignature, year]);
+
+  const openDetail = (u: ZoneUnitStatus) => {
+    setDetailUnit(u);
+    setDetail(null);
+    setDetailLoading(true);
+    getUnitDetail(u.unitId, year)
+      .then(setDetail)
+      .catch(() => setDetail([]))
+      .finally(() => setDetailLoading(false));
+  };
+
   if (loading || units.length === 0) return null;
 
-  const cityGroups = groupUnitsByCity(units);
-  const showCityStep = cityGroups.length > 1;
   const activeUnits = showCityStep
     ? cityGroups.find((g) => g.key === selectedCity)?.units ?? []
     : units;
-  const showingCityList = showCityStep && selectedCity == null;
 
   return (
-    <Card variant="paper2" style={styles.faithListCard}>
-      <Label style={{ marginBottom: 8 }}>
-        {showingCityList ? t('goalsAgg.myCitiesSubmission') : t('goalsAgg.myUnitsSubmission')}
-      </Label>
-      {showCityStep && selectedCity != null && (
-        <Pressable onPress={() => setSelectedCity(null)} hitSlop={6} style={{ marginBottom: 8 }}>
-          <Text style={styles.backLink}>{t('goalsAgg.backToCities')}</Text>
-        </Pressable>
-      )}
-      {!showingCityList && activeUnits.every((u) => u.submitted) && (
-        <Text style={[styles.faithListItem, { color: colors.mossSoft, fontWeight: '600' }]}>
-          {t('goalsAgg.allUnitsSubmitted')}
-        </Text>
-      )}
-      {showingCityList
-        ? cityGroups.map((g) => {
-            const submitted = g.units.filter((u) => u.submitted).length;
-            return (
-              <Pressable
-                key={g.key}
-                onPress={() => setSelectedCity(g.key)}
-                style={styles.unitRow}
-              >
+    <>
+      <Card variant="paper2" style={styles.faithListCard}>
+        <Label style={{ marginBottom: 8 }}>
+          {showingCityList ? t('goalsAgg.myCitiesSubmission') : t('goalsAgg.myUnitsSubmission')}
+        </Label>
+        {showCityStep && selectedCity != null && (
+          <Pressable onPress={() => setSelectedCity(null)} hitSlop={6} style={{ marginBottom: 8 }}>
+            <Text style={styles.backLink}>{t('goalsAgg.backToCities')}</Text>
+          </Pressable>
+        )}
+        {!showingCityList && activeUnits.every((u) => u.submitted) && (
+          <Text style={[styles.faithListItem, { color: colors.mossSoft, fontWeight: '600' }]}>
+            {t('goalsAgg.allUnitsSubmitted')}
+          </Text>
+        )}
+        {showingCityList
+          ? cityGroups.map((g) => {
+              const submitted = g.units.filter((u) => u.submitted).length;
+              const lines = cityAggregates[g.key];
+              return (
+                <Pressable key={g.key} onPress={() => setSelectedCity(g.key)} style={styles.cityCard}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.unitName}>{g.name ?? t('goalsAgg.noCityLabel')}</Text>
+                      <Text style={styles.unitMeta}>
+                        {t('goalsAgg.assembliesCount', { count: g.units.length })}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <CityStatusBadge submitted={submitted} total={g.units.length} />
+                      <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+                    </View>
+                  </View>
+                  {lines == null ? (
+                    <ActivityIndicator color={colors.moss} size="small" style={{ marginTop: 8 }} />
+                  ) : lines.length > 0 ? (
+                    <View style={{ marginTop: 8, gap: 2 }}>
+                      {categories.map((category) => {
+                        const line = lines.find((l) => l.categoryId === category.id);
+                        const eff = line?.effectiveAmount ?? line?.effectiveCount ?? 0;
+                        return (
+                          <Text key={category.id} style={styles.faithListItem}>
+                            {category.name} : {fmtValue(category, eff)}
+                          </Text>
+                        );
+                      })}
+                    </View>
+                  ) : null}
+                </Pressable>
+              );
+            })
+          : activeUnits.map((u) => (
+              <Pressable key={u.unitId} onPress={() => openDetail(u)} style={styles.unitRow}>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.unitName}>{g.name ?? t('goalsAgg.noCityLabel')}</Text>
+                  <Text style={styles.unitName}>{u.unitName}</Text>
                   <Text style={styles.unitMeta}>
-                    {t('goalsAgg.assembliesCount', { count: g.units.length })}
+                    {t('goalsAgg.pledgeCount', { name: u.localityName ?? '', count: u.pledgeCount })}
                   </Text>
+                  {u.leaderName != null && (
+                    <Text style={styles.unitMeta}>
+                      {t('goalsAgg.unitLeader', { name: u.leaderName })}
+                    </Text>
+                  )}
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <CityStatusBadge submitted={submitted} total={g.units.length} />
+                  <UnitStatusBadge unit={u} />
                   <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
                 </View>
               </Pressable>
-            );
-          })
-        : activeUnits.map((u) => (
-            <View key={u.unitId} style={styles.unitRow}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.unitName}>{u.unitName}</Text>
-                <Text style={styles.unitMeta}>
-                  {t('goalsAgg.pledgeCount', { name: u.localityName ?? '', count: u.pledgeCount })}
-                </Text>
-                {u.leaderName != null && (
-                  <Text style={styles.unitMeta}>
-                    {t('goalsAgg.unitLeader', { name: u.leaderName })}
-                  </Text>
-                )}
-              </View>
-              <UnitStatusBadge unit={u} />
+            ))}
+      </Card>
+
+      <UnitDetailModal
+        unit={detailUnit}
+        detail={detail}
+        loading={detailLoading}
+        goal={goal}
+        year={year}
+        onClose={() => setDetailUnit(null)}
+      />
+    </>
+  );
+}
+
+/** Détail (lecture seule) des engagements d'une assemblée du sous-arbre (Lot 4.7 mobile). */
+function UnitDetailModal({
+  unit,
+  detail,
+  loading,
+  goal,
+  year,
+  onClose,
+}: {
+  unit: ZoneUnitStatus | null;
+  detail: UnitPledgeDetail[] | null;
+  loading: boolean;
+  goal: ActiveGoal;
+  year: number;
+  onClose: () => void;
+}) {
+  const { t } = useLanguage();
+  const currency = goal.defaultCurrency;
+  const catByCode = new Map(goal.categories.map((c) => [c.code, c]));
+
+  if (unit == null) return null;
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <Card style={styles.modalCard}>
+          <Text style={styles.modalTitle}>{t('goalsAgg.unitPledgesTitle', { name: unit.unitName })}</Text>
+          <Text style={styles.modalSub}>{t('goalsAgg.unitPledgesSub', { year })}</Text>
+
+          {loading ? (
+            <ActivityIndicator color={colors.moss} style={{ marginTop: 14 }} />
+          ) : (
+            <View style={{ marginTop: 10, gap: 8 }}>
+              {(detail ?? []).map((d) => {
+                const cat = catByCode.get(d.categoryCode);
+                const pledged = d.unitType === 'CURRENCY'
+                  ? d.targetAmount != null ? fmtAmount(d.targetAmount, currency) : '—'
+                  : d.targetCount != null ? `${d.targetCount} ${cat?.unitLabel ?? ''}`.trim() : '—';
+                const paid = d.unitType === 'CURRENCY'
+                  ? fmtAmount(d.achievedAmount ?? 0, currency)
+                  : `${d.achievedCount ?? 0} ${cat?.unitLabel ?? ''}`.trim();
+                return (
+                  <View key={d.categoryId} style={styles.detailRow}>
+                    <Text style={styles.unitName}>{cat?.name ?? d.categoryCode}</Text>
+                    <View style={{ flexDirection: 'row', gap: 16 }}>
+                      <Text style={styles.unitMeta}>{t('goalsAgg.colPledged')} : {pledged}</Text>
+                      <Text style={styles.unitMeta}>{t('goalsAgg.colPaid')} : {paid}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+              {(detail ?? []).length === 0 && (
+                <Text style={styles.faithListItem}>{t('goalsAgg.noPledgeInUnit')}</Text>
+              )}
             </View>
-          ))}
-    </Card>
+          )}
+
+          <Button label={t('common.ok')} variant="ghost" onPress={onClose} style={{ marginTop: 18 }} fullWidth height={46} />
+        </Card>
+      </View>
+    </Modal>
   );
 }
 
@@ -753,6 +889,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     marginTop: 8,
+  },
+  cityCard: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(42,38,32,0.06)',
+  },
+  detailRow: {
+    gap: 3,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(42,38,32,0.06)',
   },
   unitName: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
   unitMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 1 },

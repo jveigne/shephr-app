@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import {
   Badge,
@@ -1054,7 +1054,7 @@ function MyPerimeterSection({
           <PerimeterBlock key={n.id} goal={goal} currency={currency} year={year} meId={meId} isSuperAdmin={isSuperAdmin} node={n} />
         ))
       )}
-      <ZoneUnitsBlock zoneId={null} goal={goal} year={year} perimeterScoped />
+      <ZoneUnitsBlock zoneId={null} goal={goal} currency={currency} year={year} perimeterScoped />
     </div>
   );
 }
@@ -1412,7 +1412,7 @@ function AggregateSection({
         </div>
       )}
 
-      {level === 'zones' && <ZoneUnitsBlock zoneId={entityId} goal={goal} year={year} />}
+      {level === 'zones' && <ZoneUnitsBlock zoneId={entityId} goal={goal} currency={currency} year={year} />}
 
       <FaithFormModal
         level={level}
@@ -1549,8 +1549,8 @@ function FaithFormModal({
 
 /** Statut de soumission des unités de la zone (UC-LDR-06) + rappels (UC-LDR-07, Lot 4.4). */
 function ZoneUnitsBlock({
-  zoneId, goal, year, perimeterScoped = false,
-}: { zoneId: string | null; goal: ActiveGoal; year: number; perimeterScoped?: boolean }) {
+  zoneId, goal, currency, year, perimeterScoped = false,
+}: { zoneId: string | null; goal: ActiveGoal; currency: string; year: number; perimeterScoped?: boolean }) {
   const { t } = useTranslation();
   const { push } = useToast();
   const { me } = useAuth();
@@ -1575,6 +1575,29 @@ function ZoneUnitsBlock({
     ? cityGroups.find((g) => g.key === selectedCity)?.units ?? []
     : units;
   const allSubmitted = activeUnits.length > 0 && activeUnits.every((u) => u.submitted);
+
+  const showingCityListPreview = showCityStep && selectedCity == null;
+  // Résumé « comme un coordinateur » (UC-LDR-06 ter) : cumul + engagement effectif par catégorie,
+  // par ville — sans le versé (pas d'endpoint bulk équivalent à getRegionsSummary pour les villes).
+  const citiesLocalitiesQ = useQuery({
+    queryKey: zoneId ? ['admin', 'localities', zoneId] : ['admin', 'localities'],
+    queryFn: () => listLocalities(zoneId ? { zoneId } : {}),
+    enabled: showingCityListPreview,
+  });
+  const localityIdByName = new Map((citiesLocalitiesQ.data ?? []).map((l) => [l.name, l.id]));
+  const cityAggQueries = useQueries({
+    queries: showingCityListPreview
+      ? cityGroups.map((g) => {
+          const localityId = g.name ? localityIdByName.get(g.name) : undefined;
+          return {
+            queryKey: ['goals', 'aggregate', 'cities', localityId, year],
+            queryFn: () => getAggregate('cities', localityId!, year),
+            enabled: localityId != null,
+          };
+        })
+      : [],
+  });
+  const catsByOrder = [...goal.categories].sort((a, b) => a.displayOrder - b.displayOrder);
 
   // Lot P2 : rouvrir la soumission d'une assemblée (elle pourra compléter puis resoumettre).
   const [unlockUnitTarget, setUnlockUnitTarget] = useState<ZoneUnitStatus | null>(null);
@@ -1672,15 +1695,26 @@ function ZoneUnitsBlock({
       {unitsQ.isLoading ? (
         <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
       ) : showingCityList ? (
-        <Table
-          columns={[
-            { label: t('common.locality'), render: (g: CityUnitsGroup & { id: string }) => <strong>{g.name ?? t('goals.noCityLabel')}</strong> },
-            { label: t('goals.colAssemblies'), render: (g) => String(g.units.length) },
-            {
-              label: t('goals.colStatus'),
-              render: (g) => {
-                const submitted = g.units.filter((u) => u.submitted).length;
-                return (
+        <div>
+          {cityGroups.map((g, i) => {
+            const submitted = g.units.filter((u) => u.submitted).length;
+            const aggQ = cityAggQueries[i];
+            const lineByCat = new Map((aggQ?.data ?? []).map((l) => [l.categoryId, l]));
+            return (
+              <div
+                key={g.key}
+                className="card"
+                role="button"
+                tabIndex={0}
+                onClick={() => setSelectedCity(g.key)}
+                onKeyDown={(e) => { if (e.key === 'Enter') setSelectedCity(g.key); }}
+                style={{ padding: '12px 16px', marginBottom: 10, cursor: 'pointer' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                  <strong style={{ flex: 1 }}>{g.name ?? t('goals.noCityLabel')}</strong>
+                  <span style={{ fontSize: 12, color: 'var(--ink-400)' }}>
+                    {t('goals.colAssemblies')} : {g.units.length}
+                  </span>
                   <Badge tone={submitted === g.units.length ? 'ok' : submitted > 0 ? 'warn' : 'gray'}>
                     {t('views.submittedRatio', {
                       submitted,
@@ -1688,20 +1722,28 @@ function ZoneUnitsBlock({
                       percent: Math.round((submitted / g.units.length) * 100),
                     })}
                   </Badge>
-                );
-              },
-            },
-            {
-              label: '',
-              style: { width: 40 },
-              cellStyle: { textAlign: 'right' },
-              render: () => <Icon name="chevRight" size={13} />,
-            },
-          ]}
-          rows={cityGroups.map((g) => ({ ...g, id: g.key }))}
-          onRowClick={(g) => setSelectedCity(g.key)}
-          zebra
-        />
+                  <Icon name="chevRight" size={13} />
+                </div>
+                {citiesLocalitiesQ.isLoading || aggQ?.isLoading ? (
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-400)' }}>{t('common.loading')}</p>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 22px', fontSize: 13 }}>
+                    {catsByOrder.map((cat) => {
+                      const line = lineByCat.get(cat.id);
+                      const eff = line?.effectiveAmount ?? line?.effectiveCount ?? 0;
+                      return (
+                        <span key={cat.id}>
+                          <span style={{ color: 'var(--ink-400)' }}>{cat.name} : </span>
+                          <strong>{fmtCatValue(cat, eff, currency)}</strong>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <Table
           columns={[

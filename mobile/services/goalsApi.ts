@@ -431,6 +431,27 @@ export async function getMyUnits(year?: number): Promise<ZoneUnitStatus[]> {
   return data;
 }
 
+// --- Lot 4.7 — drill-down dirigeant : détail (engagé + versé) d'une unité de son sous-arbre (lecture seule) ---
+export interface UnitPledgeDetail {
+  categoryId: string;
+  categoryCode: string;
+  unitType: PledgeUnitType;
+  targetAmount: number | null;
+  targetCount: number | null;
+  achievedAmount: number | null;
+  achievedCount: number | null;
+  locked: boolean;
+  /** Nom du DIRIGEANT goal de l'unité — identique sur chaque ligne (Lot G1.b). */
+  leaderName: string | null;
+}
+
+export async function getUnitDetail(unitId: string, year?: number): Promise<UnitPledgeDetail[]> {
+  const { data } = await apiClient.get<UnitPledgeDetail[]>(
+    `/api/church/goals/units/${unitId}/detail${yq(year)}`,
+  );
+  return data;
+}
+
 // Lot G2 : la règle locale « 24 h » (ex-isProgressEditable) est SUPPRIMÉE — l'éditabilité est
 // server-driven via `ProgressResponse.editable` / `editableUntil` (deadline de l'année).
 
