@@ -425,6 +425,12 @@ export async function getZoneUnits(zoneId: string, year?: number): Promise<ZoneU
   return data;
 }
 
+/** Lot 3.5 — assemblées du SOUS-ARBRE du dirigeant (indépendant du niveau de ses nœuds de périmètre). */
+export async function getMyUnits(year?: number): Promise<ZoneUnitStatus[]> {
+  const { data } = await apiClient.get<ZoneUnitStatus[]>(`/api/church/goals/me/units${yq(year)}`);
+  return data;
+}
+
 // Lot G2 : la règle locale « 24 h » (ex-isProgressEditable) est SUPPRIMÉE — l'éditabilité est
 // server-driven via `ProgressResponse.editable` / `editableUntil` (deadline de l'année).
 

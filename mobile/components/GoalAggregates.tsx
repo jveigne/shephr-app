@@ -27,8 +27,8 @@ import {
   deleteFaithPledge,
   getActiveGoal,
   getAggregate,
+  getMyUnits,
   getRegionsSummary,
-  getZoneUnits,
   listFaithPledges,
   updateFaithPledge,
   type ActiveGoal,
@@ -41,6 +41,27 @@ import {
 import { listCountries, listLocalities, listZones } from '../services/orgApi';
 
 const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallback;
+
+/** Regroupement d'assemblées par ville (localityName) — clé stable même sans localityId. */
+interface CityUnitsGroup {
+  key: string;
+  name: string | null;
+  units: ZoneUnitStatus[];
+}
+
+function groupUnitsByCity(units: ZoneUnitStatus[]): CityUnitsGroup[] {
+  const map = new Map<string, CityUnitsGroup>();
+  for (const u of units) {
+    const key = u.localityName ?? '__none__';
+    let group = map.get(key);
+    if (!group) {
+      group = { key, name: u.localityName, units: [] };
+      map.set(key, group);
+    }
+    group.units.push(u);
+  }
+  return [...map.values()];
+}
 
 interface Perimeter {
   level: AggregateLevelPath;
@@ -200,6 +221,10 @@ export default function GoalAggregatesScreen({
         />
       ))}
 
+      {/* Lot 3.5 — mon sous-arbre d'assemblées (indépendant du niveau de mes nœuds de périmètre) :
+          villes → assemblées si plusieurs villes, sinon liste directe. */}
+      {year != null && <MyUnitsBlock key={`my-units-${year}-${refreshKey}`} year={year} />}
+
       {/* Lot V1 — vue Coordinateur : cumuls PAR RÉGION + somme totale (borné à la Région). */}
       {year != null && countryIds.map((id) => (
         <RegionsSummaryBlock key={`regions-${id}-${year}-${refreshKey}`} nationId={id} year={year} goal={goal} />
@@ -213,7 +238,6 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
   const { t } = useLanguage();
   const [lines, setLines] = useState<AggregateLine[]>([]);
   const [faiths, setFaiths] = useState<FaithPledgeResponse[]>([]);
-  const [units, setUnits] = useState<ZoneUnitStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [faithCategory, setFaithCategory] = useState<GoalCategory | null>(null);
 
@@ -222,19 +246,14 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
 
   const load = useCallback(async () => {
     try {
-      const [agg, fp, us] = await Promise.all([
+      const [agg, fp] = await Promise.all([
         getAggregate(perimeter.level, perimeter.entityId, year),
         listFaithPledges(perimeter.level, perimeter.entityId, year).catch(
           () => [] as FaithPledgeResponse[],
         ),
-        // UC-LDR-06 : statut de soumission des unités (zones uniquement).
-        perimeter.level === 'zones'
-          ? getZoneUnits(perimeter.entityId, year).catch(() => [] as ZoneUnitStatus[])
-          : Promise.resolve([] as ZoneUnitStatus[]),
       ]);
       setLines(agg);
       setFaiths(fp);
-      setUnits(us);
     } finally {
       setLoading(false);
     }
@@ -330,32 +349,6 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
             </Card>
           )}
 
-          {perimeter.level === 'zones' && units.length > 0 && (
-            <Card variant="paper2" style={styles.faithListCard}>
-              <Label style={{ marginBottom: 8 }}>{t('goalsAgg.myUnitsSubmission')}</Label>
-              {units.every((u) => u.submitted) && (
-                <Text style={[styles.faithListItem, { color: colors.mossSoft, fontWeight: '600' }]}>
-                  {t('goalsAgg.allUnitsSubmitted')}
-                </Text>
-              )}
-              {units.map((u) => (
-                <View key={u.unitId} style={styles.unitRow}>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={styles.unitName}>{u.unitName}</Text>
-                    <Text style={styles.unitMeta}>
-                      {t('goalsAgg.pledgeCount', { name: u.localityName ?? '', count: u.pledgeCount })}
-                    </Text>
-                    {u.leaderName != null && (
-                      <Text style={styles.unitMeta}>
-                        {t('goalsAgg.unitLeader', { name: u.leaderName })}
-                      </Text>
-                    )}
-                  </View>
-                  <UnitStatusBadge unit={u} />
-                </View>
-              ))}
-            </Card>
-          )}
         </View>
       )}
 
@@ -373,6 +366,110 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
         }}
       />
     </>
+  );
+}
+
+/**
+ * Lot 3.5 (mobile) — mes assemblées (sous-arbre), indépendamment du niveau de mes nœuds de
+ * périmètre (zone ou ville) : régions → villes → assemblées pour un dirigeant senior sur zone,
+ * assemblées directes pour un dirigeant déjà scopé à une seule ville.
+ */
+function MyUnitsBlock({ year }: { year: number }) {
+  const { t } = useLanguage();
+  const [units, setUnits] = useState<ZoneUnitStatus[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getMyUnits(year)
+      .then((us) => { if (!cancelled) setUnits(us); })
+      .catch(() => { if (!cancelled) setUnits([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [year]);
+
+  useEffect(() => {
+    setSelectedCity(null);
+  }, [year]);
+
+  if (loading || units.length === 0) return null;
+
+  const cityGroups = groupUnitsByCity(units);
+  const showCityStep = cityGroups.length > 1;
+  const activeUnits = showCityStep
+    ? cityGroups.find((g) => g.key === selectedCity)?.units ?? []
+    : units;
+  const showingCityList = showCityStep && selectedCity == null;
+
+  return (
+    <Card variant="paper2" style={styles.faithListCard}>
+      <Label style={{ marginBottom: 8 }}>
+        {showingCityList ? t('goalsAgg.myCitiesSubmission') : t('goalsAgg.myUnitsSubmission')}
+      </Label>
+      {showCityStep && selectedCity != null && (
+        <Pressable onPress={() => setSelectedCity(null)} hitSlop={6} style={{ marginBottom: 8 }}>
+          <Text style={styles.backLink}>{t('goalsAgg.backToCities')}</Text>
+        </Pressable>
+      )}
+      {!showingCityList && activeUnits.every((u) => u.submitted) && (
+        <Text style={[styles.faithListItem, { color: colors.mossSoft, fontWeight: '600' }]}>
+          {t('goalsAgg.allUnitsSubmitted')}
+        </Text>
+      )}
+      {showingCityList
+        ? cityGroups.map((g) => {
+            const submitted = g.units.filter((u) => u.submitted).length;
+            return (
+              <Pressable
+                key={g.key}
+                onPress={() => setSelectedCity(g.key)}
+                style={styles.unitRow}
+              >
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.unitName}>{g.name ?? t('goalsAgg.noCityLabel')}</Text>
+                  <Text style={styles.unitMeta}>
+                    {t('goalsAgg.assembliesCount', { count: g.units.length })}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <CityStatusBadge submitted={submitted} total={g.units.length} />
+                  <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+                </View>
+              </Pressable>
+            );
+          })
+        : activeUnits.map((u) => (
+            <View key={u.unitId} style={styles.unitRow}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.unitName}>{u.unitName}</Text>
+                <Text style={styles.unitMeta}>
+                  {t('goalsAgg.pledgeCount', { name: u.localityName ?? '', count: u.pledgeCount })}
+                </Text>
+                {u.leaderName != null && (
+                  <Text style={styles.unitMeta}>
+                    {t('goalsAgg.unitLeader', { name: u.leaderName })}
+                  </Text>
+                )}
+              </View>
+              <UnitStatusBadge unit={u} />
+            </View>
+          ))}
+    </Card>
+  );
+}
+
+/** Badge de ratio de soumission d'une ville (Lot 3.5 mobile) — pendant de UnitStatusBadge au niveau ville. */
+function CityStatusBadge({ submitted, total }: { submitted: number; total: number }) {
+  const { t } = useLanguage();
+  const tone = submitted === total ? colors.moss : submitted > 0 ? colors.earthDeep : colors.ink3;
+  return (
+    <View style={[styles.statusBadge, { backgroundColor: tone + '22' }]}>
+      <Text style={[styles.statusBadgeText, { color: tone }]}>
+        {t('goalsAgg.citySubmittedRatio', { submitted, total })}
+      </Text>
+    </View>
   );
 }
 
@@ -661,6 +758,7 @@ const styles = StyleSheet.create({
   unitMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 1 },
   statusBadge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 99 },
   statusBadgeText: { fontFamily: fonts.sans, fontSize: 11, fontWeight: '700' },
+  backLink: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: colors.moss },
   faithListItem: {
     fontFamily: fonts.sans,
     fontSize: 12.5,

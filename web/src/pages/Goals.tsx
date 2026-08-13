@@ -65,6 +65,27 @@ import { currencySymbol, fmtAmount, fmtDateLabel, toLocalDate } from '../utils/f
 const errMsg = (err: unknown, fallback: string) =>
   (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
 
+/** Regroupement d'assemblées par ville (localityName) — clé stable même sans localityId. */
+interface CityUnitsGroup {
+  key: string;
+  name: string | null;
+  units: ZoneUnitStatus[];
+}
+
+function groupUnitsByCity(units: ZoneUnitStatus[]): CityUnitsGroup[] {
+  const map = new Map<string, CityUnitsGroup>();
+  for (const u of units) {
+    const key = u.localityName ?? '__none__';
+    let group = map.get(key);
+    if (!group) {
+      group = { key, name: u.localityName, units: [] };
+      map.set(key, group);
+    }
+    group.units.push(u);
+  }
+  return [...map.values()];
+}
+
 /** Données « mon unité » (UC-DIR-08) — chargées seulement si l'utilisateur a un goalUnitId. */
 interface UnitData {
   pledges: PledgeResponse[];
@@ -1540,7 +1561,20 @@ function ZoneUnitsBlock({
     queryFn: () => (perimeterScoped ? getMyUnits(year) : getZoneUnits(zoneId!, year)),
   });
   const units = unitsQ.data ?? [];
-  const allSubmitted = units.length > 0 && units.every((u) => u.submitted);
+
+  // Villes → assemblées (UC-LDR-06 bis) : dès que le périmètre couvre plusieurs villes, on
+  // intercale un choix de ville avant la liste des assemblées (sinon liste directe, inchangée).
+  const cityGroups = groupUnitsByCity(units);
+  const showCityStep = cityGroups.length > 1;
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  useEffect(() => {
+    setSelectedCity(null);
+  }, [zoneId, perimeterScoped, year]);
+
+  const activeUnits = showCityStep
+    ? cityGroups.find((g) => g.key === selectedCity)?.units ?? []
+    : units;
+  const allSubmitted = activeUnits.length > 0 && activeUnits.every((u) => u.submitted);
 
   // Lot P2 : rouvrir la soumission d'une assemblée (elle pourra compléter puis resoumettre).
   const [unlockUnitTarget, setUnlockUnitTarget] = useState<ZoneUnitStatus | null>(null);
@@ -1605,16 +1639,69 @@ function ZoneUnitsBlock({
     return <Badge tone="gray" dot>{t('goals.statusNotStarted')}</Badge>;
   };
 
+  const showingCityList = showCityStep && selectedCity == null;
+
   return (
     <div style={{ marginTop: 14 }}>
-      <h4 style={{ margin: '0 0 8px' }}>{t('goals.myUnitsStatus')}</h4>
-      {allSubmitted && (
+      <h4 style={{ margin: '0 0 8px' }}>
+        {showingCityList ? t('goals.myCitiesStatus') : t('goals.myUnitsStatus')}
+      </h4>
+      {showCityStep && selectedCity != null && (
+        <button
+          type="button"
+          onClick={() => setSelectedCity(null)}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            marginBottom: 8,
+            cursor: 'pointer',
+            color: 'var(--green-700, #1E3A2F)',
+            fontSize: 13,
+            textDecoration: 'underline',
+          }}
+        >
+          {t('goals.backToCities')}
+        </button>
+      )}
+      {!showingCityList && allSubmitted && (
         <p style={{ margin: '0 0 8px', color: 'var(--green-600, #2E5142)', fontSize: 13 }}>
           {t('goals.allUnitsSubmitted')}
         </p>
       )}
       {unitsQ.isLoading ? (
         <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
+      ) : showingCityList ? (
+        <Table
+          columns={[
+            { label: t('common.locality'), render: (g: CityUnitsGroup & { id: string }) => <strong>{g.name ?? t('goals.noCityLabel')}</strong> },
+            { label: t('goals.colAssemblies'), render: (g) => String(g.units.length) },
+            {
+              label: t('goals.colStatus'),
+              render: (g) => {
+                const submitted = g.units.filter((u) => u.submitted).length;
+                return (
+                  <Badge tone={submitted === g.units.length ? 'ok' : submitted > 0 ? 'warn' : 'gray'}>
+                    {t('views.submittedRatio', {
+                      submitted,
+                      total: g.units.length,
+                      percent: Math.round((submitted / g.units.length) * 100),
+                    })}
+                  </Badge>
+                );
+              },
+            },
+            {
+              label: '',
+              style: { width: 40 },
+              cellStyle: { textAlign: 'right' },
+              render: () => <Icon name="chevRight" size={13} />,
+            },
+          ]}
+          rows={cityGroups.map((g) => ({ ...g, id: g.key }))}
+          onRowClick={(g) => setSelectedCity(g.key)}
+          zebra
+        />
       ) : (
         <Table
           columns={[
@@ -1694,7 +1781,7 @@ function ZoneUnitsBlock({
                 ),
             },
           ]}
-          rows={units.map((u) => ({ ...u, id: u.unitId }))}
+          rows={activeUnits.map((u) => ({ ...u, id: u.unitId }))}
           zebra
           empty={
             <p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>
@@ -1970,9 +2057,11 @@ function DeadlineEditor({ year, current }: { year: number; current: string | nul
 /** Résumé global du ministère par continent (UC-SEC-01, Lot 4.3) — LEADER/SECRETARIAT/SA. */
 /** Étape du drill-down SECRETARIAT (UC-SEC-02, Lot 4.5). */
 interface DrillStep {
-  level: 'continents' | 'countries' | 'zones' | 'units';
+  level: 'continents' | 'countries' | 'zones' | 'cities' | 'units';
   id: string;
   name: string;
+  /** Zone parente — portée par l'étape 'cities' pour filtrer les assemblées de cette ville. */
+  parentZoneId?: string;
   /** Statut soumission porté depuis la liste des unités (niveau unité uniquement). */
   unitStatus?: ZoneUnitStatus;
 }
@@ -2175,9 +2264,17 @@ function DrillView({
         <DrillZones countryId={current.id} onOpen={(id, name) => setPath([...path, { level: 'zones', id, name }])} />
       )}
       {current.level === 'zones' && (
-        <DrillUnits
+        <DrillCities
           zoneId={current.id}
           year={year}
+          onOpen={(id, name) => setPath([...path, { level: 'cities', id, name, parentZoneId: current.id }])}
+        />
+      )}
+      {current.level === 'cities' && (
+        <DrillUnits
+          zoneId={current.parentZoneId!}
+          year={year}
+          cityName={current.name}
           onOpen={(u) => setPath([...path, { level: 'units', id: u.unitId, name: u.unitName, unitStatus: u }])}
         />
       )}
@@ -2508,14 +2605,62 @@ function DrillZones({ countryId, onOpen }: { countryId: string; onOpen: (id: str
   );
 }
 
-function DrillUnits({ zoneId, year, onOpen }: { zoneId: string; year: number; onOpen: (u: ZoneUnitStatus) => void }) {
+/** Villes d'une région, avec nombre d'assemblées + ratio de soumission (UC-SEC-02 bis). */
+function DrillCities({ zoneId, year, onOpen }: { zoneId: string; year: number; onOpen: (id: string, name: string) => void }) {
+  const { t } = useTranslation();
+  const localitiesQ = useQuery({ queryKey: ['admin', 'localities', zoneId], queryFn: () => listLocalities({ zoneId }) });
+  const unitsQ = useQuery({ queryKey: ['goals', 'zone-units', zoneId, year], queryFn: () => getZoneUnits(zoneId, year) });
+  const units = unitsQ.data ?? [];
+  const rows = (localitiesQ.data ?? []).map((l) => {
+    const cityUnits = units.filter((u) => u.localityName === l.name);
+    return { ...l, total: cityUnits.length, submitted: cityUnits.filter((u) => u.submitted).length };
+  });
+  return (
+    <div style={{ marginTop: 16 }}>
+      <h4 style={{ margin: '0 0 8px' }}>{t('goals.citiesHeading')}</h4>
+      <Table
+        columns={[
+          { label: t('common.locality'), render: (l: (typeof rows)[number]) => <strong>{l.name}</strong> },
+          { label: t('goals.colAssemblies'), render: (l) => String(l.total) },
+          {
+            label: t('goals.colStatus'),
+            render: (l) =>
+              l.total > 0 ? (
+                <Badge tone={l.submitted === l.total ? 'ok' : l.submitted > 0 ? 'warn' : 'gray'}>
+                  {t('views.submittedRatio', {
+                    submitted: l.submitted,
+                    total: l.total,
+                    percent: Math.round((l.submitted / l.total) * 100),
+                  })}
+                </Badge>
+              ) : (
+                <span style={{ color: 'var(--ink-400)' }}>—</span>
+              ),
+          },
+          {
+            label: '',
+            style: { width: 40 },
+            cellStyle: { textAlign: 'right' },
+            render: () => <Icon name="chevRight" size={13} />,
+          },
+        ]}
+        rows={rows}
+        onRowClick={(l) => onOpen(l.id, l.name)}
+        zebra
+        empty={<p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>{t('goals.noCityInZone')}</p>}
+      />
+    </div>
+  );
+}
+
+function DrillUnits({ zoneId, year, onOpen, cityName }: { zoneId: string; year: number; onOpen: (u: ZoneUnitStatus) => void; cityName?: string | null }) {
   const { t } = useTranslation();
   const { push } = useToast();
   const { me } = useAuth();
   // Lot P2 (décision #14) : déverrouillage réservé à SUPER_ADMIN + SECRETARIAT.
   const canUnlock = (me?.superAdmin ?? false) || me?.goalRole === 'SECRETARIAT';
   const unitsQ = useQuery({ queryKey: ['goals', 'zone-units', zoneId, year], queryFn: () => getZoneUnits(zoneId, year) });
-  const rows = unitsQ.data ?? [];
+  const rows = (unitsQ.data ?? []).filter((u) => cityName == null || u.localityName === cityName);
 
   const [unlockTarget, setUnlockTarget] = useState<ZoneUnitStatus | null>(null);
   const unlockM = useMutation({
@@ -2587,7 +2732,11 @@ function DrillUnits({ zoneId, year, onOpen }: { zoneId: string; year: number; on
         rows={rows.map((u) => ({ ...u, id: u.unitId }))}
         onRowClick={(u) => onOpen(u)}
         zebra
-        empty={<p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>{t('goals.noUnitInZone')}</p>}
+        empty={
+          <p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>
+            {cityName != null ? t('goals.noUnitInCity') : t('goals.noUnitInZone')}
+          </p>
+        }
       />
 
       <Modal
