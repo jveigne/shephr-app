@@ -75,6 +75,7 @@
     "existingTitle": "Un compte existe déjà",
     "existingHint": "Un compte existe déjà avec cet email. Saisissez votre mot de passe pour continuer.",
     "phoneTaken": "Un compte existe déjà avec ce numéro de téléphone.",
+    "phoneInvalid": "Numéro de téléphone incomplet.",
     "useAnotherEmail": "Utiliser une autre adresse"
   },
   "activate": {

@@ -381,6 +381,7 @@
     "existingTitle": "This account already exists",
     "existingHint": "An account already exists with this email. Enter your password to continue.",
     "phoneTaken": "An account already exists with this phone number.",
+    "phoneInvalid": "Incomplete phone number.",
     "useAnotherEmail": "Use another email address"
   },
   "invitation": {
