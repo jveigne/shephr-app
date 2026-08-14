@@ -32,6 +32,13 @@ export interface AdminUserResponse {
   /** Lot 4.8 — pays coordonnés par un SECRETARIAT/LEADER (assignés par SUPER_ADMIN). */
   coordinatedCountryIds: string[];
   active: boolean;
+  /**
+   * A soumis son engagement pour l'année courante (JP 14/08).
+   * `true` soumis · `false` pas encore · `null` NON APPLICABLE (dirigeant de ville, région ou
+   * nation : il ne soumet rien à son niveau).
+   * Mirrors com.excellence.back.auth.admin.user.dto.AdminUserResponse#goalSubmitted
+   */
+  goalSubmitted: boolean | null;
   createdAt: string;
   updatedAt: string | null;
 }
@@ -103,6 +110,26 @@ export interface UpdateUserRequest {
   coordinatedCountryIds?: string[];
   active?: boolean;
   superAdmin?: boolean;
+}
+
+/**
+ * Compteur « X / Y ont soumis leur engagement » — calculé par le SERVEUR sur tout le périmètre
+ * filtré, pas sur la page affichée (la liste est paginée).
+ * Mirrors com.excellence.back.auth.admin.user.dto.GoalSubmissionSummaryResponse
+ */
+export interface GoalSubmissionSummary {
+  submitted: number;
+  total: number;
+}
+
+export async function fetchGoalSubmissionSummary(
+  params: Pick<ListUsersParams, 'ministryId' | 'active' | 'placeNodeId' | 'search'> = {},
+): Promise<GoalSubmissionSummary> {
+  const { data } = await apiClient.get<GoalSubmissionSummary>(
+    '/api/church/admin/users/goal-submission-summary',
+    { params },
+  );
+  return data;
 }
 
 export async function listUsers(params: ListUsersParams = {}) {
@@ -326,6 +353,12 @@ export interface CreateUnitRequest {
   ministryId: string;
   localityId: string;
   name: string;
+  /**
+   * Palier C1-bis (JP 14/08) — responsable de l'assemblée, compte EXISTANT. Obligatoire hors
+   * SUPER_ADMIN (422 `UNIT_LEADER_REQUIRED`) ; l'affectation est faite par le backend dans la
+   * MÊME transaction que la création.
+   */
+  leaderUserId?: string;
 }
 
 export interface UpdateUnitRequest {
@@ -353,4 +386,40 @@ export async function updateUnit(id: string, payload: UpdateUnitRequest) {
 
 export async function deleteUnit(id: string) {
   await apiClient.delete(`/api/church/admin/units/${id}`);
+}
+
+/**
+ * Palier C4 (JP 14/08) — une ligne de l'historique de création des assemblées.
+ * Mirrors com.excellence.back.org.admin.unit.dto.AssemblyCreationResponse
+ */
+export interface AssemblyCreationRow {
+  unitId: string;
+  name: string;
+  cityName: string | null;
+  regionName: string | null;
+  nationName: string | null;
+  /** Instant ISO-8601. */
+  createdAt: string;
+  createdById: string | null;
+  /** null pour les assemblées créées AVANT la migration org/18 — l'écran affiche « — ». */
+  createdByName: string | null;
+  createdByRole: ModuleRole | null;
+}
+
+/**
+ * Palier C4 (JP 14/08) — historique de création des assemblées, trié par le SERVEUR (plus
+ * récentes d'abord) et paginé côté serveur.
+ *
+ * <p>⚠ Garde serveur : SUPER_ADMIN (tous ministères) ou SECRETARIAT (le sien seul) — tout autre
+ * rôle reçoit un 403. `ministryId` est facultatif : omis, le backend applique le périmètre de
+ * l'appelant. Le gating d'écran ne remplace pas cette garde.
+ */
+export async function listAssemblyHistory(
+  params: { ministryId?: string; page?: number; size?: number } = {},
+) {
+  const { data } = await apiClient.get<PageResponse<AssemblyCreationRow>>(
+    '/api/church/admin/units/history',
+    { params },
+  );
+  return data;
 }

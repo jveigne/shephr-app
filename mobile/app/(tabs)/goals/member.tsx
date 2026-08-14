@@ -1,18 +1,24 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, RefreshControl } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, RefreshControl, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import ScreenShell from '../../../components/ScreenShell';
 import Button from '../../../components/Button';
 import Card from '../../../components/Card';
+import Label from '../../../components/Label';
 import { YearSelector, GoalLineCard } from './index';
 import { colors, fonts } from '../../../theme';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useGoalsData } from '../../../hooks/useGoalsData';
-import { submitMyMemberPledges } from '../../../services/goalsApi';
+import {
+  submitMyMemberPledges,
+  getMyAssemblyGoal,
+  type ActiveGoal,
+  type MyAssemblyGoalLine,
+} from '../../../services/goalsApi';
 import { confirmDialog, notify } from '../../../utils/dialogs';
-import { fmtDate } from '../../../utils/format';
+import { fmtDate, fmtAmount } from '../../../utils/format';
 
 /**
  * Feature A — « Mes objectifs » du simple MEMBRE : un objectif personnel par catégorie, qui
@@ -195,8 +201,115 @@ export default function MemberGoalsScreen() {
         )
       )}
 
+      {/* Palier A1 — engagement de l'assemblée, en LECTURE SEULE (aucune action ici). */}
+      {year != null && <MyAssemblyBlock year={year} goal={goal} />}
+
       <Text style={styles.footnote}>{t('goals.member.hint')}</Text>
     </ScreenShell>
+  );
+}
+
+/**
+ * Palier A1 (JP 14/08) — bloc replié « Engagement de mon assemblée ».
+ *
+ * <p>Calqué sur `MembersAggregateBlock` de la vue dirigeant (carte paper2, chevron, badge de
+ * source), mais <b>sans le détail par fidèle</b> : un simple membre voit ce que son assemblée
+ * s'est engagée à faire, pas qui a déclaré quoi. Aucune action non plus — ni saisie, ni
+ * avancement, ni soumission : ce n'est pas son niveau.
+ */
+function MyAssemblyBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
+  const { t } = useLanguage();
+  const [expanded, setExpanded] = useState(false);
+  const [lines, setLines] = useState<MyAssemblyGoalLine[] | null>(null);
+  const [unitName, setUnitName] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // L'année change → on invalide, le contenu sera rechargé au prochain dépli.
+  useEffect(() => {
+    setLines(null);
+  }, [year]);
+
+  useEffect(() => {
+    if (!expanded || lines != null || loading) return;
+    setLoading(true);
+    getMyAssemblyGoal(year)
+      .then((r) => {
+        setLines(r.lines);
+        setUnitName(r.unitName);
+      })
+      .catch(() => setLines([]))
+      .finally(() => setLoading(false));
+  }, [expanded, lines, loading, year]);
+
+  const catById = new Map(goal.categories.map((c) => [c.id, c]));
+  const fmtFor = (categoryId: string, v: number | null) => {
+    if (v == null) return '—';
+    const cat = catById.get(categoryId);
+    return cat?.unitType === 'CURRENCY'
+      ? fmtAmount(v, goal.defaultCurrency)
+      : `${v} ${cat?.unitLabel ?? ''}`.trim();
+  };
+  const sourceLabel: Record<string, string> = {
+    AGGREGATE: t('goals.aggregate.sourceAggregate'),
+    DIRECT: t('goals.aggregate.sourceDirect'),
+    FAITH: t('goals.aggregate.sourceFaith'),
+  };
+  // Une ligne sans engagement ni réalisé n'apprend rien au membre : on ne l'affiche pas.
+  const filled = (lines ?? []).filter(
+    (l) => (l.effectiveAmount ?? l.effectiveCount ?? 0) > 0 || (l.achievedAmount ?? l.achievedCount ?? 0) > 0,
+  );
+
+  return (
+    <Card variant="paper2" style={styles.assemblyCard}>
+      <Pressable onPress={() => setExpanded((e) => !e)} style={styles.assemblyHeader} hitSlop={6}>
+        <Ionicons name="home-outline" size={18} color={colors.mossSoft} />
+        <Text style={styles.assemblyTitle}>
+          {t('goals.member.assemblyTitle')}
+          {unitName ? ` · ${unitName}` : ''}
+        </Text>
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.ink3} />
+      </Pressable>
+
+      {expanded && (
+        <View style={{ marginTop: 10 }}>
+          <Text style={styles.assemblyHint}>{t('goals.member.assemblyHint')}</Text>
+          {loading && <ActivityIndicator color={colors.moss} style={{ marginTop: 10 }} />}
+          {!loading && filled.length === 0 && (
+            <Text style={styles.assemblyEmpty}>{t('goals.member.assemblyEmpty')}</Text>
+          )}
+          {!loading &&
+            filled.map((line) => {
+              const cat = catById.get(line.categoryId);
+              return (
+                <View key={line.categoryId} style={styles.assemblyLine}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={styles.assemblyCat}>{cat?.name ?? line.categoryCode}</Text>
+                    <View style={styles.sourceBadge}>
+                      <Text style={styles.sourceBadgeText}>
+                        {sourceLabel[line.source] ?? line.source}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.assemblyCols}>
+                    <View>
+                      <Label>{t('goals.aggregate.retained')}</Label>
+                      <Text style={[styles.assemblyValue, { fontWeight: '600' }]}>
+                        {fmtFor(line.categoryId, line.effectiveAmount ?? line.effectiveCount)}
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Label>{t('goals.given')}</Label>
+                      <Text style={styles.assemblyValue}>
+                        {fmtFor(line.categoryId, line.achievedAmount ?? line.achievedCount)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+        </View>
+      )}
+    </Card>
   );
 }
 
@@ -275,6 +388,45 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 18,
     lineHeight: 18,
+  },
+  // Palier A1 — bloc « Engagement de mon assemblée » (miroir de membersAgg* de la vue dirigeant).
+  assemblyCard: { marginTop: 18, paddingHorizontal: 16, paddingVertical: 14 },
+  assemblyHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  assemblyTitle: {
+    flex: 1,
+    fontFamily: fonts.sans,
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: colors.ink,
+  },
+  assemblyHint: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, lineHeight: 17 },
+  assemblyEmpty: {
+    fontFamily: fonts.sans,
+    fontSize: 12.5,
+    color: colors.ink3,
+    lineHeight: 18,
+    marginTop: 10,
+  },
+  assemblyLine: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(42,38,32,0.06)',
+  },
+  assemblyCat: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
+  assemblyCols: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  assemblyValue: { fontFamily: fonts.serif, fontSize: 16, color: colors.ink, marginTop: 2 },
+  sourceBadge: {
+    backgroundColor: 'rgba(201,149,107,0.22)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 99,
+  },
+  sourceBadgeText: {
+    fontFamily: fonts.sans,
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: colors.earthDeep,
   },
   centerBox: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 24 },
   emptyBubble: {

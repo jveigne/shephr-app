@@ -19,7 +19,10 @@ import { colors, fonts } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { canManageUsers, MODULE_ROLE_LABELS, type ModuleRole } from '../services/authApi';
-import { listUsers, listUnits, type AdminUserResponse, type UnitResponse } from '../services/adminApi';
+import {
+  fetchGoalSubmissionSummary, listUsers, listUnits,
+  type AdminUserResponse, type GoalSubmissionSummary, type UnitResponse,
+} from '../services/adminApi';
 import SelectField from '../components/SelectField';
 import {
   fetchMemberGoals,
@@ -61,6 +64,8 @@ export default function MembresScreen() {
   const [pickingUnit, setPickingUnit] = useState(false);
   // JP 31/07 — cliquer sur une personne ouvre SES engagements du But Quinquennal.
   const [openedMember, setOpenedMember] = useState<AdminUserResponse | null>(null);
+  // JP 14/08 — « X / Y ont soumis », sur tout le périmètre filtré (pas sur les lignes chargées).
+  const [submission, setSubmission] = useState<GoalSubmissionSummary | null>(null);
 
   // La recherche par noms approchés ignore le filtre géographique (décision JP).
   const placeNodeId = search ? undefined : (city ?? region ?? nation)?.id;
@@ -70,10 +75,11 @@ export default function MembresScreen() {
   const PAGE_SIZE = 30;
 
   const load = useCallback(async () => {
-    const [u, un, ctx] = await Promise.allSettled([
+    const [u, un, ctx, sub] = await Promise.allSettled([
       listUsers({ size: PAGE_SIZE, page: 0, placeNodeId, search: search || undefined }),
       listUnits(),
       fetchRequestContext(),
+      fetchGoalSubmissionSummary({ placeNodeId, search: search || undefined }),
     ]);
     if (u.status === 'fulfilled') {
       setUsers(u.value.content);
@@ -81,6 +87,7 @@ export default function MembresScreen() {
     }
     if (un.status === 'fulfilled') setUnits(un.value);
     if (ctx.status === 'fulfilled') setContext(ctx.value);
+    setSubmission(sub.status === 'fulfilled' ? sub.value : null);
     setPage(0);
     setLoading(false);
   }, [placeNodeId, search]);
@@ -216,7 +223,17 @@ export default function MembresScreen() {
         />
       )}
 
-      <Text style={styles.count}>{t('membres.count', { count: rows.length })}</Text>
+      <View style={styles.countRow}>
+        <Text style={styles.count}>{t('membres.count', { count: rows.length })}</Text>
+        {submission != null && submission.total > 0 && (
+          <Text style={styles.submittedCounter}>
+            {t('membres.submittedCounter', {
+              submitted: submission.submitted,
+              total: submission.total,
+            })}
+          </Text>
+        )}
+      </View>
 
       <View style={{ gap: 8 }}>
         {rows.map((u) => {
@@ -236,6 +253,13 @@ export default function MembresScreen() {
                   {unit ? ` · ${unit}` : ''}
                 </Text>
               </View>
+              {/* JP 14/08 — un dirigeant d'assemblée porte l'engagement de SON assemblée, un
+                  membre ses objectifs personnels. `null` = non concerné → aucun badge. */}
+              {u.goalSubmitted != null && (
+                <Text style={[styles.submittedPill, !u.goalSubmitted && styles.submittedPillPending]}>
+                  {u.goalSubmitted ? t('membres.submittedYes') : t('membres.submittedNo')}
+                </Text>
+              )}
               {!u.active && <Text style={styles.inactivePill}>{t('membres.inactive')}</Text>}
               <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
             </Card>
@@ -425,6 +449,16 @@ const styles = StyleSheet.create({
   avatarText: { color: colors.white, fontFamily: fonts.serif, fontSize: 15 },
   itemName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
   itemMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2 },
+  countRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  submittedCounter: {
+    fontFamily: fonts.sans, fontSize: 12, fontWeight: '700', color: colors.mossDeep,
+    backgroundColor: colors.mossTint, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 99,
+  },
+  submittedPill: {
+    fontFamily: fonts.sans, fontSize: 10.5, fontWeight: '700', color: colors.mossDeep,
+    backgroundColor: colors.mossTint, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99,
+  },
+  submittedPillPending: { color: colors.earthDeep, backgroundColor: 'rgba(201,149,107,0.22)' },
   inactivePill: {
     fontFamily: fonts.mono, fontSize: 9.5, color: colors.ink3, letterSpacing: 0.6,
     textTransform: 'uppercase', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 99,

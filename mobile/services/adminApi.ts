@@ -132,7 +132,15 @@ export async function listUnits(params: { localityId?: string } = {}): Promise<U
   return data;
 }
 
-export async function createUnit(payload: { ministryId: string; localityId: string; name: string; type: UnitType }) {
+/**
+ * Palier C1-bis (JP 14/08) — `leaderUserId` : responsable de l'assemblée, compte EXISTANT.
+ * Obligatoire hors SUPER_ADMIN (422 `UNIT_LEADER_REQUIRED`) : une assemblée sans responsable
+ * n'est administrable par personne. L'affectation est faite par le backend dans la MÊME
+ * transaction que la création — inutile (et risqué) d'enchaîner deux appels ici.
+ */
+export async function createUnit(payload: {
+  ministryId: string; localityId: string; name: string; type: UnitType; leaderUserId?: string;
+}) {
   const { data } = await apiClient.post<UnitResponse>('/api/church/admin/units', payload);
   return data;
 }
@@ -197,6 +205,13 @@ export interface AdminUserResponse {
   goalRole: ModuleRole | null;
   goalUnitId: string | null;
   active: boolean;
+  /**
+   * A soumis son engagement pour l'année courante (JP 14/08).
+   * `true` soumis · `false` pas encore · `null` NON APPLICABLE (dirigeant de ville, région ou
+   * nation : il ne soumet rien à son niveau).
+   * Mirrors com.excellence.back.auth.admin.user.dto.AdminUserResponse#goalSubmitted
+   */
+  goalSubmitted: boolean | null;
 }
 
 export interface UsersPage {
@@ -206,11 +221,69 @@ export interface UsersPage {
   last?: boolean;
 }
 
+/**
+ * Compteur « X / Y ont soumis leur engagement » (JP 14/08) — calculé par le SERVEUR sur TOUT le
+ * périmètre filtré, pas sur les lignes chargées (la liste est paginée et s'empile).
+ * Mirrors com.excellence.back.auth.admin.user.dto.GoalSubmissionSummaryResponse
+ */
+export interface GoalSubmissionSummary {
+  submitted: number;
+  total: number;
+}
+
+export async function fetchGoalSubmissionSummary(
+  params: { placeNodeId?: string; search?: string } = {},
+): Promise<GoalSubmissionSummary> {
+  const { data } = await apiClient.get<GoalSubmissionSummary>(
+    '/api/church/admin/users/goal-submission-summary',
+    { params },
+  );
+  return data;
+}
+
 export async function listUsers(
   // JP 31/07 — filtrage et pagination CÔTÉ SERVEUR : `placeNodeId` (nation, région ou ville)
   // et `search` (noms approchés, indépendant du filtre géographique) sont résolus par le backend.
   params: { active?: boolean; page?: number; size?: number; placeNodeId?: string; search?: string } = {},
 ): Promise<UsersPage> {
   const { data } = await apiClient.get<UsersPage>('/api/church/admin/users', { params });
+  return data;
+}
+
+// ---------------- Historique des créations d'assemblées (palier C4 — JP 14/08) ----------------
+// GET /api/church/admin/units/history — LECTURE SEULE, trié par les plus récentes (tri porté par
+// le backend). Garde serveur : SUPER_ADMIN (tous ministères) ou SECRETARIAT (le sien seul) ; tout
+// autre rôle reçoit un 403. Le gating d'écran évite d'afficher une entrée inutile, il ne remplace
+// pas cette garde.
+
+/** Mirrors com.excellence.back.org.admin.unit.dto.AssemblyCreationResponse */
+export interface AssemblyCreationRow {
+  unitId: string;
+  name: string;
+  cityName: string | null;
+  regionName: string | null;
+  nationName: string | null;
+  /** Instant ISO. */
+  createdAt: string;
+  createdById: string | null;
+  /** `null` pour les assemblées créées AVANT la migration org/18 → afficher « — ». */
+  createdByName: string | null;
+  createdByRole: ModuleRole | null;
+}
+
+export interface AssemblyHistoryPage {
+  content: AssemblyCreationRow[];
+  totalElements: number;
+  /** Enveloppe Page de Spring : vrai sur la dernière page. */
+  last?: boolean;
+}
+
+export async function listAssemblyHistory(
+  params: { ministryId?: string; page?: number; size?: number } = {},
+): Promise<AssemblyHistoryPage> {
+  const { data } = await apiClient.get<AssemblyHistoryPage>(
+    '/api/church/admin/units/history',
+    { params },
+  );
   return data;
 }

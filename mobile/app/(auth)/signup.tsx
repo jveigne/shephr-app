@@ -63,12 +63,19 @@ export default function SignupScreen() {
 
   const phoneDigits = useMemo(() => phone.replace(/\D/g, ''), [phone]);
 
+  // Téléphone FACULTATIF à l'inscription libre (retour Apple, JP 14/08) : le champ reste affiché
+  // et rien n'indique qu'il est optionnel — mais il ne bloque plus la création du compte. S'il est
+  // renseigné, il reste validé comme avant (indicatif + au moins 6 chiffres), en erreur de FORMAT.
+  const phoneProvided = phoneDigits.length > 0;
+  const phoneTooShort = phoneProvided && phoneDigits.length < 6;
+  const countryMissing = phoneProvided && country == null;
+
   const formValid =
     firstName.trim().length > 0 &&
     lastName.trim().length > 0 &&
     email.includes('@') &&
-    country != null &&
-    phoneDigits.length >= 6 &&
+    !phoneTooShort &&
+    !countryMissing &&
     password.length >= 6 &&
     confirm === password;
 
@@ -85,7 +92,7 @@ export default function SignupScreen() {
   };
 
   const submit = async () => {
-    if (!formValid || !country) return;
+    if (!formValid) return;
     setLoading(true);
     setPhoneTaken(false);
     try {
@@ -93,8 +100,10 @@ export default function SignupScreen() {
         identifier: email.trim(),
         password,
         fullName: `${firstName.trim()} ${lastName.trim()}`,
-        phoneNumber: phone.trim(),
-        countryCode: country.dial,
+        // Numéro vide ⇒ on n'envoie pas non plus l'indicatif : un indicatif orphelin fausserait
+        // l'unicité (indicatif, numéro) le jour où l'utilisateur renseignera son téléphone.
+        phoneNumber: phoneProvided ? phone.trim() : undefined,
+        countryCode: phoneProvided ? country?.dial : undefined,
       });
       // Compte neuf : aucun rattachement possible → rattachement à une assemblée.
       router.replace('/(auth)/join');
@@ -229,6 +238,8 @@ export default function SignupScreen() {
                     {i18n.language?.startsWith('en') ? country.nameEn : country.name} · {country.dial}
                   </Text>
                 )}
+                {countryMissing && <Text style={styles.errText}>{t('activate.countryRequired')}</Text>}
+                {phoneTooShort && <Text style={styles.errText}>{t('signup.phoneInvalid')}</Text>}
                 {phoneTaken && <Text style={styles.errText}>{t('signup.phoneTaken')}</Text>}
               </View>
 

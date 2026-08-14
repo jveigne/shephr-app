@@ -40,8 +40,8 @@ interface HistoryEntry {
 export default function HistoryScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { year: yearParam } = useLocalSearchParams<{ year?: string }>();
-  const { goal, lines, progressByPledge, loading, reload } = useGoalsData(yearParam ? Number(yearParam) : null);
+  const { year: yearParam, unitId } = useLocalSearchParams<{ year?: string; unitId?: string }>();
+  const { goal, lines, progressByPledge, loading, reload } = useGoalsData(yearParam ? Number(yearParam) : null, false, unitId);
   const [filter, setFilter] = useState<string | null>(null);
   const [editing, setEditing] = useState<HistoryEntry | null>(null);
   const [refreshing, setRefreshing] = useState(false);

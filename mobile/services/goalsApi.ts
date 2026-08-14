@@ -44,6 +44,18 @@ export interface ActiveGoal {
 /** `?year=` si l'année est fournie (sinon le backend retombe sur l'année courante). */
 const yq = (year?: number) => (year != null ? `?year=${year}` : '');
 
+/**
+ * Palier A3 — année + assemblée ciblée. `unitId` absent ⇒ l'assemblée « home » de l'appelant,
+ * exactement comme avant : les écrans mono-assemblée n'ont rien à passer.
+ */
+const yuq = (year?: number, unitId?: string) => {
+  const parts = [
+    year != null ? `year=${year}` : null,
+    unitId ? `unitId=${unitId}` : null,
+  ].filter(Boolean);
+  return parts.length ? `?${parts.join('&')}` : '';
+};
+
 export interface PledgeResponse {
   id: string;
   goalId: string;
@@ -71,6 +83,8 @@ export interface CreatePledgeRequest {
   year?: number;
   targetAmount?: number;
   targetCount?: number;
+  /** Palier A3 — assemblée ciblée ; absent = l'assemblée « home » du dirigeant. */
+  unitId?: string;
 }
 
 export interface UpdatePledgeRequest {
@@ -123,9 +137,10 @@ export async function getActiveGoal(): Promise<ActiveGoal> {
   return data;
 }
 
-export async function getMyPledges(year?: number): Promise<PledgeResponse[]> {
+/** Palier A3 — `unitId` facultatif : une des assemblées du dirigeant, sinon la « home ». */
+export async function getMyPledges(year?: number, unitId?: string): Promise<PledgeResponse[]> {
   const { data } = await apiClient.get<PledgeResponse[]>(
-    `/api/church/goals/me/pledges${yq(year)}`,
+    `/api/church/goals/me/pledges${yuq(year, unitId)}`,
   );
   return data;
 }
@@ -153,9 +168,10 @@ export async function updatePledge(
 
 // --- Submission (UC-DIR-11) --------------------------------------------------
 
-export async function submitMyPledges(year?: number): Promise<SubmitResponse> {
+/** Palier A3 — verrouille l'assemblée ciblée (`unitId`), ou la « home » si non précisée. */
+export async function submitMyPledges(year?: number, unitId?: string): Promise<SubmitResponse> {
   const { data } = await apiClient.post<SubmitResponse>(
-    `/api/church/goals/me/submit${yq(year)}`,
+    `/api/church/goals/me/submit${yuq(year, unitId)}`,
   );
   return data;
 }
@@ -381,6 +397,42 @@ export async function fetchMembersAggregate(
   return data;
 }
 
+/**
+ * Palier A1 (JP 14/08) — engagement de MON assemblée, en lecture seule.
+ * Mirrors com.excellence.back.goals.query.dto.MyAssemblyGoalResponse
+ *
+ * ⚠ Volontairement SANS donnée nominative : c'est ce qui distingue cet endpoint de
+ * `fetchMembersAggregate`, réservé aux dirigeants (il liste les objectifs de chaque fidèle).
+ * Un simple membre voit le total engagé de son assemblée, pas qui a déclaré quoi.
+ */
+export interface MyAssemblyGoalLine {
+  categoryId: string;
+  categoryCode: string;
+  /** Retenu pour l'assemblée (RG-08 : MAX(agrégat des fidèles, foi)). */
+  effectiveAmount: number | null;
+  effectiveCount: number | null;
+  source: AggregationSource;
+  /** Réalisé (versé / atteint). */
+  achievedAmount: number | null;
+  achievedCount: number | null;
+}
+
+export interface MyAssemblyGoalResponse {
+  unitId: string;
+  unitName: string | null;
+  year: number;
+  submitted: boolean;
+  lines: MyAssemblyGoalLine[];
+}
+
+/** Erreur 422 : USER_NO_GOAL_UNIT (compte sans assemblée de rattachement). */
+export async function getMyAssemblyGoal(year?: number): Promise<MyAssemblyGoalResponse> {
+  const { data } = await apiClient.get<MyAssemblyGoalResponse>(
+    `/api/church/goals/me/assembly${yq(year)}`,
+  );
+  return data;
+}
+
 // --- Vues agrégées manquantes (Lot 4.3 — UC-DIR-13, UC-LDR-06) ---------------
 
 /** Avancement enrichi de sa catégorie — remplace N appels listProgress (UC-DIR-13). */
@@ -405,8 +457,11 @@ export interface ZoneUnitStatus {
   leaderName: string | null;
 }
 
-export async function getMyProgress(year?: number): Promise<MyProgressResponse[]> {
-  const { data } = await apiClient.get<MyProgressResponse[]>(`/api/church/goals/me/progress${yq(year)}`);
+/** Palier A3 — `unitId` facultatif, même résolution que `getMyPledges`. */
+export async function getMyProgress(year?: number, unitId?: string): Promise<MyProgressResponse[]> {
+  const { data } = await apiClient.get<MyProgressResponse[]>(
+    `/api/church/goals/me/progress${yuq(year, unitId)}`,
+  );
   return data;
 }
 

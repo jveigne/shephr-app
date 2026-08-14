@@ -62,13 +62,19 @@ export function SignupPage() {
       setError(t('signup.validationError'));
       return;
     }
-    if (!countryIso) {
-      setError(t('invitation.countryRequired'));
-      return;
-    }
-    if (phone.trim().replace(/\D/g, '').length < 6) {
-      setError(t('invitation.phoneRequired'));
-      return;
+    // Téléphone FACULTATIF à l'inscription libre (retour Apple, JP 14/08) : le champ reste
+    // affiché, sans mention d'optionnalité, mais ne bloque plus la création du compte. Renseigné,
+    // il reste validé comme avant — en erreur de FORMAT, jamais d'absence.
+    const phoneDigits = phone.trim().replace(/\D/g, '');
+    if (phoneDigits.length > 0) {
+      if (!countryIso) {
+        setError(t('invitation.countryRequired'));
+        return;
+      }
+      if (phoneDigits.length < 6) {
+        setError(t('signup.phoneInvalid'));
+        return;
+      }
     }
     if (password !== confirm) {
       setError(t('invitation.mismatch'));
@@ -80,8 +86,11 @@ export function SignupPage() {
         identifier: email.trim(),
         password,
         fullName: `${firstName.trim()} ${lastName.trim()}`,
-        phoneNumber: phone.trim(),
-        countryCode: DIAL_COUNTRIES.find((c) => c.iso === countryIso)?.dial,
+        // Numéro vide ⇒ pas d'indicatif non plus : un indicatif orphelin fausserait l'unicité
+        // (indicatif, numéro) le jour où l'utilisateur renseignera son téléphone.
+        phoneNumber: phoneDigits.length > 0 ? phone.trim() : undefined,
+        countryCode:
+          phoneDigits.length > 0 ? DIAL_COUNTRIES.find((c) => c.iso === countryIso)?.dial : undefined,
       });
       // Compte neuf : aucun rattachement possible → rattachement à une assemblée.
       navigate('/join', { replace: true });
@@ -233,7 +242,9 @@ export function SignupPage() {
                   />
                 </Field>
 
-                <Field label={t('invitation.phoneLabel')} hint={t('invitation.phoneHint')}>
+                {/* Pas de `hint` ni de `required` ici : le téléphone ne conditionne plus la
+                    création du compte (JP 14/08). Le champ reste à sa place, sans mention. */}
+                <Field label={t('invitation.phoneLabel')}>
                   <div style={{ display: 'grid', gap: 8 }}>
                     <CountryDialPicker value={countryIso} onChange={setCountryIso} />
                     <Input
@@ -241,7 +252,6 @@ export function SignupPage() {
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder={t('invitation.phonePlaceholder')}
                       autoComplete="tel-national"
-                      required
                     />
                   </div>
                 </Field>

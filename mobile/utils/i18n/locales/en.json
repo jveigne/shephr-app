@@ -75,6 +75,7 @@
     "existingTitle": "This account already exists",
     "existingHint": "An account already exists with this email. Enter your password to continue.",
     "phoneTaken": "An account already exists with this phone number.",
+    "phoneInvalid": "Incomplete phone number.",
     "useAnotherEmail": "Use another email address"
   },
   "activate": {
@@ -326,7 +327,17 @@
       "submittedBanner": "Your objectives are submitted for this year. To change them, send a request to the secretariat.",
       "submitRefused": "Submission refused",
       "noPledgeToSubmit": "Declare at least one objective before submitting.",
-      "alreadySubmitted": "Your objectives have already been submitted for this year."
+      "alreadySubmitted": "Your objectives have already been submitted for this year.",
+      "assemblyTitle": "My assembly's pledge",
+      "assemblyHint": "What your assembly has committed to this year, all members combined. Read only.",
+      "assemblyEmpty": "Your assembly has no pledge for this year yet."
+    },
+    "myUnits": {
+      "title": "My assemblies",
+      "hint": "You lead several assemblies: open the one whose pledge you want to record or submit.",
+      "empty": "No assembly attached to your account.",
+      "back": "My assemblies",
+      "yearNote": "{{year}} statuses."
     },
     "aggregate": {
       "membersSum": "Members total",
@@ -459,7 +470,6 @@
     "countries": "Countries",
     "myAttachment": "My attachment",
     "attachEmpty": "No attachment yet.",
-    "requestCreate": "Request a creation",
     "countriesTab": "Countries",
     "addCountry": "Add a nation",
     "addZone": "Add a region",
@@ -485,6 +495,10 @@
     "modalAddUnit": "Add — assembly",
     "name": "Name",
     "namePlaceholder": "Name",
+    "leader": "Assembly leader",
+    "leaderHint": "Required — pick an existing account. They become the leader of this assembly.",
+    "leaderSearchPlaceholder": "Search a name or username…",
+    "leaderNoResult": "No account found.",
     "parentCountry": "Country",
     "parentZone": "Region",
     "parentLocality": "City",
@@ -497,7 +511,13 @@
     "fillFields": "Enter the name and the parent.",
     "saveRefusedTitle": "Save refused",
     "saveRefusedBody": "Outside your scope.",
-    "attachedRegionReadOnly": "Your attached region · read-only"
+    "attachedRegionReadOnly": "Your attached region · read-only",
+    "historyTitle": "Creation history",
+    "historyEmpty": "No creation recorded.",
+    "historyNoPlace": "Unknown attachment",
+    "historyCreatedBy": "Created by {{name}} · {{date}}",
+    "historyUnknownAuthor": "—",
+    "historyLoadMore": "Load more"
   },
   "notifications": {
     "morePending": "{{count}} more reminder(s) pending",
@@ -513,6 +533,9 @@
     "count_other": "{{count}} members",
     "roleMember": "Member",
     "inactive": "Inactive",
+    "submittedYes": "Submitted",
+    "submittedNo": "Not submitted",
+    "submittedCounter": "{{submitted}} / {{total}} submitted",
     "empty": "No member in your scope.",
     "pickUnitTitle": "Choose an assembly",
     "pickUnitSub": "The invited leader will be attached to this assembly.",
@@ -748,6 +771,7 @@
     "coordinator": "Coordinator",
     "leader": "Leader",
     "unit": "Unit",
+    "myUnits": "My assemblies",
     "member": "Personal",
     "regionsHeading": "Regions",
     "statesHeading": "States",

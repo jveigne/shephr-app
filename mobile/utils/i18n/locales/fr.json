@@ -75,6 +75,7 @@
     "existingTitle": "Un compte existe déjà",
     "existingHint": "Un compte existe déjà avec cet email. Saisissez votre mot de passe pour continuer.",
     "phoneTaken": "Un compte existe déjà avec ce numéro de téléphone.",
+    "phoneInvalid": "Numéro de téléphone incomplet.",
     "useAnotherEmail": "Utiliser une autre adresse"
   },
   "activate": {
@@ -326,7 +327,17 @@
       "submittedBanner": "Vos objectifs sont soumis pour cette année. Pour les modifier, adressez une demande au secrétariat.",
       "submitRefused": "Soumission refusée",
       "noPledgeToSubmit": "Déclarez au moins un objectif avant de soumettre.",
-      "alreadySubmitted": "Vos objectifs ont déjà été soumis pour cette année."
+      "alreadySubmitted": "Vos objectifs ont déjà été soumis pour cette année.",
+      "assemblyTitle": "Engagement de mon assemblée",
+      "assemblyHint": "Ce que votre assemblée s'est engagée à faire cette année, tous membres confondus. Lecture seule.",
+      "assemblyEmpty": "Votre assemblée n'a pas encore d'engagement pour cette année."
+    },
+    "myUnits": {
+      "title": "Mes assemblées",
+      "hint": "Vous dirigez plusieurs assemblées : ouvrez celle dont vous voulez déclarer ou soumettre l'engagement.",
+      "empty": "Aucune assemblée rattachée à votre compte.",
+      "back": "Mes assemblées",
+      "yearNote": "Statuts de l'année {{year}}."
     },
     "aggregate": {
       "membersSum": "Cumul des membres",
@@ -459,7 +470,6 @@
     "countries": "Pays",
     "myAttachment": "Mon rattachement",
     "attachEmpty": "Aucun rattachement pour le moment.",
-    "requestCreate": "Demander une création",
     "countriesTab": "Pays",
     "addCountry": "Ajouter une nation",
     "addZone": "Ajouter une région",
@@ -485,6 +495,10 @@
     "modalAddUnit": "Ajouter — assemblée",
     "name": "Nom",
     "namePlaceholder": "Nom",
+    "leader": "Responsable de l'assemblée",
+    "leaderHint": "Obligatoire — choisissez un compte existant. Il devient dirigeant de cette assemblée.",
+    "leaderSearchPlaceholder": "Rechercher un nom ou un identifiant…",
+    "leaderNoResult": "Aucun compte trouvé.",
     "parentCountry": "Pays",
     "parentZone": "Région",
     "parentLocality": "Ville",
@@ -497,7 +511,13 @@
     "fillFields": "Renseignez le nom et le rattachement.",
     "saveRefusedTitle": "Enregistrement refusé",
     "saveRefusedBody": "Hors de votre périmètre.",
-    "attachedRegionReadOnly": "Votre région de rattachement · lecture seule"
+    "attachedRegionReadOnly": "Votre région de rattachement · lecture seule",
+    "historyTitle": "Historique des créations",
+    "historyEmpty": "Aucune création enregistrée.",
+    "historyNoPlace": "Rattachement inconnu",
+    "historyCreatedBy": "Créée par {{name}} · {{date}}",
+    "historyUnknownAuthor": "—",
+    "historyLoadMore": "Charger plus"
   },
   "notifications": {
     "morePending": "{{count}} autre(s) rappel(s) en attente",
@@ -513,6 +533,9 @@
     "count_other": "{{count}} membres",
     "roleMember": "Membre",
     "inactive": "Inactif",
+    "submittedYes": "Soumis",
+    "submittedNo": "Non soumis",
+    "submittedCounter": "{{submitted}} / {{total}} ont soumis",
     "empty": "Aucun membre dans votre périmètre.",
     "pickUnitTitle": "Choisir une assemblée",
     "pickUnitSub": "Le dirigeant invité sera rattaché à cette assemblée.",
@@ -748,6 +771,7 @@
     "coordinator": "Coordinateur",
     "leader": "Dirigeant",
     "unit": "Unité",
+    "myUnits": "Mes assemblées",
     "member": "Personnelle",
     "regionsHeading": "Régions",
     "statesHeading": "États",

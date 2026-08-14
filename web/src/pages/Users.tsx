@@ -38,6 +38,7 @@ import {
   listCountries,
   listLocalities,
   listUnits,
+  fetchGoalSubmissionSummary,
   listUsers,
   listZones,
   updateUser,
@@ -64,6 +65,12 @@ const VISIBLE_MODULES: ModuleKind[] = FEATURES.donations ? ['goal', 'donation'] 
 
 const roleOf = (u: AdminUserResponse, m: ModuleKind) => (m === 'goal' ? u.goalRole : u.donationRole);
 const unitIdOf = (u: AdminUserResponse, m: ModuleKind) => (m === 'goal' ? u.goalUnitId : u.donationUnitId);
+/** Palier A2 — assemblées SUPPLÉMENTAIRES (le set moins la « home »). */
+const extraUnitIdsOf = (u: AdminUserResponse, m: ModuleKind) => {
+  const home = unitIdOf(u, m);
+  const set = (m === 'goal' ? u.goalUnitIds : u.donationUnitIds) ?? [];
+  return set.filter((id) => id !== home);
+};
 const zoneIdOf = (u: AdminUserResponse, m: ModuleKind) => (m === 'goal' ? u.goalZoneId : u.donationZoneId);
 const cityIdOf = (u: AdminUserResponse, m: ModuleKind) => (m === 'goal' ? u.goalCityId : u.donationCityId);
 const countryIdsOf = (u: AdminUserResponse, m: ModuleKind) =>
@@ -122,6 +129,17 @@ export function UsersPage() {
         search: submittedSearch || undefined,
         page,
         size: PAGE_SIZE,
+      }),
+  });
+
+  // Compteur « X / Y ont soumis » (JP 14/08) — calculé par le SERVEUR sur TOUT le périmètre
+  // filtré : la liste est paginée, compter les 30 lignes visibles n'aurait aucun sens.
+  const submissionQ = useQuery({
+    queryKey: ['admin', 'users', 'goal-submission', placeNodeId, submittedSearch],
+    queryFn: () =>
+      fetchGoalSubmissionSummary({
+        placeNodeId: submittedSearch ? undefined : placeNodeId || undefined,
+        search: submittedSearch || undefined,
       }),
   });
 
@@ -231,6 +249,20 @@ export function UsersPage() {
         return <span style={{ color: 'var(--ink-600)' }}>{parts.join(' · ') || '—'}</span>;
       },
     },
+    {
+      // JP 14/08 — suivi des soumissions : un dirigeant d'assemblée porte l'engagement de SON
+      // assemblée, un membre ses objectifs personnels. `null` = non concerné (dirigeant de ville,
+      // région ou nation) : « — » plutôt qu'un faux retardataire.
+      label: t('users.colSubmitted'),
+      render: (r) =>
+        r.goalSubmitted == null ? (
+          <span style={{ color: 'var(--ink-400)' }}>—</span>
+        ) : (
+          <Badge tone={r.goalSubmitted ? 'green' : 'earth'}>
+            {r.goalSubmitted ? t('users.submittedYes') : t('users.submittedNo')}
+          </Badge>
+        ),
+    },
     { label: t('common.status'), render: (r) => <StatusBadge active={r.active} /> },
     ...(canWrite
       ? [{
@@ -330,8 +362,25 @@ export function UsersPage() {
         </div>
 
         {/* Le total vient du SERVEUR : `rows` n'est qu'une page de 30. */}
-        <div style={{ color: 'var(--ink-500)', fontSize: 13, marginBottom: 10 }}>
-          {t('users.count', { count: usersQ.data?.totalElements ?? rows.length })}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+          <span style={{ color: 'var(--ink-500)', fontSize: 13 }}>
+            {t('users.count', { count: usersQ.data?.totalElements ?? rows.length })}
+          </span>
+          {submissionQ.data && submissionQ.data.total > 0 && (
+            <span
+              style={{
+                fontSize: 13, fontWeight: 600, color: 'var(--green-800)',
+                background: 'var(--paper-2, #faf7f0)', border: '1px solid var(--line)',
+                borderRadius: 999, padding: '3px 10px',
+              }}
+              title={t('users.submittedCounterHint')}
+            >
+              {t('users.submittedCounter', {
+                submitted: submissionQ.data.submitted,
+                total: submissionQ.data.total,
+              })}
+            </span>
+          )}
         </div>
 
         <div className="card" style={{ padding: 0 }}>
@@ -502,10 +551,12 @@ function MemberGoalsModal({ member, onClose }: { member: AdminUserResponse | nul
 }
 
 function PerimeterFields({
-  role, unitId, zoneId, cityId, countryIds, units, zones, cities, countries, set,
+  role, unitId, unitIds, zoneId, cityId, countryIds, units, zones, cities, countries, set,
 }: {
   role: ModuleRole | '';
   unitId: string;
+  /** Palier A2 — assemblées SUPPLÉMENTAIRES d'un DIRIGEANT_UNITE (hors « home »). */
+  unitIds: string[];
   zoneId: string;
   cityId: string;
   countryIds: string[];
@@ -513,7 +564,7 @@ function PerimeterFields({
   zones: ZoneResponse[];
   cities: LocalityResponse[];
   countries: CountryResponse[];
-  set: (patch: { unitId?: string; zoneId?: string; cityId?: string; countryIds?: string[] }) => void;
+  set: (patch: { unitId?: string; unitIds?: string[]; zoneId?: string; cityId?: string; countryIds?: string[] }) => void;
 }) {
   const { t } = useTranslation();
   // Recherche en cascade (nation › région › ville) : la liste du niveau visé se filtre
@@ -521,9 +572,22 @@ function PerimeterFields({
   const picker = { units, cities, zones, countries };
   if (role === 'MEMBRE' || role === 'DIRIGEANT_UNITE') {
     return (
-      <Field label={t('users.unitAttachment')} hint={t('users.unitAttachmentHint')}>
-        <GeoPicker level="unit" value={unitId} onChange={(id) => set({ unitId: id })} {...picker} />
-      </Field>
+      <>
+        <Field label={t('users.unitAttachment')} hint={t('users.unitAttachmentHint')}>
+          <GeoPicker level="unit" value={unitId} onChange={(id) => set({ unitId: id })} {...picker} />
+        </Field>
+        {/* Palier A2 (JP 14/08) : un dirigeant d'unité peut en tenir plusieurs. Un MEMBRE non :
+            il appartient à une seule assemblée. */}
+        {role === 'DIRIGEANT_UNITE' && (
+          <ExtraUnitsField
+            homeUnitId={unitId}
+            unitIds={unitIds}
+            units={units}
+            onChange={(ids) => set({ unitIds: ids })}
+            picker={picker}
+          />
+        )}
+      </>
     );
   }
   if (role === 'DIRIGEANT') {
@@ -566,6 +630,61 @@ function PerimeterFields({
   return null;
 }
 
+/**
+ * Assemblées supplémentaires d'un dirigeant d'unité (palier A2, JP 14/08).
+ *
+ * <p>Le sélecteur AJOUTE au lieu de remplacer : la liste des assemblées d'un ministère est bien
+ * trop longue pour une liste à cocher, on réutilise donc le GeoPicker en cascade puis on affiche
+ * les choix en badges retirables. L'assemblée « home » (au-dessus) reste la principale : c'est
+ * elle qui porte la déclaration par défaut, les autres élargissent le périmètre.
+ */
+function ExtraUnitsField({
+  homeUnitId, unitIds, units, onChange, picker,
+}: {
+  homeUnitId: string;
+  unitIds: string[];
+  units: UnitResponse[];
+  onChange: (ids: string[]) => void;
+  picker: { units: UnitResponse[]; cities: LocalityResponse[]; zones: ZoneResponse[]; countries: CountryResponse[] };
+}) {
+  const { t } = useTranslation();
+  const nameOf = (id: string) => units.find((u) => u.id === id)?.name ?? '—';
+  const extras = unitIds.filter((id) => id !== homeUnitId);
+
+  return (
+    <Field label={t('users.extraUnits')} hint={t('users.extraUnitsHint')}>
+      <div style={{ display: 'grid', gap: 8 }}>
+        {extras.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {extras.map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onChange(extras.filter((x) => x !== id))}
+                style={{
+                  border: '1px solid var(--line)', borderRadius: 999, padding: '4px 10px',
+                  background: 'var(--paper-2, #faf7f0)', color: 'var(--ink-600)', cursor: 'pointer',
+                  fontSize: 13, fontFamily: 'var(--font-sans)',
+                }}
+              >
+                {nameOf(id)} ✕
+              </button>
+            ))}
+          </div>
+        )}
+        <GeoPicker
+          level="unit"
+          value=""
+          onChange={(id) => {
+            if (id && id !== homeUnitId && !extras.includes(id)) onChange([...extras, id]);
+          }}
+          {...picker}
+        />
+      </div>
+    </Field>
+  );
+}
+
 /** Sélecteur de superviseur (organigramme, Lot 3.5) — partagé invite/edit. */
 function SupervisorField({
   me, people, value, onChange, excludeId,
@@ -598,13 +717,18 @@ function SupervisorField({
 }
 
 /** Construit le rattachement du MODULE choisi (les autres modules ne sont pas touchés). */
-function buildAttachment(module: ModuleKind, role: ModuleRole | '', unitId: string, zoneId: string, cityId: string, countryIds: string[]) {
+function buildAttachment(module: ModuleKind, role: ModuleRole | '', unitId: string, unitIds: string[], zoneId: string, cityId: string, countryIds: string[]) {
   const r = (role || undefined) as ModuleRole | undefined;
-  // home unit (action perso). MEMBRE/DIRIGEANT_UNITE = 1 assemblée ; DIRIGEANT = 1 ville (décision #7).
+  // home unit (action perso). MEMBRE = 1 assemblée ; DIRIGEANT_UNITE = 1..N (A2) ;
+  // DIRIGEANT = 1 ville (décision #7).
   let homeUnit: string | undefined;
   let unitSet: string[] | undefined;
-  if (role === 'MEMBRE' || role === 'DIRIGEANT_UNITE') {
+  if (role === 'MEMBRE') {
     homeUnit = unitId || undefined;
+  } else if (role === 'DIRIGEANT_UNITE') {
+    homeUnit = unitId || undefined;
+    // La « home » ouvre toujours le set : le backend traite `goalUnitIds` comme le périmètre complet.
+    unitSet = unitId ? [unitId, ...unitIds.filter((id) => id !== unitId)] : [];
   } else if (role === 'DIRIGEANT') {
     // DIRIGEANT = dirigeant de ville : rattachement à une VILLE ; on purge les unités héritées.
     unitSet = [];
@@ -669,6 +793,8 @@ function InviteModal({
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<ModuleRole | ''>('');
   const [unitId, setUnitId] = useState('');
+  // Palier A2 — assemblées supplémentaires d'un DIRIGEANT_UNITE (« home » exclue).
+  const [unitIds, setUnitIds] = useState<string[]>([]);
   const [zoneId, setZoneId] = useState('');
   const [cityId, setCityId] = useState('');
   const [countryIds, setCountryIds] = useState<string[]>([]);
@@ -677,7 +803,7 @@ function InviteModal({
   useEffect(() => {
     if (open) {
       setModule(VISIBLE_MODULES[0]); setEmail(''); setUsername(''); setFullName(''); setRole('');
-      setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); setSupervisorId(defaultSupervisor);
+      setUnitId(''); setUnitIds([]); setZoneId(''); setCityId(''); setCountryIds([]); setSupervisorId(defaultSupervisor);
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -706,7 +832,7 @@ function InviteModal({
                 username: username.trim() || undefined,
                 fullName: fullName.trim(),
                 supervisorId: supervisorId || undefined,
-                ...buildAttachment(module, role, unitId, zoneId, cityId, countryIds),
+                ...buildAttachment(module, role, unitId, unitIds, zoneId, cityId, countryIds),
               })}
             >
               {submitting ? t('users.creating') : t('users.generateInvitation')}
@@ -744,17 +870,17 @@ function InviteModal({
             <Field label={t('users.emailOptionalLabel')}><Input type="email" placeholder={t('users.emailPlaceholder')} value={email} onChange={(e) => setEmail(e.target.value)} icon={<Icon name="mail" size={14} />} /></Field>
           </div>
           <SupervisorField me={me} people={people} value={supervisorId} onChange={setSupervisorId} />
-          <ModuleField module={module} onChange={(m) => { setModule(m); setRole(''); setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); }} />
+          <ModuleField module={module} onChange={(m) => { setModule(m); setRole(''); setUnitId(''); setUnitIds([]); setZoneId(''); setCityId(''); setCountryIds([]); }} />
           <Field label={t('users.roleConferred', { module: moduleLabel(module) })}>
             <Picker
               value={role}
-              onChange={(r) => { setRole(r as ModuleRole | ''); setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); }}
+              onChange={(r) => { setRole(r as ModuleRole | ''); setUnitId(''); setUnitIds([]); setZoneId(''); setCityId(''); setCountryIds([]); }}
               placeholder={t('common.choose')}
               options={conferrableRoles(me, module).map((r) => ({ id: r, label: t(`roles.${r}`) }))}
             />
           </Field>
-          <PerimeterFields role={role} unitId={unitId} zoneId={zoneId} cityId={cityId} countryIds={countryIds} units={units} zones={zones} cities={cities} countries={countries}
-            set={(p) => { if (p.unitId !== undefined) setUnitId(p.unitId); if (p.zoneId !== undefined) setZoneId(p.zoneId); if (p.cityId !== undefined) setCityId(p.cityId); if (p.countryIds !== undefined) setCountryIds(p.countryIds); }} />
+          <PerimeterFields role={role} unitId={unitId} unitIds={unitIds} zoneId={zoneId} cityId={cityId} countryIds={countryIds} units={units} zones={zones} cities={cities} countries={countries}
+            set={(p) => { if (p.unitId !== undefined) setUnitId(p.unitId); if (p.unitIds !== undefined) setUnitIds(p.unitIds); if (p.zoneId !== undefined) setZoneId(p.zoneId); if (p.cityId !== undefined) setCityId(p.cityId); if (p.countryIds !== undefined) setCountryIds(p.countryIds); }} />
         </div>
       )}
     </Modal>
@@ -781,6 +907,8 @@ function EditModal({
   const [module, setModule] = useState<ModuleKind>(VISIBLE_MODULES[0]);
   const [role, setRole] = useState<ModuleRole | ''>('');
   const [unitId, setUnitId] = useState('');
+  // Palier A2 — assemblées supplémentaires d'un DIRIGEANT_UNITE (« home » exclue).
+  const [unitIds, setUnitIds] = useState<string[]>([]);
   const [zoneId, setZoneId] = useState('');
   const [cityId, setCityId] = useState('');
   const [countryIds, setCountryIds] = useState<string[]>([]);
@@ -793,6 +921,7 @@ function EditModal({
   const initFromUser = (u: AdminUserResponse, m: ModuleKind) => {
     setRole((roleOf(u, m) ?? '') as ModuleRole | '');
     setUnitId(unitIdOf(u, m) ?? '');
+    setUnitIds(extraUnitIdsOf(u, m));
     setZoneId(zoneIdOf(u, m) ?? '');
     setCityId(cityIdOf(u, m) ?? '');
     setCountryIds(countryIdsOf(u, m) ?? []);
@@ -824,7 +953,7 @@ function EditModal({
           <Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
           <Button variant="primary" disabled={!valid || submitting} onClick={() => onSubmit({
             supervisorId: supervisorId || undefined,
-            ...buildAttachment(module, role, unitId, zoneId, cityId, countryIds),
+            ...buildAttachment(module, role, unitId, unitIds, zoneId, cityId, countryIds),
             ...(me?.superAdmin ? { coordinatedCountryIds: showCoordinated ? coordinatedCountryIds : [] } : {}),
             active,
           })}>
@@ -839,7 +968,7 @@ function EditModal({
         <Field label={t('users.roleConferred', { module: moduleLabel(module) })}>
           <Picker
             value={role}
-            onChange={(r) => { setRole(r as ModuleRole | ''); setUnitId(''); setZoneId(''); setCityId(''); setCountryIds([]); }}
+            onChange={(r) => { setRole(r as ModuleRole | ''); setUnitId(''); setUnitIds([]); setZoneId(''); setCityId(''); setCountryIds([]); }}
             placeholder={t('common.noneOption')}
             options={[
               // Retrait du rôle : choix explicite, pas seulement un placeholder.
@@ -848,8 +977,8 @@ function EditModal({
             ]}
           />
         </Field>
-        <PerimeterFields role={role} unitId={unitId} zoneId={zoneId} cityId={cityId} countryIds={countryIds} units={units} zones={zones} cities={cities} countries={countries}
-          set={(p) => { if (p.unitId !== undefined) setUnitId(p.unitId); if (p.zoneId !== undefined) setZoneId(p.zoneId); if (p.cityId !== undefined) setCityId(p.cityId); if (p.countryIds !== undefined) setCountryIds(p.countryIds); }} />
+        <PerimeterFields role={role} unitId={unitId} unitIds={unitIds} zoneId={zoneId} cityId={cityId} countryIds={countryIds} units={units} zones={zones} cities={cities} countries={countries}
+          set={(p) => { if (p.unitId !== undefined) setUnitId(p.unitId); if (p.unitIds !== undefined) setUnitIds(p.unitIds); if (p.zoneId !== undefined) setZoneId(p.zoneId); if (p.cityId !== undefined) setCityId(p.cityId); if (p.countryIds !== undefined) setCountryIds(p.countryIds); }} />
         {showCoordinated && (
           <Field label={t('users.coordinatedCountriesNation')} hint={t('users.coordinatedCountriesHint')}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
