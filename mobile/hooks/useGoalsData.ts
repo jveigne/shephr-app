@@ -67,8 +67,16 @@ export function progressTotal(items: ProgressResponse[]): number {
  * Feature A — mode « objectifs personnels du membre » : mêmes lignes, même écran, mais les
  * engagements ET leurs avancements viennent du niveau MEMBER (`/goals/member/me/...`) au lieu
  * de ceux de l'assemblée. Décision JP 28/07 : le membre déclare aussi l'état de SES objectifs.
+ *
+ * <p>Palier A3 (JP 14/08) — `unitId` facultatif : l'assemblée à consulter pour un dirigeant qui en
+ * tient plusieurs. Absent, le backend retombe sur l'assemblée « home », donc les écrans
+ * mono-assemblée sont inchangés. Sans effet en mode membre (ses objectifs sont personnels).
  */
-export function useGoalsData(selectedYear?: number | null, member = false): GoalsData {
+export function useGoalsData(
+  selectedYear?: number | null,
+  member = false,
+  unitId?: string | null,
+): GoalsData {
   const [goal, setGoal] = useState<ActiveGoal | null>(null);
   const [pledges, setPledges] = useState<PledgeResponse[]>([]);
   const [progressByPledge, setProgressByPledge] = useState<
@@ -83,9 +91,10 @@ export function useGoalsData(selectedYear?: number | null, member = false): Goal
       // Annualisation Lot 4.6 : année sélectionnée (défaut = année courante du Goal).
       const y = selectedYear ?? g.currentYear;
       // Lot 4.3 : un seul appel /me/progress remplace un listProgress par pledge.
+      const unit = member ? undefined : (unitId ?? undefined);
       const [ps, progress] = await Promise.all([
-        member ? fetchMyMemberPledges(y) : getMyPledges(y),
-        member ? getMyMemberProgress(y) : getMyProgress(y),
+        member ? fetchMyMemberPledges(y) : getMyPledges(y, unit),
+        member ? getMyMemberProgress(y) : getMyProgress(y, unit),
       ]);
       const byPledge: Record<string, ProgressResponse[]> = {};
       for (const p of progress) {
@@ -100,7 +109,7 @@ export function useGoalsData(selectedYear?: number | null, member = false): Goal
     } finally {
       setLoading(false);
     }
-  }, [selectedYear, member]);
+  }, [selectedYear, member, unitId]);
 
   useEffect(() => {
     reload();

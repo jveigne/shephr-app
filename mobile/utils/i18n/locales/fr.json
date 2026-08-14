@@ -327,7 +327,17 @@
       "submittedBanner": "Vos objectifs sont soumis pour cette année. Pour les modifier, adressez une demande au secrétariat.",
       "submitRefused": "Soumission refusée",
       "noPledgeToSubmit": "Déclarez au moins un objectif avant de soumettre.",
-      "alreadySubmitted": "Vos objectifs ont déjà été soumis pour cette année."
+      "alreadySubmitted": "Vos objectifs ont déjà été soumis pour cette année.",
+      "assemblyTitle": "Engagement de mon assemblée",
+      "assemblyHint": "Ce que votre assemblée s'est engagée à faire cette année, tous membres confondus. Lecture seule.",
+      "assemblyEmpty": "Votre assemblée n'a pas encore d'engagement pour cette année."
+    },
+    "myUnits": {
+      "title": "Mes assemblées",
+      "hint": "Vous dirigez plusieurs assemblées : ouvrez celle dont vous voulez déclarer ou soumettre l'engagement.",
+      "empty": "Aucune assemblée rattachée à votre compte.",
+      "back": "Mes assemblées",
+      "yearNote": "Statuts de l'année {{year}}."
     },
     "aggregate": {
       "membersSum": "Cumul des membres",
@@ -749,6 +759,7 @@
     "coordinator": "Coordinateur",
     "leader": "Dirigeant",
     "unit": "Unité",
+    "myUnits": "Mes assemblées",
     "member": "Personnelle",
     "regionsHeading": "Régions",
     "statesHeading": "États",

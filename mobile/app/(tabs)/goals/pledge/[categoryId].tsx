@@ -34,16 +34,18 @@ const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallb
 export default function PledgeEditScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { categoryId, year: yearParam, scope } = useLocalSearchParams<{
+  const { categoryId, year: yearParam, scope, unitId } = useLocalSearchParams<{
     categoryId: string;
     year?: string;
     scope?: string;
+    /** Palier A3 — assemblée ciblée (dirigeant multi-assemblées) ; absente = son assemblée « home ». */
+    unitId?: string;
   }>();
   const year = yearParam ? Number(yearParam) : null;
   // Feature A — `scope=member` : même écran de saisie, mais l'objectif est PERSONNEL
   // (niveau MEMBER) et non l'engagement de l'assemblée.
   const member = scope === 'member';
-  const { goal, lines, loading, reload } = useGoalsData(year, member);
+  const { goal, lines, loading, reload } = useGoalsData(year, member, unitId);
 
   const line = lines.find((l) => l.category.id === categoryId) ?? null;
   const category = line?.category ?? null;
@@ -102,6 +104,7 @@ export default function PledgeEditScreen() {
           pledge={pledge}
           locked={locked}
           member={member}
+          unitId={unitId}
           onSaved={async () => {
             await reload();
             router.back();
@@ -122,6 +125,7 @@ function TargetSection({
   pledge,
   locked,
   member = false,
+  unitId,
   onSaved,
 }: {
   categoryId: string;
@@ -132,6 +136,8 @@ function TargetSection({
   pledge: PledgeResponse | null;
   locked: boolean;
   member?: boolean;
+  /** Palier A3 — assemblée ciblée ; absente = l'assemblée « home » du dirigeant. */
+  unitId?: string;
   onSaved: () => Promise<void>;
 }) {
   const { t } = useLanguage();
@@ -155,7 +161,7 @@ function TargetSection({
       } else if (pledge) {
         await updatePledge(pledge.id, payload);
       } else {
-        await createPledge({ categoryId, year, ...payload });
+        await createPledge({ categoryId, year, unitId, ...payload });
       }
       await onSaved();
     } catch (e: any) {

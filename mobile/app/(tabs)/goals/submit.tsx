@@ -20,9 +20,10 @@ const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallb
 export default function SubmitScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { year: yearParam } = useLocalSearchParams<{ year?: string }>();
+  // Palier A3 — `unitId` : l'assemblée que le dirigeant soumet (absente = son assemblée « home »).
+  const { year: yearParam, unitId } = useLocalSearchParams<{ year?: string; unitId?: string }>();
   const year = yearParam ? Number(yearParam) : null;
-  const { goal, lines, pledges, submitted, loading, reload } = useGoalsData(year);
+  const { goal, lines, pledges, submitted, loading, reload } = useGoalsData(year, false, unitId);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState<SubmitResponse | null>(null);
 
@@ -43,7 +44,7 @@ export default function SubmitScreen() {
   const doSubmit = async () => {
     setSubmitting(true);
     try {
-      const res = await submitMyPledges(year ?? undefined);
+      const res = await submitMyPledges(year ?? undefined, unitId);
       setDone(res);
       await reload();
     } catch (e: any) {

@@ -48,15 +48,38 @@ export default function GoalsOverviewScreen() {
   if (!me?.goalUnitId && (zoneIds.length > 0 || cityIds.length > 0 || countryIds.length > 0)) {
     return <GoalAggregatesScreen zoneIds={zoneIds} cityIds={cityIds} countryIds={countryIds} />;
   }
+  // Palier A3 (JP 14/08) — dirigeant de PLUSIEURS assemblées : on liste ses assemblées et il entre
+  // dans celle qu'il veut. Une seule assemblée ⇒ écran inchangé (pas de détour inutile).
+  const unitIds = uniq(me?.goalUnitId, me?.goalUnitIds);
+  if (unitIds.length > 1) {
+    return <Redirect href="/(tabs)/goals/units" />;
+  }
 
   return <UnitGoalsScreen />;
 }
 
-function UnitGoalsScreen() {
+/**
+ * Engagements d'UNE assemblée.
+ *
+ * <p>Palier A3 : `unitId` facultatif — absent, c'est l'assemblée « home » de l'utilisateur (cas
+ * historique du dirigeant d'une seule assemblée) ; fourni, c'est l'assemblée choisie dans le
+ * drill-down. Il est propagé à toutes les actions (saisie, soumission, avancement, historique) :
+ * sans quoi le dirigeant croirait déclarer sur l'assemblée ouverte et écrirait sur sa « home ».
+ */
+export function UnitGoalsScreen({
+  unitId,
+  unitName,
+  onBack,
+}: { unitId?: string; unitName?: string; onBack?: () => void } = {}) {
   const { t } = useLanguage();
   const { me } = useAuth();
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const { goal, lines, submitted, pledges, loading, error, reload } = useGoalsData(selectedYear);
+  const { goal, lines, submitted, pledges, loading, error, reload } = useGoalsData(selectedYear, false, unitId);
+  /**
+   * Assemblée ciblée, propagée aux écrans enfants. Chaîne vide en mono-assemblée : les URLs
+   * restent identiques à avant le palier A3.
+   */
+  const uq = unitId ? `&unitId=${unitId}` : '';
   const [refreshing, setRefreshing] = useState(false);
   const year = selectedYear ?? goal?.currentYear ?? null;
 
@@ -106,14 +129,26 @@ function UnitGoalsScreen() {
         <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
+      {/* Palier A3 — retour au drill-down. EN HAUT, dans le flux : en bas flottant, il passait
+          sous la barre d'onglets. */}
+      {onBack && (
+        <Pressable onPress={onBack} style={styles.backRow} hitSlop={8}>
+          <Ionicons name="chevron-back" size={18} color={colors.mossDeep} />
+          <Text style={styles.backRowText}>{t('goals.myUnits.back')}</Text>
+        </Pressable>
+      )}
+
       <View style={styles.titleRow}>
         <Ionicons name="flag-outline" size={22} color={colors.mossSoft} />
         <Text style={styles.title}>{t('goals.title')}</Text>
       </View>
       <View style={styles.viewChip}>
-        <Text style={styles.viewChipText}>{t('views.badge')} : {t('views.unit')}</Text>
+        <Text style={styles.viewChipText}>
+          {t('views.badge')} : {unitId ? t('views.myUnits') : t('views.unit')}
+        </Text>
       </View>
       <Text style={styles.subtitle}>
+        {unitName ? `${unitName} · ` : ''}
         {goal?.name} · {goal ? `${new Date(goal.startDate).getFullYear()}–${new Date(goal.endDate).getFullYear()}` : ''}
       </Text>
 
@@ -157,7 +192,7 @@ function UnitGoalsScreen() {
             key={line.category.id}
             line={line}
             currency={goal?.defaultCurrency ?? 'EUR'}
-            onPress={() => router.push(`/(tabs)/goals/pledge/${line.category.id}?year=${year ?? ''}`)}
+            onPress={() => router.push(`/(tabs)/goals/pledge/${line.category.id}?year=${year ?? ''}${uq}`)}
           />
         ))}
       </View>
@@ -165,7 +200,7 @@ function UnitGoalsScreen() {
       {!submitted && (
         <Button
           label={t('goals.submitPledges')}
-          onPress={() => router.push(`/(tabs)/goals/submit?year=${year ?? ''}`)}
+          onPress={() => router.push(`/(tabs)/goals/submit?year=${year ?? ''}${uq}`)}
           disabled={!hasPledges}
           fullWidth
           style={{ marginTop: 22 }}
@@ -183,22 +218,22 @@ function UnitGoalsScreen() {
           <Button
             label={t('goals.addProgress')}
             variant="soft"
-            onPress={() => router.push(`/(tabs)/goals/progress?year=${year ?? ''}`)}
+            onPress={() => router.push(`/(tabs)/goals/progress?year=${year ?? ''}${uq}`)}
             style={{ flex: 1 }}
             iconLeft={<Ionicons name="trending-up-outline" size={17} color={colors.mossDeep} />}
           />
           <Button
             label={t('goals.historyBtn')}
             variant="ghost"
-            onPress={() => router.push(`/(tabs)/goals/history?year=${year ?? ''}`)}
+            onPress={() => router.push(`/(tabs)/goals/history?year=${year ?? ''}${uq}`)}
             style={{ flex: 1 }}
           />
         </View>
       )}
 
       {/* Feature A — agrégat des fidèles vs engagement du dirigeant (bloc replié). */}
-      {me?.goalUnitId && goal && year != null && (
-        <MembersAggregateBlock unitId={me.goalUnitId} year={year} goal={goal} />
+      {(unitId ?? me?.goalUnitId) && goal && year != null && (
+        <MembersAggregateBlock unitId={(unitId ?? me!.goalUnitId)!} year={year} goal={goal} />
       )}
     </ScreenShell>
   );
@@ -488,6 +523,8 @@ const styles = StyleSheet.create({
   },
   viewChipText: { fontFamily: fonts.sans, fontSize: 12, fontWeight: '600', color: colors.earthDeep },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  backRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: 6, paddingVertical: 4 },
+  backRowText: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.mossDeep },
   title: {
     fontFamily: fonts.serif,
     fontSize: 28,

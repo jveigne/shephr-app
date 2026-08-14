@@ -127,6 +127,11 @@ export interface MeResponse {
   // Lot 4.2 — périmètre GOALS (UC-LDR-04/05, COO-04/05) :
   /** Unité du DIRIGEANT côté Goals ; null sinon. */
   goalUnitId: string | null;
+  /**
+   * Palier A2 — assemblées gérées côté Goals, « home » comprise (vide pour un simple membre).
+   * Prérequis du drill-down A3 : sans ces ids, impossible de cibler une autre assemblée.
+   */
+  goalUnitIds: string[] | null;
   /** Zone du DIRIGEANT_LEADER côté Goals ; null sinon. */
   goalZoneId: string | null;
   /** Chantier B (décision #7) — ville du dirigeant de ville ; null sinon. */
@@ -140,6 +145,13 @@ export interface MeResponse {
   // Périmètre LISIBLE (noms résolus) — affichage explicite dans le profil, selon le leadership :
   /** Noms des unités rattachées (home + multi-unités, tous modules) ; vide sinon. */
   unitNames: string[] | null;
+  /**
+   * Palier A2 — mêmes assemblées que `unitNames`, sous forme structurée. `unitNames` reste servi
+   * pour la rétro-compatibilité ; préférer `assemblies` dès qu'on a besoin de l'id ou de la ville
+   * (« Béthel » existe dans plusieurs villes).
+   * Mirrors com.excellence.back.donation.auth.dto.MeAssemblyResponse
+   */
+  assemblies: Array<{ id: string; name: string; cityName: string | null }> | null;
   /** Noms des zones rattachées (DIRIGEANT_SENIOR ou région de la ville) ; vide sinon. */
   zoneNames: string[] | null;
   /** Chantier B — noms des villes rattachées (dirigeant de ville) ; vide sinon. */

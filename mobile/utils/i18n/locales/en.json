@@ -327,7 +327,17 @@
       "submittedBanner": "Your objectives are submitted for this year. To change them, send a request to the secretariat.",
       "submitRefused": "Submission refused",
       "noPledgeToSubmit": "Declare at least one objective before submitting.",
-      "alreadySubmitted": "Your objectives have already been submitted for this year."
+      "alreadySubmitted": "Your objectives have already been submitted for this year.",
+      "assemblyTitle": "My assembly's pledge",
+      "assemblyHint": "What your assembly has committed to this year, all members combined. Read only.",
+      "assemblyEmpty": "Your assembly has no pledge for this year yet."
+    },
+    "myUnits": {
+      "title": "My assemblies",
+      "hint": "You lead several assemblies: open the one whose pledge you want to record or submit.",
+      "empty": "No assembly attached to your account.",
+      "back": "My assemblies",
+      "yearNote": "{{year}} statuses."
     },
     "aggregate": {
       "membersSum": "Members total",
@@ -749,6 +759,7 @@
     "coordinator": "Coordinator",
     "leader": "Leader",
     "unit": "Unit",
+    "myUnits": "My assemblies",
     "member": "Personal",
     "regionsHeading": "Regions",
     "statesHeading": "States",

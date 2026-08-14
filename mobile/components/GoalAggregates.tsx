@@ -663,8 +663,12 @@ function RegionsSummaryBlock({ nationId, year, goal }: { nationId: string; year:
   );
 }
 
-/** Badge de statut de soumission (UC-LDR-06) : Soumis / En retard / Brouillon / Non démarré. */
-function UnitStatusBadge({ unit }: { unit: ZoneUnitStatus }) {
+/**
+ * Badge de statut de soumission (UC-LDR-06) : Soumis / En retard / Brouillon / Non démarré.
+ * Exporté depuis le palier A3 : l'écran « Mes assemblées » affiche le même statut, et deux
+ * implémentations divergeraient sur la règle « en retard ».
+ */
+export function UnitStatusBadge({ unit }: { unit: ZoneUnitStatus }) {
   const { t } = useLanguage();
   const [label, tone] = unit.submitted
     ? [t('goalsAgg.statusSubmitted'), colors.moss]

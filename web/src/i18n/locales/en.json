@@ -708,6 +708,8 @@
     "linkCopied": "Link copied",
     "unitAttachment": "Home assembly",
     "unitAttachmentHint": "Pick the nation, the region then the city — the list narrows as you go.",
+    "extraUnits": "Other assemblies led",
+    "extraUnitsHint": "Optional — a leader may hold several assemblies. The home assembly above stays the main one.",
     "managedUnits": "Managed assemblies",
     "managedUnitsHint": "A leader can manage several assemblies.",
     "zoneFaith": "Region (reference / pledges)",

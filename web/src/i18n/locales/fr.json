@@ -708,6 +708,8 @@
     "linkCopied": "Lien copié",
     "unitAttachment": "Assemblée de rattachement",
     "unitAttachmentHint": "Choisissez la nation, la région puis la ville — la liste se filtre au fur et à mesure.",
+    "extraUnits": "Autres assemblées dirigées",
+    "extraUnitsHint": "Facultatif — un dirigeant peut tenir plusieurs assemblées. L'assemblée de rattachement ci-dessus reste la principale.",
     "managedUnits": "Assemblées dirigées",
     "managedUnitsHint": "Un dirigeant peut gérer plusieurs assemblées.",
     "zoneFaith": "Région (référentiel / engagements)",

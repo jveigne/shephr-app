@@ -33,9 +33,14 @@ export default function AddProgressScreen() {
   const insets = useSafeAreaInsets();
   // `scope=member` : mêmes écrans, mais on déclare l'état de SES objectifs personnels
   // (décision JP 28/07 — le membre est sa propre unité d'engagement).
-  const { year: yearParam, scope } = useLocalSearchParams<{ year?: string; scope?: string }>();
+  const { year: yearParam, scope, unitId } = useLocalSearchParams<{
+    year?: string;
+    scope?: string;
+    /** Palier A3 — assemblée ciblée : ses engagements, donc ses avancements. */
+    unitId?: string;
+  }>();
   const member = scope === 'member';
-  const { goal, lines, loading, reload } = useGoalsData(yearParam ? Number(yearParam) : null, member);
+  const { goal, lines, loading, reload } = useGoalsData(yearParam ? Number(yearParam) : null, member, unitId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [value, setValue] = useState('');
   const [note, setNote] = useState('');
