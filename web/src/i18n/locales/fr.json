@@ -688,6 +688,11 @@
   },
   "users": {
     "title": "Membres",
+    "colSubmitted": "Engagement",
+    "submittedYes": "Soumis",
+    "submittedNo": "Non soumis",
+    "submittedCounter": "{{submitted}} / {{total}} ont soumis",
+    "submittedCounterHint": "Sur tout le périmètre filtré. Les dirigeants de ville, région ou nation ne sont pas comptés : ils ne soumettent rien à leur niveau.",
     "moduleGoals": "Objectifs",
     "moduleDonations": "Dons",
     "invite": "Inviter un membre",

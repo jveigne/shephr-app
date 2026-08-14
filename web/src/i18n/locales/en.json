@@ -688,6 +688,11 @@
   },
   "users": {
     "title": "Members",
+    "colSubmitted": "Pledge",
+    "submittedYes": "Submitted",
+    "submittedNo": "Not submitted",
+    "submittedCounter": "{{submitted}} / {{total}} submitted",
+    "submittedCounterHint": "Across the whole filtered scope. City, region and nation leaders are excluded: they do not submit at their level.",
     "moduleGoals": "Goals",
     "moduleDonations": "Donations",
     "invite": "Invite a member",

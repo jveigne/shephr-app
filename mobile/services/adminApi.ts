@@ -205,6 +205,13 @@ export interface AdminUserResponse {
   goalRole: ModuleRole | null;
   goalUnitId: string | null;
   active: boolean;
+  /**
+   * A soumis son engagement pour l'année courante (JP 14/08).
+   * `true` soumis · `false` pas encore · `null` NON APPLICABLE (dirigeant de ville, région ou
+   * nation : il ne soumet rien à son niveau).
+   * Mirrors com.excellence.back.auth.admin.user.dto.AdminUserResponse#goalSubmitted
+   */
+  goalSubmitted: boolean | null;
 }
 
 export interface UsersPage {
@@ -212,6 +219,26 @@ export interface UsersPage {
   totalElements: number;
   /** Enveloppe Page de Spring : vrai sur la dernière page (pagination serveur, JP 31/07). */
   last?: boolean;
+}
+
+/**
+ * Compteur « X / Y ont soumis leur engagement » (JP 14/08) — calculé par le SERVEUR sur TOUT le
+ * périmètre filtré, pas sur les lignes chargées (la liste est paginée et s'empile).
+ * Mirrors com.excellence.back.auth.admin.user.dto.GoalSubmissionSummaryResponse
+ */
+export interface GoalSubmissionSummary {
+  submitted: number;
+  total: number;
+}
+
+export async function fetchGoalSubmissionSummary(
+  params: { placeNodeId?: string; search?: string } = {},
+): Promise<GoalSubmissionSummary> {
+  const { data } = await apiClient.get<GoalSubmissionSummary>(
+    '/api/church/admin/users/goal-submission-summary',
+    { params },
+  );
+  return data;
 }
 
 export async function listUsers(

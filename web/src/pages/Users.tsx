@@ -38,6 +38,7 @@ import {
   listCountries,
   listLocalities,
   listUnits,
+  fetchGoalSubmissionSummary,
   listUsers,
   listZones,
   updateUser,
@@ -128,6 +129,17 @@ export function UsersPage() {
         search: submittedSearch || undefined,
         page,
         size: PAGE_SIZE,
+      }),
+  });
+
+  // Compteur « X / Y ont soumis » (JP 14/08) — calculé par le SERVEUR sur TOUT le périmètre
+  // filtré : la liste est paginée, compter les 30 lignes visibles n'aurait aucun sens.
+  const submissionQ = useQuery({
+    queryKey: ['admin', 'users', 'goal-submission', placeNodeId, submittedSearch],
+    queryFn: () =>
+      fetchGoalSubmissionSummary({
+        placeNodeId: submittedSearch ? undefined : placeNodeId || undefined,
+        search: submittedSearch || undefined,
       }),
   });
 
@@ -237,6 +249,20 @@ export function UsersPage() {
         return <span style={{ color: 'var(--ink-600)' }}>{parts.join(' · ') || '—'}</span>;
       },
     },
+    {
+      // JP 14/08 — suivi des soumissions : un dirigeant d'assemblée porte l'engagement de SON
+      // assemblée, un membre ses objectifs personnels. `null` = non concerné (dirigeant de ville,
+      // région ou nation) : « — » plutôt qu'un faux retardataire.
+      label: t('users.colSubmitted'),
+      render: (r) =>
+        r.goalSubmitted == null ? (
+          <span style={{ color: 'var(--ink-400)' }}>—</span>
+        ) : (
+          <Badge tone={r.goalSubmitted ? 'green' : 'earth'}>
+            {r.goalSubmitted ? t('users.submittedYes') : t('users.submittedNo')}
+          </Badge>
+        ),
+    },
     { label: t('common.status'), render: (r) => <StatusBadge active={r.active} /> },
     ...(canWrite
       ? [{
@@ -336,8 +362,25 @@ export function UsersPage() {
         </div>
 
         {/* Le total vient du SERVEUR : `rows` n'est qu'une page de 30. */}
-        <div style={{ color: 'var(--ink-500)', fontSize: 13, marginBottom: 10 }}>
-          {t('users.count', { count: usersQ.data?.totalElements ?? rows.length })}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+          <span style={{ color: 'var(--ink-500)', fontSize: 13 }}>
+            {t('users.count', { count: usersQ.data?.totalElements ?? rows.length })}
+          </span>
+          {submissionQ.data && submissionQ.data.total > 0 && (
+            <span
+              style={{
+                fontSize: 13, fontWeight: 600, color: 'var(--green-800)',
+                background: 'var(--paper-2, #faf7f0)', border: '1px solid var(--line)',
+                borderRadius: 999, padding: '3px 10px',
+              }}
+              title={t('users.submittedCounterHint')}
+            >
+              {t('users.submittedCounter', {
+                submitted: submissionQ.data.submitted,
+                total: submissionQ.data.total,
+              })}
+            </span>
+          )}
         </div>
 
         <div className="card" style={{ padding: 0 }}>
