@@ -20,11 +20,11 @@ import Button from '../components/Button';
 import { colors, fonts } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { canManageStructure, canManageZones, isSecretariat } from '../services/authApi';
+import { canCreateAssembly, canManageStructure, canManageZones, isSecretariat } from '../services/authApi';
 import { confirmDialog, notify } from '../utils/dialogs';
 import i18n from '../utils/i18n/i18n';
 import {
-  createCountry, createLocality, createUnit, createZone,
+  createCountry, createLocality, createUnit, createZone, listUsers, type AdminUserResponse,
   deleteCountry, deleteLocality, deleteUnit, deleteZone,
   listContinents, listCountries, listLocalities, listUnits, listZones,
   updateLocality, updateUnit, updateZone,
@@ -77,7 +77,9 @@ export default function StructureScreen() {
   const canEdit = level === 'countries' ? false
     : level === 'zones' ? canManageZones(me)
     : canManageStructure(me);
-  const canAdd = level === 'units' ? isAdmin && canEdit : canDirect;
+  // Palier C1 (JP 14/08) : la création d'ASSEMBLÉE est ouverte aux dirigeants (le backend garde le
+  // périmètre : « dans MA ville » → 403 sinon). Nation/région/ville restent SUPER_ADMIN/SECRETARIAT.
+  const canAdd = level === 'units' ? canCreateAssembly(me) : canDirect;
   // Suppression sans passer par la modale d'édition (pas de modification in-app pour les
   // nations ; le SECRETARIAT ne modifie pas les régions/villes).
   const canDeleteRow = level === 'countries' ? canDirect
@@ -358,9 +360,16 @@ function StructureFormModal({
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState('');
   const [saving, setSaving] = useState(false);
+  // Palier C1-bis (JP 14/08) — responsable de l'assemblée : compte EXISTANT, obligatoire.
+  const [leaderId, setLeaderId] = useState('');
+  const [leaderQuery, setLeaderQuery] = useState('');
+  const [leaderResults, setLeaderResults] = useState<AdminUserResponse[]>([]);
+  const [leaderLoading, setLeaderLoading] = useState(false);
   const open = editing != null;
   const level = editing?.level ?? 'zones';
   const item = editing?.item ?? null;
+  /** Uniquement à la CRÉATION d'une assemblée : renommer une assemblée ne redemande pas son dirigeant. */
+  const needsLeader = level === 'units' && item == null;
 
   useEffect(() => {
     if (open) {
@@ -370,8 +379,25 @@ function StructureFormModal({
           : level === 'localities' ? item?.zoneId ?? ''
           : item?.localityId ?? '',
       );
+      setLeaderId(''); setLeaderQuery(''); setLeaderResults([]);
     }
   }, [open, editing]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Recherche serveur, débounce court : l'annuaire d'un ministère ne se charge pas en entier.
+  useEffect(() => {
+    if (!needsLeader) return;
+    const q = leaderQuery.trim();
+    if (q.length < 2) { setLeaderResults([]); return; }
+    let cancelled = false;
+    setLeaderLoading(true);
+    const timer = setTimeout(() => {
+      listUsers({ search: q, active: true, size: 10 })
+        .then((page) => { if (!cancelled) setLeaderResults(page.content); })
+        .catch(() => { if (!cancelled) setLeaderResults([]); })
+        .finally(() => { if (!cancelled) setLeaderLoading(false); });
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [leaderQuery, needsLeader]);
 
   const parentLabel = level === 'zones' ? t('structure.parentCountry') : level === 'localities' ? t('structure.parentZone') : t('structure.parentLocality');
   const parents = level === 'zones'
@@ -381,7 +407,10 @@ function StructureFormModal({
     : localities.map((l) => ({ id: l.id, name: l.name }));
 
   const valid = name.trim().length > 0
-    && (level === 'localities' ? (zoneOptional || parentId !== '') : parentId !== '');
+    && (level === 'localities' ? (zoneOptional || parentId !== '') : parentId !== '')
+    // Sans responsable, le backend refuse (422 UNIT_LEADER_REQUIRED) : on désactive plutôt que
+    // de laisser l'utilisateur buter sur une erreur.
+    && (!needsLeader || leaderId !== '');
 
   const onSave = async () => {
     if (!valid) { notify(t('common.appName'), t('structure.fillFields')); return; }
@@ -397,7 +426,10 @@ function StructureFormModal({
       } else {
         // Décision #5 : plus de type CENTER — toute unité est une assemblée de maison.
         if (item) await updateUnit(item.id, { name: name.trim(), localityId: parentId, type: 'ASSEMBLY' });
-        else await createUnit({ ministryId: ministryId!, localityId: parentId, name: name.trim(), type: 'ASSEMBLY' });
+        else await createUnit({
+          ministryId: ministryId!, localityId: parentId, name: name.trim(), type: 'ASSEMBLY',
+          leaderUserId: leaderId,
+        });
       }
       await onSaved();
     } catch (e: any) {
@@ -430,7 +462,45 @@ function StructureFormModal({
             {parents.length === 0 && <Text style={styles.empty}>{t('structure.noParent', { parent: parentLabel.toLowerCase() })}</Text>}
           </ScrollView>
 
-          <Button label={item ? t('common.save') : t('common.create')} onPress={onSave} loading={saving} fullWidth style={{ marginTop: 18 }} />
+          {/* Palier C1-bis — responsable OBLIGATOIRE : une assemblée sans dirigeant n'est
+              administrable par personne. Compte existant uniquement (décision JP 14/08). */}
+          {needsLeader && (
+            <>
+              <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.leader')}</Label>
+              <Text style={styles.leaderHint}>{t('structure.leaderHint')}</Text>
+              <TextInput
+                value={leaderQuery}
+                onChangeText={(v) => { setLeaderQuery(v); setLeaderId(''); }}
+                style={styles.input}
+                placeholder={t('structure.leaderSearchPlaceholder')}
+                placeholderTextColor={colors.ink3}
+                autoCapitalize="none"
+              />
+              {leaderLoading && <Text style={styles.empty}>{t('common.loading')}</Text>}
+              {!leaderLoading && leaderQuery.trim().length >= 2 && leaderResults.length === 0 && (
+                <Text style={styles.empty}>{t('structure.leaderNoResult')}</Text>
+              )}
+              {leaderResults.map((u) => (
+                <Pressable
+                  key={u.id}
+                  onPress={() => { setLeaderId(u.id); setLeaderQuery(u.fullName); setLeaderResults([]); }}
+                  style={[styles.leaderRow, leaderId === u.id && styles.leaderRowActive]}
+                >
+                  <Text style={styles.itemName}>{u.fullName}</Text>
+                  <Text style={styles.itemMeta}>{u.username ?? u.email ?? ''}</Text>
+                </Pressable>
+              ))}
+            </>
+          )}
+
+          <Button
+            label={item ? t('common.save') : t('common.create')}
+            onPress={onSave}
+            loading={saving}
+            disabled={!valid}
+            fullWidth
+            style={{ marginTop: 18 }}
+          />
           {item && (
             <Pressable onPress={() => { onClose(); onDelete(level, item.id, item.name); }} style={{ marginTop: 12, alignItems: 'center' }}>
               <Text style={styles.deleteLink}>{t('common.delete')}</Text>
@@ -466,6 +536,12 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(22,41,31,0.45)', justifyContent: 'center', padding: 20 },
   modalCard: { paddingHorizontal: 20, paddingVertical: 20 },
   modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink },
+  leaderHint: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginBottom: 6, lineHeight: 17 },
+  leaderRow: {
+    paddingHorizontal: 12, paddingVertical: 10, marginTop: 6, borderRadius: 10,
+    borderWidth: 1, borderColor: 'rgba(42,38,32,0.12)', backgroundColor: colors.paper,
+  },
+  leaderRowActive: { borderColor: colors.moss, backgroundColor: colors.mossTint2 },
   input: {
     fontFamily: fonts.sans, fontSize: 15, color: colors.ink,
     borderWidth: 1, borderColor: 'rgba(42,38,32,0.15)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,

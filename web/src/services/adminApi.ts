@@ -326,6 +326,12 @@ export interface CreateUnitRequest {
   ministryId: string;
   localityId: string;
   name: string;
+  /**
+   * Palier C1-bis (JP 14/08) — responsable de l'assemblée, compte EXISTANT. Obligatoire hors
+   * SUPER_ADMIN (422 `UNIT_LEADER_REQUIRED`) ; l'affectation est faite par le backend dans la
+   * MÊME transaction que la création.
+   */
+  leaderUserId?: string;
 }
 
 export interface UpdateUnitRequest {

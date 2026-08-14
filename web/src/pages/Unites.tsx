@@ -24,6 +24,7 @@ import {
   deleteUnit,
   listLocalities,
   listUnits,
+  listUsers,
   updateUnit,
   type LocalityResponse,
   type UnitResponse,
@@ -107,9 +108,10 @@ export function UnitesPage() {
         title={t('units.title')}
         crumbs={[t('common.brand'), t('nav.structure'), t('units.title')]}
         actions={
-          // RG-DS-05 (22/07) : la création directe est réservée au SUPER_ADMIN — les dirigeants
-          // déposent une demande validée par le secrétariat (page Demandes).
-          me?.superAdmin ? (
+          // Palier C1 (JP 14/08) : la création directe est ouverte aux dirigeants — le garde
+          // RG-DS-05 (« passez par une demande ») est retiré côté serveur. Le périmètre (« dans MA
+          // ville ») reste vérifié par le backend, qui répond 403.
+          canCreate ? (
             <Button
               variant="primary"
               iconL={<Icon name="plus" size={15} />}
@@ -170,8 +172,11 @@ export function UnitesPage() {
         onClose={() => setCreating(false)}
         localities={localities}
         submitting={createM.isPending}
+        requireLeader={!me?.superAdmin}
         onSubmit={(v) =>
-          ministryId && createM.mutate({ ministryId, localityId: v.localityId, name: v.name })
+          ministryId && createM.mutate({
+            ministryId, localityId: v.localityId, name: v.name, leaderUserId: v.leaderUserId,
+          })
         }
       />
       <UnitFormModal
@@ -193,12 +198,23 @@ export function UnitesPage() {
   );
 }
 
+/** Debounce minimal — cette surface n'a pas de hook dédié (contrairement à shephr-webapp). */
+function useDebouncedValue(value: string, delayMs: number): string {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+  return debounced;
+}
+
 function UnitFormModal({
   open,
   onClose,
   localities,
   unit,
   submitting,
+  requireLeader = false,
   onSubmit,
 }: {
   open: boolean;
@@ -206,23 +222,43 @@ function UnitFormModal({
   localities: LocalityResponse[];
   unit?: UnitResponse;
   submitting: boolean;
-  onSubmit: (v: { localityId: string; name: string; active: boolean }) => void;
+  /**
+   * Palier C1-bis (JP 14/08) — le responsable est obligatoire à la création, sauf pour le
+   * SUPER_ADMIN (le back-office construit l'arbre avant que les comptes n'existent).
+   */
+  requireLeader?: boolean;
+  onSubmit: (v: { localityId: string; name: string; active: boolean; leaderUserId?: string }) => void;
 }) {
   const { t } = useTranslation();
   const isEdit = unit != null;
   const [localityId, setLocalityId] = useState('');
   const [name, setName] = useState('');
   const [active, setActive] = useState(true);
+  const [leaderId, setLeaderId] = useState('');
+  const [leaderQuery, setLeaderQuery] = useState('');
 
   useEffect(() => {
     if (open) {
       setLocalityId(unit?.localityId ?? localities[0]?.id ?? '');
       setName(unit?.name ?? '');
       setActive(unit?.active ?? true);
+      setLeaderId(''); setLeaderQuery('');
     }
   }, [open, unit, localities]);
 
-  const valid = name.trim().length > 0 && localityId !== '';
+  // Recherche serveur : l'annuaire d'un ministère ne se charge pas en entier (cf. Utilisateurs).
+  const needsLeader = !isEdit && requireLeader;
+  const debouncedLeaderQuery = useDebouncedValue(leaderQuery, 300);
+  const leadersQ = useQuery({
+    queryKey: ['admin', 'user-search', debouncedLeaderQuery],
+    queryFn: () => listUsers({ search: debouncedLeaderQuery, active: true, size: 10 }),
+    enabled: needsLeader && debouncedLeaderQuery.trim().length >= 2,
+  });
+  const leaders = leadersQ.data?.content ?? [];
+
+  const valid = name.trim().length > 0 && localityId !== ''
+    // Sans responsable, le backend refuse (422 UNIT_LEADER_REQUIRED).
+    && (!needsLeader || leaderId !== '');
 
   return (
     <Modal
@@ -236,7 +272,10 @@ function UnitFormModal({
           <Button
             variant="primary"
             disabled={!valid || submitting}
-            onClick={() => onSubmit({ localityId, name: name.trim(), active })}
+            onClick={() => onSubmit({
+              localityId, name: name.trim(), active,
+              leaderUserId: needsLeader ? leaderId : undefined,
+            })}
           >
             {submitting ? t('common.saving') : isEdit ? t('common.save') : t('common.create')}
           </Button>
@@ -254,7 +293,40 @@ function UnitFormModal({
         <Field label={t('units.nameLabel')}>
           <Input placeholder={t('units.namePlaceholder')} value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-                {isEdit && (
+        {/* Palier C1-bis — responsable OBLIGATOIRE : une assemblée sans dirigeant n'est
+            administrable par personne. Compte existant uniquement (décision JP 14/08). */}
+        {needsLeader && (
+          <Field label={t('units.leaderLabel')} hint={t('units.leaderHint')}>
+            <div style={{ display: 'grid', gap: 6 }}>
+              <Input
+                placeholder={t('units.leaderSearchPlaceholder')}
+                value={leaderQuery}
+                onChange={(e) => { setLeaderQuery(e.target.value); setLeaderId(''); }}
+              />
+              {leadersQ.isFetching && <span className="section-sub">{t('common.loading')}</span>}
+              {!leadersQ.isFetching && debouncedLeaderQuery.trim().length >= 2 && leaders.length === 0 && (
+                <span className="section-sub">{t('units.leaderNoResult')}</span>
+              )}
+              {leaders.map((u) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => { setLeaderId(u.id); setLeaderQuery(u.fullName); }}
+                  style={{
+                    textAlign: 'left', padding: '8px 10px', borderRadius: 8, cursor: 'pointer',
+                    border: `1px solid ${leaderId === u.id ? 'var(--green-800)' : 'var(--line)'}`,
+                    background: leaderId === u.id ? 'var(--paper-2, #faf7f0)' : 'transparent',
+                    fontFamily: 'var(--font-sans)', fontSize: 13.5, color: 'var(--ink-700)',
+                  }}
+                >
+                  {u.fullName}
+                  <span style={{ color: 'var(--ink-400)' }}> · {u.username ?? u.email ?? ''}</span>
+                </button>
+              ))}
+            </div>
+          </Field>
+        )}
+        {isEdit && (
           <Field label={t('common.status')}>
             <Toggle checked={active} onChange={setActive} label={active ? t('common.activeFem') : t('common.inactiveFem')} />
           </Field>

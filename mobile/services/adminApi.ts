@@ -132,7 +132,15 @@ export async function listUnits(params: { localityId?: string } = {}): Promise<U
   return data;
 }
 
-export async function createUnit(payload: { ministryId: string; localityId: string; name: string; type: UnitType }) {
+/**
+ * Palier C1-bis (JP 14/08) — `leaderUserId` : responsable de l'assemblée, compte EXISTANT.
+ * Obligatoire hors SUPER_ADMIN (422 `UNIT_LEADER_REQUIRED`) : une assemblée sans responsable
+ * n'est administrable par personne. L'affectation est faite par le backend dans la MÊME
+ * transaction que la création — inutile (et risqué) d'enchaîner deux appels ici.
+ */
+export async function createUnit(payload: {
+  ministryId: string; localityId: string; name: string; type: UnitType; leaderUserId?: string;
+}) {
   const { data } = await apiClient.post<UnitResponse>('/api/church/admin/units', payload);
   return data;
 }

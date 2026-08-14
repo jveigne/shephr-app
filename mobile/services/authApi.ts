@@ -94,6 +94,22 @@ export function isSecretariat(me: MeResponse | null): boolean {
   return me.donationRole === 'SECRETARIAT' || me.goalRole === 'SECRETARIAT';
 }
 
+/**
+ * Palier C1 (JP 14/08) — peut CRÉER une assemblée de maison.
+ *
+ * <p>Miroir du backend {@code AccessControlServiceImpl.requireCanManageInLocality} : superAdmin,
+ * SECRETARIAT de son ministère, DIRIGEANT de la ville, DIRIGEANT_UNITE dans la ville de ses
+ * assemblées, SENIOR/COORDINATEUR de la région englobante — soit, côté écran, tout rang de manager
+ * ≥ DIRIGEANT_UNITE plus le SECRETARIAT.
+ *
+ * <p>⚠ Le gating d'écran sert à ne pas afficher un bouton inutile ; la garde de périmètre (« dans
+ * MA ville ») reste côté serveur, qui répond 403. Ne pas l'assouplir pour contourner un 403.
+ */
+export function canCreateAssembly(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return me.superAdmin || isSecretariat(me) || managerRank(me) >= ROLE_RANK.DIRIGEANT_UNITE;
+}
+
 export interface UserDTO {
   id: string;
   email: string;

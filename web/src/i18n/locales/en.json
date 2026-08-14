@@ -654,6 +654,10 @@
   },
   "units": {
     "title": "Assemblies",
+    "leaderLabel": "Assembly leader",
+    "leaderHint": "Required — pick an existing account. They become the leader of this assembly.",
+    "leaderSearchPlaceholder": "Search a name or username…",
+    "leaderNoResult": "No account found.",
     "newUnit": "New assembly",
     "noLocalityHint": "No city in your scope to create a assembly in.",
     "intro": "Centers and assemblies of a city. Members join a assembly via its code.",

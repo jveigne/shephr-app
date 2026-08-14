@@ -654,6 +654,10 @@
   },
   "units": {
     "title": "Assemblées",
+    "leaderLabel": "Responsable de l'assemblée",
+    "leaderHint": "Obligatoire — choisissez un compte existant. Il devient dirigeant de cette assemblée.",
+    "leaderSearchPlaceholder": "Rechercher un nom ou un identifiant…",
+    "leaderNoResult": "Aucun compte trouvé.",
     "newUnit": "Nouvelle assemblée",
     "noLocalityHint": "Aucune ville dans votre périmètre où créer une assemblée.",
     "intro": "Centres et assemblées d'une ville. Les membres rejoignent une assemblée via son code.",

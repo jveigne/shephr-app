@@ -145,6 +145,22 @@ export function isSecretariat(me: MeResponse | null): boolean {
   return me.donationRole === 'SECRETARIAT' || me.goalRole === 'SECRETARIAT';
 }
 
+/**
+ * Palier C1 (JP 14/08) — peut CRÉER une assemblée de maison.
+ *
+ * <p>Miroir du backend {@code AccessControlServiceImpl.requireCanManageInLocality} : superAdmin,
+ * SECRETARIAT de son ministère, DIRIGEANT de la ville, DIRIGEANT_UNITE dans la ville de ses
+ * assemblées, SENIOR/COORDINATEUR de la région englobante — soit, côté écran, tout rang de manager
+ * ≥ DIRIGEANT_UNITE plus le SECRETARIAT.
+ *
+ * <p>⚠ Le gating d'écran sert à ne pas afficher un bouton inutile ; la garde de périmètre (« dans
+ * MA ville ») reste côté serveur, qui répond 403. Ne pas l'assouplir pour contourner un 403.
+ */
+export function canCreateAssembly(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return me.superAdmin || isSecretariat(me) || managerRank(me) >= ROLE_RANK.DIRIGEANT_UNITE;
+}
+
 /** Chantier B (décision #7) — l'utilisateur est un dirigeant de VILLE (rattaché à une ville). */
 export function isCityLeader(me: MeResponse | null): boolean {
   return !!me && (!!me.donationCityId || !!me.goalCityId);
@@ -156,11 +172,12 @@ export function canManageLocalities(me: MeResponse | null): boolean {
 }
 
 /**
- * Peut administrer les ASSEMBLÉES de son périmètre : les managers de structure PLUS le
- * dirigeant de ville (qui gère les assemblées de sa ville — Chantier B).
+ * Peut administrer les ASSEMBLÉES de son périmètre : les managers de structure, le dirigeant de
+ * ville (Chantier B) et — palier C1 (JP 14/08) — le dirigeant d'unité, qui ouvre une assemblée de
+ * maison dans sa propre ville. Aligné sur {@link canCreateAssembly}.
  */
 export function canManageUnits(me: MeResponse | null): boolean {
-  return canManageStructure(me) || isCityLeader(me);
+  return canManageStructure(me) || isCityLeader(me) || canCreateAssembly(me);
 }
 
 const ROLE_RANK: Record<ModuleRole, number> = {
