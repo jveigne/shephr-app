@@ -470,7 +470,6 @@
     "countries": "Countries",
     "myAttachment": "My attachment",
     "attachEmpty": "No attachment yet.",
-    "requestCreate": "Request a creation",
     "countriesTab": "Countries",
     "addCountry": "Add a nation",
     "addZone": "Add a region",
@@ -512,7 +511,13 @@
     "fillFields": "Enter the name and the parent.",
     "saveRefusedTitle": "Save refused",
     "saveRefusedBody": "Outside your scope.",
-    "attachedRegionReadOnly": "Your attached region · read-only"
+    "attachedRegionReadOnly": "Your attached region · read-only",
+    "historyTitle": "Creation history",
+    "historyEmpty": "No creation recorded.",
+    "historyNoPlace": "Unknown attachment",
+    "historyCreatedBy": "Created by {{name}} · {{date}}",
+    "historyUnknownAuthor": "—",
+    "historyLoadMore": "Load more"
   },
   "notifications": {
     "morePending": "{{count}} more reminder(s) pending",

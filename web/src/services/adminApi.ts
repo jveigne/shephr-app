@@ -387,3 +387,39 @@ export async function updateUnit(id: string, payload: UpdateUnitRequest) {
 export async function deleteUnit(id: string) {
   await apiClient.delete(`/api/church/admin/units/${id}`);
 }
+
+/**
+ * Palier C4 (JP 14/08) — une ligne de l'historique de création des assemblées.
+ * Mirrors com.excellence.back.org.admin.unit.dto.AssemblyCreationResponse
+ */
+export interface AssemblyCreationRow {
+  unitId: string;
+  name: string;
+  cityName: string | null;
+  regionName: string | null;
+  nationName: string | null;
+  /** Instant ISO-8601. */
+  createdAt: string;
+  createdById: string | null;
+  /** null pour les assemblées créées AVANT la migration org/18 — l'écran affiche « — ». */
+  createdByName: string | null;
+  createdByRole: ModuleRole | null;
+}
+
+/**
+ * Palier C4 (JP 14/08) — historique de création des assemblées, trié par le SERVEUR (plus
+ * récentes d'abord) et paginé côté serveur.
+ *
+ * <p>⚠ Garde serveur : SUPER_ADMIN (tous ministères) ou SECRETARIAT (le sien seul) — tout autre
+ * rôle reçoit un 403. `ministryId` est facultatif : omis, le backend applique le périmètre de
+ * l'appelant. Le gating d'écran ne remplace pas cette garde.
+ */
+export async function listAssemblyHistory(
+  params: { ministryId?: string; page?: number; size?: number } = {},
+) {
+  const { data } = await apiClient.get<PageResponse<AssemblyCreationRow>>(
+    '/api/church/admin/units/history',
+    { params },
+  );
+  return data;
+}

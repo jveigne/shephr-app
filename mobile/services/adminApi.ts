@@ -249,3 +249,41 @@ export async function listUsers(
   const { data } = await apiClient.get<UsersPage>('/api/church/admin/users', { params });
   return data;
 }
+
+// ---------------- Historique des créations d'assemblées (palier C4 — JP 14/08) ----------------
+// GET /api/church/admin/units/history — LECTURE SEULE, trié par les plus récentes (tri porté par
+// le backend). Garde serveur : SUPER_ADMIN (tous ministères) ou SECRETARIAT (le sien seul) ; tout
+// autre rôle reçoit un 403. Le gating d'écran évite d'afficher une entrée inutile, il ne remplace
+// pas cette garde.
+
+/** Mirrors com.excellence.back.org.admin.unit.dto.AssemblyCreationResponse */
+export interface AssemblyCreationRow {
+  unitId: string;
+  name: string;
+  cityName: string | null;
+  regionName: string | null;
+  nationName: string | null;
+  /** Instant ISO. */
+  createdAt: string;
+  createdById: string | null;
+  /** `null` pour les assemblées créées AVANT la migration org/18 → afficher « — ». */
+  createdByName: string | null;
+  createdByRole: ModuleRole | null;
+}
+
+export interface AssemblyHistoryPage {
+  content: AssemblyCreationRow[];
+  totalElements: number;
+  /** Enveloppe Page de Spring : vrai sur la dernière page. */
+  last?: boolean;
+}
+
+export async function listAssemblyHistory(
+  params: { ministryId?: string; page?: number; size?: number } = {},
+): Promise<AssemblyHistoryPage> {
+  const { data } = await apiClient.get<AssemblyHistoryPage>(
+    '/api/church/admin/units/history',
+    { params },
+  );
+  return data;
+}

@@ -684,7 +684,17 @@
     "nameLabel": "Assembly name",
     "namePlaceholder": "London Center…",
     "deleteLabel": "the assembly “{{name}}”",
-    "requestUnit": "Request an assembly"
+    "requestUnit": "Request an assembly",
+    "tabUnits": "Assemblies",
+    "tabHistory": "History",
+    "histIntro": "Assembly creation history, most recent first.",
+    "histCount_one": "{{count}} creation",
+    "histCount_other": "{{count}} creations",
+    "histColNation": "Nation",
+    "histColCreatedBy": "Created by",
+    "histEmpty": "No creation",
+    "histEmptyHint": "No assembly has been created in your scope yet.",
+    "histLoadFailed": "History unavailable."
   },
   "users": {
     "title": "Members",

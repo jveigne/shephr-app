@@ -684,7 +684,17 @@
     "nameLabel": "Nom de l'assemblée",
     "namePlaceholder": "Centre Londres…",
     "deleteLabel": "l'assemblée « {{name}} »",
-    "requestUnit": "Demander une assemblée"
+    "requestUnit": "Demander une assemblée",
+    "tabUnits": "Assemblées",
+    "tabHistory": "Historique",
+    "histIntro": "Historique de création des assemblées, des plus récentes aux plus anciennes.",
+    "histCount_one": "{{count}} création",
+    "histCount_other": "{{count}} créations",
+    "histColNation": "Nation",
+    "histColCreatedBy": "Créée par",
+    "histEmpty": "Aucune création",
+    "histEmptyHint": "Aucune assemblée n'a encore été créée dans votre périmètre.",
+    "histLoadFailed": "Historique indisponible."
   },
   "users": {
     "title": "Membres",

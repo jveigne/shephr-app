@@ -26,13 +26,17 @@ import i18n from '../utils/i18n/i18n';
 import {
   createCountry, createLocality, createUnit, createZone, listUsers, type AdminUserResponse,
   deleteCountry, deleteLocality, deleteUnit, deleteZone,
+  listAssemblyHistory, type AssemblyCreationRow,
   listContinents, listCountries, listLocalities, listUnits, listZones,
   updateLocality, updateUnit, updateZone,
   type ContinentResponse, type CountryResponse, type LocalityResponse,
   type UnitResponse, type ZoneResponse,
 } from '../services/adminApi';
+import { fmtDate } from '../utils/format';
 
 type Level = 'countries' | 'zones' | 'localities' | 'units';
+
+const HISTORY_PAGE_SIZE = 20;
 
 const errMsg = (e: any, fb: string) =>
   e?.response ? e.response.data?.message ?? fb : i18n.t('errors.serverUnreachableShort');
@@ -49,6 +53,14 @@ export default function StructureScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [editing, setEditing] = useState<{ level: Level; item: any | null } | null>(null);
+  // Palier C4 (JP 14/08) — historique des créations d'assemblées, en LECTURE SEULE et paginé
+  // serveur (on empile, comme l'annuaire des membres).
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [history, setHistory] = useState<AssemblyCreationRow[]>([]);
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historyLast, setHistoryLast] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
 
   const load = useCallback(async () => {
     const [c, z, l, u] = await Promise.allSettled([
@@ -63,6 +75,41 @@ export default function StructureScreen() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Chargement PARESSEUX : l'endpoint est réservé au secrétariat / superAdmin, on ne l'appelle
+  // qu'à la première ouverture de la section.
+  useEffect(() => {
+    if (!historyOpen || history.length > 0) return;
+    let cancelled = false;
+    setHistoryLoading(true);
+    listAssemblyHistory({ page: 0, size: HISTORY_PAGE_SIZE })
+      .then((res) => {
+        if (cancelled) return;
+        setHistory(res.content);
+        setHistoryLast(res.last ?? res.content.length < HISTORY_PAGE_SIZE);
+        setHistoryPage(0);
+      })
+      .catch(() => { if (!cancelled) { setHistory([]); setHistoryLast(true); } })
+      .finally(() => { if (!cancelled) setHistoryLoading(false); });
+    return () => { cancelled = true; };
+  }, [historyOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Page suivante de l'historique — le serveur pagine, on empile. */
+  const loadMoreHistory = async () => {
+    if (historyLast || historyLoadingMore) return;
+    setHistoryLoadingMore(true);
+    try {
+      const next = historyPage + 1;
+      const res = await listAssemblyHistory({ page: next, size: HISTORY_PAGE_SIZE });
+      setHistory((prev) => [...prev, ...res.content]);
+      setHistoryLast(res.last ?? res.content.length < HISTORY_PAGE_SIZE);
+      setHistoryPage(next);
+    } catch {
+      setHistoryLast(true);
+    } finally {
+      setHistoryLoadingMore(false);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     try { await load(); } finally { setRefreshing(false); }
@@ -70,8 +117,8 @@ export default function StructureScreen() {
 
   const isAdmin = me?.superAdmin ?? false;
   // RDG 25/07 : la création ET la suppression directes de nation/région/ville sont réservées au
-  // SUPER_ADMIN (back-office) et au SECRETARIAT. Les assemblées gardent leurs règles (création
-  // directe SUPER_ADMIN ; les dirigeants déposent une DEMANDE — écran Demandes).
+  // SUPER_ADMIN (back-office) et au SECRETARIAT. Les assemblées ont leurs propres règles — voir
+  // `canAdd` ci-dessous (palier C1 : création directe ouverte aux dirigeants).
   const secretariat = isSecretariat(me);
   const canDirect = isAdmin || secretariat;
   const canEdit = level === 'countries' ? false
@@ -84,7 +131,9 @@ export default function StructureScreen() {
   // nations ; le SECRETARIAT ne modifie pas les régions/villes).
   const canDeleteRow = level === 'countries' ? canDirect
     : level !== 'units' && secretariat && !canEdit;
-  const canPropose = !isAdmin && canManageStructure(me);
+  // Palier C4 (JP 14/08) : l'historique des créations est réservé au SECRETARIAT et au superAdmin
+  // (garde serveur identique — 403 pour les autres).
+  const canSeeHistory = isAdmin || secretariat;
 
   const onDelete = async (lvl: Level, id: string, name: string) => {
     const ok = await confirmDialog(t('structure.deleteTitle'), t('structure.deleteConfirm', { name }), t('common.delete'), true);
@@ -176,15 +225,6 @@ export default function StructureScreen() {
           iconLeft={<Ionicons name="add" size={18} color={colors.mossDeep} />}
         />
       )}
-{/*      {canPropose && (
-        <Button
-          label={t('structure.requestCreate')}
-          variant="soft"
-          onPress={() => router.push('/demandes')}
-          style={{ marginTop: 12 }}
-          iconLeft={<Ionicons name="add" size={18} color={colors.mossDeep} />}
-        />
-      )}*/}
 
       <View style={{ gap: 8, marginTop: 12 }}>
         {rows.map((r: any) => (
@@ -222,6 +262,53 @@ export default function StructureScreen() {
           <Text style={styles.empty}>{t('structure.emptyPerimeter')}</Text>
         ) : null}
       </View>
+
+      {/* Palier C4 (JP 14/08) — historique des créations d'assemblées : LECTURE SEULE, affiché
+          uniquement sur l'onglet Assemblées et pour le secrétariat / superAdmin. */}
+      {canSeeHistory && level === 'units' && (
+        <View style={styles.historyBlock}>
+          <Pressable onPress={() => setHistoryOpen((v) => !v)} style={styles.historyHeader} hitSlop={6}>
+            <Text style={styles.historyTitle}>{t('structure.historyTitle')}</Text>
+            <Ionicons name={historyOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.ink3} />
+          </Pressable>
+          {historyOpen && (
+            <View style={{ gap: 8, marginTop: 10 }}>
+              {historyLoading && <ActivityIndicator color={colors.moss} />}
+              {!historyLoading && history.length === 0 && (
+                <Text style={styles.empty}>{t('structure.historyEmpty')}</Text>
+              )}
+              {history.map((h) => (
+                <Card key={h.unitId} style={styles.itemCard}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.itemName}>{h.name}</Text>
+                    <Text style={styles.itemMeta}>
+                      {[h.cityName, h.regionName, h.nationName].filter(Boolean).join(' · ')
+                        || t('structure.historyNoPlace')}
+                    </Text>
+                    {/* `createdByName` est null pour les assemblées créées avant la traçabilité
+                        (migration org/18) : on affiche un tiret plutôt qu'un vide. */}
+                    <Text style={styles.itemMeta}>
+                      {t('structure.historyCreatedBy', {
+                        name: h.createdByName ?? t('structure.historyUnknownAuthor'),
+                        date: fmtDate(new Date(h.createdAt)),
+                      })}
+                    </Text>
+                  </View>
+                </Card>
+              ))}
+              {!historyLast && (
+                <Button
+                  label={t('structure.historyLoadMore')}
+                  variant="soft"
+                  height={46}
+                  loading={historyLoadingMore}
+                  onPress={loadMoreHistory}
+                />
+              )}
+            </View>
+          )}
+        </View>
+      )}
 
       <StructureFormModal
         editing={editing?.level === 'countries' ? null : editing}
@@ -533,6 +620,9 @@ const styles = StyleSheet.create({
   itemName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
   itemMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2 },
   empty: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, fontStyle: 'italic', marginTop: 8 },
+  historyBlock: { marginTop: 22, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.hair },
+  historyHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  historyTitle: { fontFamily: fonts.serif, fontSize: 17, color: colors.ink },
   backdrop: { flex: 1, backgroundColor: 'rgba(22,41,31,0.45)', justifyContent: 'center', padding: 20 },
   modalCard: { paddingHorizontal: 20, paddingVertical: 20 },
   modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink },

@@ -470,7 +470,6 @@
     "countries": "Pays",
     "myAttachment": "Mon rattachement",
     "attachEmpty": "Aucun rattachement pour le moment.",
-    "requestCreate": "Demander une création",
     "countriesTab": "Pays",
     "addCountry": "Ajouter une nation",
     "addZone": "Ajouter une région",
@@ -512,7 +511,13 @@
     "fillFields": "Renseignez le nom et le rattachement.",
     "saveRefusedTitle": "Enregistrement refusé",
     "saveRefusedBody": "Hors de votre périmètre.",
-    "attachedRegionReadOnly": "Votre région de rattachement · lecture seule"
+    "attachedRegionReadOnly": "Votre région de rattachement · lecture seule",
+    "historyTitle": "Historique des créations",
+    "historyEmpty": "Aucune création enregistrée.",
+    "historyNoPlace": "Rattachement inconnu",
+    "historyCreatedBy": "Créée par {{name}} · {{date}}",
+    "historyUnknownAuthor": "—",
+    "historyLoadMore": "Charger plus"
   },
   "notifications": {
     "morePending": "{{count}} autre(s) rappel(s) en attente",
