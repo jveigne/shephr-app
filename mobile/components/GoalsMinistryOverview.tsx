@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from './ScreenShell';
 import Card from './Card';
 import Label from './Label';
+import { GoalScreenTitle } from './GoalCards';
 import { colors, fonts } from '../theme';
 import { useLanguage } from '../contexts/LanguageContext';
 import { fmtAmount, fmtDate } from '../utils/format';
@@ -60,10 +61,7 @@ export default function GoalsMinistryOverview({ secretariat }: { secretariat: bo
     <ScreenShell
       refreshControl={<RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <View style={styles.titleRow}>
-        <Ionicons name="flag-outline" size={22} color={colors.mossSoft} />
-        <Text style={styles.title}>{t('goals.title')}</Text>
-      </View>
+      <GoalScreenTitle title={t('goals.title')} />
       {/* Lot V1 : vue NOMMÉE à l'écran. */}
       <View style={styles.viewChip}>
         <Text style={styles.viewChipText}>
@@ -166,8 +164,6 @@ export default function GoalsMinistryOverview({ secretariat }: { secretariat: bo
 }
 
 const styles = StyleSheet.create({
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.5 },
   viewChip: {
     alignSelf: 'flex-start',
     backgroundColor: colors.earthDeep + '1F',

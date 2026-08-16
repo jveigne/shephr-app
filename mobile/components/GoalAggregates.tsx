@@ -15,6 +15,7 @@ import Card from './Card';
 import Label from './Label';
 import Button from './Button';
 import HandDivider from './HandDivider';
+import { GoalScreenTitle } from './GoalCards';
 import { colors, fonts } from '../theme';
 import { goalCategoryMeta } from '../constants/goalCategories';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -204,10 +205,7 @@ export default function GoalAggregatesScreen({
         <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <View style={styles.titleRow}>
-        <Ionicons name="flag-outline" size={22} color={colors.mossSoft} />
-        <Text style={styles.title}>{t('goals.title')}</Text>
-      </View>
+      <GoalScreenTitle title={t('goals.title')} />
       <View style={styles.viewChip}>
         <Text style={styles.viewChipText}>
           {t('views.badge')} : {countryIds.length > 0 ? t('views.coordinator') : t('views.leader')}
@@ -709,13 +707,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   viewChipText: { fontFamily: fonts.sans, fontSize: 12, fontWeight: '600', color: colors.earthDeep },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  title: {
-    fontFamily: fonts.serif,
-    fontSize: 28,
-    color: colors.ink,
-    letterSpacing: -0.4,
-  },
   subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4 },
   yearRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   yearChip: {

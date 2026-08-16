@@ -131,6 +131,36 @@ export default function MemberGoalsScreen() {
         {`${new Date(goal.startDate).getFullYear()}–${new Date(goal.endDate).getFullYear()}`}
       </Text>
 
+      {/* Vues de lecture du dirigeant (RG-BQ-04) : EN HAUT, avant sa propre déclaration (JP 16/08).
+          En bas de page, un dirigeant — coordinateur compris — ne les voyait pas : il arrivait sur
+          l'écran de déclaration et concluait que le résumé de son périmètre n'existait plus.
+          Chaque carte porte SA garde, miroir de celle du backend — on ne propose pas un écran qui
+          répondra 403 (le refus s'y afficherait en « rien à voir », ce qui est faux). */}
+      {(perimeter || myUnits) && (
+        <View style={{ gap: 8, marginTop: 14 }}>
+          {perimeter && (
+            <Card variant="tinted" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/perimeter')}>
+              <Ionicons name="stats-chart-outline" size={18} color={colors.mossDeep} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.navTitle}>{t('goals.nav.perimeter')}</Text>
+                <Text style={styles.navHint}>{t('goals.nav.perimeterHint')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+            </Card>
+          )}
+          {myUnits && (
+            <Card variant="tinted" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/units')}>
+              <Ionicons name="home-outline" size={18} color={colors.mossDeep} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.navTitle}>{t('goals.nav.units')}</Text>
+                <Text style={styles.navHint}>{t('goals.nav.unitsHint')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+            </Card>
+          )}
+        </View>
+      )}
+
       {((goal.visibleYears ?? goal.openYears)?.length ?? 0) > 0 && year != null && (
         <YearSelector
           years={goal.visibleYears ?? goal.openYears}
@@ -219,34 +249,6 @@ export default function MemberGoalsScreen() {
       {/* Détail NOMINATIF — réservé aux dirigeants (403 pour un simple membre). */}
       {leader && year != null && me?.goalUnitId && (
         <UnitMembersAggregate unitId={me.goalUnitId} year={year} goal={goal} />
-      )}
-
-      {/* Vues de lecture du dirigeant (RG-BQ-04) : elles ne sont plus l'écran d'entrée. Chaque
-          carte porte SA garde, miroir de celle du backend — on ne propose pas un écran qui
-          répondra 403 (le refus s'y afficherait en « rien à voir », ce qui est faux). */}
-      {(perimeter || myUnits) && (
-        <View style={{ gap: 8, marginTop: 16 }}>
-          {perimeter && (
-            <Card variant="paper2" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/perimeter')}>
-              <Ionicons name="stats-chart-outline" size={18} color={colors.mossDeep} />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.navTitle}>{t('goals.nav.perimeter')}</Text>
-                <Text style={styles.navHint}>{t('goals.nav.perimeterHint')}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
-            </Card>
-          )}
-          {myUnits && (
-            <Card variant="paper2" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/units')}>
-              <Ionicons name="home-outline" size={18} color={colors.mossDeep} />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.navTitle}>{t('goals.nav.units')}</Text>
-                <Text style={styles.navHint}>{t('goals.nav.unitsHint')}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
-            </Card>
-          )}
-        </View>
       )}
 
       {/* RG-BQ-13 — changer d'assemblée soi-même, sans demande ni valideur. */}

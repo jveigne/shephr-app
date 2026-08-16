@@ -5,6 +5,7 @@ import ScreenShell from '../../../components/ScreenShell';
 import Card from '../../../components/Card';
 import Label from '../../../components/Label';
 import { UnitStatusBadge } from '../../../components/GoalAggregates';
+import { GoalScreenTitle } from '../../../components/GoalCards';
 import UnitMembersAggregate from '../../../components/UnitMembersAggregate';
 import { colors, fonts } from '../../../theme';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -126,10 +127,7 @@ export default function MyUnitsScreen() {
         <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <View style={styles.titleRow}>
-        <Ionicons name="flag-outline" size={22} color={colors.mossSoft} />
-        <Text style={styles.title}>{t('goals.title')}</Text>
-      </View>
+      <GoalScreenTitle title={t('goals.title')} />
       <View style={styles.viewChip}>
         <Text style={styles.viewChipText}>
           {t('views.badge')} : {t('views.myUnits')}

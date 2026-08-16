@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from './ScreenShell';
 import Card from './Card';
@@ -19,6 +20,28 @@ import type { GoalLine } from '../hooks/useGoalsData';
  * l'écran d'engagement d'assemblée qui les hébergeait a disparu (RG-BQ-11), et les laisser dans un
  * `index.tsx` réduit à du routage aurait obligé chaque écran à importer depuis une route.
  */
+
+/**
+ * Titre d'un écran Objectifs, avec flèche de retour (JP 16/08).
+ *
+ * <p>Les vues de LECTURE (« Mon périmètre », « Mes assemblées ») s'atteignent depuis « Mes
+ * objectifs » : sans flèche on y restait bloqué — la barre d'onglets ramène sur l'onglet, pas sur
+ * l'écran précédent. La flèche n'apparaît que s'il y a quelque chose à dépiler : ces mêmes écrans
+ * servent aussi d'écran d'ENTRÉE de l'onglet pour un compte sans assemblée.
+ */
+export function GoalScreenTitle({ title }: { title: string }) {
+  return (
+    <View style={styles.titleRow}>
+      {router.canGoBack() && (
+        <Pressable onPress={() => router.back()} hitSlop={10}>
+          <Ionicons name="arrow-back" size={24} color={colors.ink2} />
+        </Pressable>
+      )}
+      <Ionicons name="flag-outline" size={22} color={colors.mossSoft} />
+      <Text style={styles.screenTitle}>{title}</Text>
+    </View>
+  );
+}
 
 /** Sélecteur d'année (Lot 4.6, révisé G1.c) — chips des années VISIBLES. */
 export function YearSelector({
@@ -174,6 +197,8 @@ export function GoalEmptyState({
 }
 
 const styles = StyleSheet.create({
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
+  screenTitle: { flex: 1, fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4 },
   yearRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   yearChip: {
     paddingVertical: 6,
