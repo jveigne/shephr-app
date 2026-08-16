@@ -39,6 +39,12 @@ export default function MyUnitsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
+  /**
+   * L'appel a été REFUSÉ (403) ou a échoué. Sans ce drapeau, `GET /goals/me/units` — gardé par
+   * `requireSubCoordinatorLeader`, qui exclut le superAdmin et les rôles ministère-large — rendait
+   * son refus en « Aucune assemblée rattachée à votre compte », un message faux (chantier 16/08).
+   */
+  const [error, setError] = useState<'denied' | 'failed' | null>(null);
 
   /** Assemblées portées par le compte, dans l'ordre du backend (principale en tête). */
   const myAssemblies = me?.assemblies ?? [];
@@ -53,8 +59,13 @@ export default function MyUnitsScreen() {
       const g = await getActiveGoal();
       setGoal(g);
       setYear(g.currentYear);
-      const all = await getMyUnits(g.currentYear).catch(() => [] as ZoneUnitStatus[]);
-      setUnits(all);
+      try {
+        setUnits(await getMyUnits(g.currentYear));
+        setError(null);
+      } catch (e: any) {
+        setUnits([]);
+        setError(e?.response?.status === 403 ? 'denied' : 'failed');
+      }
     } finally {
       setLoading(false);
     }
@@ -130,7 +141,25 @@ export default function MyUnitsScreen() {
       </View>
       <Text style={styles.hint}>{t('goals.myUnits.hint')}</Text>
 
-      {rows.length === 0 ? (
+      {rows.length === 0 && error != null ? (
+        /* Un refus n'est pas une absence : le dire, plutôt que d'affirmer « aucune assemblée ».
+           Le repli sur `me.assemblies` reste prioritaire — c'est de la donnée vraie. */
+        <Card variant="paper2" style={styles.errorCard}>
+          <View style={styles.errorHead}>
+            <Ionicons
+              name={error === 'denied' ? 'lock-closed-outline' : 'cloud-offline-outline'}
+              size={18}
+              color={colors.clay}
+            />
+            <Text style={styles.errorTitle}>
+              {t(error === 'denied' ? 'goalsAgg.deniedTitle' : 'goalsAgg.loadErrorTitle')}
+            </Text>
+          </View>
+          <Text style={styles.errorHint}>
+            {t(error === 'denied' ? 'goals.myUnits.deniedHint' : 'goalsAgg.loadErrorHint')}
+          </Text>
+        </Card>
+      ) : rows.length === 0 ? (
         <Text style={styles.empty}>{t('goals.myUnits.empty')}</Text>
       ) : (
         <View style={{ gap: 8, marginTop: 12 }}>
@@ -259,6 +288,10 @@ const styles = StyleSheet.create({
   sectionTitle: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink },
   hint: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 6, lineHeight: 18 },
   empty: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, marginTop: 16, lineHeight: 19 },
+  errorCard: { paddingHorizontal: 16, paddingVertical: 14, marginTop: 16 },
+  errorHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  errorTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '700', color: colors.clay, flex: 1 },
+  errorHint: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink2, marginTop: 6, lineHeight: 17 },
   unitCard: {
     flexDirection: 'row',
     alignItems: 'center',

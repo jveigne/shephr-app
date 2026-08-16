@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Icon } from './Icon';
 import { useAuth } from '../hooks/useAuth';
 import {
+  canCreateAssembly,
   canManageLocalities,
   canManageStructure,
   canManageUnits,
@@ -137,7 +138,11 @@ export function Sidebar() {
       pays: (me?.superAdmin ?? false) || secretariat,
       zones: canManageZones(me) || secretariat,
       localites: canManageLocalities(me) || secretariat,
-      unites: canManageUnits(me),
+      // RG-BQ-12 (JP 16/08) : la page Assemblées sert deux gestes de portées différentes — la
+      // CRÉATION, ouverte à tout membre du ministère, et l'ADMINISTRATION (modifier/supprimer),
+      // restée gardée. L'entrée de menu suit donc le plus ouvert des deux, sans quoi on cacherait
+      // une capacité que le serveur accorde ; c'est la page qui masque les actions gardées.
+      unites: canCreateAssembly(me) || canManageUnits(me),
     };
     return (id: string) => map[id] ?? true;
   }, [me]);

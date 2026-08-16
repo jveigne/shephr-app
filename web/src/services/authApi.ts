@@ -157,19 +157,23 @@ export function isSecretariat(me: MeResponse | null): boolean {
 }
 
 /**
- * Palier C1 (JP 14/08) — peut CRÉER une assemblée de maison.
+ * RG-BQ-12 (JP 16/08) — peut CRÉER une assemblée de maison.
  *
- * <p>Miroir du backend {@code AccessControlServiceImpl.requireCanManageInLocality} : superAdmin,
- * SECRETARIAT de son ministère, DIRIGEANT de la ville, DIRIGEANT_UNITE dans la ville de ses
- * assemblées, SENIOR/COORDINATEUR de la région englobante — soit, côté écran, tout rang de manager
- * ≥ DIRIGEANT_UNITE plus le SECRETARIAT.
+ * <p>La création n'a plus AUCUNE contrainte de rôle ni de géographie : tout membre du ministère
+ * ouvre une assemblée dans la ville de son choix, sans y être rattaché ni en être dirigeant
+ * ({@code AdminUnitServiceImpl.create} n'appelle plus {@code requireCanManageInLocality}). Le seul
+ * prérequis côté écran est d'être rattaché à un ministère — la frontière de ministère, elle, reste
+ * gardée par le serveur.
  *
- * <p>⚠ Le gating d'écran sert à ne pas afficher un bouton inutile ; la garde de périmètre (« dans
- * MA ville ») reste côté serveur, qui répond 403. Ne pas l'assouplir pour contourner un 403.
+ * <p>Historique : le palier C1 (14/08) avait ouvert ce geste au dirigeant de la ville
+ * ({@code managerRank >= DIRIGEANT_UNITE} + SECRETARIAT) ; le 16/08 supprime la contrainte.
+ * Ce prédicat était resté plus strict que le backend, cachant une capacité réellement accordée.
+ *
+ * <p>⚠ Ne gate QUE la création. MODIFIER ou SUPPRIMER une assemblée reste gardé côté serveur par
+ * {@code requireCanManageInLocality} → voir {@link canManageUnits}, qui n'a pas bougé.
  */
 export function canCreateAssembly(me: MeResponse | null): boolean {
-  if (!me) return false;
-  return me.superAdmin || isSecretariat(me) || managerRank(me) >= ROLE_RANK.DIRIGEANT_UNITE;
+  return !!me && !!me.ministryId;
 }
 
 /** Chantier B (décision #7) — l'utilisateur est un dirigeant de VILLE (rattaché à une ville). */
@@ -183,12 +187,28 @@ export function canManageLocalities(me: MeResponse | null): boolean {
 }
 
 /**
- * Peut administrer les ASSEMBLÉES de son périmètre : les managers de structure, le dirigeant de
- * ville (Chantier B) et — palier C1 (JP 14/08) — le dirigeant d'unité, qui ouvre une assemblée de
- * maison dans sa propre ville. Aligné sur {@link canCreateAssembly}.
+ * Peut ADMINISTRER (modifier / supprimer) les assemblées de son périmètre : les managers de
+ * structure, le dirigeant de ville (Chantier B) et — palier C1 (JP 14/08) — le dirigeant d'unité.
+ *
+ * <p>Miroir du backend {@code AccessControlServiceImpl.requireCanManageInLocality}, qui garde
+ * toujours {@code update} et {@code delete} : superAdmin, SECRETARIAT du ministère, DIRIGEANT de la
+ * ville, DIRIGEANT_UNITE dans la ville de ses assemblées, SENIOR/COORDINATEUR de la région
+ * englobante — soit, côté écran, tout rang de manager ≥ DIRIGEANT_UNITE plus le SECRETARIAT.
+ *
+ * <p>⚠ RG-BQ-12 n'a ouvert que la CRÉATION ({@link canCreateAssembly}) : élargir ce prédicat-ci
+ * afficherait des boutons Modifier / Supprimer qui prendront un 403. La garde de périmètre
+ * (« dans MA ville ») reste serveur ; ce gating d'écran sert seulement à ne pas promettre un geste
+ * que le serveur refusera.
  */
 export function canManageUnits(me: MeResponse | null): boolean {
-  return canManageStructure(me) || isCityLeader(me) || canCreateAssembly(me);
+  if (!me) return false;
+  return (
+    canManageStructure(me) ||
+    isCityLeader(me) ||
+    me.superAdmin ||
+    isSecretariat(me) ||
+    managerRank(me) >= ROLE_RANK.DIRIGEANT_UNITE
+  );
 }
 
 const ROLE_RANK: Record<ModuleRole, number> = {
@@ -211,6 +231,94 @@ function managerRank(me: MeResponse | null): number {
     r === 'DIRIGEANT_COORDINATEUR' || r === 'DIRIGEANT_SENIOR' || r === 'DIRIGEANT' || r === 'DIRIGEANT_UNITE'
       ? ROLE_RANK[r] : 0;
   return Math.max(w(me.donationRole), w(me.goalRole));
+}
+
+// ============================================================================================
+//  Périmètre de LECTURE des agrégats Goals — miroirs de AccessControlServiceImpl (16/08)
+//
+//  ⚠ Ces prédicats existent à l'identique dans `shephr-app/mobile/services/authApi.ts`. Les deux
+//  copies doivent bouger ENSEMBLE : c'est leur divergence qui faisait afficher au web des sections
+//  que le serveur refusait, là où le mobile les masquait déjà.
+//
+//  Le principe, en une phrase : **le rôle gate, la géographie ne fait que désigner la branche.**
+//  Un rattachement porté par un rang trop bas ne doit pas devenir une section à zéros — les
+//  rattachements résiduels existent bel et bien (le PATCH `update` ne purge pas les champs géo
+//  d'un rôle rétrogradé, seul `reassign` le fait).
+// ============================================================================================
+
+/** Rang du rôle GOALS seul — les agrégats Objectifs ne regardent jamais le rôle Dons. */
+function goalRank(me: MeResponse | null): number {
+  return me?.goalRole ? ROLE_RANK[me.goalRole] : 0;
+}
+
+/** Viewer ministère-large côté Goals : voit tout son ministère sans rattachement géographique. */
+function isMinistryWideGoals(me: MeResponse | null): boolean {
+  return me?.goalRole === 'LEADER' || me?.goalRole === 'SECRETARIAT';
+}
+
+/**
+ * Niveau RÉGION (`GET /goals/zones/{id}/aggregate`) — miroir de `getVisibleZoneIds` : superAdmin,
+ * ministère-large, ou rang Objectifs ≥ DIRIGEANT_SENIOR. En dessous le backend renvoie `Set.of()`
+ * et le garde répond 403.
+ */
+export function canReadZoneAggregate(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return me.superAdmin || isMinistryWideGoals(me) || goalRank(me) >= ROLE_RANK.DIRIGEANT_SENIOR;
+}
+
+/**
+ * Niveau VILLE (`GET /goals/cities/{id}/aggregate`) — miroir de `getVisibleLocalityIds` : SENIOR et
+ * au-dessus, PLUS le dirigeant DE ville (`DIRIGEANT` effectivement rattaché à une ville — sans
+ * rattachement il reste unité-only, exactement comme côté backend).
+ */
+export function canReadCityAggregate(me: MeResponse | null): boolean {
+  if (!me) return false;
+  if (me.superAdmin || isMinistryWideGoals(me) || goalRank(me) >= ROLE_RANK.DIRIGEANT_SENIOR) return true;
+  const cities = [me.goalCityId, ...(me.goalCityIds ?? [])].filter(Boolean);
+  return me.goalRole === 'DIRIGEANT' && cities.length > 0;
+}
+
+/**
+ * Niveau NATION (`GET /goals/countries/{id}/aggregate`) — miroir de `getVisibleCountryIds` :
+ * réservé au COORDINATEUR, aux viewers ministère-large et au superAdmin. Un SENIOR n'y passe pas.
+ */
+export function canReadCountryAggregate(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return me.superAdmin || isMinistryWideGoals(me) || me.goalRole === 'DIRIGEANT_COORDINATEUR';
+}
+
+/** Nœuds de rattachement, principal en tête, sans doublon. */
+function uniqNodes(home?: string | null, set?: string[] | null): string[] {
+  const rest = (set ?? []).filter((id) => id !== home);
+  return home ? [home, ...rest] : rest;
+}
+
+/**
+ * Les nœuds de périmètre que le compte peut RÉELLEMENT lire, par niveau. Source unique des
+ * sections « Mon périmètre » — aucune section ne doit être construite sur un niveau refusé.
+ */
+export function goalPerimeterNodes(me: MeResponse | null): {
+  zoneIds: string[];
+  cityIds: string[];
+  countryIds: string[];
+} {
+  return {
+    zoneIds: canReadZoneAggregate(me) ? uniqNodes(me?.goalZoneId, me?.goalZoneIds) : [],
+    cityIds: canReadCityAggregate(me) ? uniqNodes(me?.goalCityId, me?.goalCityIds) : [],
+    countryIds: canReadCountryAggregate(me) ? (me?.goalCountryIds ?? []) : [],
+  };
+}
+
+/**
+ * Peut lire le DÉTAIL NOMINATIF d'une assemblée (`GET /units/{id}/members-aggregate`) — miroir de
+ * `GoalAccessGuard.coversAssembly`, qui interroge `getVisibleUnitIds(user, GOAL)` : un
+ * `goalRole = MEMBRE` obtient `Set.of()`, donc 403, et un rôle Dons-seul aussi (le périmètre est
+ * GOAL et rien d'autre). Sans ce test, le bloc était monté pour tout le monde et le refus
+ * s'effaçait en silence.
+ */
+export function canReadAssemblyMembers(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return me.superAdmin || isMinistryWideGoals(me) || goalRank(me) >= ROLE_RANK.DIRIGEANT_UNITE;
 }
 
 /**

@@ -342,6 +342,7 @@
       "hint": "Les assemblées de votre périmètre : ouvrez-en une pour voir ce que ses membres ont engagé.",
       "empty": "Aucune assemblée rattachée à votre compte.",
       "back": "Mes assemblées",
+      "deniedHint": "Cette vue est réservée aux dirigeants d'assemblée, de ville et de région. Nous n'affichons pas de liste vide à la place : elle serait fausse.",
       "yearNote": "Statuts de l'année {{year}}."
     },
     "nav": {
@@ -369,7 +370,8 @@
       "reminded": "Relancé",
       "reminderSentTitle": "Rappel envoyé",
       "reminderSentBody": "{{name}} a reçu un rappel.",
-      "reminderRefused": "Rappel non envoyé"
+      "reminderRefused": "Rappel non envoyé",
+      "loadFailed": "Impossible de charger les engagements des membres. Réessayez plus tard."
     }
   },
   "goalsAgg": {
@@ -400,7 +402,11 @@
     "statusNotStarted": "Non démarré",
     "pledgedTotal": "Total engagé",
     "allMembersSubmitted": "Tous les membres de vos assemblées ont soumis !",
-    "statusInProgress": "En cours"
+    "statusInProgress": "En cours",
+    "deniedTitle": "Vue non autorisée",
+    "deniedHint": "Ce niveau n'est pas dans votre périmètre : le serveur a refusé la lecture. Aucun chiffre n'est affiché ici — un zéro laisserait croire à un total réel.",
+    "loadErrorTitle": "Lecture impossible",
+    "loadErrorHint": "Ces cumuls n'ont pas pu être chargés. Tirez vers le bas pour réessayer."
   },
   "progress": {
     "title": "Déclarer l'état actuel",

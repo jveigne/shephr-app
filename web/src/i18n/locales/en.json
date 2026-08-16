@@ -672,6 +672,7 @@
     "noUnit": "No assembly",
     "createFirst": "Create your first assembly.",
     "noneInScope": "No assembly in your scope.",
+    "noCityYet": "No city exists yet: ask the secretariat to create one, then come back and open your assembly.",
     "created": "Assembly created",
     "updated": "Assembly updated",
     "deleted": "Assembly deleted",

@@ -11,7 +11,7 @@ import UnitMembersAggregate from '../../../components/UnitMembersAggregate';
 import { colors, fonts } from '../../../theme';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
-import { hasGoalsAccess, hasPerimeterView } from '../../../services/authApi';
+import { hasGoalsAccess, hasPerimeterView, isSubCoordinatorLeader } from '../../../services/authApi';
 import { useGoalsData } from '../../../hooks/useGoalsData';
 import {
   getMyAssemblyGoal,
@@ -43,6 +43,12 @@ export default function MemberGoalsScreen() {
   // « Mon périmètre » n'est proposé que s'il a quelque chose à montrer : un dirigeant sans nœud
   // porté ET sans sous-arbre lisible tombait sur un état vide trompeur (cf. `hasPerimeterView`).
   const perimeter = hasPerimeterView(me);
+  // « Mes assemblées » = celles que JE dirige. `GET /goals/me/units` est gardé côté backend par
+  // `GoalQueryServiceImpl.requireSubCoordinatorLeader`, qui EXCLUT le superAdmin et n'admet que
+  // DIRIGEANT_UNITE | DIRIGEANT | DIRIGEANT_SENIOR : un LEADER/SECRETARIAT est ministère-large et
+  // ne dirige aucune assemblée en propre, un superAdmin non plus. Gater sur `hasGoalsAccess`
+  // proposait la carte à ces profils, et le 403 s'affichait en « aucune assemblée » — faux.
+  const myUnits = isSubCoordinatorLeader(me);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -215,8 +221,10 @@ export default function MemberGoalsScreen() {
         <UnitMembersAggregate unitId={me.goalUnitId} year={year} goal={goal} />
       )}
 
-      {/* Vues de lecture du dirigeant (RG-BQ-04) : elles ne sont plus l'écran d'entrée. */}
-      {leader && (
+      {/* Vues de lecture du dirigeant (RG-BQ-04) : elles ne sont plus l'écran d'entrée. Chaque
+          carte porte SA garde, miroir de celle du backend — on ne propose pas un écran qui
+          répondra 403 (le refus s'y afficherait en « rien à voir », ce qui est faux). */}
+      {(perimeter || myUnits) && (
         <View style={{ gap: 8, marginTop: 16 }}>
           {perimeter && (
             <Card variant="paper2" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/perimeter')}>
@@ -228,14 +236,16 @@ export default function MemberGoalsScreen() {
               <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
             </Card>
           )}
-          <Card variant="paper2" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/units')}>
-            <Ionicons name="home-outline" size={18} color={colors.mossDeep} />
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.navTitle}>{t('goals.nav.units')}</Text>
-              <Text style={styles.navHint}>{t('goals.nav.unitsHint')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
-          </Card>
+          {myUnits && (
+            <Card variant="paper2" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/units')}>
+              <Ionicons name="home-outline" size={18} color={colors.mossDeep} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.navTitle}>{t('goals.nav.units')}</Text>
+                <Text style={styles.navHint}>{t('goals.nav.unitsHint')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+            </Card>
+          )}
         </View>
       )}
 

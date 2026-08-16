@@ -37,7 +37,12 @@ function Figure({ value, label }: { value: string; label: string }) {
   );
 }
 
-/** Un des quatre principes du module Objectifs (foi, cumul, état, niveaux). */
+/**
+ * Un des quatre principes du module Objectifs, tels qu'ils sont réellement affichés
+ * (`landing.goals.*`) : engagement individuel, total = somme, état réel année après année,
+ * du membre au continent. (L'ancienne mention « foi, cumul » datait d'avant la refonte des
+ * objectifs individuels : plus d'engagement de foi ni de cumul sur cette page.)
+ */
 function Principle({ icon, title, desc }: { icon: string; title: string; desc: string }) {
   return (
     <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>

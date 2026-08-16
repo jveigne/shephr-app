@@ -19,7 +19,7 @@ import {
 } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { canManageUnits, isSecretariat } from '../services/authApi';
+import { canCreateAssembly, canManageUnits, isSecretariat } from '../services/authApi';
 import {
   createUnit,
   deleteUnit,
@@ -48,7 +48,12 @@ export function UnitesPage() {
   const { push } = useToast();
   const { me } = useAuth();
   const ministryId = me?.ministryId ?? null;
-  const canWrite = canManageUnits(me);
+  // Deux droits distincts sur cet écran, à ne pas confondre (RG-BQ-12) :
+  //  - ADMINISTRER (modifier / supprimer) reste gardé par `requireCanManageInLocality` côté
+  //    serveur → `canManageUnits`, inchangé. Afficher ces actions plus largement ne produirait
+  //    que des 403 ;
+  //  - CRÉER est ouvert à tout membre du ministère → `canCreate` plus bas.
+  const canAdminister = canManageUnits(me);
   // Palier C4 (JP 14/08) : l'onglet Historique n'est proposé qu'au SECRETARIAT et au SUPER_ADMIN,
   // miroir de la garde serveur de GET /units/history (tout autre rôle → 403).
   const canSeeHistory = isSecretariat(me) || !!me?.superAdmin;
@@ -101,9 +106,10 @@ export function UnitesPage() {
 
   const localities = localitiesQ.data ?? [];
   // RG-BQ-12 (JP 16/08) : la création d'une assemblée n'a PLUS aucune contrainte de rôle ni de
-  // géographie — tout compte du ministère en crée une dans la ville de son choix. Il ne reste que
-  // les prérequis techniques : connaître son ministère, et avoir au moins une ville où la poser.
-  const canCreate = localities.length > 0 && ministryId != null;
+  // géographie — tout compte du ministère en crée une dans la ville de son choix. Le droit passe
+  // par `canCreateAssembly` (même prédicat que l'offre de création des Réglages) ; reste le
+  // prérequis technique d'avoir au moins une ville où la poser.
+  const canCreate = canCreateAssembly(me) && localities.length > 0;
 
   const cols: Column<UnitResponse>[] = [
     { label: t('units.colUnit'), render: (u) => <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{u.name}</span> },
@@ -113,7 +119,7 @@ export function UnitesPage() {
       render: (u) => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-600)' }}>{u.joinCode}</span>,
     },
     { label: t('common.status'), render: (u) => <StatusBadge active={u.active} /> },
-    ...(canWrite
+    ...(canAdminister
       ? [{
           label: '',
           style: { width: 90 },
@@ -189,7 +195,10 @@ export function UnitesPage() {
                   <div className="empty">
                     <div className="icon-wrap"><Icon name="unit" size={26} /></div>
                     <h4>{t('units.noUnit')}</h4>
-                    <p>{canCreate ? t('units.createFirst') : t('units.noneInScope')}</p>
+                    {/* RG-BQ-12 : la liste n'est plus scopée à un périmètre (lecture ouverte à
+                        tout le ministère). Si `canCreate` est faux ici, ce n'est pas un refus de
+                        droit — c'est qu'aucune ville n'existe encore où poser une assemblée. */}
+                    <p>{canCreate ? t('units.createFirst') : t('units.noCityYet')}</p>
                   </div>
                 }
               />

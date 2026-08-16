@@ -18,6 +18,8 @@ import HandDivider from './HandDivider';
 import { colors, fonts } from '../theme';
 import { goalCategoryMeta } from '../constants/goalCategories';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
+import { isSubCoordinatorLeader } from '../services/authApi';
 import { fmtAmount } from '../utils/format';
 import {
   getActiveGoal,
@@ -98,6 +100,11 @@ export default function GoalAggregatesScreen({
   countryIds: string[];
 }) {
   const { t } = useLanguage();
+  const { me } = useAuth();
+  // `GET /goals/me/units` est réservé aux sous-coordinateurs côté backend
+  // (`requireSubCoordinatorLeader`, superAdmin exclu) : ne pas l'appeler pour un COORDINATEUR,
+  // dont le périmètre passe par les agrégats de ses nations.
+  const canDrillMyUnits = isSubCoordinatorLeader(me);
   const [goal, setGoal] = useState<ActiveGoal | null>(null);
   const [perimeters, setPerimeters] = useState<Perimeter[]>([]);
   const [loading, setLoading] = useState(true);
@@ -241,7 +248,9 @@ export default function GoalAggregatesScreen({
 
       {/* Lot 3.5 — mon sous-arbre d'assemblées (indépendant du niveau de mes nœuds de périmètre) :
           villes → assemblées si plusieurs villes, sinon liste directe. */}
-      {year != null && <MyUnitsBlock key={`my-units-${year}-${refreshKey}`} year={year} goal={goal} />}
+      {year != null && canDrillMyUnits && (
+        <MyUnitsBlock key={`my-units-${year}-${refreshKey}`} year={year} goal={goal} />
+      )}
 
       {/* Lot V1 — vue Coordinateur : cumuls PAR RÉGION + somme totale (borné à la Région). */}
       {year != null && countryIds.map((id) => (
@@ -251,10 +260,17 @@ export default function GoalAggregatesScreen({
   );
 }
 
+/**
+ * Une section n'a pas pu être lue. `denied` = le serveur a REFUSÉ (403, niveau hors périmètre),
+ * `failed` = réseau ou erreur inattendue. Les deux se disent, aucun ne se tait.
+ */
+type SectionError = 'denied' | 'failed';
+
 function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goal: ActiveGoal; year: number }) {
   const { t } = useLanguage();
   const [lines, setLines] = useState<AggregateLine[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<SectionError | null>(null);
 
   const currency = goal.defaultCurrency;
   const categories = [...goal.categories].sort((a, b) => a.displayOrder - b.displayOrder);
@@ -267,10 +283,14 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
           ? await getAggregate(perimeter.level, perimeter.entityId, year)
           : await getMyPerimeterAggregate(year),
       );
-    } catch {
-      // 403 hors périmètre / réseau : une section vide vaut mieux qu'un écran en erreur, les
-      // autres sections restent lisibles.
+      setError(null);
+    } catch (e: any) {
+      // ⚠ Un REFUS n'est pas un zéro (chantier 16/08). L'ancien `setLines([])` affichait la
+      // section avec le nom de la région en titre et des zéros partout, indiscernables d'un vrai
+      // zéro : l'utilisateur croyait l'information vraie. On dit explicitement qu'on n'a pas pu
+      // lire ; les autres sections restent lisibles, l'écran n'est pas mis en erreur globale.
       setLines([]);
+      setError(e?.response?.status === 403 ? 'denied' : 'failed');
     } finally {
       setLoading(false);
     }
@@ -295,6 +315,22 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
 
       {loading ? (
         <ActivityIndicator color={colors.moss} style={{ marginTop: 18 }} />
+      ) : error != null ? (
+        <Card variant="paper2" style={styles.errorCard}>
+          <View style={styles.errorHead}>
+            <Ionicons
+              name={error === 'denied' ? 'lock-closed-outline' : 'cloud-offline-outline'}
+              size={18}
+              color={colors.clay}
+            />
+            <Text style={styles.errorTitle}>
+              {t(error === 'denied' ? 'goalsAgg.deniedTitle' : 'goalsAgg.loadErrorTitle')}
+            </Text>
+          </View>
+          <Text style={styles.errorHint}>
+            {t(error === 'denied' ? 'goalsAgg.deniedHint' : 'goalsAgg.loadErrorHint')}
+          </Text>
+        </Card>
       ) : (
         <View style={{ gap: 8, marginTop: 10 }}>
           {categories.map((category) => {
@@ -699,6 +735,10 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontFamily: fonts.serif, fontSize: 20, color: colors.ink },
   lineCard: { paddingHorizontal: 16, paddingVertical: 14 },
+  errorCard: { paddingHorizontal: 16, paddingVertical: 14, marginTop: 10 },
+  errorHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  errorTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '700', color: colors.clay, flex: 1 },
+  errorHint: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink2, marginTop: 6, lineHeight: 17 },
   lineHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   lineIcon: {
     width: 36,

@@ -16,7 +16,7 @@ import {
 } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { isSecretariat } from '../services/authApi';
+import { canReadAssemblyMembers, goalPerimeterNodes, isSecretariat } from '../services/authApi';
 import {
   addProgress,
   deleteProgress,
@@ -188,14 +188,14 @@ export function GoalsPage() {
   // périmètre zone/pays (goalZoneId / goalCountryIds).
   const hasUnit = !!me?.goalUnitId;
   const zoneId = me?.goalZoneId ?? null;
-  // Multi-rattachements (home + set) : toutes les régions / villes portées, principale en tête.
-  const uniq = (home?: string | null, set?: string[] | null) => {
-    const rest = (set ?? []).filter((id) => id !== home);
-    return home ? [home, ...rest] : rest;
-  };
-  const zoneIds = uniq(me?.goalZoneId, me?.goalZoneIds);
-  const cityIds = uniq(me?.goalCityId, me?.goalCityIds);
-  const countryIds = me?.goalCountryIds ?? [];
+  // Nœuds de périmètre FILTRÉS PAR LE RANG (16/08) — miroir de AccessControlServiceImpl, partagé
+  // à l'identique avec le mobile. Les ids bruts de `me` ne suffisent pas : un rattachement
+  // résiduel (un SENIOR rétrogradé DIRIGEANT garde son goalZoneId — le PATCH `update` ne purge
+  // pas, seul `reassign` le fait) produisait une section que le serveur refuse.
+  const perimeterNodes = goalPerimeterNodes(me);
+  const zoneIds = perimeterNodes.zoneIds;
+  const cityIds = perimeterNodes.cityIds;
+  const countryIds = perimeterNodes.countryIds;
   // Lot 4.8 — pays qu'un SECRETARIAT/LEADER coordonne explicitement (vue pays éditable comme un coordinateur).
   const coordinatedCountryIds = me?.coordinatedCountryIds ?? [];
 
@@ -619,9 +619,13 @@ export function GoalsPage() {
                 />
 
                 {/* Détail nominatif de MON assemblée : qui a déclaré, qui a soumis, qui est en
-                    retard. Réservé aux dirigeants (403 pour un simple membre) — le bloc s'efface
-                    proprement dans ce cas. */}
-                {goal && year != null && me?.goalUnitId && (
+                    retard. Réservé aux dirigeants côté Goals — `canReadAssemblyMembers` est le
+                    miroir de `GoalAccessGuard.coversAssembly`.
+                    Avant le 16/08 le bloc était monté sans garde et « s'effaçait proprement » sur
+                    403 : pour un dirigeant DONS-seul (qui atteint /goals via hasMinistryAccess),
+                    l'appel était refusé à chaque chargement et le refus disparaissait en silence.
+                    Un refus rendu en néant reste un refus — on ne le demande plus. */}
+                {goal && year != null && me?.goalUnitId && canReadAssemblyMembers(me) && (
                   <MembersGoalsBlock
                     unitId={me.goalUnitId}
                     goal={goal}

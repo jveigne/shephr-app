@@ -342,6 +342,7 @@
       "hint": "The assemblies in your scope: open one to see what its members have pledged.",
       "empty": "No assembly attached to your account.",
       "back": "My assemblies",
+      "deniedHint": "This view is reserved for assembly, city and region leaders. We are not showing an empty list instead: it would be untrue.",
       "yearNote": "{{year}} statuses."
     },
     "nav": {
@@ -369,7 +370,8 @@
       "reminded": "Reminded",
       "reminderSentTitle": "Reminder sent",
       "reminderSentBody": "{{name}} has been reminded.",
-      "reminderRefused": "Reminder not sent"
+      "reminderRefused": "Reminder not sent",
+      "loadFailed": "Could not load members' commitments. Please try again later."
     }
   },
   "goalsAgg": {
@@ -400,7 +402,11 @@
     "statusNotStarted": "Not started",
     "pledgedTotal": "Total pledged",
     "allMembersSubmitted": "All the members of your assemblies have submitted!",
-    "statusInProgress": "In progress"
+    "statusInProgress": "In progress",
+    "deniedTitle": "View not allowed",
+    "deniedHint": "This level is outside your scope: the server refused the read. No figure is shown here — a zero would look like a real total.",
+    "loadErrorTitle": "Could not load",
+    "loadErrorHint": "These totals could not be loaded. Pull down to try again."
   },
   "progress": {
     "title": "Update current status",

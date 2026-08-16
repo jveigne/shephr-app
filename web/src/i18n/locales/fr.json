@@ -672,6 +672,7 @@
     "noUnit": "Aucune assemblée",
     "createFirst": "Créez votre première assemblée.",
     "noneInScope": "Aucune assemblée dans votre périmètre.",
+    "noCityYet": "Aucune ville n'existe encore : contactez le secrétariat pour en créer une, puis revenez ouvrir votre assemblée.",
     "created": "Assemblée créée",
     "updated": "Assemblée mise à jour",
     "deleted": "Assemblée supprimée",

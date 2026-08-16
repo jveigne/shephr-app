@@ -7,7 +7,7 @@ import { Button, Field, Input, Modal, TopBar } from '../components/ui';
 import { GeoPicker } from '../components/GeoPicker';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { deleteMyAccount, primaryRoleKey } from '../services/authApi';
+import { canCreateAssembly, deleteMyAccount, primaryRoleKey } from '../services/authApi';
 import {
   changeMyAssembly,
   createUnit,
@@ -353,8 +353,10 @@ function MyAssemblyCard() {
           </Field>
 
           {/* RG-BQ-12 — « cette assemblée n'existe pas ? créez-la ici ». Proposé dès qu'une ville
-              est retenue : c'est le seul moment où la création a un lieu où se poser. */}
-          {cityId !== '' && ministryId != null && (
+              est retenue : c'est le seul moment où la création a un lieu où se poser. Le droit,
+              lui, passe par `canCreateAssembly` — un seul prédicat pour ce geste dans toute l'app
+              (même règle sur la page Assemblées). */}
+          {cityId !== '' && canCreateAssembly(me) && (
             <div
               style={{
                 border: '1px dashed var(--line)',

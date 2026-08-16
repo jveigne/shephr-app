@@ -5,7 +5,7 @@ import GoalsMinistryOverview from '../../../components/GoalsMinistryOverview';
 import { GoalEmptyState } from '../../../components/GoalCards';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
-import { isMinistryWideGoals, isSubCoordinatorLeader } from '../../../services/authApi';
+import { goalPerimeterNodes, isMinistryWideGoals, isSubCoordinatorLeader } from '../../../services/authApi';
 
 /**
  * « Mon périmètre » — vues de LECTURE d'un dirigeant (RG-BQ-04 : le label de dirigeant ne confère
@@ -21,19 +21,21 @@ import { isMinistryWideGoals, isSubCoordinatorLeader } from '../../../services/a
  * nœud géographique. Sans ce repli, la carte menait un dirigeant d'assemblée sur un « Compte non
  * rattaché » faux (il a bien une assemblée) ; le web fait le même repli
  * (`Goals.tsx`, `PerimeterBlock node={null}`).
+ *
+ * <p>⚠ Le RÔLE gate, la géographie ne fait que désigner la branche (`goalPerimeterNodes`, 16/08).
+ * Tester d'abord les `goal*Id` portés ouvrait cet écran à des comptes que le backend refuse — un
+ * `goalZoneId` est servi à l'affichage jusqu'au simple membre, alors que `getVisibleZoneIds`
+ * renvoie `Set.of()` sous le rang DIRIGEANT_SENIOR. Même aiguillage que le web
+ * (`Goals.tsx`, `showPerimeter`) : les deux surfaces doivent raconter la même chose.
  */
 export default function PerimeterScreen() {
   const { me } = useAuth();
   const { t } = useLanguage();
 
-  // Multi-rattachements (home + set) : toutes les régions / villes portées, principale en tête.
-  const uniq = (home?: string | null, set?: string[] | null) => {
-    const rest = (set ?? []).filter((id) => id !== home);
-    return home ? [home, ...rest] : rest;
-  };
-  const zoneIds = uniq(me?.goalZoneId, me?.goalZoneIds);
-  const cityIds = uniq(me?.goalCityId, me?.goalCityIds);
-  const countryIds = me?.goalCountryIds ?? [];
+  // Le RÔLE gate, la géographie ne fait que désigner la branche (chantier 16/08) : un
+  // rattachement porté par un rang trop bas est écarté par `goalPerimeterNodes`, sans quoi la
+  // section s'affichait avec le nom de la région en titre et des zéros — un 403 rendu en donnée.
+  const { zoneIds, cityIds, countryIds } = goalPerimeterNodes(me);
 
   // ⚠ « Secrétariat » se lit ici sur le rôle OBJECTIFS uniquement (un secrétariat Dons n'ouvre pas
   // la vue de gestion des Objectifs) — ne pas y substituer `isSecretariat`, qui unit les deux modules.
@@ -44,7 +46,9 @@ export default function PerimeterScreen() {
       />
     );
   }
-  if (zoneIds.length > 0 || cityIds.length > 0 || countryIds.length > 0 || isSubCoordinatorLeader(me)) {
+  // Rôle d'abord : le sous-coordinateur a `GET /goals/me/aggregate` même sans aucun nœud porté ;
+  // les listes ne servent qu'à construire les sections supplémentaires.
+  if (isSubCoordinatorLeader(me) || zoneIds.length > 0 || cityIds.length > 0 || countryIds.length > 0) {
     return <GoalAggregatesScreen zoneIds={zoneIds} cityIds={cityIds} countryIds={countryIds} />;
   }
 

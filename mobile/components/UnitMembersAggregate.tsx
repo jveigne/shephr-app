@@ -43,12 +43,17 @@ export default function UnitMembersAggregate({
   const [data, setData] = useState<MembersAggregateResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [denied, setDenied] = useState(false);
+  /** Une tentative a eu lieu — succès OU échec. Sans ce drapeau, un échec autre qu'un 403
+   *  relancerait l'appel EN BOUCLE : `denied` reste false, `data` reste null, `loading` repasse à
+   *  false, et l'effet se rejoue. Même remède que `MyAssemblyBlock` (goals/member.tsx). */
+  const [loaded, setLoaded] = useState(false);
   const [reminding, setReminding] = useState<string | null>(null);
   const [reminded, setReminded] = useState<Record<string, true>>({});
 
   useEffect(() => {
     setData(null);
     setDenied(false);
+    setLoaded(false);
     setReminded({});
   }, [unitId, year]);
 
@@ -61,14 +66,15 @@ export default function UnitMembersAggregate({
       setData(null);
       setDenied(e?.response?.status === 403);
     } finally {
+      setLoaded(true);
       setLoading(false);
     }
   }, [unitId, year]);
 
   useEffect(() => {
-    if (!expanded || data != null || loading || denied) return;
+    if (!expanded || loaded || loading) return;
     load();
-  }, [expanded, data, loading, denied, load]);
+  }, [expanded, loaded, loading, load]);
 
   const catById = new Map(goal.categories.map((c) => [c.id, c]));
   const fmtFor = (categoryId: string, v: number | null) => {
@@ -127,6 +133,11 @@ export default function UnitMembersAggregate({
         <View style={{ marginTop: 10 }}>
           {loading && <ActivityIndicator color={colors.moss} />}
           {!loading && denied && <Text style={styles.empty}>{t('goals.members.forbidden')}</Text>}
+          {/* Échec autre qu'un refus : le dire. Sans ça, le bloc se dépliait sur du vide — l'appel
+              avait échoué et rien ne le signalait. */}
+          {!loading && !denied && loaded && data == null && (
+            <Text style={styles.empty}>{t('goals.members.loadFailed')}</Text>
+          )}
           {!loading && !denied && data != null && (
             <>
               <Text style={styles.counters}>
