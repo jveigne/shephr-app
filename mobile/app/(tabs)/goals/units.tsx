@@ -10,6 +10,7 @@ import UnitMembersAggregate from '../../../components/UnitMembersAggregate';
 import { colors, fonts } from '../../../theme';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { goalName } from '../../../utils/goalName';
 import { fmtAmount } from '../../../utils/format';
 import {
   getActiveGoal,
@@ -252,7 +253,7 @@ function UnitDetailScreen({
             : `${d.achievedCount ?? 0} ${cat?.unitLabel ?? ''}`.trim();
           return (
             <View key={d.categoryId} style={styles.detailRow}>
-              <Text style={styles.unitName}>{cat?.name ?? d.categoryCode}</Text>
+              <Text style={styles.unitName}>{goalName(cat, d.categoryCode)}</Text>
               <View style={{ flexDirection: 'row', gap: 16 }}>
                 <Text style={styles.unitCity}>{t('goalsAgg.colPledged')} : {pledged}</Text>
                 <Text style={styles.unitCity}>{t('goalsAgg.colPaid')} : {paid}</Text>

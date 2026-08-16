@@ -20,6 +20,7 @@ import Button from '../../../components/Button';
 import Chip from '../../../components/Chip';
 import { colors, fonts } from '../../../theme';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { goalName } from '../../../utils/goalName';
 import { useGoalsData } from '../../../hooks/useGoalsData';
 import { goalCategoryMeta } from '../../../constants/goalCategories';
 import { currencySymbol, fmtAmount, fmtDateLong, toLocalDate } from '../../../utils/format';
@@ -131,7 +132,7 @@ export default function AddProgressScreen() {
                 return (
                   <Chip
                     key={l.category.id}
-                    label={l.category.name}
+                    label={goalName(l.category)}
                     selected={on}
                     onPress={() => {
                       setSelectedId(l.category.id);

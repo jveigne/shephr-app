@@ -18,6 +18,7 @@ import Label from '../../../../components/Label';
 import Button from '../../../../components/Button';
 import { colors, fonts } from '../../../../theme';
 import { useLanguage } from '../../../../contexts/LanguageContext';
+import { goalName } from '../../../../utils/goalName';
 import { goalCategoryMeta } from '../../../../constants/goalCategories';
 import { useGoalsData } from '../../../../hooks/useGoalsData';
 import { currencySymbol } from '../../../../utils/format';
@@ -76,7 +77,7 @@ export default function PledgeEditScreen() {
           <View style={[styles.titleIcon, { backgroundColor: meta.tone + '1F' }]}>
             <Ionicons name={meta.icon} size={20} color={meta.tone} />
           </View>
-          <Text style={styles.title}>{category.name}</Text>
+          <Text style={styles.title}>{goalName(category)}</Text>
         </View>
 
         {locked && (

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, RefreshControl, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import ScreenShell from '../../../components/ScreenShell';
 import Button from '../../../components/Button';
 import Card from '../../../components/Card';
@@ -11,6 +11,7 @@ import UnitMembersAggregate from '../../../components/UnitMembersAggregate';
 import { colors, fonts } from '../../../theme';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { goalName } from '../../../utils/goalName';
 import { hasGoalsAccess, hasPerimeterView, isSubCoordinatorLeader } from '../../../services/authApi';
 import { useGoalsData } from '../../../hooks/useGoalsData';
 import {
@@ -38,7 +39,23 @@ export default function MemberGoalsScreen() {
   const { goal, pledges, lines, submitted, anyEditable, loading, error, reload } =
     useGoalsData(selectedYear);
   const [refreshing, setRefreshing] = useState(false);
+  /**
+   * Signal d'invalidation des blocs repliés (« Engagement de mon assemblée », détail nominatif) :
+   * ils gardent leur contenu en cache une fois chargés. `useGoalsData` se relit au focus, eux non —
+   * on revenait de sa déclaration et l'assemblée affichait encore « pas encore d'engagement ».
+   */
+  const [refreshKey, setRefreshKey] = useState(0);
   const year = selectedYear ?? goal?.currentYear ?? null;
+  /**
+   * Jeton d'invalidation des blocs repliés. Deux sources, parce qu'une seule ne suffit pas :
+   * le compteur (`refreshKey`, focus et tirer-pour-rafraîchir) attrape ce que les AUTRES membres
+   * ont déclaré, et la signature de MES engagements attrape ma propre saisie même sans changement
+   * de focus. La Σ de l'assemblée inclut mes engagements : dès qu'un montant ou un verrou bouge
+   * ici, le bloc doit se relire, sans quoi il affiche encore « pas encore d'engagement ».
+   */
+  const refreshToken = `${refreshKey}|${pledges
+    .map((p) => `${p.id}:${p.targetAmount ?? p.targetCount ?? ''}:${p.locked}`)
+    .join('|')}`;
   const leader = hasGoalsAccess(me);
   // « Mon périmètre » n'est proposé que s'il a quelque chose à montrer : un dirigeant sans nœud
   // porté ET sans sous-arbre lisible tombait sur un état vide trompeur (cf. `hasPerimeterView`).
@@ -54,10 +71,15 @@ export default function MemberGoalsScreen() {
     setRefreshing(true);
     try {
       await reload();
+      setRefreshKey((k) => k + 1);
     } finally {
       setRefreshing(false);
     }
   };
+
+  // Retour sur l'écran (après avoir déclaré, soumis, saisi un avancement) : on invalide les blocs
+  // repliés, comme le fait déjà « Mon périmètre » (`GoalAggregates`).
+  useFocusEffect(useCallback(() => { setRefreshKey((k) => k + 1); }, []));
 
   // RG-BQ-03 : sans assemblée de rattachement, on ne peut rien déclarer. RG-BQ-13 : on en change
   // soi-même, sans demande ni valideur — c'est donc l'action proposée ici.
@@ -126,10 +148,28 @@ export default function MemberGoalsScreen() {
           {t('views.badge')} : {t('views.member')}
         </Text>
       </View>
-      <Text style={styles.subtitle}>
-        {goal.name} ·{' '}
-        {`${new Date(goal.startDate).getFullYear()}–${new Date(goal.endDate).getFullYear()}`}
-      </Text>
+            {((goal.visibleYears ?? goal.openYears)?.length ?? 0) > 0 && year != null && (
+        <YearSelector
+          years={goal.visibleYears ?? goal.openYears}
+          value={year}
+          onChange={setSelectedYear}
+        />
+      )}
+
+      {deadline && (
+          <Card variant="paper2" style={styles.banner}>
+            <Ionicons
+                name={deadlinePast ? 'alert-circle-outline' : 'time-outline'}
+                size={18}
+                color={deadlinePast ? colors.clay : colors.earthDeep}
+            />
+            <Text style={[styles.bannerText, deadlinePast && { color: colors.clay }]}>
+              {deadlinePast
+                  ? t('goals.deadlinePast', { date: fmtDate(deadline) })
+                  : t('goals.deadlineFuture', { date: fmtDate(deadline) })}
+            </Text>
+          </Card>
+      )}
 
       {/* Vues de lecture du dirigeant (RG-BQ-04) : EN HAUT, avant sa propre déclaration (JP 16/08).
           En bas de page, un dirigeant — coordinateur compris — ne les voyait pas : il arrivait sur
@@ -161,28 +201,6 @@ export default function MemberGoalsScreen() {
         </View>
       )}
 
-      {((goal.visibleYears ?? goal.openYears)?.length ?? 0) > 0 && year != null && (
-        <YearSelector
-          years={goal.visibleYears ?? goal.openYears}
-          value={year}
-          onChange={setSelectedYear}
-        />
-      )}
-
-      {deadline && (
-        <Card variant="paper2" style={styles.banner}>
-          <Ionicons
-            name={deadlinePast ? 'alert-circle-outline' : 'time-outline'}
-            size={18}
-            color={deadlinePast ? colors.clay : colors.earthDeep}
-          />
-          <Text style={[styles.bannerText, deadlinePast && { color: colors.clay }]}>
-            {deadlinePast
-              ? t('goals.deadlinePast', { date: fmtDate(deadline) })
-              : t('goals.deadlineFuture', { date: fmtDate(deadline) })}
-          </Text>
-        </Card>
-      )}
 
       <View style={styles.sectionRow}>
         <Text style={styles.sectionTitle}>{t('goals.member.title')}</Text>
@@ -244,11 +262,11 @@ export default function MemberGoalsScreen() {
       )}
 
       {/* Engagement de mon assemblée — ANONYME (RG-BQ-05, exception du simple membre). */}
-      {year != null && <MyAssemblyBlock year={year} goal={goal} />}
+      {year != null && <MyAssemblyBlock year={year} goal={goal} refreshToken={refreshToken} />}
 
       {/* Détail NOMINATIF — réservé aux dirigeants (403 pour un simple membre). */}
       {leader && year != null && me?.goalUnitId && (
-        <UnitMembersAggregate unitId={me.goalUnitId} year={year} goal={goal} />
+        <UnitMembersAggregate unitId={me.goalUnitId} year={year} goal={goal} refreshToken={refreshToken} />
       )}
 
       {/* RG-BQ-13 — changer d'assemblée soi-même, sans demande ni valideur. */}
@@ -276,7 +294,7 @@ export default function MemberGoalsScreen() {
  * <p>Le badge de source et le libellé « Retenu (MAX) » ont disparu : une ligne porte UNE valeur,
  * la somme des engagements des membres (RG-BQ-02).
  */
-function MyAssemblyBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
+function MyAssemblyBlock({ year, goal, refreshToken }: { year: number; goal: ActiveGoal; refreshToken: string }) {
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const [data, setData] = useState<MyAssemblyGoalResponse | null>(null);
@@ -287,12 +305,13 @@ function MyAssemblyBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
    *  boucle : `loading` repasse à false, l'effet se rejoue et `data` est toujours null. */
   const [loaded, setLoaded] = useState(false);
 
-  // L'année change → on invalide, le contenu sera rechargé au prochain dépli.
+  // Année changée, ou retour sur l'écran / tirer-pour-rafraîchir (`refreshKey`) → on invalide,
+  // le contenu est relu tout de suite si le bloc est déplié, sinon au prochain dépli.
   useEffect(() => {
     setData(null);
     setErrorCode(null);
     setLoaded(false);
-  }, [year]);
+  }, [year, refreshToken]);
 
   useEffect(() => {
     if (!expanded || loaded || loading) return;
@@ -376,7 +395,7 @@ function MyAssemblyBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
               const cat = catById.get(line.categoryId);
               return (
                 <View key={line.categoryId} style={styles.assemblyLine}>
-                  <Text style={styles.assemblyCat}>{cat?.name ?? line.categoryCode}</Text>
+                  <Text style={styles.assemblyCat}>{goalName(cat, line.categoryCode)}</Text>
                   <View style={styles.assemblyCols}>
                     <View>
                       <Label>{t('goals.pledged')}</Label>

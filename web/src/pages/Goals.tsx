@@ -55,6 +55,7 @@ import { NationsMap } from '../components/NationsMap';
 import { GoalTimeline } from '../components/GoalTimeline';
 import { YearPicker } from '../components/YearPicker';
 import { currencySymbol, fmtAmount, fmtDateLabel, toLocalDate } from '../utils/format';
+import { goalName } from '../utils/goalName';
 
 const errMsg = (err: unknown, fallback: string) =>
   (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -351,7 +352,7 @@ export function GoalsPage() {
       label: t('goals.colCategory'),
       render: (l) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <strong>{l.category.name}</strong>
+          <strong>{goalName(l.category)}</strong>
           <span style={{ fontSize: 12, color: 'var(--ink-400)' }}>
             {l.category.unitType === 'CURRENCY'
               ? t('goals.amountUnit', { symbol: currencySymbol(currency) })
@@ -474,7 +475,7 @@ export function GoalsPage() {
 
   const historyCols: Column<{ id: string; progress: ProgressResponse; line: GoalLine }>[] = [
     { label: t('common.date'), render: (r) => fmtDateLabel(r.progress.progressDate) },
-    { label: t('goals.colCategory'), render: (r) => r.line.category.name },
+    { label: t('goals.colCategory'), render: (r) => goalName(r.line.category) },
     {
       label: t('goals.colValue'),
       render: (r) => (
@@ -572,7 +573,7 @@ export function GoalsPage() {
         ) : (
           <>
             <div style={{ marginBottom: 14 }}>
-              <h3 style={{ margin: '0 0 4px' }}>{goal?.name}</h3>
+              <h3 style={{ margin: '0 0 4px' }}>{goalName(goal)}</h3>
               {/* Lot G2 : la date limite est PAR ANNÉE (yearDeadlines), mise en exergue. */}
               <p style={{ margin: 0, fontSize: 13.5 }}>
                 {!hasUnit ? null : submitted ? (
@@ -745,7 +746,7 @@ export function GoalsPage() {
           <tbody>
             {lines.map((l) => (
               <tr key={l.category.id}>
-                <td style={{ padding: '6px 0', color: 'var(--ink-400)' }}>{l.category.name}</td>
+                <td style={{ padding: '6px 0', color: 'var(--ink-400)' }}>{goalName(l.category)}</td>
                 <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 600 }}>
                   {l.target != null ? fmtTarget(l, l.target, currency) : '—'}
                 </td>
@@ -877,7 +878,7 @@ function PledgeFormModal({
     <Modal
       open
       onClose={onClose}
-      title={line.category.name}
+      title={goalName(line.category)}
       sub={
         locked
           ? t('goals.pledgeLockedSub')
@@ -994,7 +995,7 @@ function ProgressFormModal({
           <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
             {lines.map((l) => (
               <option key={l.category.id} value={l.category.id}>
-                {l.category.name}
+                {goalName(l.category)}
               </option>
             ))}
           </Select>
@@ -1176,7 +1177,7 @@ function PerimeterBlock({
   // RG-BQ-02 : UNE valeur par ligne. Les anciennes colonnes « Mon sous-arbre » / « Mon engagement »
   // / « Objectif retenu » (+ badge de source) fusionnent en une seule.
   const aggCols: Column<AggRow>[] = [
-    { label: t('goals.colCategory'), render: (r) => <strong>{r.category.name}</strong> },
+    { label: t('goals.colCategory'), render: (r) => <strong>{goalName(r.category)}</strong> },
     {
       label: t('goals.colTotal'),
       render: (r) => {
@@ -1236,7 +1237,7 @@ function AggregateSection({
 
   type AggRow = { id: string; category: GoalCategory };
   const aggCols: Column<AggRow>[] = [
-    { label: t('goals.colCategory'), render: (r) => <strong>{r.category.name}</strong> },
+    { label: t('goals.colCategory'), render: (r) => <strong>{goalName(r.category)}</strong> },
     {
       label: t('goals.colTotal'),
       render: (r) => {
@@ -1417,7 +1418,7 @@ function ZoneUnitsBlock({
                       const eff = line?.effectiveAmount ?? line?.effectiveCount ?? 0;
                       return (
                         <span key={cat.id}>
-                          <span style={{ color: 'var(--ink-400)' }}>{cat.name} : </span>
+                          <span style={{ color: 'var(--ink-400)' }}>{goalName(cat)} : </span>
                           <strong>{fmtCatValue(cat, eff, currency)}</strong>
                         </span>
                       );
@@ -1509,7 +1510,7 @@ function ZoneUnitsBlock({
             <tbody>
               {(detailQ.data ?? []).map((d: UnitPledgeDetail) => {
                 const cat = catByCode.get(d.categoryCode);
-                const label = cat?.name ?? d.categoryCode;
+                const label = goalName(cat, d.categoryCode);
                 const engaged =
                   d.unitType === 'CURRENCY'
                     ? d.targetAmount != null
@@ -1613,7 +1614,7 @@ function NationRegionsBlock({
                 : `${l.achieved ?? 0} ${cat?.unitLabel ?? ''}`.trim();
               return (
                 <span key={l.categoryId}>
-                  <span style={{ color: 'var(--ink-400)' }}>{cat?.name ?? l.categoryCode} : </span>
+                  <span style={{ color: 'var(--ink-400)' }}>{goalName(cat, l.categoryCode)} : </span>
                   <strong>{effective}</strong>
                   <span style={{ color: 'var(--ink-400)' }}> · {t('views.achievedInline', { value: achieved })}</span>
                 </span>
@@ -1635,7 +1636,7 @@ function NationRegionsBlock({
               : `${l.achieved ?? 0} ${cat?.unitLabel ?? ''}`.trim();
             return (
               <span key={l.categoryId}>
-                <span style={{ color: 'var(--ink-400)' }}>{cat?.name ?? l.categoryCode} : </span>
+                <span style={{ color: 'var(--ink-400)' }}>{goalName(cat, l.categoryCode)} : </span>
                 <strong>{effective}</strong>
                 <span style={{ color: 'var(--ink-400)' }}> · {t('views.achievedInline', { value: achieved })}</span>
               </span>
@@ -1806,7 +1807,7 @@ function GlobalSummarySection({ goal, currency, year, drill = true }: { goal: Ac
               {
                 label: t('goals.colCategory'),
                 render: (l: GlobalSummary['totals'][number] & { id: string }) => (
-                  <strong>{catById.get(l.categoryId)?.name ?? l.categoryCode}</strong>
+                  <strong>{goalName(catById.get(l.categoryId), l.categoryCode)}</strong>
                 ),
               },
               {
@@ -1846,7 +1847,7 @@ function GlobalSummarySection({ goal, currency, year, drill = true }: { goal: Ac
                   {
                     label: t('goals.colCategory'),
                     render: (l: GlobalSummary['totals'][number] & { id: string }) =>
-                      catById.get(l.categoryId)?.name ?? l.categoryCode,
+                      goalName(catById.get(l.categoryId), l.categoryCode),
                   },
                   {
                     label: t('goals.colEffectivePledged'),
@@ -1987,7 +1988,7 @@ function LevelAggregateBlock({
         columns={[
           {
             label: t('goals.colCategory'),
-            render: (r: { id: string; category: GoalCategory }) => <strong>{r.category.name}</strong>,
+            render: (r: { id: string; category: GoalCategory }) => <strong>{goalName(r.category)}</strong>,
           },
           {
             // RG-BQ-02 : une seule colonne de valeur — la somme des engagements des membres.
@@ -2155,7 +2156,7 @@ function MembersGoalsBlock({
   const aggCols: Column<Line & { id: string }>[] = [
     {
       label: t('goals.colCategory'),
-      render: (l) => <strong>{catById.get(l.categoryId)?.name ?? l.categoryCode}</strong>,
+      render: (l) => <strong>{goalName(catById.get(l.categoryId), l.categoryCode)}</strong>,
     },
     {
       label: t('goals.colTotal'),
@@ -2166,7 +2167,7 @@ function MembersGoalsBlock({
   const memberCols: Column<MemberRow>[] = [
     { label: t('goals.colMember'), render: (r) => <strong>{r.member.fullName}</strong> },
     ...lines.map((l) => ({
-      label: catById.get(l.categoryId)?.name ?? l.categoryCode,
+      label: goalName(catById.get(l.categoryId), l.categoryCode),
       render: (r: MemberRow) => {
         const v = r.values.get(l.categoryId);
         return v != null ? fmt(l.categoryId, v) : <span style={{ color: 'var(--ink-400)' }}>—</span>;

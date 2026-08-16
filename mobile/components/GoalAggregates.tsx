@@ -19,6 +19,7 @@ import { GoalScreenTitle } from './GoalCards';
 import { colors, fonts } from '../theme';
 import { goalCategoryMeta } from '../constants/goalCategories';
 import { useLanguage } from '../contexts/LanguageContext';
+import { goalName } from '../utils/goalName';
 import { useAuth } from '../contexts/AuthContext';
 import { isSubCoordinatorLeader } from '../services/authApi';
 import { fmtAmount } from '../utils/format';
@@ -212,7 +213,7 @@ export default function GoalAggregatesScreen({
         </Text>
       </View>
       <Text style={styles.subtitle}>
-        {t('goalsAgg.subtitle', { name: goal.name })}
+        {t('goalsAgg.subtitle', { name: goalName(goal) })}
       </Text>
 
       {((goal.visibleYears ?? goal.openYears)?.length ?? 0) > 0 && year != null && (
@@ -342,7 +343,7 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
                   <View style={[styles.lineIcon, { backgroundColor: meta.tone + '1F' }]}>
                     <Ionicons name={meta.icon} size={18} color={meta.tone} />
                   </View>
-                  <Text style={styles.lineName}>{category.name}</Text>
+                  <Text style={styles.lineName}>{goalName(category)}</Text>
                 </View>
                 <HandDivider style={{ marginVertical: 10 }} />
                 <View style={[styles.lineFooter, { alignItems: 'baseline' }]}>
@@ -484,7 +485,7 @@ function MyUnitsBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
                         const eff = line?.effectiveAmount ?? line?.effectiveCount ?? 0;
                         return (
                           <Text key={category.id} style={styles.listItem}>
-                            {category.name} : {fmtValue(category, eff)}
+                            {goalName(category)} : {fmtValue(category, eff)}
                           </Text>
                         );
                       })}
@@ -578,7 +579,7 @@ function UnitDetailModal({
                   : `${d.achievedCount ?? 0} ${cat?.unitLabel ?? ''}`.trim();
                 return (
                   <View key={d.categoryId} style={styles.detailRow}>
-                    <Text style={styles.unitName}>{cat?.name ?? d.categoryCode}</Text>
+                    <Text style={styles.unitName}>{goalName(cat, d.categoryCode)}</Text>
                     <View style={{ flexDirection: 'row', gap: 16 }}>
                       <Text style={styles.unitMeta}>{t('goalsAgg.colPledged')} : {pledged}</Text>
                       <Text style={styles.unitMeta}>{t('goalsAgg.colPaid')} : {paid}</Text>
@@ -636,7 +637,7 @@ function RegionsSummaryBlock({ nationId, year, goal }: { nationId: string; year:
     const achieved = l.unitType === 'CURRENCY'
       ? fmtAmount(l.achieved ?? 0, currency)
       : `${l.achieved ?? 0} ${cat?.unitLabel ?? ''}`.trim();
-    return `${cat?.name ?? l.categoryCode} : ${effective} · ${t('views.achievedInline', { value: achieved })}`;
+    return `${goalName(cat, l.categoryCode)} : ${effective} · ${t('views.achievedInline', { value: achieved })}`;
   };
 
   return (

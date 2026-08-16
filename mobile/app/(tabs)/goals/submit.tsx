@@ -9,6 +9,7 @@ import Button from '../../../components/Button';
 import HandDivider from '../../../components/HandDivider';
 import { colors, fonts } from '../../../theme';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { goalName } from '../../../utils/goalName';
 import { useGoalsData } from '../../../hooks/useGoalsData';
 import { goalCategoryMeta } from '../../../constants/goalCategories';
 import { fmtAmount, fmtDate } from '../../../utils/format';
@@ -106,7 +107,7 @@ export default function SubmitScreen() {
       ) : (
         <>
           <Card variant="paper2" style={styles.recap}>
-            <Text style={styles.recapHeader}>{goal?.name}</Text>
+            <Text style={styles.recapHeader}>{goalName(goal)}</Text>
             <HandDivider style={{ marginVertical: 12 }} />
             {lines.map((line) => {
               const meta = goalCategoryMeta(line.category.code);
@@ -120,7 +121,7 @@ export default function SubmitScreen() {
               return (
                 <View key={line.category.id} style={styles.recapRow}>
                   <Ionicons name={meta.icon} size={15} color={meta.tone} />
-                  <Text style={styles.recapLabel}>{line.category.name}</Text>
+                  <Text style={styles.recapLabel}>{goalName(line.category)}</Text>
                   <Text style={[styles.recapValue, line.target == null && { color: colors.ink3 }]}>
                     {value}
                   </Text>

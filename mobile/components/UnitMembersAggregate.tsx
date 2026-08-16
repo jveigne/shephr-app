@@ -32,11 +32,19 @@ export default function UnitMembersAggregate({
   year,
   goal,
   defaultExpanded = false,
+  refreshToken = '',
 }: {
   unitId: string;
   year: number;
   goal: ActiveGoal;
   defaultExpanded?: boolean;
+  /**
+   * Jeton d'invalidation fourni par l'écran appelant : il change au retour de focus, au
+   * tirer-pour-rafraîchir et dès qu'un engagement personnel bouge. Le contenu est alors relu.
+   * Sans ce signal, le bloc ne se rechargeait qu'au changement d'année — on revenait de sa
+   * déclaration et l'assemblée affichait encore l'état d'avant.
+   */
+  refreshToken?: string;
 }) {
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState(defaultExpanded);
@@ -55,7 +63,7 @@ export default function UnitMembersAggregate({
     setDenied(false);
     setLoaded(false);
     setReminded({});
-  }, [unitId, year]);
+  }, [unitId, year, refreshToken]);
 
   const load = useCallback(async () => {
     setLoading(true);

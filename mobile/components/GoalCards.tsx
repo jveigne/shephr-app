@@ -9,6 +9,7 @@ import Button from './Button';
 import HandDivider from './HandDivider';
 import { colors, fonts } from '../theme';
 import { useLanguage } from '../contexts/LanguageContext';
+import { goalName } from '../utils/goalName';
 import { goalCategoryMeta } from '../constants/goalCategories';
 import { fmtAmount } from '../utils/format';
 import type { GoalLine } from '../hooks/useGoalsData';
@@ -110,7 +111,7 @@ export function GoalLineCard({
           <Ionicons name={meta.icon} size={18} color={meta.tone} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.lineName}>{line.category.name}</Text>
+          <Text style={styles.lineName}>{goalName(line.category)}</Text>
           <Text style={styles.lineMeta}>
             {pledge == null
               ? t('goals.lineToComplete')

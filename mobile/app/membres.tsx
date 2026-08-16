@@ -18,6 +18,7 @@ import Button from '../components/Button';
 import { colors, fonts } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { goalName } from '../utils/goalName';
 import { canManageUsers, isSecretariat, MODULE_ROLE_LABELS, type ModuleRole } from '../services/authApi';
 import {
   fetchGoalSubmissionSummary, listUsers, listUnits,
@@ -366,7 +367,7 @@ function MemberGoalsModal({
       : `${p.targetCount ?? 0}${cat?.unitLabel ? ` ${cat.unitLabel}` : ''}`;
     return (
       <View key={p.id} style={styles.pledgeRow}>
-        <Text style={styles.pledgeLabel} numberOfLines={2}>{cat?.name ?? p.categoryCode}</Text>
+        <Text style={styles.pledgeLabel} numberOfLines={2}>{goalName(cat, p.categoryCode)}</Text>
         <Text style={styles.pledgeValue}>{value}</Text>
       </View>
     );

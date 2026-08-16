@@ -19,6 +19,7 @@ import Button from '../../../components/Button';
 import Chip from '../../../components/Chip';
 import { colors, fonts } from '../../../theme';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { goalName } from '../../../utils/goalName';
 import { useGoalsData } from '../../../hooks/useGoalsData';
 import { goalCategoryMeta } from '../../../constants/goalCategories';
 import { currencySymbol, fmtAmount, fmtDate, parseLocalDate } from '../../../utils/format';
@@ -122,7 +123,7 @@ export default function HistoryScreen() {
           {categoriesWithEntries.map((c) => (
             <Chip
               key={c.id}
-              label={c.name}
+              label={goalName(c)}
               selected={filter === c.id}
               onPress={() => setFilter(c.id)}
             />
@@ -155,7 +156,7 @@ export default function HistoryScreen() {
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.entryValue}>{valueText}</Text>
                     <Text style={styles.entryMeta}>
-                      {entry.category.name} · {fmtDate(parseLocalDate(p.progressDate))}
+                      {goalName(entry.category)} · {fmtDate(parseLocalDate(p.progressDate))}
                       {p.recordedByName ? ` · ${p.recordedByName}` : ''}
                     </Text>
                     {!!p.note && <Text style={styles.entryNote}>« {p.note} »</Text>}

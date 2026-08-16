@@ -444,6 +444,9 @@
     "reportsTo": "Vous rendez compte à",
     "goalSubmitted": "Objectifs soumis",
     "goalLate": "Objectifs en retard",
+    "leadershipTitle": "Ce que porte mon leadership · {{year}}",
+    "leadershipHint": "Somme des engagements des membres des assemblées que vous supervisez, directement ou via vos dirigeants.",
+    "leadershipEmpty": "Aucun engagement déclaré pour l'instant dans les assemblées que vous supervisez.",
     "goalDraft": "Objectifs en brouillon",
     "goalNoPledges": "Aucun objectif déclaré"
   },

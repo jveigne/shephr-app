@@ -717,7 +717,10 @@
     "goalSubmitted": "Submitted",
     "goalDraft": "Draft",
     "goalNothing": "Nothing declared",
-    "goalLate": "Late"
+    "goalLate": "Late",
+    "leadershipTitle": "What my leadership carries · {{year}}",
+    "leadershipHint": "Sum of the pledges made by the members of the assemblies you supervise, directly or through your leaders.",
+    "leadershipEmpty": "No pledge declared yet in the assemblies you supervise."
   },
   "invite": {
     "title": "Invite a leader",

@@ -6,7 +6,7 @@
       "account": "My account"
     },
     "hero": {
-      "badge": "CMCI Five-Year Goal · 2026 → 2030",
+      "badge": "CMFI Five-Year Goal · 2026 → 2030",
       "title": "The Five-Year Goal, carried by each one of us",
       "subtitle": "Fourteen axes, forty actions, five years. Shephr is the tool that lets every member, every assembly and every country declare their commitments, roll them up and track their fulfilment through to 31 December 2030.",
       "ctaPrimary": "Sign in",
@@ -444,6 +444,9 @@
     "reportsTo": "You report to",
     "goalSubmitted": "Goals submitted",
     "goalLate": "Goals late",
+    "leadershipTitle": "What my leadership carries · {{year}}",
+    "leadershipHint": "Sum of the pledges made by the members of the assemblies you supervise, directly or through your leaders.",
+    "leadershipEmpty": "No pledge declared yet in the assemblies you supervise.",
     "goalDraft": "Goals in draft",
     "goalNoPledges": "No goal declared"
   },

@@ -20,6 +20,7 @@ import {
 } from '../services/goalsApi';
 import { isSecretariat } from '../services/authApi';
 import { currencySymbol, fmtAmount, fmtDateLabel } from '../utils/format';
+import { goalName } from '../utils/goalName';
 
 // « Mes objectifs » — depuis le chantier « objectifs individuels » (JP 16/08), c'est l'écran de
 // TOUT compte rattaché, dirigeants compris (RG-BQ-11) : chacun déclare POUR LUI-MÊME, et le total
@@ -276,7 +277,7 @@ export function MemberGoalsPage() {
   const assemblyCols: Column<(typeof assemblyRows)[number]>[] = [
     {
       label: t('goals.colCategory'),
-      render: (l) => <strong>{catById.get(l.categoryId)?.name ?? l.categoryCode}</strong>,
+      render: (l) => <strong>{goalName(catById.get(l.categoryId), l.categoryCode)}</strong>,
     },
     {
       label: t('goals.colPledged'),
@@ -293,7 +294,7 @@ export function MemberGoalsPage() {
       label: t('goals.colCategory'),
       render: (l) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <strong>{l.category.name}</strong>
+          <strong>{goalName(l.category)}</strong>
           <span style={{ fontSize: 12, color: 'var(--ink-400)' }}>
             {l.category.unitType === 'CURRENCY'
               ? t('goals.amountUnit', { symbol: currencySymbol(currency) })
@@ -449,7 +450,7 @@ export function MemberGoalsPage() {
         ) : goal ? (
           <>
             <div style={{ marginBottom: 14 }}>
-              <h3 style={{ margin: '0 0 4px' }}>{goal.name}</h3>
+              <h3 style={{ margin: '0 0 4px' }}>{goalName(goal)}</h3>
               <p style={{ margin: 0, fontSize: 13.5 }}>
                 {deadlinePast && yearDeadline ? (
                   <strong style={{ color: 'var(--err, #B86A4A)' }}>
@@ -589,7 +590,7 @@ export function MemberGoalsPage() {
               value={progressCat}
               onChange={setProgressCat}
               placeholder={t('common.choose')}
-              options={declarable.map((l) => ({ id: l.category.id, label: l.category.name }))}
+              options={declarable.map((l) => ({ id: l.category.id, label: goalName(l.category) }))}
             />
           </Field>
           {progressLine && (

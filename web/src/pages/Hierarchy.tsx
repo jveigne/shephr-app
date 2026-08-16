@@ -11,6 +11,9 @@ import {
   type LeaderHierarchyNode,
 } from '../services/leadersApi';
 import { canManageUsers, type ModuleRole } from '../services/authApi';
+import { getActiveGoal, getMyPerimeterAggregate } from '../services/goalsApi';
+import { goalName } from '../utils/goalName';
+import { fmtAmount } from '../utils/format';
 import { FEATURES } from '../config/features';
 
 // Hiérarchie des dirigeants (21/07) — arbre du leadership renvoyé par le backend, déjà scopé
@@ -22,6 +25,86 @@ const ROLE_TONE: Partial<Record<ModuleRole, 'green' | 'earth' | 'gray'>> = {
   DIRIGEANT: 'earth',
   DIRIGEANT_UNITE: 'earth',
 };
+
+/**
+ * « Ce que porte mon leadership » — Σ des engagements des membres de mon sous-arbre, par catégorie.
+ *
+ * <p>Aucune addition côté client : le total vient de `GET /goals/me/aggregate`, que le backend
+ * calcule sur les assemblées dont je suis le superviseur (directement ou par la chaîne de
+ * dirigeants). Sommer l'arbre affiché donnerait autre chose : il porte des personnes, pas des
+ * montants.
+ *
+ * <p>Garde identique à `Goals.tsx` (`showPerimeter`), miroir de `requireSubCoordinatorLeader`
+ * côté serveur. En cas de refus ou de panne, le bloc ne s'affiche PAS : un total à zéro se lirait
+ * comme « mon leadership n'a rien engagé », ce qui serait faux.
+ */
+function LeadershipTotals({ unitCount, memberCount }: { unitCount: number; memberCount: number }) {
+  const { t } = useTranslation();
+  const { me } = useAuth();
+  const canRead =
+    !!me
+    && !me.superAdmin
+    && (me.goalRole === 'DIRIGEANT_UNITE'
+      || me.goalRole === 'DIRIGEANT'
+      || me.goalRole === 'DIRIGEANT_SENIOR');
+
+  const goalQ = useQuery({ queryKey: ['goals', 'active'], queryFn: getActiveGoal, enabled: canRead });
+  const year = goalQ.data?.currentYear ?? null;
+  const aggQ = useQuery({
+    queryKey: ['goals', 'me', 'aggregate', year],
+    queryFn: () => getMyPerimeterAggregate(year ?? undefined),
+    enabled: canRead && year != null,
+  });
+
+  if (!canRead || !goalQ.data || !aggQ.data) return null;
+
+  const goal = goalQ.data;
+  const categories = [...goal.categories].sort((a, b) => a.displayOrder - b.displayOrder);
+  const valueOf = (categoryId: string) => {
+    const line = aggQ.data.find((l) => l.categoryId === categoryId);
+    return line?.effectiveAmount ?? line?.effectiveCount ?? 0;
+  };
+  const nothing = categories.every((c) => valueOf(c.id) === 0);
+
+  return (
+    <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <strong style={{ fontSize: 14 }}>{t('hierarchy.leadershipTitle', { year: goal.currentYear })}</strong>
+        <span style={{ fontSize: 12.5, color: 'var(--ink-500)' }}>
+          {t('hierarchy.unitsCount', { count: unitCount })} · {t('hierarchy.membersCount', { count: memberCount })}
+        </span>
+      </div>
+
+      {nothing ? (
+        <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--ink-400)', fontStyle: 'italic' }}>
+          {t('hierarchy.leadershipEmpty')}
+        </p>
+      ) : (
+        <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
+          {categories.map((category) => (
+            <div
+              key={category.id}
+              style={{
+                display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12,
+                paddingTop: 6, borderTop: '1px solid var(--line-soft, rgba(42,38,32,0.08))',
+              }}
+            >
+              <span style={{ fontSize: 13, color: 'var(--ink-600)' }}>{goalName(category)}</span>
+              <strong style={{ fontSize: 15 }}>
+                {category.unitType === 'CURRENCY'
+                  ? fmtAmount(valueOf(category.id), goal.defaultCurrency)
+                  : `${valueOf(category.id)} ${category.unitLabel ?? ''}`.trim()}
+              </strong>
+            </div>
+          ))}
+        </div>
+      )}
+      <p style={{ margin: '12px 0 0', fontSize: 12, color: 'var(--ink-400)' }}>
+        {t('hierarchy.leadershipHint')}
+      </p>
+    </div>
+  );
+}
 
 /**
  * Pastille « où en est cette personne sur le But Quinquennal » (RG-BQ-11 — un dirigeant déclare
@@ -106,6 +189,11 @@ export function HierarchyPage() {
             </span>
           </div>
         )}
+
+        {/* Ce que porte mon leadership (JP 17/08) : la Σ des engagements des membres des
+            assemblées de mon sous-arbre, en face de l'arbre qui la produit. Même source que
+            « Mon périmètre » — le serveur scope l'agrégat au sous-arbre de personnes. */}
+        <LeadershipTotals unitCount={totals.units} memberCount={totals.members} />
 
         <p className="section-sub">{intro}</p>
 

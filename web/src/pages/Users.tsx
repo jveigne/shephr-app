@@ -55,6 +55,7 @@ import {
 } from '../services/adminApi';
 
 import { FEATURES } from '../config/features';
+import { goalName } from '../utils/goalName';
 
 const errMsg = (err: unknown, fallback: string) =>
   (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -576,7 +577,7 @@ function MemberGoalsModal({ member, onClose }: { member: AdminUserResponse | nul
           padding: '7px 0', borderBottom: '1px solid var(--line)',
         }}
       >
-        <span style={{ color: 'var(--ink-600)' }}>{cat?.name ?? p.categoryCode}</span>
+        <span style={{ color: 'var(--ink-600)' }}>{goalName(cat, p.categoryCode)}</span>
         <strong style={{ color: 'var(--ink-900)' }}>{value}</strong>
       </div>
     );

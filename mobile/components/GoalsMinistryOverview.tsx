@@ -7,6 +7,7 @@ import Label from './Label';
 import { GoalScreenTitle } from './GoalCards';
 import { colors, fonts } from '../theme';
 import { useLanguage } from '../contexts/LanguageContext';
+import { goalName } from '../utils/goalName';
 import { fmtAmount, fmtDate } from '../utils/format';
 import {
   getActiveGoal,
@@ -68,7 +69,7 @@ export default function GoalsMinistryOverview({ secretariat }: { secretariat: bo
           {t('views.badge')} : {secretariat ? t('views.secretariat') : t('views.overview')}
         </Text>
       </View>
-      <Text style={styles.subtitle}>{goal?.name ?? ''}</Text>
+      <Text style={styles.subtitle}>{goalName(goal)}</Text>
 
       {years.length > 0 && year != null && (
         <View style={styles.yearRow}>
@@ -127,7 +128,7 @@ export default function GoalsMinistryOverview({ secretariat }: { secretariat: bo
                   : `${l.achieved ?? 0} ${cat?.unitLabel ?? ''}`.trim();
                 return (
                   <Text key={l.categoryId} style={styles.lineText}>
-                    <Text style={styles.lineLabel}>{cat?.name ?? l.categoryCode} : </Text>
+                    <Text style={styles.lineLabel}>{goalName(cat, l.categoryCode)} : </Text>
                     <Text style={styles.lineValue}>{effective}</Text>
                     <Text style={styles.lineLabel}> · {t('views.achievedInline', { value: achieved })}</Text>
                   </Text>
