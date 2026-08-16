@@ -5,6 +5,7 @@ import GoalsMinistryOverview from '../../../components/GoalsMinistryOverview';
 import { GoalEmptyState } from '../../../components/GoalCards';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { isMinistryWideGoals, isSubCoordinatorLeader } from '../../../services/authApi';
 
 /**
  * « Mon périmètre » — vues de LECTURE d'un dirigeant (RG-BQ-04 : le label de dirigeant ne confère
@@ -15,14 +16,15 @@ import { useLanguage } from '../../../contexts/LanguageContext';
  * en lieu et place de l'écran personnel.
  *
  * <p>Ministère-large (LEADER / SECRETARIAT / superAdmin) → totaux + nations ; sinon agrégats des
- * régions / villes / nations portées.
+ * régions / villes / nations portées, et à défaut la SOMME À PLAT du sous-arbre
+ * (`GET /goals/me/aggregate`) — c'est le seul agrégat d'un DIRIGEANT_UNITE, qui ne porte aucun
+ * nœud géographique. Sans ce repli, la carte menait un dirigeant d'assemblée sur un « Compte non
+ * rattaché » faux (il a bien une assemblée) ; le web fait le même repli
+ * (`Goals.tsx`, `PerimeterBlock node={null}`).
  */
 export default function PerimeterScreen() {
   const { me } = useAuth();
   const { t } = useLanguage();
-
-  const secretariat = (me?.superAdmin ?? false) || me?.goalRole === 'SECRETARIAT';
-  const ministryWide = secretariat || me?.goalRole === 'LEADER';
 
   // Multi-rattachements (home + set) : toutes les régions / villes portées, principale en tête.
   const uniq = (home?: string | null, set?: string[] | null) => {
@@ -33,22 +35,42 @@ export default function PerimeterScreen() {
   const cityIds = uniq(me?.goalCityId, me?.goalCityIds);
   const countryIds = me?.goalCountryIds ?? [];
 
-  if (ministryWide) {
-    return <GoalsMinistryOverview secretariat={secretariat} />;
+  // ⚠ « Secrétariat » se lit ici sur le rôle OBJECTIFS uniquement (un secrétariat Dons n'ouvre pas
+  // la vue de gestion des Objectifs) — ne pas y substituer `isSecretariat`, qui unit les deux modules.
+  if (isMinistryWideGoals(me)) {
+    return (
+      <GoalsMinistryOverview
+        secretariat={(me?.superAdmin ?? false) || me?.goalRole === 'SECRETARIAT'}
+      />
+    );
   }
-  if (zoneIds.length > 0 || cityIds.length > 0 || countryIds.length > 0) {
+  if (zoneIds.length > 0 || cityIds.length > 0 || countryIds.length > 0 || isSubCoordinatorLeader(me)) {
     return <GoalAggregatesScreen zoneIds={zoneIds} cityIds={cityIds} countryIds={countryIds} />;
   }
 
-  // Ni assemblée de rattachement, ni périmètre de lecture : la seule action utile est de rejoindre
-  // une assemblée (RG-BQ-13 — chacun change d'assemblée lui-même).
+  // Pas d'assemblée du tout : la seule action utile est d'en rejoindre une (RG-BQ-13 — chacun
+  // change d'assemblée lui-même, sans demande ni valideur).
+  if (!me?.goalUnitId) {
+    return (
+      <GoalEmptyState
+        icon="link-outline"
+        title={t('goals.noUnitTitle')}
+        hint={t('goals.noUnitHint')}
+        actionLabel={t('assembly.changeCta')}
+        onAction={() => router.push('/(tabs)/goals/assembly')}
+      />
+    );
+  }
+
+  // Rattaché, mais aucun périmètre de LECTURE (ex. coordinateur sans nation affectée) : ne pas
+  // dire « compte non rattaché », c'est faux — renvoyer sur ses objectifs personnels.
   return (
     <GoalEmptyState
-      icon="link-outline"
-      title={t('goals.noUnitTitle')}
-      hint={t('goals.noUnitHint')}
-      actionLabel={t('assembly.changeCta')}
-      onAction={() => router.push('/(tabs)/goals/assembly')}
+      icon="stats-chart-outline"
+      title={t('goals.noPerimeterTitle')}
+      hint={t('goals.noPerimeterHint')}
+      actionLabel={t('goals.backToMine')}
+      onAction={() => router.push('/(tabs)/goals/member')}
     />
   );
 }

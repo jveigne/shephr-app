@@ -10,6 +10,7 @@ import { useAuth } from '../hooks/useAuth';
 import { deleteMyAccount, primaryRoleKey } from '../services/authApi';
 import {
   changeMyAssembly,
+  createUnit,
   listCountries,
   listLocalities,
   listUnits,
@@ -174,6 +175,11 @@ export function SettingsPage() {
  *
  * <p>Ce qui bouge : `goalUnitId` ET `donationUnitId`. Ce qui ne bouge pas : les assemblées qu'on
  * DIRIGE (`goalUnitIds`) — déménager ne fait pas démissionner.
+ *
+ * <p>La carte porte AUSSI la création d'une assemblée (RG-BQ-12, JP 16/08) : « web et mobile »,
+ * or sur le web la création vit dans /structure/unites, écran d'`AppShell` hors de portée d'un
+ * MEMBRE. On l'offre donc ici, là où la personne cherche déjà son assemblée — une fois la ville
+ * choisie, si la sienne n'est pas dans la liste, elle la crée et enchaîne sur le rattachement.
  */
 function MyAssemblyCard() {
   const { t } = useTranslation();
@@ -183,6 +189,12 @@ function MyAssemblyCard() {
   useContactSettings();
   const [open, setOpen] = useState(false);
   const [unitId, setUnitId] = useState('');
+  // Ville retenue à l'étape 3 du GeoPicker (remontée par `onCityChange`) : c'est elle qui
+  // conditionne l'offre de création — on ne crée pas une assemblée « nulle part ».
+  const [cityId, setCityId] = useState('');
+  const [creatingOpen, setCreatingOpen] = useState(false);
+  const [newName, setNewName] = useState('');
+  const ministryId = me?.ministryId ?? null;
 
   // Le GeoPicker ne fait aucun appel réseau : le référentiel est chargé ici, sur les mêmes
   // queryKey ['admin', …] que les autres écrans (cache partagé, pas de requête en double).
@@ -211,6 +223,46 @@ function MyAssemblyCard() {
             ? t('settings.myAssemblyMinistryMismatch')
             : errMsg(err, t('settings.myAssemblyFailed')),
       }),
+  });
+
+  const cityName = citiesQ.data?.find((c) => c.id === cityId)?.name ?? '';
+
+  /**
+   * Création d'une assemblée depuis l'espace membre (RG-BQ-12) — POST /api/church/admin/units,
+   * sans contrainte de rôle ni de géographie côté serveur.
+   *
+   * <p>On NE rafraîchit PAS `me` ici, volontairement : créer une assemblée fait passer un MEMBRE
+   * à DIRIGEANT_UNITE (il en devient responsable), ce qui change de coquille — un `refreshMe`
+   * immédiat démonterait `MemberShell` et la modale avec elle. Le rafraîchissement a lieu à
+   * l'étape suivante, dans `changeM.onSuccess`, une fois la modale fermée.
+   */
+  const createM = useMutation({
+    mutationFn: () =>
+      createUnit({ ministryId: ministryId ?? '', localityId: cityId, name: newName.trim() }),
+    onSuccess: async (unit) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'units'] });
+      setCreatingOpen(false);
+      setNewName('');
+      // Pré-sélectionnée : « Changer d'assemblée » enchaîne directement sur le rattachement.
+      setUnitId(unit.id);
+      push({ kind: 'ok', title: t('settings.myAssemblyCreated', { name: unit.name }) });
+    },
+    onError: (err) => {
+      // STRUCTURE_NAME_EXISTS : anti-doublon (même nom, même ville). On le dit nous-mêmes plutôt
+      // que de relayer le message serveur — il faut que la ville concernée soit nommée.
+      const code = errCode(err);
+      push({
+        kind: 'error',
+        title:
+          code === 'STRUCTURE_NAME_EXISTS'
+            ? t('settings.myAssemblyNameExists')
+            : t('settings.myAssemblyCreateRefused'),
+        msg:
+          code === 'STRUCTURE_NAME_EXISTS'
+            ? t('settings.myAssemblyNameExistsHint', { city: cityName })
+            : errMsg(err, t('settings.myAssemblyCreateFailed')),
+      });
+    },
   });
 
   // `assemblies` porte l'id et la ville (« Béthel » existe dans plusieurs villes) ; `unitNames`
@@ -246,7 +298,13 @@ function MyAssemblyCard() {
         </p>
         <Button
           iconL={<Icon name="unit" size={15} />}
-          onClick={() => { setUnitId(''); setOpen(true); }}
+          onClick={() => {
+            setUnitId('');
+            setCityId('');
+            setCreatingOpen(false);
+            setNewName('');
+            setOpen(true);
+          }}
         >
           {t('settings.myAssemblyChange')}
         </Button>
@@ -286,12 +344,73 @@ function MyAssemblyCard() {
               level="unit"
               value={unitId}
               onChange={setUnitId}
+              onCityChange={setCityId}
               units={units}
               cities={citiesQ.data ?? []}
               zones={zonesQ.data ?? []}
               countries={countriesQ.data ?? []}
             />
           </Field>
+
+          {/* RG-BQ-12 — « cette assemblée n'existe pas ? créez-la ici ». Proposé dès qu'une ville
+              est retenue : c'est le seul moment où la création a un lieu où se poser. */}
+          {cityId !== '' && ministryId != null && (
+            <div
+              style={{
+                border: '1px dashed var(--line)',
+                borderRadius: 10,
+                padding: '12px 14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+              }}
+            >
+              {creatingOpen ? (
+                <>
+                  <Field
+                    label={t('settings.myAssemblyNewName')}
+                    hint={t('settings.myAssemblyCreateHint', { city: cityName })}
+                  >
+                    <Input
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      placeholder={t('settings.myAssemblyNewNamePlaceholder')}
+                      autoFocus
+                    />
+                  </Field>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      disabled={newName.trim() === '' || createM.isPending}
+                      onClick={() => createM.mutate()}
+                    >
+                      {createM.isPending ? t('common.saving') : t('settings.myAssemblyCreateConfirm')}
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setCreatingOpen(false)}>
+                      {t('common.cancel')}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: 'var(--ink-600)' }}>
+                    {t('settings.myAssemblyMissing', { city: cityName })}
+                  </p>
+                  <div>
+                    <Button
+                      size="sm"
+                      iconL={<Icon name="plus" size={14} />}
+                      onClick={() => { setNewName(''); setCreatingOpen(true); }}
+                    >
+                      {t('settings.myAssemblyCreate')}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Repli : si le périmètre serveur ne renvoie aucune assemblée à ce compte, le sélecteur
               serait vide et muet — on renvoie explicitement vers le support. */}
           {noUnitListed && (

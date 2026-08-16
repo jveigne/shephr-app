@@ -312,6 +312,9 @@
     "noGoalHint": "Aucun But Quinquennal n'est actif pour le moment. Contactez votre coordinateur.",
     "noUnitTitle": "Compte non rattaché",
     "noUnitHint": "Votre compte n'est rattaché à aucune assemblée pour le module Objectifs. Contactez votre responsable.",
+    "noPerimeterTitle": "Aucun périmètre à afficher",
+    "noPerimeterHint": "Cette vue montre les engagements des assemblées que vous dirigez. Aucune ne vous est rattachée pour le moment — vos objectifs personnels, eux, restent dans « Mes objectifs ».",
+    "backToMine": "Revenir à mes objectifs",
     "deadlinePast": "Date limite dépassée ({{date}}) — contactez le secrétariat.",
     "deadlineFuture": "Modifiable jusqu'au {{date}}.",
     "addProgress": "Déclarer l'état actuel",
@@ -343,7 +346,7 @@
     },
     "nav": {
       "perimeter": "Mon périmètre",
-      "perimeterHint": "Les cumuls de vos villes, régions ou nations — en lecture.",
+      "perimeterHint": "Les cumuls des assemblées de votre périmètre — en lecture.",
       "units": "Mes assemblées",
       "unitsHint": "Suivi des engagements, assemblée par assemblée, jusqu’au membre."
     },
@@ -379,6 +382,7 @@
     "myCityNamed": "Ma ville — {{name}}",
     "myCountry": "Mon pays",
     "myCountryNamed": "Mon pays — {{name}}",
+    "myPerimeter": "Mon périmètre",
     "myUnitsSubmission": "Mes assemblées — soumission",
     "myCitiesSubmission": "Mes villes — soumission",
     "backToCities": "‹ Retour aux villes",

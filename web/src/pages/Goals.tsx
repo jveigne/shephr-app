@@ -661,7 +661,9 @@ export function GoalsPage() {
               </>
             )}
 
-            {/* Lot V1 — vue Coordinateur : agrégats + foi Nation, puis cumuls PAR RÉGION (borné à la Région). */}
+            {/* Lot V1 — vue Coordinateur : total de la Nation, puis totaux PAR RÉGION (borné à la Région).
+                RG-BQ-02 : chaque total est la SOMME des engagements individuels dessous — plus de
+                foi de nœud, plus de MAX à départager. */}
             {goal && year != null && isCoordinatorView && <ViewTitle label={t('views.coordinator')} />}
             {goal && year != null &&
               countryIds.map((id) => (
@@ -1942,7 +1944,7 @@ function DrillView({
   );
 }
 
-/** Agrégats par catégorie d'un niveau + fois déclarées (lecture seule). */
+/** Totaux par catégorie d'un niveau — somme des engagements individuels dessous (lecture seule). */
 function LevelAggregateBlock({
   goal,
   currency,

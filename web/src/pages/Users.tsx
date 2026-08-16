@@ -493,9 +493,11 @@ export function UsersPage() {
 }
 
 // --------- Champs de périmètre selon le rôle (partagés invite/edit) ---------
-// Lot 3.5 : MEMBRE/DIRIGEANT_UNITE = 1 unité ; DIRIGEANT = N unités ; DIRIGEANT_SENIOR = zone (référentiel
-// d'adressage pour ses engagements de FOI — sa visibilité « données » vient du sous-arbre) ;
+// Lot 3.5 : MEMBRE/DIRIGEANT_UNITE = 1 unité ; DIRIGEANT = N unités ; DIRIGEANT_SENIOR = zone
+// (périmètre qu'il DIRIGE — sa visibilité « données » vient du sous-arbre) ;
 // COORDINATEUR = pays (SUPER_ADMIN) ; LEADER/SECRETARIAT = ministère (pas de rattachement).
+// ⚠ RG-BQ-01 : aucun de ces champs ne sert à DÉCLARER. On ne déclare que pour soi, dans son
+// assemblée de rattachement (`goalUnitId`) ; les engagements de foi de nœud n'existent plus.
 /**
  * Engagements d'une personne (JP 31/07) — ouverts en cliquant sur sa ligne.
  *

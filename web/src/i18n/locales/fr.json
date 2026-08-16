@@ -31,15 +31,15 @@
     },
     "goals": {
       "kicker": "Module Objectifs",
-      "title": "De la foi de chacun au But accompli",
-      "subtitle": "Trouves-y ce que tu vas personnellement porter. Shephr recueille l'engagement de chacun, le fait remonter niveau par niveau et rend visible, chaque année, où nous en sommes réellement.",
-      "faith": {
-        "title": "L'engagement par la foi",
-        "desc": "Chacun déclare ce qu'il porte — par la foi, pas par le calcul. Une fois soumis, l'engagement est verrouillé : un acte unique, posé devant le Seigneur."
+      "title": "De l'engagement de chacun au But accompli",
+      "subtitle": "Trouves-y ce que tu vas personnellement porter. Shephr recueille l'engagement de chaque membre, l'additionne niveau par niveau et rend visible, chaque année, où nous en sommes réellement.",
+      "personal": {
+        "title": "L'engagement est individuel",
+        "desc": "Chaque membre déclare ce qu'il porte, pour lui-même, dans son assemblée. Personne ne déclare à la place d'un autre : un dirigeant s'engage comme membre de son assemblée, ni plus ni moins."
       },
-      "aggregate": {
-        "title": "Le cumul à chaque niveau",
-        "desc": "L'objectif retenu est le maximum entre le cumul des sous-niveaux et l'engagement de foi du dirigeant : personne ne vise en dessous de ce que portent les siens."
+      "sum": {
+        "title": "Le total est une somme",
+        "desc": "L'objectif d'une assemblée est la somme des engagements de ses membres ; celui d'une ville, la somme de ses assemblées, et ainsi jusqu'au continent. Aucun autre calcul, rien à arbitrer."
       },
       "progress": {
         "title": "L'état réel, année après année",
@@ -47,14 +47,15 @@
       },
       "levels": {
         "title": "Du membre au continent",
-        "desc": "Membre, assemblée, région, pays, continent : la même déclaration remonte toute la chaîne, sans ressaisie ni tableur, avec tableaux de bord et exports à chaque étage."
+        "desc": "Membre, assemblée, ville, région, nation, continent : chaque engagement personnel remonte toute la chaîne, sans ressaisie ni tableur, avec tableaux de bord et exports à chaque étage."
       },
-      "chainTitle": "La chaîne du cumul",
+      "chainTitle": "La chaîne des totaux",
       "chain": {
         "member": "Membre",
         "unit": "Assemblée",
+        "city": "Ville",
         "zone": "Région",
-        "country": "Pays",
+        "country": "Nation",
         "continent": "Continent"
       },
       "cta": "Voir mes objectifs",
@@ -1087,7 +1088,18 @@
     "myAssemblyMinistryMismatch": "Cette assemblée appartient à un autre ministère — contactez le secrétariat.",
     "myAssemblyNoneListed": "Aucune assemblée n'apparaît dans la liste.",
     "myAssemblyContactSupport": "Contacter le support",
-    "myAssemblySupportSubject": "Shephr — changer d'assemblée"
+    "myAssemblySupportSubject": "Shephr — changer d'assemblée",
+    "myAssemblyMissing": "Votre assemblée n'apparaît pas à {{city}} ?",
+    "myAssemblyCreate": "Créer une assemblée",
+    "myAssemblyNewName": "Nom de la nouvelle assemblée",
+    "myAssemblyNewNamePlaceholder": "Ex. Assemblée Béthel",
+    "myAssemblyCreateHint": "Elle sera créée à {{city}}, et vous en deviendrez responsable.",
+    "myAssemblyCreateConfirm": "Créer l'assemblée",
+    "myAssemblyCreated": "{{name}} a été créée et sélectionnée — confirmez pour vous y rattacher.",
+    "myAssemblyCreateRefused": "Création refusée",
+    "myAssemblyCreateFailed": "Création impossible, réessayez.",
+    "myAssemblyNameExists": "Ce nom est déjà pris",
+    "myAssemblyNameExistsHint": "Une assemblée porte déjà ce nom à {{city}} : cherchez-la dans la liste ci-dessus, ou choisissez un autre nom."
   },
   "join": {
     "title": "Rejoindre mon assemblée",

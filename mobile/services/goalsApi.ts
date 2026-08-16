@@ -211,6 +211,21 @@ export async function getAggregate(
   return data;
 }
 
+/**
+ * Agrégat de MON sous-arbre, sans nœud géographique porteur — `level`/`entityId` reviennent `null`.
+ *
+ * <p>Chantier « objectifs individuels » (JP 16/08) : c'est le seul agrégat d'un DIRIGEANT_UNITE,
+ * qui ne porte ni ville, ni région, ni nation. Le backend borne l'accès aux dirigeants
+ * SOUS-COORDINATEURS (`GoalQueryServiceImpl.requireSubCoordinatorLeader` : DIRIGEANT_UNITE,
+ * DIRIGEANT, DIRIGEANT_SENIOR, superAdmin exclu) — au-delà, 403.
+ */
+export async function getMyPerimeterAggregate(year?: number): Promise<AggregateLine[]> {
+  const { data } = await apiClient.get<AggregateLine[]>(
+    `/api/church/goals/me/aggregate${yq(year)}`,
+  );
+  return data;
+}
+
 // --- Objectifs d'UNE personne ------------------------------------------------
 
 /**
@@ -452,12 +467,10 @@ export async function getMyMemberProgress(year?: number): Promise<MyProgressResp
   return data;
 }
 
-export async function getZoneUnits(zoneId: string, year?: number): Promise<ZoneUnitStatus[]> {
-  const { data } = await apiClient.get<ZoneUnitStatus[]>(
-    `/api/church/goals/zones/${zoneId}/units${yq(year)}`,
-  );
-  return data;
-}
+// `getZoneUnits` (GET /goals/zones/{id}/units) a été SUPPRIMÉ le 16/08 : plus aucun appelant depuis
+// que la liste d'assemblées vient du SOUS-ARBRE (`getMyUnits`) et non de la zone géographique.
+// L'endpoint existe toujours côté backend — le rétablir ici si un écran « assemblées d'une région
+// que je ne dirige pas » réapparaît.
 
 /** Lot 3.5 — assemblées du SOUS-ARBRE du dirigeant (indépendant du niveau de ses nœuds de périmètre). */
 export async function getMyUnits(year?: number): Promise<ZoneUnitStatus[]> {

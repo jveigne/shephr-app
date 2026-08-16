@@ -31,15 +31,15 @@
     },
     "goals": {
       "kicker": "Goals module",
-      "title": "From each one's faith to the Goal accomplished",
-      "subtitle": "Find in it what you will personally carry. Shephr gathers each person's commitment, rolls it up level by level and makes visible, year after year, where we truly stand.",
-      "faith": {
-        "title": "Commitment by faith",
-        "desc": "Everyone declares what they carry — by faith, not by calculation. Once submitted, the commitment is locked: a single act, laid before the Lord."
+      "title": "From each one's commitment to the Goal accomplished",
+      "subtitle": "Find in it what you will personally carry. Shephr gathers every member's commitment, adds them up level by level and makes visible, year after year, where we truly stand.",
+      "personal": {
+        "title": "Commitment is individual",
+        "desc": "Every member declares what they carry, for themselves, in their own assembly. No one declares on someone else's behalf: a leader commits as a member of their assembly, no more, no less."
       },
-      "aggregate": {
-        "title": "Roll-up at every level",
-        "desc": "The goal retained is the maximum between the roll-up of the sub-levels and the leader's own commitment of faith: no one aims below what their own people carry."
+      "sum": {
+        "title": "The total is a sum",
+        "desc": "An assembly's goal is the sum of its members' commitments; a city's is the sum of its assemblies, and so on up to the continent. No other calculation, nothing to arbitrate."
       },
       "progress": {
         "title": "The real state, year after year",
@@ -47,14 +47,15 @@
       },
       "levels": {
         "title": "From the member to the continent",
-        "desc": "Member, assembly, region, country, continent: the same declaration travels up the whole chain, with no re-entry or spreadsheets, with dashboards and exports at every level."
+        "desc": "Member, assembly, city, region, nation, continent: every personal commitment travels up the whole chain, with no re-entry or spreadsheets, with dashboards and exports at every level."
       },
-      "chainTitle": "The roll-up chain",
+      "chainTitle": "The chain of totals",
       "chain": {
         "member": "Member",
         "unit": "Assembly",
+        "city": "City",
         "zone": "Region",
-        "country": "Country",
+        "country": "Nation",
         "continent": "Continent"
       },
       "cta": "View my goals",
@@ -1087,7 +1088,18 @@
     "myAssemblyMinistryMismatch": "This assembly belongs to another ministry — contact the secretariat.",
     "myAssemblyNoneListed": "No assembly is listed.",
     "myAssemblyContactSupport": "Contact support",
-    "myAssemblySupportSubject": "Shephr — change assembly"
+    "myAssemblySupportSubject": "Shephr — change assembly",
+    "myAssemblyMissing": "Your assembly is not listed in {{city}}?",
+    "myAssemblyCreate": "Create an assembly",
+    "myAssemblyNewName": "Name of the new assembly",
+    "myAssemblyNewNamePlaceholder": "E.g. Bethel Assembly",
+    "myAssemblyCreateHint": "It will be created in {{city}}, and you will become its leader.",
+    "myAssemblyCreateConfirm": "Create the assembly",
+    "myAssemblyCreated": "{{name}} has been created and selected — confirm to join it.",
+    "myAssemblyCreateRefused": "Creation refused",
+    "myAssemblyCreateFailed": "Creation failed, please try again.",
+    "myAssemblyNameExists": "That name is already taken",
+    "myAssemblyNameExistsHint": "An assembly already carries that name in {{city}}: look for it in the list above, or pick another name."
   },
   "join": {
     "title": "Join my assembly",

@@ -22,6 +22,7 @@ import { fmtAmount } from '../utils/format';
 import {
   getActiveGoal,
   getAggregate,
+  getMyPerimeterAggregate,
   getMyUnits,
   getRegionsSummary,
   getUnitDetail,
@@ -55,9 +56,14 @@ function groupUnitsByCity(units: ZoneUnitStatus[]): CityUnitsGroup[] {
   return [...map.values()];
 }
 
+/**
+ * Un nœud de périmètre porté par le compte. `level`/`entityId` à `null` = pas de nœud du tout :
+ * l'agrégat est alors la somme à plat du SOUS-ARBRE (`GET /goals/me/aggregate`), seul agrégat
+ * disponible pour un DIRIGEANT_UNITE.
+ */
 interface Perimeter {
-  level: AggregateLevelPath;
-  entityId: string;
+  level: AggregateLevelPath | null;
+  entityId: string | null;
   title: string;
 }
 
@@ -73,6 +79,11 @@ interface Perimeter {
  *
  * <p>RG-BQ-04 : ces vues sont désormais de la LECTURE seule et s'atteignent depuis « Mes
  * objectifs » — un dirigeant déclare, lui aussi, dans son assemblée de rattachement.
+ *
+ * <p>Les trois listes peuvent être VIDES : c'est le cas d'un DIRIGEANT_UNITE (aucun nœud
+ * géographique porté) et, depuis le Lot 3.5, de tout dirigeant dont la visibilité ne vient que de
+ * son sous-arbre de personnes. On retombe alors sur `GET /goals/me/aggregate`, comme le web
+ * (`Goals.tsx`, `PerimeterBlock node={null}`).
  */
 export default function GoalAggregatesScreen({
   zoneIds,
@@ -83,6 +94,7 @@ export default function GoalAggregatesScreen({
   zoneIds: string[];
   /** Villes portées (dirigeant de ville, multi inclus) ; vide sinon. */
   cityIds: string[];
+  /** Nations portées (coordinateur) ; vide sinon. */
   countryIds: string[];
 }) {
   const { t } = useLanguage();
@@ -109,8 +121,8 @@ export default function GoalAggregatesScreen({
       const localities = localitiesR.status === 'fulfilled' ? localitiesR.value : [];
       const countries = countriesR.status === 'fulfilled' ? countriesR.value : [];
       const list: Perimeter[] = [];
-      // Multi-rattachements : une section par région / ville portée — chaque foi se déclare sur
-      // SON nœud et remonte vers SA branche dans l'arbre.
+      // Multi-rattachements : une section par région / ville / nation portée, chacune agrégée sur
+      // SA branche de l'arbre (RG-BQ-02 — une somme, plus rien à départager).
       for (const id of zoneIds) {
         const name = zones.find((z) => z.id === id)?.name;
         list.push({ level: 'zones', entityId: id, title: name ? t('goalsAgg.myZoneNamed', { name }) : t('goalsAgg.myZone') });
@@ -122,6 +134,11 @@ export default function GoalAggregatesScreen({
       for (const id of countryIds) {
         const name = countries.find((c) => c.id === id)?.name;
         list.push({ level: 'countries', entityId: id, title: name ? t('goalsAgg.myCountryNamed', { name }) : t('goalsAgg.myCountry') });
+      }
+      // Aucun nœud porté (DIRIGEANT_UNITE, ou dirigeant dont la visibilité ne vient que de son
+      // sous-arbre de personnes depuis le Lot 3.5) : une seule section, la somme à plat.
+      if (list.length === 0) {
+        list.push({ level: null, entityId: null, title: t('goalsAgg.myPerimeter') });
       }
       setPerimeters(list);
     } catch (e: any) {
@@ -215,7 +232,7 @@ export default function GoalAggregatesScreen({
 
       {year != null && perimeters.map((p) => (
         <AggregateSection
-          key={`${p.level}-${p.entityId}-${year}-${refreshKey}`}
+          key={`${p.level ?? 'me'}-${p.entityId ?? 'subtree'}-${year}-${refreshKey}`}
           perimeter={p}
           goal={goal}
           year={year}
@@ -244,7 +261,16 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
 
   const load = useCallback(async () => {
     try {
-      setLines(await getAggregate(perimeter.level, perimeter.entityId, year));
+      // Nœud porté → agrégat de CE nœud ; sinon somme à plat de mon sous-arbre (DIRIGEANT_UNITE).
+      setLines(
+        perimeter.level != null && perimeter.entityId != null
+          ? await getAggregate(perimeter.level, perimeter.entityId, year)
+          : await getMyPerimeterAggregate(year),
+      );
+    } catch {
+      // 403 hors périmètre / réseau : une section vide vaut mieux qu'un écran en erreur, les
+      // autres sections restent lisibles.
+      setLines([]);
     } finally {
       setLoading(false);
     }

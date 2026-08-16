@@ -190,6 +190,46 @@ export function hasMemberGoals(me: MeResponse | null): boolean {
   return me?.goalRole === 'MEMBRE' && !!me?.goalUnitId;
 }
 
+/** Vue Objectifs ministère-large (totaux + nations) : superAdmin, LEADER ou SECRETARIAT Objectifs. */
+export function isMinistryWideGoals(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return me.superAdmin || me.goalRole === 'LEADER' || me.goalRole === 'SECRETARIAT';
+}
+
+/**
+ * Dirigeant SOUS-COORDINATEUR — miroir exact de
+ * `GoalQueryServiceImpl.requireSubCoordinatorLeader` : seuls ces profils obtiennent
+ * `/goals/me/aggregate` et `/goals/me/units` (le superAdmin en est explicitement exclu côté
+ * backend, il a la vue ministère-large).
+ */
+export function isSubCoordinatorLeader(me: MeResponse | null): boolean {
+  if (!me || me.superAdmin) return false;
+  return me.goalRole === 'DIRIGEANT_UNITE'
+    || me.goalRole === 'DIRIGEANT'
+    || me.goalRole === 'DIRIGEANT_SENIOR';
+}
+
+/**
+ * « Mon périmètre » a-t-il quelque chose à montrer ? (chantier « objectifs individuels », 16/08)
+ *
+ * <p>Miroir de l'aiguillage de `app/(tabs)/goals/perimeter.tsx` — les deux doivent bouger ensemble,
+ * sans quoi la carte réapparaît devant un écran vide. Trois familles : ministère-large → vue globale ;
+ * sous-coordinateur → SON SOUS-ARBRE, y compris sans aucun rattachement géographique (cas du
+ * DIRIGEANT_UNITE, qui ne porte ni ville ni région) ; sinon les nœuds géographiques portés.
+ *
+ * <p>⚠ Sans ce prédicat, la carte « Mon périmètre » s'affichait dès `hasGoalsAccess` et menait un
+ * dirigeant d'assemblée sur un « Compte non rattaché » faux — il a bien une assemblée.
+ */
+export function hasPerimeterView(me: MeResponse | null): boolean {
+  if (!me) return false;
+  if (isMinistryWideGoals(me) || isSubCoordinatorLeader(me)) return true;
+  const nodes = [
+    me.goalZoneId, me.goalCityId,
+    ...(me.goalZoneIds ?? []), ...(me.goalCityIds ?? []), ...(me.goalCountryIds ?? []),
+  ];
+  return nodes.some((id) => !!id);
+}
+
 /** Human label for the user's most significant role ('Membre' for a plain member). */
 export function roleLabel(me: MeResponse | null): string {
   if (!me) return '—';

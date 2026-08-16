@@ -312,6 +312,9 @@
     "noGoalHint": "No Five-Year Goal is active at the moment. Contact your coordinator.",
     "noUnitTitle": "Account not linked",
     "noUnitHint": "Your account is not linked to any assembly for the Goals module. Contact your leader.",
+    "noPerimeterTitle": "Nothing to show here",
+    "noPerimeterHint": "This view shows the pledges of the assemblies you lead. None is linked to you at the moment — your own goals stay in “My goals”.",
+    "backToMine": "Back to my goals",
     "deadlinePast": "Deadline passed ({{date}}) — contact the secretariat.",
     "deadlineFuture": "Editable until {{date}}.",
     "addProgress": "Update current status",
@@ -343,7 +346,7 @@
     },
     "nav": {
       "perimeter": "My scope",
-      "perimeterHint": "The totals of your cities, regions or nations — read only.",
+      "perimeterHint": "The totals of the assemblies in your scope — read only.",
       "units": "My assemblies",
       "unitsHint": "Pledge tracking, assembly by assembly, down to the member."
     },
@@ -379,6 +382,7 @@
     "myCityNamed": "My city — {{name}}",
     "myCountry": "My country",
     "myCountryNamed": "My country — {{name}}",
+    "myPerimeter": "My scope",
     "myUnitsSubmission": "My assemblies — submission",
     "myCitiesSubmission": "My cities — submission",
     "backToCities": "‹ Back to cities",

@@ -11,7 +11,7 @@ import UnitMembersAggregate from '../../../components/UnitMembersAggregate';
 import { colors, fonts } from '../../../theme';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
-import { hasGoalsAccess } from '../../../services/authApi';
+import { hasGoalsAccess, hasPerimeterView } from '../../../services/authApi';
 import { useGoalsData } from '../../../hooks/useGoalsData';
 import {
   getMyAssemblyGoal,
@@ -40,6 +40,9 @@ export default function MemberGoalsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const year = selectedYear ?? goal?.currentYear ?? null;
   const leader = hasGoalsAccess(me);
+  // « Mon périmètre » n'est proposé que s'il a quelque chose à montrer : un dirigeant sans nœud
+  // porté ET sans sous-arbre lisible tombait sur un état vide trompeur (cf. `hasPerimeterView`).
+  const perimeter = hasPerimeterView(me);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -215,14 +218,16 @@ export default function MemberGoalsScreen() {
       {/* Vues de lecture du dirigeant (RG-BQ-04) : elles ne sont plus l'écran d'entrée. */}
       {leader && (
         <View style={{ gap: 8, marginTop: 16 }}>
-          <Card variant="paper2" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/perimeter')}>
-            <Ionicons name="stats-chart-outline" size={18} color={colors.mossDeep} />
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.navTitle}>{t('goals.nav.perimeter')}</Text>
-              <Text style={styles.navHint}>{t('goals.nav.perimeterHint')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
-          </Card>
+          {perimeter && (
+            <Card variant="paper2" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/perimeter')}>
+              <Ionicons name="stats-chart-outline" size={18} color={colors.mossDeep} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.navTitle}>{t('goals.nav.perimeter')}</Text>
+                <Text style={styles.navHint}>{t('goals.nav.perimeterHint')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+            </Card>
+          )}
           <Card variant="paper2" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/units')}>
             <Ionicons name="home-outline" size={18} color={colors.mossDeep} />
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -264,20 +269,36 @@ function MyAssemblyBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
   const [expanded, setExpanded] = useState(false);
   const [data, setData] = useState<MyAssemblyGoalResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  /** Code d'erreur brut du backend (`ApiError.error`), traduit à l'affichage. */
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  /** Une tentative a eu lieu — succès OU échec. Sans ce drapeau, un échec relancerait l'appel en
+   *  boucle : `loading` repasse à false, l'effet se rejoue et `data` est toujours null. */
+  const [loaded, setLoaded] = useState(false);
 
   // L'année change → on invalide, le contenu sera rechargé au prochain dépli.
   useEffect(() => {
     setData(null);
+    setErrorCode(null);
+    setLoaded(false);
   }, [year]);
 
   useEffect(() => {
-    if (!expanded || data != null || loading) return;
+    if (!expanded || loaded || loading) return;
     setLoading(true);
     getMyAssemblyGoal(year)
-      .then(setData)
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
-  }, [expanded, data, loading, year]);
+      .then((d) => {
+        setData(d);
+        setErrorCode(null);
+      })
+      .catch((e: any) => {
+        setData(null);
+        setErrorCode(e?.response?.data?.error ?? 'UNKNOWN');
+      })
+      .finally(() => {
+        setLoaded(true);
+        setLoading(false);
+      });
+  }, [expanded, loaded, loading, year]);
 
   const catById = new Map(goal.categories.map((c) => [c.id, c]));
   const fmtFor = (categoryId: string, v: number | null) => {
@@ -325,7 +346,17 @@ function MyAssemblyBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
             </View>
           )}
 
-          {!loading && filled.length === 0 && (
+          {/* 422 USER_NO_GOAL_UNIT : le rattachement a sauté depuis le chargement de `me` (auto
+              changement d'assemblée sur un autre appareil, réaffectation par le secrétariat). Le
+              dire, plutôt que laisser croire que l'assemblée n'a rien déclaré. */}
+          {!loading && errorCode != null && (
+            <Text style={styles.assemblyEmpty}>
+              {errorCode === 'USER_NO_GOAL_UNIT'
+                ? t('errors.goals.USER_NO_GOAL_UNIT')
+                : t('errors.tryAgain')}
+            </Text>
+          )}
+          {!loading && errorCode == null && filled.length === 0 && (
             <Text style={styles.assemblyEmpty}>{t('goals.member.assemblyEmpty')}</Text>
           )}
           {!loading &&

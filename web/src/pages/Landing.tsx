@@ -78,14 +78,19 @@ export function LandingPage() {
     { icon: 'export', key: 'reports' },
   ];
 
+  // Chantier « objectifs individuels » (RG-BQ-01/02, JP 16/08) : cette page est PUBLIQUE, elle ne
+  // doit décrire que le modèle en vigueur. L'« engagement de foi du dirigeant » et le MAX qui
+  // l'arbitrait contre le cumul des sous-niveaux sont ABOLIS — d'où `personal` / `sum` en place
+  // des anciennes clés `faith` / `aggregate`.
   const principles = [
-    { icon: 'sparkle', key: 'faith' },
-    { icon: 'tree', key: 'aggregate' },
+    { icon: 'sparkle', key: 'personal' },
+    { icon: 'tree', key: 'sum' },
     { icon: 'history', key: 'progress' },
     { icon: 'globe', key: 'levels' },
   ];
 
-  const chain = ['member', 'unit', 'zone', 'country', 'continent'];
+  // Chantier B : l'arbre est Assemblée › Ville › Région › Nation (la ville manquait à cette chaîne).
+  const chain = ['member', 'unit', 'city', 'zone', 'country', 'continent'];
 
   const factors = ['size', 'zone', 'cmci', 'bundle'];
 
@@ -224,7 +229,7 @@ export function LandingPage() {
             ))}
           </div>
 
-          {/* Chaîne du cumul : rend concret le « du membre au continent ». */}
+          {/* Chaîne des totaux : rend concret le « du membre au continent ». */}
           <div style={{ background: 'var(--parchment-deep)', borderRadius: 'var(--radius-lg)', padding: 'clamp(18px, 4vw, 26px)' }}>
             <h3 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 15, color: 'var(--green-800)', margin: '0 0 14px', textAlign: 'center' }}>
               {t('landing.goals.chainTitle')}

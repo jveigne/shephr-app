@@ -35,6 +35,7 @@ export function GeoPicker({
   level,
   value,
   onChange,
+  onCityChange,
   units,
   cities,
   zones,
@@ -43,6 +44,14 @@ export function GeoPicker({
   level: GeoLevel;
   value: string;
   onChange: (id: string) => void;
+  /**
+   * Ville de l'étape 3, remontée à l'appelant (RG-BQ-12, JP 16/08) — `''` quand aucune n'est
+   * retenue. Facultatif et purement informatif : il permet à « Mon assemblée » de proposer la
+   * CRÉATION d'une assemblée dans la ville choisie quand elle n'existe pas encore. Le
+   * comportement du sélecteur est inchangé pour les appelants qui ne le passent pas.
+   * Toujours `''` hors `level="unit"` (les autres niveaux n'ont pas d'étape ville).
+   */
+  onCityChange?: (cityId: string) => void;
   units: UnitResponse[];
   cities: LocalityResponse[];
   zones: ZoneResponse[];
@@ -123,6 +132,16 @@ export function GeoPicker({
     if (level !== 'unit') return;
     if (zoneId && !cityId && cityOptions.length === 1) setCityId(cityOptions[0].id);
   }, [level, zoneId, cityId, cityOptions]);
+
+  // Remontée de l'étape « ville » — via une ref pour ne dépendre que de `cityId` : l'appelant
+  // passe souvent une lambda recréée à chaque rendu, la mettre en dépendance rejouerait l'effet
+  // en boucle. Couvre TOUTES les origines du changement (clic, auto-sélection, réinitialisation,
+  // positionnement sur une valeur existante), puisqu'on observe l'état et non les gestes.
+  const onCityChangeRef = useRef(onCityChange);
+  onCityChangeRef.current = onCityChange;
+  useEffect(() => {
+    onCityChangeRef.current?.(cityId);
+  }, [cityId]);
 
   const rows: Row[] = useMemo(() => {
     const needle = search.trim().toLowerCase();
