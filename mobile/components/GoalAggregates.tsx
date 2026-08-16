@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   Modal,
   ActivityIndicator,
   RefreshControl,
@@ -18,31 +17,22 @@ import Button from './Button';
 import HandDivider from './HandDivider';
 import { colors, fonts } from '../theme';
 import { goalCategoryMeta } from '../constants/goalCategories';
-import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { currencySymbol, fmtAmount } from '../utils/format';
-import { confirmDialog, notify } from '../utils/dialogs';
+import { fmtAmount } from '../utils/format';
 import {
-  createFaithPledge,
-  deleteFaithPledge,
   getActiveGoal,
   getAggregate,
   getMyUnits,
   getRegionsSummary,
   getUnitDetail,
-  listFaithPledges,
-  updateFaithPledge,
   type ActiveGoal,
   type AggregateLevelPath,
   type AggregateLine,
-  type FaithPledgeResponse,
   type GoalCategory,
   type UnitPledgeDetail,
   type ZoneUnitStatus,
 } from '../services/goalsApi';
 import { listCountries, listLocalities, listZones } from '../services/orgApi';
-
-const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallback;
 
 /** Regroupement d'assemblées par ville (localityName) — clé stable même sans localityId. */
 interface CityUnitsGroup {
@@ -72,8 +62,17 @@ interface Perimeter {
 }
 
 /**
- * Vue agrégée du périmètre Goals d'un leader (UC-LDR-04/05, UC-COO-04/05) :
- * zone du DIRIGEANT_LEADER et/ou pays du COORDINATEUR. Effectif = MAX (RG-08).
+ * Vue agrégée du périmètre Goals d'un dirigeant — région(s) d'un DIRIGEANT_SENIOR, ville(s) d'un
+ * DIRIGEANT, nation(s) d'un COORDINATEUR.
+ *
+ * <p>Chantier « objectifs individuels » (JP 16/08) — RG-BQ-02 : l'engagement d'un niveau est la
+ * SOMME des engagements de ses membres, une seule valeur par catégorie. Le bloc de comparaison
+ * « Cumul / Mon engagement / Objectif retenu », le badge de foi et le formulaire de foi ont été
+ * supprimés : il n'y a plus de valeur concurrente à départager, donc plus de MAX (l'ancienne
+ * RG-08 est annulée).
+ *
+ * <p>RG-BQ-04 : ces vues sont désormais de la LECTURE seule et s'atteignent depuis « Mes
+ * objectifs » — un dirigeant déclare, lui aussi, dans son assemblée de rattachement.
  */
 export default function GoalAggregatesScreen({
   zoneIds,
@@ -236,26 +235,16 @@ export default function GoalAggregatesScreen({
 }
 
 function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goal: ActiveGoal; year: number }) {
-  const { me } = useAuth();
   const { t } = useLanguage();
   const [lines, setLines] = useState<AggregateLine[]>([]);
-  const [faiths, setFaiths] = useState<FaithPledgeResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [faithCategory, setFaithCategory] = useState<GoalCategory | null>(null);
 
   const currency = goal.defaultCurrency;
   const categories = [...goal.categories].sort((a, b) => a.displayOrder - b.displayOrder);
 
   const load = useCallback(async () => {
     try {
-      const [agg, fp] = await Promise.all([
-        getAggregate(perimeter.level, perimeter.entityId, year),
-        listFaithPledges(perimeter.level, perimeter.entityId, year).catch(
-          () => [] as FaithPledgeResponse[],
-        ),
-      ]);
-      setLines(agg);
-      setFaiths(fp);
+      setLines(await getAggregate(perimeter.level, perimeter.entityId, year));
     } finally {
       setLoading(false);
     }
@@ -266,8 +255,6 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
   }, [load]);
 
   const lineFor = (categoryId: string) => lines.find((l) => l.categoryId === categoryId) ?? null;
-  const myFaithFor = (categoryId: string) =>
-    faiths.find((f) => f.categoryId === categoryId && f.createdById === me?.id) ?? null;
 
   const fmtValue = (category: GoalCategory, v: number) =>
     category.unitType === 'CURRENCY'
@@ -287,10 +274,8 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
           {categories.map((category) => {
             const meta = goalCategoryMeta(category.code);
             const line = lineFor(category.id);
-            const agg = line?.aggregateOfChildren ?? 0;
+            // RG-BQ-02 : UNE valeur — la somme des engagements des membres du sous-arbre.
             const eff = line?.effectiveAmount ?? line?.effectiveCount ?? 0;
-            const mine = myFaithFor(category.id);
-            const faithValue = mine ? mine.targetAmount ?? mine.targetCount ?? 0 : null;
             return (
               <Card key={category.id} style={styles.lineCard}>
                 <View style={styles.lineHead}>
@@ -298,75 +283,19 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
                     <Ionicons name={meta.icon} size={18} color={meta.tone} />
                   </View>
                   <Text style={styles.lineName}>{category.name}</Text>
-                  {line?.source === 'FAITH' && (
-                    <View style={styles.faithBadge}>
-                      <Text style={styles.faithBadgeText}>{t('goalsAgg.faithBadge')}</Text>
-                    </View>
-                  )}
                 </View>
                 <HandDivider style={{ marginVertical: 10 }} />
-                <View style={styles.lineFooter}>
-                  <View>
-                    <Label>{t('goalsAgg.aggregate')}</Label>
-                    <Text style={styles.lineValue}>{fmtValue(category, agg)}</Text>
-                  </View>
-                  <View style={{ alignItems: 'center' }}>
-                    <Label>{t('goalsAgg.myFaith')}</Label>
-                    <Text style={[styles.lineValue, faithValue == null && { color: colors.ink3 }]}>
-                      {faithValue != null ? fmtValue(category, faithValue) : '—'}
-                    </Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Label>{t('goalsAgg.effective')}</Label>
-                    <Text style={[styles.lineValue, { fontWeight: '600' }]}>
-                      {fmtValue(category, eff)}
-                    </Text>
-                  </View>
+                <View style={[styles.lineFooter, { alignItems: 'baseline' }]}>
+                  <Label>{t('goalsAgg.pledgedTotal')}</Label>
+                  <Text style={[styles.lineValue, { fontWeight: '600' }]}>
+                    {fmtValue(category, eff)}
+                  </Text>
                 </View>
-                <Button
-                  label={mine ? t('goalsAgg.editFaith') : t('goalsAgg.declareFaith')}
-                  variant="soft"
-                  height={42}
-                  onPress={() => setFaithCategory(category)}
-                  style={{ marginTop: 12 }}
-                />
               </Card>
             );
           })}
-
-          {faiths.length > 0 && (
-            <Card variant="paper2" style={styles.faithListCard}>
-              <Label style={{ marginBottom: 8 }}>{t('goalsAgg.declaredFaith')}</Label>
-              {faiths.map((f) => {
-                const category = goal.categories.find((c) => c.id === f.categoryId);
-                return (
-                  <Text key={f.id} style={styles.faithListItem}>
-                    {category?.name ?? f.categoryCode} ·{' '}
-                    {category ? fmtValue(category, f.targetAmount ?? f.targetCount ?? 0) : ''} —{' '}
-                    {f.createdByName ?? '—'}
-                    {f.createdById === me?.id ? t('goalsAgg.me') : ''}
-                  </Text>
-                );
-              })}
-            </Card>
-          )}
-
         </View>
       )}
-
-      <FaithFormModal
-        perimeter={perimeter}
-        category={faithCategory}
-        year={year}
-        aggregate={faithCategory ? lineFor(faithCategory.id)?.aggregateOfChildren ?? 0 : 0}
-        existing={faithCategory ? myFaithFor(faithCategory.id) : null}
-        currency={currency}
-        onClose={() => setFaithCategory(null)}
-        onSaved={async () => {
-          setFaithCategory(null);
-          await load();
-        }}
-      />
     </>
   );
 }
@@ -450,7 +379,7 @@ function MyUnitsBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
 
   return (
     <>
-      <Card variant="paper2" style={styles.faithListCard}>
+      <Card variant="paper2" style={styles.listCard}>
         <Label style={{ marginBottom: 8 }}>
           {showingCityList ? t('goalsAgg.myCitiesSubmission') : t('goalsAgg.myUnitsSubmission')}
         </Label>
@@ -459,14 +388,18 @@ function MyUnitsBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
             <Text style={styles.backLink}>{t('goalsAgg.backToCities')}</Text>
           </Pressable>
         )}
-        {!showingCityList && activeUnits.every((u) => u.submitted) && (
-          <Text style={[styles.faithListItem, { color: colors.mossSoft, fontWeight: '600' }]}>
-            {t('goalsAgg.allUnitsSubmitted')}
+        {/* RG-BQ-06 — maille PERSONNE : « tout le monde a soumis » se lit sur les membres. */}
+        {!showingCityList
+          && activeUnits.length > 0
+          && activeUnits.every((u) => u.totalMembers > 0 && u.submittedMembers === u.totalMembers) && (
+          <Text style={[styles.listItem, { color: colors.mossSoft, fontWeight: '600' }]}>
+            {t('goalsAgg.allMembersSubmitted')}
           </Text>
         )}
         {showingCityList
           ? cityGroups.map((g) => {
-              const submitted = g.units.filter((u) => u.submitted).length;
+              const submitted = g.units.reduce((n, u) => n + u.submittedMembers, 0);
+              const total = g.units.reduce((n, u) => n + u.totalMembers, 0);
               const lines = cityAggregates[g.key];
               return (
                 <Pressable key={g.key} onPress={() => setSelectedCity(g.key)} style={styles.cityCard}>
@@ -478,7 +411,7 @@ function MyUnitsBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
                       </Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <CityStatusBadge submitted={submitted} total={g.units.length} />
+                      <CityStatusBadge submitted={submitted} total={total} />
                       <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
                     </View>
                   </View>
@@ -490,7 +423,7 @@ function MyUnitsBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
                         const line = lines.find((l) => l.categoryId === category.id);
                         const eff = line?.effectiveAmount ?? line?.effectiveCount ?? 0;
                         return (
-                          <Text key={category.id} style={styles.faithListItem}>
+                          <Text key={category.id} style={styles.listItem}>
                             {category.name} : {fmtValue(category, eff)}
                           </Text>
                         );
@@ -504,9 +437,19 @@ function MyUnitsBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
               <Pressable key={u.unitId} onPress={() => openDetail(u)} style={styles.unitRow}>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.unitName}>{u.unitName}</Text>
+                  {/* RG-BQ-06 — « X/Y membres ont soumis », plus « n/5 engagements ». */}
                   <Text style={styles.unitMeta}>
-                    {t('goalsAgg.pledgeCount', { name: u.localityName ?? '', count: u.pledgeCount })}
+                    {u.localityName ? `${u.localityName} · ` : ''}
+                    {t('goals.members.submittedRatioLong', {
+                      submitted: u.submittedMembers,
+                      total: u.totalMembers,
+                    })}
                   </Text>
+                  {u.lateMembers > 0 && (
+                    <Text style={[styles.unitMeta, { color: colors.clay }]}>
+                      {t('goals.members.lateCount', { count: u.lateMembers })}
+                    </Text>
+                  )}
                   {u.leaderName != null && (
                     <Text style={styles.unitMeta}>
                       {t('goalsAgg.unitLeader', { name: u.leaderName })}
@@ -584,7 +527,7 @@ function UnitDetailModal({
                 );
               })}
               {(detail ?? []).length === 0 && (
-                <Text style={styles.faithListItem}>{t('goalsAgg.noPledgeInUnit')}</Text>
+                <Text style={styles.listItem}>{t('goalsAgg.noPledgeInUnit')}</Text>
               )}
             </View>
           )}
@@ -596,10 +539,13 @@ function UnitDetailModal({
   );
 }
 
-/** Badge de ratio de soumission d'une ville (Lot 3.5 mobile) — pendant de UnitStatusBadge au niveau ville. */
+/**
+ * Ratio de soumission d'une ville — maille PERSONNE depuis le 16/08 (RG-BQ-06) : ce sont les
+ * MEMBRES de ses assemblées qui sont comptés, pas les assemblées.
+ */
 function CityStatusBadge({ submitted, total }: { submitted: number; total: number }) {
   const { t } = useLanguage();
-  const tone = submitted === total ? colors.moss : submitted > 0 ? colors.earthDeep : colors.ink3;
+  const tone = total > 0 && submitted === total ? colors.moss : submitted > 0 ? colors.earthDeep : colors.ink3;
   return (
     <View style={[styles.statusBadge, { backgroundColor: tone + '22' }]}>
       <Text style={[styles.statusBadgeText, { color: tone }]}>
@@ -634,7 +580,7 @@ function RegionsSummaryBlock({ nationId, year, goal }: { nationId: string; year:
   };
 
   return (
-    <Card variant="paper2" style={styles.faithListCard}>
+    <Card variant="paper2" style={styles.listCard}>
       <Label style={{ marginBottom: 8 }}>
         {heading}{data.nationName ? ` — ${data.nationName}` : ''}
       </Label>
@@ -642,183 +588,52 @@ function RegionsSummaryBlock({ nationId, year, goal }: { nationId: string; year:
         <View key={r.regionId} style={{ marginBottom: 10 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Text style={styles.unitName}>{r.regionName}</Text>
+            {/* RG-BQ-06 — le taux de soumission se compte en PERSONNES. */}
             <Text style={styles.unitMeta}>
               {t('views.submittedRatio', {
-                submitted: r.submittedUnits, total: r.totalUnits,
+                submitted: r.submittedMembers, total: r.totalMembers,
                 percent: Math.round(r.submissionRate * 100),
               })}
             </Text>
           </View>
           {r.lines.map((l) => (
-            <Text key={l.categoryId} style={styles.faithListItem}>{fmtLine(l)}</Text>
+            <Text key={l.categoryId} style={styles.listItem}>{fmtLine(l)}</Text>
           ))}
         </View>
       ))}
       <HandDivider style={{ marginVertical: 8 }} />
       <Text style={[styles.unitName, { marginBottom: 4 }]}>{t('views.nationTotal')}</Text>
       {data.totals.map((l) => (
-        <Text key={l.categoryId} style={styles.faithListItem}>{fmtLine(l)}</Text>
+        <Text key={l.categoryId} style={styles.listItem}>{fmtLine(l)}</Text>
       ))}
     </Card>
   );
 }
 
 /**
- * Badge de statut de soumission (UC-LDR-06) : Soumis / En retard / Brouillon / Non démarré.
- * Exporté depuis le palier A3 : l'écran « Mes assemblées » affiche le même statut, et deux
- * implémentations divergeraient sur la règle « en retard ».
+ * Badge de statut de soumission d'une assemblée — maille PERSONNE depuis le 16/08 (RG-BQ-06).
+ *
+ * <p>Une assemblée ne « soumet » plus : ses membres soumettent. Statut défini par le backend
+ * (javadoc de `ZoneUnitStatusResponse`) : aucun engagement → Non démarré ; tous les membres ont
+ * soumis → Soumis ; sinon En cours — et « En retard » l'emporte dès qu'une personne est en retard.
+ *
+ * <p>Exporté : l'écran « Mes assemblées » affiche le même statut, et deux implémentations
+ * divergeraient sur la règle « en retard ».
  */
 export function UnitStatusBadge({ unit }: { unit: ZoneUnitStatus }) {
   const { t } = useLanguage();
-  const [label, tone] = unit.submitted
-    ? [t('goalsAgg.statusSubmitted'), colors.moss]
-    : unit.late
+  const allSubmitted = unit.totalMembers > 0 && unit.submittedMembers === unit.totalMembers;
+  const [label, tone] = unit.lateMembers > 0
     ? [t('goalsAgg.statusLate'), colors.clay]
-    : unit.pledgeCount > 0
-    ? [t('goalsAgg.statusDraft'), colors.earthDeep]
+    : allSubmitted
+    ? [t('goalsAgg.statusSubmitted'), colors.moss]
+    : unit.membersWithPledges > 0
+    ? [t('goalsAgg.statusInProgress'), colors.earthDeep]
     : [t('goalsAgg.statusNotStarted'), colors.ink3];
   return (
     <View style={[styles.statusBadge, { backgroundColor: tone + '22' }]}>
       <Text style={[styles.statusBadgeText, { color: tone }]}>{label}</Text>
     </View>
-  );
-}
-
-/** Déclaration / modification / retrait d'un engagement de foi (UC-LDR-05, COO-05). */
-function FaithFormModal({
-  perimeter,
-  category,
-  year,
-  aggregate,
-  existing,
-  currency,
-  onClose,
-  onSaved,
-}: {
-  perimeter: Perimeter;
-  category: GoalCategory | null;
-  year: number;
-  aggregate: number;
-  existing: FaithPledgeResponse | null;
-  currency: string;
-  onClose: () => void;
-  onSaved: () => Promise<void>;
-}) {
-  const { t } = useLanguage();
-  const [value, setValue] = useState('');
-  const [saving, setSaving] = useState(false);
-  const isCurrency = category?.unitType === 'CURRENCY';
-
-  useEffect(() => {
-    if (category) {
-      const v = existing ? existing.targetAmount ?? existing.targetCount : null;
-      setValue(v != null ? String(v) : '');
-    }
-  }, [category, existing]);
-
-  const num = Number.parseFloat(value.replace(',', '.'));
-  const valid = Number.isFinite(num) && num > 0;
-
-  const fmtValue = (v: number) =>
-    isCurrency ? fmtAmount(v, currency) : `${v} ${category?.unitLabel ?? ''}`.trim();
-
-  const onSubmit = async () => {
-    if (!category || !valid) return;
-    setSaving(true);
-    try {
-      const payload = isCurrency ? { targetAmount: num } : { targetCount: Math.round(num) };
-      if (existing) {
-        await updateFaithPledge(existing.id, payload);
-      } else {
-        await createFaithPledge(perimeter.level, perimeter.entityId, {
-          categoryId: category.id,
-          year,
-          ...payload,
-        });
-      }
-      await onSaved();
-    } catch (e: any) {
-      notify(t('common.appName'), errMsg(e, t('errors.saveFailed')));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const onRemove = async () => {
-    if (!existing) return;
-    const ok = await confirmDialog(
-      t('goalsAgg.removeTitle'),
-      t('goalsAgg.removeConfirm'),
-      t('goalsAgg.remove'),
-      true,
-    );
-    if (!ok) return;
-    setSaving(true);
-    try {
-      await deleteFaithPledge(existing.id);
-      await onSaved();
-    } catch (e: any) {
-      notify(t('common.appName'), errMsg(e, t('errors.deleteFailed')));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (!category) return null;
-  return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.modalBackdrop}>
-        <Card style={styles.modalCard}>
-          <Text style={styles.modalTitle}>{t('goalsAgg.faithModalTitle', { name: category.name })}</Text>
-          <Text style={styles.modalSub}>
-            {t('goalsAgg.faithModalSub', { value: fmtValue(aggregate) })}
-          </Text>
-
-          <View style={styles.amountRow}>
-            {isCurrency && <Text style={styles.cur}>{currencySymbol(currency)}</Text>}
-            <TextInput
-              value={value}
-              onChangeText={(v) => setValue(v.replace(/[^0-9.,]/g, ''))}
-              keyboardType={isCurrency ? 'decimal-pad' : 'number-pad'}
-              style={styles.amountInput}
-              maxLength={10}
-              placeholder="0"
-              placeholderTextColor={colors.ink3}
-            />
-          </View>
-
-          {valid && (
-            <Text style={[styles.hint, num <= aggregate && { color: colors.clay }]}>
-              {num > aggregate
-                ? t('goalsAgg.faithAbove', { value: fmtValue(num - aggregate) })
-                : t('goalsAgg.faithBelow')}
-            </Text>
-          )}
-
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
-            <Button label={t('common.cancel')} variant="ghost" onPress={onClose} style={{ flex: 1 }} height={48} />
-            <Button
-              label={existing ? t('common.edit') : t('goalsAgg.declare')}
-              onPress={onSubmit}
-              disabled={!valid}
-              loading={saving}
-              style={{ flex: 1 }}
-              height={48}
-            />
-          </View>
-          {existing && (
-            <Button
-              label={t('goalsAgg.removeFaith')}
-              variant="danger"
-              onPress={onRemove}
-              fullWidth
-              height={44}
-              style={{ marginTop: 10 }}
-            />
-          )}
-        </Card>
-      </View>
-    </Modal>
   );
 }
 
@@ -873,21 +688,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.ink,
   },
-  faithBadge: {
-    backgroundColor: 'rgba(201,149,107,0.22)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 99,
-  },
-  faithBadgeText: {
-    fontFamily: fonts.sans,
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: colors.earthDeep,
-  },
   lineFooter: { flexDirection: 'row', justifyContent: 'space-between' },
   lineValue: { fontFamily: fonts.serif, fontSize: 17, color: colors.ink, marginTop: 2 },
-  faithListCard: { paddingHorizontal: 16, paddingVertical: 14, marginTop: 4 },
+  listCard: { paddingHorizontal: 16, paddingVertical: 14, marginTop: 4 },
   unitRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -911,7 +714,7 @@ const styles = StyleSheet.create({
   statusBadge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 99 },
   statusBadgeText: { fontFamily: fonts.sans, fontSize: 11, fontWeight: '700' },
   backLink: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: colors.moss },
-  faithListItem: {
+  listItem: {
     fontFamily: fonts.sans,
     fontSize: 12.5,
     color: colors.ink2,
@@ -941,29 +744,4 @@ const styles = StyleSheet.create({
   modalCard: { paddingHorizontal: 20, paddingVertical: 20 },
   modalTitle: { fontFamily: fonts.serif, fontSize: 21, color: colors.ink },
   modalSub: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4 },
-  amountRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'center',
-    marginTop: 14,
-  },
-  cur: { fontFamily: fonts.serif, fontSize: 26, color: colors.ink3, marginRight: 4 },
-  amountInput: {
-    fontFamily: fonts.serif,
-    fontSize: 44,
-    fontWeight: '500',
-    color: colors.ink,
-    textAlign: 'center',
-    minWidth: 110,
-    letterSpacing: -0.8,
-    paddingVertical: 0,
-  },
-  hint: {
-    fontFamily: fonts.sans,
-    fontSize: 12.5,
-    color: colors.mossSoft,
-    marginTop: 10,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
 });

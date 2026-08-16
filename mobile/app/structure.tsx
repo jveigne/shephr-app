@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
+  Linking,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,7 +21,8 @@ import Button from '../components/Button';
 import { colors, fonts } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { canCreateAssembly, canManageStructure, canManageZones, isSecretariat } from '../services/authApi';
+import { canManageStructure, canManageZones, isSecretariat } from '../services/authApi';
+import { contactMailto, useContactSettings } from '../services/contactApi';
 import { confirmDialog, notify } from '../utils/dialogs';
 import i18n from '../utils/i18n/i18n';
 import {
@@ -118,15 +120,19 @@ export default function StructureScreen() {
   const isAdmin = me?.superAdmin ?? false;
   // RDG 25/07 : la création ET la suppression directes de nation/région/ville sont réservées au
   // SUPER_ADMIN (back-office) et au SECRETARIAT. Les assemblées ont leurs propres règles — voir
-  // `canAdd` ci-dessous (palier C1 : création directe ouverte aux dirigeants).
+  // `canAdd` ci-dessous.
   const secretariat = isSecretariat(me);
   const canDirect = isAdmin || secretariat;
   const canEdit = level === 'countries' ? false
     : level === 'zones' ? canManageZones(me)
     : canManageStructure(me);
-  // Palier C1 (JP 14/08) : la création d'ASSEMBLÉE est ouverte aux dirigeants (le backend garde le
-  // périmètre : « dans MA ville » → 403 sinon). Nation/région/ville restent SUPER_ADMIN/SECRETARIAT.
-  const canAdd = level === 'units' ? canCreateAssembly(me) : canDirect;
+  // RG-BQ-12 (JP 16/08) : la création d'une ASSEMBLÉE n'a PLUS AUCUNE contrainte géographique —
+  // tout compte du ministère en crée une dans la ville de son choix, sans y être rattaché ni en
+  // être dirigeant. Le créateur en devient responsable (et passe DIRIGEANT_UNITE s'il était
+  // MEMBRE ; jamais de rétrogradation, et son rôle Dons n'est pas promu).
+  // ⚠ MODIFIER / SUPPRIMER une assemblée reste gardé côté serveur (`canEdit` ci-dessus) : on ouvre
+  // la création, pas l'administration. Nation/région/ville restent SUPER_ADMIN/SECRETARIAT.
+  const canAdd = level === 'units' ? true : canDirect;
   // Suppression sans passer par la modale d'édition (pas de modification in-app pour les
   // nations ; le SECRETARIAT ne modifie pas les régions/villes).
   const canDeleteRow = level === 'countries' ? canDirect
@@ -444,6 +450,7 @@ function StructureFormModal({
   onDelete: (lvl: Level, id: string, name: string) => Promise<void>;
 }) {
   const { t } = useLanguage();
+  const contact = useContactSettings();
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState('');
   const [saving, setSaving] = useState(false);
@@ -455,8 +462,11 @@ function StructureFormModal({
   const open = editing != null;
   const level = editing?.level ?? 'zones';
   const item = editing?.item ?? null;
-  /** Uniquement à la CRÉATION d'une assemblée : renommer une assemblée ne redemande pas son dirigeant. */
-  const needsLeader = level === 'units' && item == null;
+  /**
+   * Champ « responsable » proposé à la CRÉATION d'une assemblée — FACULTATIF depuis RG-BQ-12 :
+   * laissé vide, le créateur devient lui-même responsable. Renommer n'en redemande pas.
+   */
+  const canPickLeader = level === 'units' && item == null;
 
   useEffect(() => {
     if (open) {
@@ -472,7 +482,7 @@ function StructureFormModal({
 
   // Recherche serveur, débounce court : l'annuaire d'un ministère ne se charge pas en entier.
   useEffect(() => {
-    if (!needsLeader) return;
+    if (!canPickLeader) return;
     const q = leaderQuery.trim();
     if (q.length < 2) { setLeaderResults([]); return; }
     let cancelled = false;
@@ -484,7 +494,7 @@ function StructureFormModal({
         .finally(() => { if (!cancelled) setLeaderLoading(false); });
     }, 300);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [leaderQuery, needsLeader]);
+  }, [leaderQuery, canPickLeader]);
 
   const parentLabel = level === 'zones' ? t('structure.parentCountry') : level === 'localities' ? t('structure.parentZone') : t('structure.parentLocality');
   const parents = level === 'zones'
@@ -493,11 +503,10 @@ function StructureFormModal({
     ? zones.map((z) => ({ id: z.id, name: z.name }))
     : localities.map((l) => ({ id: l.id, name: l.name }));
 
+  // RG-BQ-12 : `leaderUserId` est FACULTATIF — omis, le créateur devient responsable. Le code
+  // 422 `UNIT_LEADER_REQUIRED` ne peut plus être levé, il n'y a donc plus rien à désactiver.
   const valid = name.trim().length > 0
-    && (level === 'localities' ? (zoneOptional || parentId !== '') : parentId !== '')
-    // Sans responsable, le backend refuse (422 UNIT_LEADER_REQUIRED) : on désactive plutôt que
-    // de laisser l'utilisateur buter sur une erreur.
-    && (!needsLeader || leaderId !== '');
+    && (level === 'localities' ? (zoneOptional || parentId !== '') : parentId !== '');
 
   const onSave = async () => {
     if (!valid) { notify(t('common.appName'), t('structure.fillFields')); return; }
@@ -515,12 +524,20 @@ function StructureFormModal({
         if (item) await updateUnit(item.id, { name: name.trim(), localityId: parentId, type: 'ASSEMBLY' });
         else await createUnit({
           ministryId: ministryId!, localityId: parentId, name: name.trim(), type: 'ASSEMBLY',
-          leaderUserId: leaderId,
+          leaderUserId: leaderId || undefined,
         });
       }
       await onSaved();
     } catch (e: any) {
-      notify(t('structure.saveRefusedTitle'), errMsg(e, t('structure.saveRefusedBody')));
+      // RG-BQ-12 / RG-DS-03 — sans contrainte de lieu, le doublon de nom dans une même ville
+      // devient banal : on lui donne son propre message plutôt que le refus générique.
+      const code = e?.response?.data?.error;
+      notify(
+        t('structure.saveRefusedTitle'),
+        code === 'STRUCTURE_NAME_EXISTS'
+          ? errMsg(e, t('errors.goals.STRUCTURE_NAME_EXISTS'))
+          : errMsg(e, t('structure.saveRefusedBody')),
+      );
     } finally {
       setSaving(false);
     }
@@ -549,9 +566,35 @@ function StructureFormModal({
             {parents.length === 0 && <Text style={styles.empty}>{t('structure.noParent', { parent: parentLabel.toLowerCase() })}</Text>}
           </ScrollView>
 
-          {/* Palier C1-bis — responsable OBLIGATOIRE : une assemblée sans dirigeant n'est
-              administrable par personne. Compte existant uniquement (décision JP 14/08). */}
-          {needsLeader && (
+          {/* RG-BQ-12 : la VILLE reste créée par le secrétariat. Sans issue de secours, une
+              personne dont la ville n'existe pas ne pourrait pas implanter son assemblée. */}
+          {level === 'units' && item == null && (
+            <View style={styles.contactBlock}>
+              <Text style={styles.leaderHint}>{t('structure.missingCityHint')}</Text>
+              <View style={{ gap: 8, marginTop: 8 }}>
+                <Button
+                  label={t('join.contactWhatsapp')}
+                  variant="soft"
+                  height={44}
+                  onPress={() => Linking.openURL(contact.whatsappUrl).catch(() => {})}
+                  iconLeft={<Ionicons name="logo-whatsapp" size={17} color={colors.mossDeep} />}
+                />
+                <Button
+                  label={t('join.contactMail')}
+                  variant="ghost"
+                  height={44}
+                  onPress={() =>
+                    Linking.openURL(contactMailto(t('structure.contactMailSubject'))).catch(() => {})
+                  }
+                  iconLeft={<Ionicons name="mail-outline" size={17} color={colors.mossDeep} />}
+                />
+              </View>
+            </View>
+          )}
+
+          {/* RG-BQ-12 — responsable FACULTATIF : laissé vide, le créateur devient responsable.
+              Compte existant uniquement quand on en désigne un (décision JP 14/08). */}
+          {canPickLeader && (
             <>
               <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.leader')}</Label>
               <Text style={styles.leaderHint}>{t('structure.leaderHint')}</Text>
@@ -627,6 +670,7 @@ const styles = StyleSheet.create({
   modalCard: { paddingHorizontal: 20, paddingVertical: 20 },
   modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink },
   leaderHint: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginBottom: 6, lineHeight: 17 },
+  contactBlock: { marginTop: 18, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.hair },
   leaderRow: {
     paddingHorizontal: 12, paddingVertical: 10, marginTop: 6, borderRadius: 10,
     borderWidth: 1, borderColor: 'rgba(42,38,32,0.12)', backgroundColor: colors.paper,

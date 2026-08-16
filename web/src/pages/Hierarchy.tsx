@@ -23,6 +23,28 @@ const ROLE_TONE: Partial<Record<ModuleRole, 'green' | 'earth' | 'gray'>> = {
   DIRIGEANT_UNITE: 'earth',
 };
 
+/**
+ * Pastille « où en est cette personne sur le But Quinquennal » (RG-BQ-11 — un dirigeant déclare
+ * comme tout le monde). C'est ici que se lit la campagne de redéclaration.
+ *
+ * <p>⚠ `null` sur les trois champs = aucun Goal actif, ou personne non rattachée → AUCUNE pastille,
+ * surtout pas un faux « rien déclaré ».
+ */
+function GoalPastille({
+  hasPledges, submitted, late,
+}: {
+  hasPledges: boolean | null;
+  submitted: boolean | null;
+  late: boolean | null;
+}) {
+  const { t } = useTranslation();
+  if (hasPledges == null && submitted == null && late == null) return null;
+  if (submitted === true) return <Badge tone="ok" dot>{t('hierarchy.goalSubmitted')}</Badge>;
+  if (late === true) return <Badge tone="err" dot>{t('hierarchy.goalLate')}</Badge>;
+  if (hasPledges === true) return <Badge tone="warn" dot>{t('hierarchy.goalDraft')}</Badge>;
+  return <Badge tone="gray" dot>{t('hierarchy.goalNoPledges')}</Badge>;
+}
+
 const countLeaders = (n: LeaderHierarchyNode): number =>
   1 + n.children.reduce((acc, c) => acc + countLeaders(c), 0);
 const countUnits = (n: LeaderHierarchyNode): number =>
@@ -183,6 +205,7 @@ function LeaderNode({ node, depth, meId }: { node: LeaderHierarchyNode; depth: n
           <Badge tone="gray">{t(`roles.${node.donationRole}`)}</Badge>
         )}
         {meId === node.id && <Badge tone="ok">{t('hierarchy.you')}</Badge>}
+        <GoalPastille hasPledges={node.goalHasPledges} submitted={node.goalSubmitted} late={node.goalLate} />
         <span style={{ marginLeft: 'auto', color: 'var(--ink-500)', fontSize: 12 }}>
           {node.units.length > 0 && t('hierarchy.unitsCount', { count: node.units.length })}
         </span>
@@ -248,6 +271,7 @@ function UnitRow({ unit, depth }: { unit: HierarchyUnitView; depth: number }) {
             <span>{m.fullName}</span>
             <span style={{ color: 'var(--ink-500)', fontSize: 12 }}>{m.email}</span>
             {!m.active && <Badge tone="gray">{t('users.statusInactive')}</Badge>}
+            <GoalPastille hasPledges={m.goalHasPledges} submitted={m.goalSubmitted} late={m.goalLate} />
           </div>
         ))}
     </div>

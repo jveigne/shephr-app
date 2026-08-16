@@ -10,6 +10,7 @@ import {
   addProgress,
   fetchMyMemberPledges,
   getActiveGoal,
+  getMyAssemblyGoal,
   getMyMemberProgress,
   saveMemberPledge,
   submitMyMemberPledges,
@@ -17,10 +18,12 @@ import {
   type MyProgressResponse,
   type PledgeResponse,
 } from '../services/goalsApi';
+import { isSecretariat } from '../services/authApi';
 import { currencySymbol, fmtAmount, fmtDateLabel } from '../utils/format';
 
-// Feature A — « Mes objectifs » : le MEMBRE déclare son objectif personnel par catégorie.
-// Ces objectifs alimentent l'agrégat des fidèles de son assemblée (members-aggregate).
+// « Mes objectifs » — depuis le chantier « objectifs individuels » (JP 16/08), c'est l'écran de
+// TOUT compte rattaché, dirigeants compris (RG-BQ-11) : chacun déclare POUR LUI-MÊME, et le total
+// de l'assemblée n'est que la somme de ces déclarations (RG-BQ-02).
 
 const errMsg = (err: unknown, fallback: string) =>
   (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -93,11 +96,25 @@ export function MemberGoalsPage() {
     setDrafts(next);
   }, [goal, pledgesQ.data]);
 
+  // Total ANONYME de mon assemblée (RG-BQ-05) : « 7/12 membres ont soumis » + Σ par catégorie.
+  // Aucun nom de personne n'y figure — c'est la raison d'être de ce DTO.
+  const assemblyQ = useQuery({
+    queryKey: ['goals', 'me-assembly', year],
+    queryFn: () => getMyAssemblyGoal(year!),
+    enabled: !!me?.goalUnitId && year != null,
+    retry: false,
+  });
+
   const currency = goal?.defaultCurrency ?? 'EUR';
   // Deadline effective de l'année (Lot G2) — repli legacy sur celle du Goal.
   const yearDeadline =
     (year != null ? goal?.yearDeadlines?.[String(year)] : null) ?? goal?.submissionDeadline ?? null;
+  // ⚠ Ce calcul local ne sert QU'AU BANDEAU d'information et à l'avancement (qui n'a pas de champ
+  // `editable` avant création). L'éditabilité d'un ENGAGEMENT est server-driven (`pledge.editable`)
+  // — la recalculer ici bloquerait à tort le SECRETARIAT/LEADER, que le backend autorise à passer
+  // outre la date limite (RG-BQ-07).
   const deadlinePast = yearDeadline != null && new Date(yearDeadline).getTime() < Date.now();
+  const canBypassDeadline = isSecretariat(me) || (me?.superAdmin ?? false) || me?.goalRole === 'LEADER';
 
   const saveM = useMutation({
     mutationFn: ({ category, value }: { category: GoalCategory; value: number }) =>
@@ -107,7 +124,9 @@ export function MemberGoalsPage() {
         ...(category.unitType === 'CURRENCY' ? { targetAmount: value } : { targetCount: value }),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['goals', 'member-pledges'] });
+      // Mon engagement alimente le total de mon assemblée et le compteur « 7/12 » : on invalide
+      // le préfixe ['goals'] plutôt que la seule clé de mes engagements.
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
       push({ kind: 'ok', title: t('memberGoals.saved') });
     },
     onError: (err) => {
@@ -125,7 +144,11 @@ export function MemberGoalsPage() {
         msg:
           code === 'PLEDGE_LOCKED'
             ? t('memberGoals.lockedAskSecretariat')
-            : errMsg(err, t('goals.saveFailed')),
+            : code === 'DEADLINE_PASSED'
+              ? t('goals.deadlinePassedHelp')
+              : code === 'NO_ASSEMBLY_ATTACHMENT'
+                ? t('memberGoals.noAssembly')
+                : errMsg(err, t('goals.saveFailed')),
       });
     },
   });
@@ -136,7 +159,9 @@ export function MemberGoalsPage() {
   const submitM = useMutation({
     mutationFn: () => submitMyMemberPledges(year ?? undefined),
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ['goals', 'member-pledges'] });
+      // Mon engagement alimente le total de mon assemblée et le compteur « 7/12 » : on invalide
+      // le préfixe ['goals'] plutôt que la seule clé de mes engagements.
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
       setSubmitOpen(false);
       push({
         kind: 'ok',
@@ -154,7 +179,11 @@ export function MemberGoalsPage() {
             ? t('memberGoals.noPledgeToSubmit')
             : code === 'ALREADY_SUBMITTED'
               ? t('memberGoals.alreadySubmitted')
-              : errMsg(err, t('goals.submitFailed')),
+              : code === 'DEADLINE_PASSED'
+                ? t('goals.deadlinePassedHelp')
+                : code === 'NO_ASSEMBLY_ATTACHMENT'
+                  ? t('memberGoals.noAssembly')
+                  : errMsg(err, t('goals.submitFailed')),
       });
     },
   });
@@ -173,7 +202,8 @@ export function MemberGoalsPage() {
         note: note.trim() || undefined,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['goals', 'member-progress'] });
+      // Le versé remonte aussi dans les totaux de l'assemblée (`achieved*`).
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
       setProgressOpen(false);
       setProgressValue('');
       setProgressNote('');
@@ -216,7 +246,9 @@ export function MemberGoalsPage() {
   const myPledges = pledgesQ.data ?? [];
   const openPledges = myPledges.filter((p) => !p.locked);
   const allSubmitted = myPledges.length > 0 && openPledges.length === 0;
-  const canSubmit = openPledges.length > 0 && !deadlinePast;
+  // Server-driven : au moins un engagement encore écrivable POUR MOI (le secrétariat garde la
+  // main après la date limite, un membre non).
+  const canSubmit = openPledges.some((p) => p.editable !== false);
 
   // Sélecteur d'année : les années VISIBLES du Goal (les jalons), et non `openYears` qui porte
   // le droit d'ÉCRITURE — même source que la vue dirigeant et que le mobile.
@@ -225,8 +257,36 @@ export function MemberGoalsPage() {
   // L'avancement porte sur un engagement EXISTANT : verrouillé ou non (déclarer où l'on en est
   // reste possible après la soumission), tant que la date limite n'est pas passée.
   const declarable = lines.filter((l) => l.pledge != null);
-  const canDeclareProgress = declarable.length > 0 && !deadlinePast;
+  // L'avancement n'a pas d'équivalent de `pledge.editable` avant sa création : on reproduit la
+  // règle serveur (deadline + contournement secrétariat) et on laisse le 422 trancher au besoin.
+  const canDeclareProgress = declarable.length > 0 && (!deadlinePast || canBypassDeadline);
   const progressLine = declarable.find((l) => l.category.id === progressCat) ?? null;
+
+  // Lignes du bloc « mon assemblée » : Σ engagée / Σ déclarée, par catégorie (aucun nom).
+  const catById = new Map((goal?.categories ?? []).map((c) => [c.id, c]));
+  const fmtCat = (categoryId: string, value: number | null | undefined) => {
+    const cat = catById.get(categoryId);
+    const v = value ?? 0;
+    if (!cat) return String(v);
+    return cat.unitType === 'CURRENCY' ? fmtAmount(v, currency) : `${v} ${cat.unitLabel ?? ''}`.trim();
+  };
+  const assemblyRows = [...(assemblyQ.data?.lines ?? [])]
+    .sort((a, b) => (catById.get(a.categoryId)?.displayOrder ?? 0) - (catById.get(b.categoryId)?.displayOrder ?? 0))
+    .map((l) => ({ ...l, id: l.categoryId }));
+  const assemblyCols: Column<(typeof assemblyRows)[number]>[] = [
+    {
+      label: t('goals.colCategory'),
+      render: (l) => <strong>{catById.get(l.categoryId)?.name ?? l.categoryCode}</strong>,
+    },
+    {
+      label: t('goals.colPledged'),
+      render: (l) => fmtCat(l.categoryId, l.effectiveAmount ?? l.effectiveCount),
+    },
+    {
+      label: t('goals.colPaid'),
+      render: (l) => fmtCat(l.categoryId, l.achievedAmount ?? l.achievedCount),
+    },
+  ];
 
   const cols: Column<MemberLine>[] = [
     {
@@ -246,7 +306,9 @@ export function MemberGoalsPage() {
       label: t('memberGoals.colMyGoal'),
       style: { width: 200 },
       render: (l) => {
-        const locked = l.pledge?.locked === true || deadlinePast;
+        // RG-BQ-07/08 — `editable` est la source de vérité : il intègre le verrou de soumission ET
+        // la date limite, contournement SECRETARIAT/LEADER compris.
+        const locked = l.pledge != null && l.pledge.editable === false;
         return locked ? (
           <strong>
             {l.pledge
@@ -302,7 +364,7 @@ export function MemberGoalsPage() {
       style: { width: 150 },
       cellStyle: { textAlign: 'right' },
       render: (l) =>
-        l.pledge?.locked === true || deadlinePast ? null : (
+        l.pledge != null && l.pledge.editable === false ? null : (
           <Button
             size="sm"
             variant="primary"
@@ -370,6 +432,9 @@ export function MemberGoalsPage() {
             <div className="empty">
               <div className="icon-wrap"><Icon name="warning" size={26} /></div>
               <h4>{t('goals.notAttached')}</h4>
+              {/* Branche défensive : la garde de MemberShell (hasMemberSpace) exige déjà le
+                  rattachement. Le recours est le secrétariat, pas le self-service — l'assemblée est
+                  exigée à l'inscription (RG-BQ-03, décision JP 16/08). */}
               <p>{t('memberGoals.noAssembly')}</p>
             </div>
           </div>
@@ -437,6 +502,52 @@ export function MemberGoalsPage() {
             )}
 
             <Table columns={cols} rows={lines} zebra />
+
+            {/* Total ANONYME de mon assemblée (RG-BQ-05) : je vois la somme et le compteur de
+                soumission, jamais qui a déclaré quoi. Masqué si le backend refuse (422
+                USER_NO_GOAL_UNIT / pas d'assemblée). */}
+            {assemblyQ.data && (
+              <div style={{ marginTop: 26 }}>
+                <h3 style={{ margin: '0 0 4px' }}>
+                  {t('memberGoals.assemblyTotalTitle', {
+                    name: assemblyQ.data.unitName ?? t('memberGoals.assemblyFallbackName'),
+                  })}
+                </h3>
+                <p
+                  style={{
+                    margin: '0 0 10px', fontSize: 13, color: 'var(--ink-500)',
+                    display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                  }}
+                >
+                  <strong>
+                    {t('goals.membersSubmittedRatio', {
+                      submitted: assemblyQ.data.submittedMembers,
+                      total: assemblyQ.data.totalMembers,
+                      percent:
+                        assemblyQ.data.totalMembers > 0
+                          ? Math.round((assemblyQ.data.submittedMembers / assemblyQ.data.totalMembers) * 100)
+                          : 0,
+                    })}
+                  </strong>
+                  {assemblyQ.data.lateMembers > 0 && (
+                    <Badge tone="err" dot>
+                      {t('goals.lateMembers', { count: assemblyQ.data.lateMembers })}
+                    </Badge>
+                  )}
+                  <span style={{ color: 'var(--ink-400)' }}>{t('memberGoals.assemblyTotalHint')}</span>
+                </p>
+                <Table
+                  columns={assemblyCols}
+                  rows={assemblyRows}
+                  zebra
+                  empty={
+                    <p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>
+                      {t('memberGoals.assemblyTotalEmpty')}
+                    </p>
+                  }
+                />
+              </div>
+            )}
           </>
         ) : null}
       </div>

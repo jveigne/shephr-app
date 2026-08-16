@@ -3,29 +3,38 @@ import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl } 
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '../../../components/ScreenShell';
 import Card from '../../../components/Card';
+import Label from '../../../components/Label';
 import { UnitStatusBadge } from '../../../components/GoalAggregates';
-import { UnitGoalsScreen } from './index';
+import UnitMembersAggregate from '../../../components/UnitMembersAggregate';
 import { colors, fonts } from '../../../theme';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
-import { getActiveGoal, getMyUnits, type ZoneUnitStatus } from '../../../services/goalsApi';
+import { fmtAmount } from '../../../utils/format';
+import {
+  getActiveGoal,
+  getMyUnits,
+  getUnitDetail,
+  type ActiveGoal,
+  type UnitPledgeDetail,
+  type ZoneUnitStatus,
+} from '../../../services/goalsApi';
 
 /**
- * Palier A3 (JP 14/08) — « Mes assemblées » : drill-down du dirigeant qui en tient PLUSIEURS.
+ * « Mes assemblées » — drill-down du dirigeant, en LECTURE SEULE.
  *
- * <p>Jusqu'ici ce profil retombait sur son assemblée « home » et n'avait aucun moyen d'atteindre
- * les autres. Ici il les voit toutes (statut de soumission, ville), entre dans celle qu'il veut,
- * et y déclare / soumet en tant que dirigeant de CETTE assemblée — l'écran d'engagements est le
- * même que pour un dirigeant mono-assemblée, simplement paramétré par `unitId`.
+ * <p>Palier A3 (JP 14/08), révisé le 16/08 : ouvrir une assemblée n'ouvre plus un écran de saisie
+ * (RG-BQ-11 — un dirigeant ne déclare plus pour son assemblée) mais son DÉTAIL : la somme engagée
+ * par catégorie, puis le détail nominatif de ses membres (RG-BQ-05).
  *
- * <p>Le statut vient de `GET /goals/me/units` (déjà utilisé par le drill-down du dirigeant de
- * ville). Si cet appel ne renvoie rien, on retombe sur les assemblées portées par le compte
- * (`me.assemblies`, palier A2) : mieux vaut une liste sans badge qu'un écran vide.
+ * <p>Le statut vient de `GET /goals/me/units`, à la maille PERSONNE : « 7/12 ont soumis », plus un
+ * booléen d'assemblée. Si l'appel ne renvoie rien, on retombe sur les assemblées portées par le
+ * compte (`me.assemblies`) : mieux vaut une liste sans badge qu'un écran vide.
  */
 export default function MyUnitsScreen() {
   const { t } = useLanguage();
   const { me } = useAuth();
   const [units, setUnits] = useState<ZoneUnitStatus[]>([]);
+  const [goal, setGoal] = useState<ActiveGoal | null>(null);
   const [year, setYear] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -41,9 +50,10 @@ export default function MyUnitsScreen() {
 
   const load = async () => {
     try {
-      const goal = await getActiveGoal();
-      setYear(goal.currentYear);
-      const all = await getMyUnits(goal.currentYear).catch(() => [] as ZoneUnitStatus[]);
+      const g = await getActiveGoal();
+      setGoal(g);
+      setYear(g.currentYear);
+      const all = await getMyUnits(g.currentYear).catch(() => [] as ZoneUnitStatus[]);
       setUnits(all);
     } finally {
       setLoading(false);
@@ -63,13 +73,14 @@ export default function MyUnitsScreen() {
     }
   };
 
-  // Une assemblée ouverte : l'écran d'engagements paramétré, qui affiche lui-même le retour à la
-  // liste en tête de page (un bouton flottant en bas passait sous la barre d'onglets).
-  if (selected) {
+  // Une assemblée ouverte : son détail, en lecture (RG-BQ-05).
+  if (selected && goal && year != null) {
     return (
-      <UnitGoalsScreen
+      <UnitDetailScreen
         unitId={selected.id}
         unitName={selected.name}
+        goal={goal}
+        year={year}
         onBack={() => setSelected(null)}
       />
     );
@@ -132,6 +143,14 @@ export default function MyUnitsScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.unitName}>{row.unitName}</Text>
                   {!!row.localityName && <Text style={styles.unitCity}>{row.localityName}</Text>}
+                  {row.status && row.status.totalMembers > 0 && (
+                    <Text style={styles.unitCity}>
+                      {t('goals.members.submittedRatioLong', {
+                        submitted: row.status.submittedMembers,
+                        total: row.status.totalMembers,
+                      })}
+                    </Text>
+                  )}
                 </View>
                 {row.status && <UnitStatusBadge unit={row.status} />}
                 <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
@@ -146,9 +165,87 @@ export default function MyUnitsScreen() {
   );
 }
 
+/** Détail d'UNE assemblée : somme engagée par catégorie + détail nominatif de ses membres. */
+function UnitDetailScreen({
+  unitId,
+  unitName,
+  goal,
+  year,
+  onBack,
+}: {
+  unitId: string;
+  unitName: string;
+  goal: ActiveGoal;
+  year: number;
+  onBack: () => void;
+}) {
+  const { t } = useLanguage();
+  const [detail, setDetail] = useState<UnitPledgeDetail[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getUnitDetail(unitId, year)
+      .then((d) => { if (!cancelled) setDetail(d); })
+      .catch(() => { if (!cancelled) setDetail([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [unitId, year]);
+
+  const currency = goal.defaultCurrency;
+  const catByCode = new Map(goal.categories.map((c) => [c.code, c]));
+
+  return (
+    <ScreenShell>
+      <Pressable onPress={onBack} style={styles.backRow} hitSlop={8}>
+        <Ionicons name="chevron-back" size={18} color={colors.mossDeep} />
+        <Text style={styles.backRowText}>{t('goals.myUnits.back')}</Text>
+      </Pressable>
+
+      <View style={styles.titleRow}>
+        <Ionicons name="home-outline" size={22} color={colors.mossSoft} />
+        <Text style={styles.title}>{unitName}</Text>
+      </View>
+      <Text style={styles.hint}>{t('goalsAgg.unitPledgesSub', { year })}</Text>
+
+      <Card variant="paper2" style={styles.detailCard}>
+        <Label style={{ marginBottom: 8 }}>{t('goalsAgg.unitPledgesTitle', { name: unitName })}</Label>
+        {loading && <ActivityIndicator color={colors.moss} />}
+        {!loading && (detail ?? []).length === 0 && (
+          <Text style={styles.empty}>{t('goalsAgg.noPledgeInUnit')}</Text>
+        )}
+        {!loading && (detail ?? []).map((d) => {
+          const cat = catByCode.get(d.categoryCode);
+          const pledged = d.unitType === 'CURRENCY'
+            ? d.targetAmount != null ? fmtAmount(d.targetAmount, currency) : '—'
+            : d.targetCount != null ? `${d.targetCount} ${cat?.unitLabel ?? ''}`.trim() : '—';
+          const paid = d.unitType === 'CURRENCY'
+            ? fmtAmount(d.achievedAmount ?? 0, currency)
+            : `${d.achievedCount ?? 0} ${cat?.unitLabel ?? ''}`.trim();
+          return (
+            <View key={d.categoryId} style={styles.detailRow}>
+              <Text style={styles.unitName}>{cat?.name ?? d.categoryCode}</Text>
+              <View style={{ flexDirection: 'row', gap: 16 }}>
+                <Text style={styles.unitCity}>{t('goalsAgg.colPledged')} : {pledged}</Text>
+                <Text style={styles.unitCity}>{t('goalsAgg.colPaid')} : {paid}</Text>
+              </View>
+            </View>
+          );
+        })}
+      </Card>
+
+      {/* RG-BQ-05 — le drill-down descend jusqu'au membre. */}
+      <UnitMembersAggregate unitId={unitId} year={year} goal={goal} defaultExpanded />
+    </ScreenShell>
+  );
+}
+
 const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4 },
+  title: { flex: 1, fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4 },
+  backRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: 6, paddingVertical: 4 },
+  backRowText: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.mossDeep },
   viewChip: {
     alignSelf: 'flex-start',
     marginTop: 8,
@@ -171,6 +268,14 @@ const styles = StyleSheet.create({
   },
   unitName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
   unitCity: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginTop: 2 },
+  detailCard: { marginTop: 16, paddingHorizontal: 16, paddingVertical: 14 },
+  detailRow: {
+    gap: 3,
+    paddingTop: 8,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(42,38,32,0.06)',
+  },
   footnote: {
     fontFamily: fonts.sans,
     fontSize: 12,

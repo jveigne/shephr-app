@@ -195,6 +195,36 @@ export default function HierarchieScreen() {
   );
 }
 
+/**
+ * Pastille de soumission du But Quinquennal (RG-BQ-06/11, 16/08).
+ *
+ * <p>Un dirigeant voit d'un coup d'œil qui, dans son arbre, n'a pas déclaré. `null` = pas de Goal
+ * actif ou personne non rattachée → AUCUNE pastille (ne pas confondre avec « pas encore soumis »).
+ */
+function GoalPill({
+  hasPledges,
+  submitted,
+  late,
+}: {
+  hasPledges: boolean | null;
+  submitted: boolean | null;
+  late: boolean | null;
+}) {
+  const { t } = useLanguage();
+  if (submitted == null) return null;
+  if (submitted) {
+    return <Text style={[styles.goalPill, styles.goalPillDone]}>{t('hierarchy.goalSubmitted')}</Text>;
+  }
+  if (late) {
+    return <Text style={[styles.goalPill, styles.goalPillLate]}>{t('hierarchy.goalLate')}</Text>;
+  }
+  return (
+    <Text style={[styles.goalPill, styles.goalPillPending]}>
+      {hasPledges ? t('hierarchy.goalDraft') : t('hierarchy.goalNothing')}
+    </Text>
+  );
+}
+
 function LeaderNodeRow({ node, depth, meId }: { node: LeaderHierarchyNode; depth: number; meId: string | null }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(depth < 2);
@@ -216,6 +246,11 @@ function LeaderNodeRow({ node, depth, meId }: { node: LeaderHierarchyNode; depth
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <Text style={styles.nodeName} numberOfLines={1}>{node.fullName}</Text>
             {meId === node.id && <Text style={styles.youPill}>{t('hierarchy.you')}</Text>}
+            <GoalPill
+              hasPledges={node.goalHasPledges}
+              submitted={node.goalSubmitted}
+              late={node.goalLate}
+            />
           </View>
           <Text style={styles.nodeMeta} numberOfLines={1}>
             {role ? MODULE_ROLE_LABELS[role] : '—'}
@@ -279,6 +314,11 @@ function UnitRow({ unit, depth, leaderName, hideLocality }: {
             <View key={m.id} style={styles.memberRow}>
               <Text style={styles.memberName} numberOfLines={1}>{m.fullName}</Text>
               {!m.active && <Text style={styles.inactivePill}>{t('membres.inactive')}</Text>}
+              <GoalPill
+                hasPledges={m.goalHasPledges}
+                submitted={m.goalSubmitted}
+                late={m.goalLate}
+              />
             </View>
           ))}
         </View>
@@ -341,6 +381,14 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99,
     backgroundColor: 'rgba(169,129,44,0.14)', overflow: 'hidden',
   },
+  goalPill: {
+    fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.6,
+    textTransform: 'uppercase', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99,
+    overflow: 'hidden',
+  },
+  goalPillDone: { color: colors.mossDeep, backgroundColor: colors.mossTint2 },
+  goalPillPending: { color: colors.earthDeep, backgroundColor: 'rgba(201,149,107,0.22)' },
+  goalPillLate: { color: colors.clay, backgroundColor: 'rgba(176,90,62,0.13)' },
   inactivePill: {
     fontFamily: fonts.mono, fontSize: 9, color: colors.ink3, letterSpacing: 0.6,
     textTransform: 'uppercase', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99,

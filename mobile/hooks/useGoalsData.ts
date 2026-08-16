@@ -4,8 +4,6 @@ import {
   fetchMyMemberPledges,
   getActiveGoal,
   getMyMemberProgress,
-  getMyPledges,
-  getMyProgress,
   type ActiveGoal,
   type GoalCategory,
   type PledgeResponse,
@@ -29,8 +27,14 @@ export interface GoalsData {
   pledges: PledgeResponse[];
   progressByPledge: Record<string, ProgressResponse[]>;
   lines: GoalLine[];
-  /** Soumis = au moins un pledge et tous verrouillés (UC-DIR-08 A3). */
+  /** Soumis = au moins un pledge et tous verrouillés (RG-BQ-06). */
   submitted: boolean;
+  /**
+   * Au moins un de mes engagements est encore modifiable — server-driven (`PledgeResponse.editable`).
+   * ⚠ Ne PAS remplacer par un calcul local de la date limite : le SECRETARIAT et le LEADER passent
+   * outre côté serveur, et un calcul local leur masquerait les boutons à tort.
+   */
+  anyEditable: boolean;
   loading: boolean;
   error: GoalsError;
   reload: () => Promise<void>;
@@ -38,10 +42,12 @@ export interface GoalsData {
 
 function classifyError(e: any): GoalsError {
   const status = e?.response?.status;
+  const code: string = e?.response?.data?.error ?? '';
   const message: string = e?.response?.data?.message ?? '';
   if (status === 404) return 'NO_GOAL';
+  if (code === 'USER_NO_GOAL_UNIT' || code === 'NO_ASSEMBLY_ATTACHMENT') return 'NO_UNIT';
   if (status === 400 && /goal unit/i.test(message)) return 'NO_UNIT';
-  if (message.includes('USER_NO_GOAL_UNIT')) return 'NO_UNIT';
+  if (message.includes('USER_NO_GOAL_UNIT') || message.includes('NO_ASSEMBLY_ATTACHMENT')) return 'NO_UNIT';
   return 'OTHER';
 }
 
@@ -64,19 +70,13 @@ export function progressTotal(items: ProgressResponse[]): number {
 }
 
 /**
- * Feature A — mode « objectifs personnels du membre » : mêmes lignes, même écran, mais les
- * engagements ET leurs avancements viennent du niveau MEMBER (`/goals/member/me/...`) au lieu
- * de ceux de l'assemblée. Décision JP 28/07 : le membre déclare aussi l'état de SES objectifs.
+ * MES objectifs personnels — un seul mode depuis le chantier « objectifs individuels » (JP 16/08).
  *
- * <p>Palier A3 (JP 14/08) — `unitId` facultatif : l'assemblée à consulter pour un dirigeant qui en
- * tient plusieurs. Absent, le backend retombe sur l'assemblée « home », donc les écrans
- * mono-assemblée sont inchangés. Sans effet en mode membre (ses objectifs sont personnels).
+ * <p>RG-BQ-01/11 : un engagement appartient à une PERSONNE, dirigeant compris. L'ancien mode
+ * « engagements de mon assemblée » (`getMyPledges` / `getMyProgress`, paramètres `member` et
+ * `unitId`) a disparu avec les routes qu'il appelait — tout compte rattaché lit et écrit ici.
  */
-export function useGoalsData(
-  selectedYear?: number | null,
-  member = false,
-  unitId?: string | null,
-): GoalsData {
+export function useGoalsData(selectedYear?: number | null): GoalsData {
   const [goal, setGoal] = useState<ActiveGoal | null>(null);
   const [pledges, setPledges] = useState<PledgeResponse[]>([]);
   const [progressByPledge, setProgressByPledge] = useState<
@@ -90,11 +90,10 @@ export function useGoalsData(
       const g = await getActiveGoal();
       // Annualisation Lot 4.6 : année sélectionnée (défaut = année courante du Goal).
       const y = selectedYear ?? g.currentYear;
-      // Lot 4.3 : un seul appel /me/progress remplace un listProgress par pledge.
-      const unit = member ? undefined : (unitId ?? undefined);
+      // Lot 4.3 : un seul appel /member/me/progress remplace un listProgress par pledge.
       const [ps, progress] = await Promise.all([
-        member ? fetchMyMemberPledges(y) : getMyPledges(y, unit),
-        member ? getMyMemberProgress(y) : getMyProgress(y, unit),
+        fetchMyMemberPledges(y),
+        getMyMemberProgress(y),
       ]);
       const byPledge: Record<string, ProgressResponse[]> = {};
       for (const p of progress) {
@@ -109,7 +108,7 @@ export function useGoalsData(
     } finally {
       setLoading(false);
     }
-  }, [selectedYear, member, unitId]);
+  }, [selectedYear]);
 
   useEffect(() => {
     reload();
@@ -135,6 +134,7 @@ export function useGoalsData(
   });
 
   const submitted = pledges.length > 0 && pledges.every((p) => p.locked);
+  const anyEditable = pledges.some((p) => p.editable === true);
 
   return {
     goal,
@@ -142,6 +142,7 @@ export function useGoalsData(
     progressByPledge,
     lines,
     submitted,
+    anyEditable,
     loading,
     error,
     reload,

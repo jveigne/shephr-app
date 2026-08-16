@@ -18,7 +18,7 @@ import Button from '../components/Button';
 import { colors, fonts } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { canManageUsers, MODULE_ROLE_LABELS, type ModuleRole } from '../services/authApi';
+import { canManageUsers, isSecretariat, MODULE_ROLE_LABELS, type ModuleRole } from '../services/authApi';
 import {
   fetchGoalSubmissionSummary, listUsers, listUnits,
   type AdminUserResponse, type GoalSubmissionSummary, type UnitResponse,
@@ -27,10 +27,13 @@ import SelectField from '../components/SelectField';
 import {
   fetchMemberGoals,
   getActiveGoal,
+  sendMemberReminder,
+  unlockMember,
   type ActiveGoal,
   type MemberGoalsResponse,
   type PledgeResponse,
 } from '../services/goalsApi';
+import { confirmDialog, notify } from '../utils/dialogs';
 import {
   fetchRequestContext,
   type RequestNodeOption,
@@ -253,8 +256,10 @@ export default function MembresScreen() {
                   {unit ? ` · ${unit}` : ''}
                 </Text>
               </View>
-              {/* JP 14/08 — un dirigeant d'assemblée porte l'engagement de SON assemblée, un
-                  membre ses objectifs personnels. `null` = non concerné → aucun badge. */}
+              {/* RG-BQ-06 (16/08) — TOUT compte rattaché soumet personnellement, dirigeant de
+                  ville, senior, coordinateur et secrétariat compris. `null` ne signifie plus
+                  « ce rôle n'a rien à déclarer » mais seulement « compte sans assemblée de
+                  rattachement, ou superAdmin » → aucun badge. */}
               {u.goalSubmitted != null && (
                 <Text style={[styles.submittedPill, !u.goalSubmitted && styles.submittedPillPending]}>
                   {u.goalSubmitted ? t('membres.submittedYes') : t('membres.submittedNo')}
@@ -278,7 +283,11 @@ export default function MembresScreen() {
         )}
       </View>
 
-      <MemberGoalsModal member={openedMember} onClose={() => setOpenedMember(null)} />
+      <MemberGoalsModal
+        member={openedMember}
+        secretariat={me?.superAdmin === true || isSecretariat(me)}
+        onClose={() => setOpenedMember(null)}
+      />
 
       <UnitPickerModal
         open={pickingUnit}
@@ -296,13 +305,27 @@ export default function MembresScreen() {
 /**
  * Engagements d'une personne (JP 31/07) — ouverts en cliquant sur son nom dans la liste.
  *
- * <p>Deux volets quand ils existent : ses engagements PERSONNELS, et l'engagement de l'assemblée
- * qu'elle dirige. Si les deux sont vides, on le DIT explicitement plutôt que d'afficher une carte
- * vide — c'est la demande de JP.
+ * <p>Un SEUL volet depuis le 16/08 (RG-BQ-01) : ses engagements personnels. Le volet « engagement
+ * de l'assemblée qu'elle dirige » a disparu du contrat — un dirigeant déclare comme tout le monde.
+ * Liste vide ⇒ on le DIT explicitement plutôt que d'afficher une carte vide (demande de JP).
+ *
+ * <p>Deux recours back-office y sont logés, faute d'écran dédié sur mobile : la RELANCE (ouverte à
+ * tout dirigeant qui voit la personne) et le DÉVERROUILLAGE (secrétariat / superAdmin), qui rouvre
+ * l'année pour que la personne corrige elle-même. ⚠ Éditer l'engagement d'un tiers n'existe pas
+ * côté backend : ne pas le câbler.
  */
-function MemberGoalsModal({ member, onClose }: { member: AdminUserResponse | null; onClose: () => void }) {
+function MemberGoalsModal({
+  member,
+  secretariat,
+  onClose,
+}: {
+  member: AdminUserResponse | null;
+  secretariat: boolean;
+  onClose: () => void;
+}) {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
+  const [acting, setActing] = useState(false);
   // On stocke la NATURE de l'erreur, pas son libellé : la traduction se fait au rendu, ce qui
   // garde l'effet indépendant de `t` (une dépendance instable relancerait le chargement).
   const [error, setError] = useState<'forbidden' | 'other' | null>(null);
@@ -349,7 +372,52 @@ function MemberGoalsModal({ member, onClose }: { member: AdminUserResponse | nul
     );
   };
 
-  const empty = !!data && data.memberPledges.length === 0 && data.assemblyPledges.length === 0;
+  const empty = !!data && data.memberPledges.length === 0;
+  const locked = !!data && data.memberPledges.length > 0 && data.memberPledges.every((p) => p.locked);
+
+  /** Relance nominative — anti-spam 24 h côté serveur. */
+  const onRemind = async () => {
+    if (!member) return;
+    setActing(true);
+    try {
+      await sendMemberReminder(member.id);
+      notify(t('goals.members.reminderSentTitle'), t('goals.members.reminderSentBody', { name: member.fullName }));
+    } catch (e: any) {
+      const code = e?.response?.data?.error;
+      notify(
+        t('goals.members.reminderRefused'),
+        code === 'MEMBER_ALREADY_SUBMITTED'
+          ? t('errors.goals.MEMBER_ALREADY_SUBMITTED')
+          : code === 'REMINDER_ALREADY_SENT'
+            ? t('errors.goals.REMINDER_ALREADY_SENT')
+            : e?.response?.data?.message ?? t('errors.tryAgain'),
+      );
+    } finally {
+      setActing(false);
+    }
+  };
+
+  /** RG-BQ-08 — le seul recours après soumission : rouvrir, la personne corrige elle-même. */
+  const onUnlock = async () => {
+    if (!member) return;
+    const ok = await confirmDialog(
+      t('membres.unlockTitle'),
+      t('membres.unlockConfirm', { name: member.fullName }),
+      t('membres.unlock'),
+      true,
+    );
+    if (!ok) return;
+    setActing(true);
+    try {
+      await unlockMember(member.id, data?.year);
+      notify(t('membres.unlockedTitle'), t('membres.unlockedBody', { name: member.fullName }));
+      onClose();
+    } catch (e: any) {
+      notify(t('common.appName'), e?.response?.data?.message ?? t('errors.tryAgain'));
+    } finally {
+      setActing(false);
+    }
+  };
 
   return (
     <Modal visible={!!member} transparent animationType="slide" onRequestClose={onClose}>
@@ -367,19 +435,34 @@ function MemberGoalsModal({ member, onClose }: { member: AdminUserResponse | nul
 
           {!loading && !error && !empty && data && (
             <View style={{ marginTop: 14, gap: 16 }}>
-              {data.memberPledges.length > 0 && (
-                <View>
-                  <Text style={styles.sectionLabel}>{t('membres.goalsPersonal')}</Text>
-                  {data.memberPledges.map(line)}
-                </View>
+              <View>
+                <Text style={styles.sectionLabel}>{t('membres.goalsPersonal')}</Text>
+                {data.memberPledges.map(line)}
+              </View>
+            </View>
+          )}
+
+          {!loading && !error && data && (
+            <View style={{ gap: 8, marginTop: 16 }}>
+              {!locked && (
+                <Button
+                  label={t('goals.members.remind')}
+                  variant="soft"
+                  height={44}
+                  loading={acting}
+                  onPress={onRemind}
+                  iconLeft={<Ionicons name="notifications-outline" size={17} color={colors.mossDeep} />}
+                />
               )}
-              {data.assemblyPledges.length > 0 && (
-                <View>
-                  <Text style={styles.sectionLabel}>
-                    {t('membres.goalsAssembly', { name: data.assemblyName ?? '' })}
-                  </Text>
-                  {data.assemblyPledges.map(line)}
-                </View>
+              {secretariat && locked && (
+                <Button
+                  label={t('membres.unlock')}
+                  variant="ghost"
+                  height={44}
+                  loading={acting}
+                  onPress={onUnlock}
+                  iconLeft={<Ionicons name="lock-open-outline" size={17} color={colors.mossDeep} />}
+                />
               )}
             </View>
           )}

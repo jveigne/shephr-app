@@ -1,10 +1,20 @@
 import { apiClient } from './apiClient';
 
-// Mirrors com.excellence.back.goals.* DTOs (Lot 4.1 — UC-DIR-08→14).
+// Mirrors com.excellence.back.goals.* DTOs.
+//
+// Chantier « Objectifs individuels » (JP 16/08) — RG-BQ-01/02 : seul un MEMBRE déclare, et il
+// déclare pour LUI-MÊME. Tout niveau au-dessus (assemblée, ville, région, nation, continent) n'est
+// plus qu'une SOMME. Conséquences sur ce fichier : plus de `PledgeKind`, plus d'`AggregationSource`,
+// plus d'engagement de foi, plus d'engagement déclaré au nom d'une assemblée. Le SEUL chemin
+// d'écriture d'un engagement est `/api/church/goals/member/**`.
 
 export type PledgeUnitType = 'CURRENCY' | 'COUNT';
-export type PledgeKind = 'DIRECT' | 'FAITH';
-export type GoalLevel = 'UNIT' | 'ZONE' | 'COUNTRY' | 'CONTINENT';
+
+/**
+ * Niveaux de l'arbre. `MEMBER` est le seul niveau d'ÉCRITURE (RG-BQ-01) ; les autres valeurs ne
+ * servent plus qu'aux lectures agrégées (`/cities/{id}/aggregate`, etc.).
+ */
+export type GoalLevel = 'MEMBER' | 'ASSEMBLY' | 'CITY' | 'REGION' | 'NATION' | 'CONTINENT';
 
 export interface GoalCategory {
   id: string;
@@ -44,26 +54,16 @@ export interface ActiveGoal {
 /** `?year=` si l'année est fournie (sinon le backend retombe sur l'année courante). */
 const yq = (year?: number) => (year != null ? `?year=${year}` : '');
 
-/**
- * Palier A3 — année + assemblée ciblée. `unitId` absent ⇒ l'assemblée « home » de l'appelant,
- * exactement comme avant : les écrans mono-assemblée n'ont rien à passer.
- */
-const yuq = (year?: number, unitId?: string) => {
-  const parts = [
-    year != null ? `year=${year}` : null,
-    unitId ? `unitId=${unitId}` : null,
-  ].filter(Boolean);
-  return parts.length ? `?${parts.join('&')}` : '';
-};
-
+// Mirrors com.excellence.back.goals.pledge.dto.PledgeResponse
 export interface PledgeResponse {
   id: string;
   goalId: string;
   categoryId: string;
   categoryCode: string;
-  level: GoalLevel;
+  /** Toujours `MEMBER` depuis le chantier du 16/08 — un engagement appartient à une personne. */
+  level: 'MEMBER';
+  /** Toujours l'`userId` du déclarant. */
   targetEntityId: string;
-  kind: PledgeKind;
   year: number;
   targetAmount: number | null;
   targetCount: number | null;
@@ -74,31 +74,33 @@ export interface PledgeResponse {
   createdByName: string | null;
   /** Lot G2 — server-driven : date limite d'écriture (deadline de l'année). */
   editableUntil: string | null;
-  /** Lot G2 — server-driven : modifiable par l'appelant courant. */
+  /**
+   * Lot G2 — server-driven : `!locked && (secretariat || !deadlinePassed)`.
+   * ⚠ SOURCE DE VÉRITÉ de l'écran : ne jamais recalculer la fenêtre d'édition côté client
+   * (le SECRETARIAT et le LEADER passent outre la date limite, un calcul local les bloquerait).
+   */
   editable: boolean | null;
 }
 
+// Mirrors com.excellence.back.goals.pledge.dto.CreatePledgeRequest
 export interface CreatePledgeRequest {
   categoryId: string;
   year?: number;
   targetAmount?: number;
   targetCount?: number;
-  /** Palier A3 — assemblée ciblée ; absent = l'assemblée « home » du dirigeant. */
-  unitId?: string;
 }
 
-export interface UpdatePledgeRequest {
-  targetAmount?: number;
-  targetCount?: number;
-}
-
+// Mirrors com.excellence.back.goals.pledge.dto.SubmitResponse
 export interface SubmitResponse {
   goalId: string;
-  unitId: string;
+  /** Assemblée du déclarant (informatif). */
+  unitId: string | null;
+  year: number;
   lockedPledges: number;
   submittedAt: string;
 }
 
+// Mirrors com.excellence.back.goals.progress.dto.ProgressResponse
 export interface ProgressResponse {
   id: string;
   pledgeId: string;
@@ -106,16 +108,17 @@ export interface ProgressResponse {
   count: number | null;
   progressDate: string;
   note: string | null;
-  recordedById: string;
+  recordedById: string | null;
   /** Auteur de l'avancement (Lot G1.b). */
   recordedByName: string | null;
   createdAt: string;
   /** Lot G2 — server-driven : date limite d'écriture (deadline de l'année). */
   editableUntil: string | null;
-  /** Lot G2 — server-driven : modifiable/supprimable par l'appelant courant (remplace la règle 24 h). */
+  /** Lot G2 — server-driven : `secretariat || (auteur && !deadlinePassed)`. */
   editable: boolean | null;
 }
 
+// Mirrors com.excellence.back.goals.progress.dto.AddProgressRequest
 export interface AddProgressRequest {
   amount?: number;
   count?: number;
@@ -123,6 +126,7 @@ export interface AddProgressRequest {
   note?: string;
 }
 
+// Mirrors com.excellence.back.goals.progress.dto.UpdateProgressRequest
 export interface UpdateProgressRequest {
   amount?: number;
   count?: number;
@@ -130,53 +134,15 @@ export interface UpdateProgressRequest {
 }
 
 
-// --- Goal & pledges (UC-DIR-08/09) ------------------------------------------
+// --- Goal actif ---------------------------------------------------------------
 
 export async function getActiveGoal(): Promise<ActiveGoal> {
   const { data } = await apiClient.get<ActiveGoal>('/api/church/goals/active');
   return data;
 }
 
-/** Palier A3 — `unitId` facultatif : une des assemblées du dirigeant, sinon la « home ». */
-export async function getMyPledges(year?: number, unitId?: string): Promise<PledgeResponse[]> {
-  const { data } = await apiClient.get<PledgeResponse[]>(
-    `/api/church/goals/me/pledges${yuq(year, unitId)}`,
-  );
-  return data;
-}
-
-export async function createPledge(
-  payload: CreatePledgeRequest,
-): Promise<PledgeResponse> {
-  const { data } = await apiClient.post<PledgeResponse>(
-    '/api/church/goals/pledges',
-    payload,
-  );
-  return data;
-}
-
-export async function updatePledge(
-  id: string,
-  payload: UpdatePledgeRequest,
-): Promise<PledgeResponse> {
-  const { data } = await apiClient.patch<PledgeResponse>(
-    `/api/church/goals/pledges/${id}`,
-    payload,
-  );
-  return data;
-}
-
-// --- Submission (UC-DIR-11) --------------------------------------------------
-
-/** Palier A3 — verrouille l'assemblée ciblée (`unitId`), ou la « home » si non précisée. */
-export async function submitMyPledges(year?: number, unitId?: string): Promise<SubmitResponse> {
-  const { data } = await apiClient.post<SubmitResponse>(
-    `/api/church/goals/me/submit${yuq(year, unitId)}`,
-  );
-  return data;
-}
-
 // --- Progress (UC-DIR-12/13/14) ----------------------------------------------
+// Un avancement ne se pose que sur SES propres engagements (403 sinon) ; le secrétariat passe outre.
 
 export async function listProgress(
   pledgeId: string,
@@ -213,37 +179,25 @@ export async function deleteProgress(id: string): Promise<void> {
   await apiClient.delete(`/api/church/goals/progress/${id}`);
 }
 
-// --- Agrégats & engagements de foi (Lot 4.2 — UC-LDR-04/05, UC-COO-04/05) -----
+// --- Agrégats de niveau (lecture seule) --------------------------------------
 
 /** Chemin d'URL des niveaux agrégeables. */
 export type AggregateLevelPath = 'cities' | 'zones' | 'countries' | 'continents';
 
-/** DIRECT = l'engagement du dirigeant l'emporte sur l'agrégat des membres (niveau ASSEMBLY). */
-export type AggregationSource = 'AGGREGATE' | 'DIRECT' | 'FAITH';
-
+/**
+ * Mirrors com.excellence.back.goals.query.dto.AggregateLineResponse
+ *
+ * <p>RG-BQ-02 — UNE valeur par ligne : la somme des engagements des membres du sous-arbre.
+ * Plus de `source`, plus de `membersSum`, plus d'`aggregateOfChildren`, plus de `faithPledges`.
+ */
 export interface AggregateLine {
   categoryId: string;
   categoryCode: string;
-  level: GoalLevel;
-  entityId: string;
-  /** Somme des engagements effectifs des enfants (DIRECT unités / effectifs zones…). */
-  aggregateOfChildren: number | null;
-  /** Engagement effectif = MAX(agrégat enfants, meilleure foi du niveau) — RG-08. */
+  /** `null` sur `/me/aggregate` (agrégat de périmètre, sans niveau porteur). */
+  level: GoalLevel | null;
+  entityId: string | null;
   effectiveAmount: number | null;
   effectiveCount: number | null;
-  source: AggregationSource;
-  /** Feature A — agrégat des engagements des fidèles (niveau ASSEMBLY uniquement). */
-  membersSum?: number | null;
-}
-
-export interface FaithPledgeResponse {
-  id: string;
-  categoryId: string;
-  categoryCode: string;
-  targetAmount: number | null;
-  targetCount: number | null;
-  createdById: string;
-  createdByName: string | null;
 }
 
 export async function getAggregate(
@@ -257,61 +211,21 @@ export async function getAggregate(
   return data;
 }
 
-export async function listFaithPledges(
-  level: AggregateLevelPath,
-  entityId: string,
-  year?: number,
-): Promise<FaithPledgeResponse[]> {
-  const { data } = await apiClient.get<FaithPledgeResponse[]>(
-    `/api/church/goals/${level}/${entityId}/faith-pledges${yq(year)}`,
-  );
-  return data;
-}
+// --- Objectifs d'UNE personne ------------------------------------------------
 
-export async function createFaithPledge(
-  level: AggregateLevelPath,
-  entityId: string,
-  payload: { categoryId: string; year?: number; targetAmount?: number; targetCount?: number },
-): Promise<PledgeResponse> {
-  const { data } = await apiClient.post<PledgeResponse>(
-    `/api/church/goals/${level}/${entityId}/faith-pledges`,
-    payload,
-  );
-  return data;
-}
-
-export async function updateFaithPledge(
-  id: string,
-  payload: { targetAmount?: number; targetCount?: number },
-): Promise<PledgeResponse> {
-  const { data } = await apiClient.patch<PledgeResponse>(
-    `/api/church/goals/faith-pledges/${id}`,
-    payload,
-  );
-  return data;
-}
-
-export async function deleteFaithPledge(id: string): Promise<void> {
-  await apiClient.delete(`/api/church/goals/faith-pledges/${id}`);
-}
-
-// --- Feature A — objectifs personnels des MEMBRES + agrégat des fidèles -------
-
-/** Engagement d'un fidèle dans l'agrégat d'assemblée. */
 /**
- * Objectifs d'UNE personne (JP 31/07) — ouverts depuis la liste des membres.
+ * Mirrors com.excellence.back.goals.member.dto.MemberGoalsResponse
  *
- * <p>Deux volets : ses engagements PERSONNELS, et l'engagement de l'assemblée dont elle est
- * dirigeante (absent si elle n'en dirige aucune). Le backend borne la lecture au périmètre de
- * l'appelant — un 403 signifie « pas dans votre périmètre », pas « pas d'engagement ».
+ * <p>Un seul volet depuis le 16/08 : ses engagements personnels. Le volet « engagement de
+ * l'assemblée qu'elle dirige » n'existe plus (un dirigeant déclare comme tout le monde).
+ * Le backend borne la lecture au périmètre de l'appelant — un 403 signifie « pas dans votre
+ * périmètre », pas « pas d'engagement ». Liste vide = « aucun engagement déclaré ».
  */
 export interface MemberGoalsResponse {
   memberId: string;
   fullName: string;
   year: number;
   memberPledges: PledgeResponse[];
-  assemblyName: string | null;
-  assemblyPledges: PledgeResponse[];
 }
 
 export async function fetchMemberGoals(memberId: string, year?: number): Promise<MemberGoalsResponse> {
@@ -321,37 +235,60 @@ export async function fetchMemberGoals(memberId: string, year?: number): Promise
   return data;
 }
 
-export interface MemberPledgeEntry {
+/**
+ * Mirrors com.excellence.back.goals.query.dto.MembersAggregateResponse$MemberStatusItem
+ * Une entrée par PERSONNE rattachée — y compris celles qui n'ont RIEN déclaré.
+ */
+export interface MemberStatusItem {
+  userId: string;
+  fullName: string;
+  hasPledges: boolean;
+  submitted: boolean;
+  /** Non soumis alors que la date limite est passée. */
+  late: boolean;
+}
+
+/**
+ * Mirrors com.excellence.back.goals.query.dto.MembersAggregateResponse$MemberObjectiveItem
+ * Construit à partir des ENGAGEMENTS : n'y figure que qui a déclaré.
+ */
+export interface MemberObjectiveItem {
   userId: string;
   fullName: string;
   amount: number | null;
   count: number | null;
-  /** Le membre a soumis ses objectifs : seul le secrétariat peut les rouvrir (JP 28/07). */
   locked: boolean;
+  late: boolean;
 }
 
 export interface MembersAggregateLine {
   categoryId: string;
   categoryCode: string;
-  /** Somme des engagements des fidèles de l'assemblée. */
-  membersSum: number | null;
-  /** Engagement DIRECT du dirigeant (montant / nombre selon la catégorie). */
-  leaderAmount: number | null;
-  leaderCount: number | null;
-  /** Retenu = MAX(agrégat des fidèles, engagement du dirigeant, foi). */
+  /** Σ des engagements des membres de l'assemblée (RG-BQ-02). */
   effectiveAmount: number | null;
   effectiveCount: number | null;
-  source: AggregationSource;
-  members: MemberPledgeEntry[];
+  members: MemberObjectiveItem[];
 }
 
+/**
+ * Mirrors com.excellence.back.goals.query.dto.MembersAggregateResponse
+ *
+ * <p>⚠ `roster` et `lines[].members` ne sont PAS redondants : `roster` part des PERSONNES (il
+ * contient donc les non-déclarants, ceux qu'un dirigeant doit relancer) tandis que `members` part
+ * des ENGAGEMENTS. Le compteur « 7/12 » et la liste des retardataires se lisent sur `roster`.
+ */
 export interface MembersAggregateResponse {
   unitId: string;
   year: number;
+  totalMembers: number;
+  membersWithPledges: number;
+  submittedMembers: number;
+  lateMembers: number;
+  roster: MemberStatusItem[];
   lines: MembersAggregateLine[];
 }
 
-/** Mes engagements personnels de MEMBRE (même forme que les pledges existants). */
+/** Mes engagements personnels de MEMBRE — seul chemin de LECTURE de mes engagements. */
 export async function fetchMyMemberPledges(year?: number): Promise<PledgeResponse[]> {
   const { data } = await apiClient.get<PledgeResponse[]>(
     `/api/church/goals/member/me/pledges${yq(year)}`,
@@ -360,8 +297,9 @@ export async function fetchMyMemberPledges(year?: number): Promise<PledgeRespons
 }
 
 /**
- * Crée / remplace mon engagement personnel de MEMBRE sur une catégorie.
- * Erreurs 422 : NO_ASSEMBLY_ATTACHMENT, PLEDGE_LOCKED, DEADLINE_PASSED.
+ * Crée / remplace MON engagement personnel sur une catégorie — seul chemin d'ÉCRITURE (RG-BQ-01).
+ * Erreurs 422 : NO_ASSEMBLY_ATTACHMENT, PLEDGE_LOCKED, DEADLINE_PASSED, YEAR_NOT_OPEN,
+ * CATEGORY_GOAL_MISMATCH.
  */
 export async function saveMemberPledge(payload: CreatePledgeRequest): Promise<PledgeResponse> {
   const { data } = await apiClient.post<PledgeResponse>(
@@ -372,9 +310,9 @@ export async function saveMemberPledge(payload: CreatePledgeRequest): Promise<Pl
 }
 
 /**
- * Décision JP 28/07 — le membre soumet LUI-MÊME ses objectifs de l'année : ils sont verrouillés,
- * indépendamment de la soumission de son assemblée. Pour les corriger ensuite, il doit passer par
- * le secrétariat. Erreurs 422 : NO_PLEDGE_TO_SUBMIT, ALREADY_SUBMITTED, DEADLINE_PASSED.
+ * RG-BQ-06 — chaque personne soumet SES engagements ; la soumission verrouille. Pour les corriger
+ * ensuite, il faut passer par le secrétariat (`unlockMember`).
+ * Erreurs 422 : NO_PLEDGE_TO_SUBMIT, ALREADY_SUBMITTED, DEADLINE_PASSED, NO_ASSEMBLY_ATTACHMENT.
  */
 export async function submitMyMemberPledges(year?: number): Promise<SubmitResponse> {
   const { data } = await apiClient.post<SubmitResponse>(
@@ -384,8 +322,8 @@ export async function submitMyMemberPledges(year?: number): Promise<SubmitRespon
 }
 
 /**
- * Agrégat des fidèles d'une assemblée (périmètre GOAL habituel + le membre pour SA propre
- * assemblée) : agrégat / engagement du dirigeant / retenu (MAX) + détail par fidèle.
+ * Détail NOMINATIF d'une assemblée — réservé aux dirigeants dont le périmètre Goals la couvre.
+ * ⚠ Un simple membre reçoit 403, même sur sa propre assemblée : lui, c'est `getMyAssemblyGoal`.
  */
 export async function fetchMembersAggregate(
   unitId: string,
@@ -397,22 +335,58 @@ export async function fetchMembersAggregate(
   return data;
 }
 
+/** Mirrors com.excellence.back.goals.reminder.dto.SendReminderRequest (corps FACULTATIF). */
+export interface SendReminderRequest {
+  /** max 2000 ; absent → message serveur par défaut (avec la date limite). */
+  message?: string;
+}
+
+/** Mirrors com.excellence.back.goals.reminder.dto.ReminderResponse */
+export interface ReminderResponse {
+  notificationId: string;
+  sentToId: string;
+  sentToName: string;
+}
+
+/**
+ * Relance une PERSONNE qui n'a pas soumis (la cible n'est plus une assemblée depuis le 16/08).
+ * Même garde que le détail nominatif : si vous voyez ce qu'elle a déclaré, vous pouvez la relancer.
+ * Erreurs 422 : MEMBER_ALREADY_SUBMITTED, REMINDER_ALREADY_SENT (anti-spam 24 h).
+ */
+export async function sendMemberReminder(
+  memberId: string,
+  payload?: SendReminderRequest,
+): Promise<ReminderResponse> {
+  const { data } = await apiClient.post<ReminderResponse>(
+    `/api/church/goals/member/${memberId}/reminders`,
+    payload ?? {},
+  );
+  return data;
+}
+
+/**
+ * Déverrouille les engagements d'une personne pour l'année (SECRETARIAT / superAdmin) — l'unique
+ * recours back-office de RG-BQ-08 : on rouvre, la personne corrige elle-même.
+ */
+export async function unlockMember(memberId: string, year?: number): Promise<void> {
+  await apiClient.post(`/api/church/goals/member/${memberId}/unlock${yq(year)}`);
+}
+
 /**
  * Palier A1 (JP 14/08) — engagement de MON assemblée, en lecture seule.
  * Mirrors com.excellence.back.goals.query.dto.MyAssemblyGoalResponse
  *
  * ⚠ Volontairement SANS donnée nominative : c'est ce qui distingue cet endpoint de
- * `fetchMembersAggregate`, réservé aux dirigeants (il liste les objectifs de chaque fidèle).
- * Un simple membre voit le total engagé de son assemblée, pas qui a déclaré quoi.
+ * `fetchMembersAggregate`, réservé aux dirigeants. Un simple membre voit le total engagé de son
+ * assemblée et le compteur de soumission (« 7/12 »), pas qui a déclaré quoi.
  */
 export interface MyAssemblyGoalLine {
   categoryId: string;
   categoryCode: string;
-  /** Retenu pour l'assemblée (RG-08 : MAX(agrégat des fidèles, foi)). */
+  /** Σ des engagements des membres actifs (RG-BQ-02). */
   effectiveAmount: number | null;
   effectiveCount: number | null;
-  source: AggregationSource;
-  /** Réalisé (versé / atteint). */
+  /** Réalisé (versé / atteint) — Σ des derniers états déclarés. */
   achievedAmount: number | null;
   achievedCount: number | null;
 }
@@ -421,7 +395,10 @@ export interface MyAssemblyGoalResponse {
   unitId: string;
   unitName: string | null;
   year: number;
-  submitted: boolean;
+  totalMembers: number;
+  /** Compteur « 7/12 » — la seule information de soumission visible d'un simple membre. */
+  submittedMembers: number;
+  lateMembers: number;
   lines: MyAssemblyGoalLine[];
 }
 
@@ -433,7 +410,7 @@ export async function getMyAssemblyGoal(year?: number): Promise<MyAssemblyGoalRe
   return data;
 }
 
-// --- Vues agrégées manquantes (Lot 4.3 — UC-DIR-13, UC-LDR-06) ---------------
+// --- Vues agrégées (Lot 4.3 — UC-DIR-13, UC-LDR-06) --------------------------
 
 /** Avancement enrichi de sa catégorie — remplace N appels listProgress (UC-DIR-13). */
 export interface MyProgressResponse extends ProgressResponse {
@@ -441,31 +418,33 @@ export interface MyProgressResponse extends ProgressResponse {
   categoryCode: string;
 }
 
+/**
+ * Mirrors com.excellence.back.goals.query.dto.ZoneUnitStatusResponse
+ *
+ * <p>RG-BQ-06 — maille PERSONNE : une assemblée ne « soumet » plus, ce sont ses membres qui
+ * soumettent. Statut d'écran : `membersWithPledges === 0` → non démarré ;
+ * `submittedMembers < totalMembers` → en cours ; tous soumis → soumis ; `lateMembers > 0` → retard.
+ */
 export interface ZoneUnitStatus {
   unitId: string;
   unitName: string;
   unitType: string | null;
   localityName: string | null;
-  pledgeCount: number;
-  submitted: boolean;
-  submittedAt: string | null;
-  /** Deadline dépassée et unité non soumise. */
-  late: boolean;
+  /** Comptes actifs rattachés (goalUnitId), hors superAdmin. */
+  totalMembers: number;
+  /** Ont au moins un engagement pour l'année. */
+  membersWithPledges: number;
+  /** Ont soumis (tous leurs engagements verrouillés). */
+  submittedMembers: number;
+  /** Non soumis alors que la date limite est passée (0 sinon). */
+  lateMembers: number;
   /** L'unité a un DIRIGEANT goal rattaché. */
   hasLeader: boolean;
   /** Nom du DIRIGEANT goal de l'unité — null si sans dirigeant (Lot G1.b). */
   leaderName: string | null;
 }
 
-/** Palier A3 — `unitId` facultatif, même résolution que `getMyPledges`. */
-export async function getMyProgress(year?: number, unitId?: string): Promise<MyProgressResponse[]> {
-  const { data } = await apiClient.get<MyProgressResponse[]>(
-    `/api/church/goals/me/progress${yuq(year, unitId)}`,
-  );
-  return data;
-}
-
-/** Avancements de MES objectifs personnels de membre (décision JP 28/07). */
+/** Avancements de MES objectifs personnels (seul chemin depuis le 16/08). */
 export async function getMyMemberProgress(year?: number): Promise<MyProgressResponse[]> {
   const { data } = await apiClient.get<MyProgressResponse[]>(
     `/api/church/goals/member/me/progress${yq(year)}`,
@@ -486,7 +465,14 @@ export async function getMyUnits(year?: number): Promise<ZoneUnitStatus[]> {
   return data;
 }
 
-// --- Lot 4.7 — drill-down dirigeant : détail (engagé + versé) d'une unité de son sous-arbre (lecture seule) ---
+// --- Lot 4.7 — drill-down dirigeant : détail (engagé + versé) d'une unité (lecture seule) ---
+/**
+ * Mirrors com.excellence.back.goals.query.dto.UnitPledgeDetailResponse
+ *
+ * <p>Sémantique révisée le 16/08 : `targetAmount`/`targetCount` ne sont plus la déclaration d'un
+ * dirigeant mais la SOMME des engagements des membres ; `locked` signifie « tous les engagements
+ * des membres pour cette catégorie sont soumis » (false s'il n'y en a aucun).
+ */
 export interface UnitPledgeDetail {
   categoryId: string;
   categoryCode: string;
@@ -519,23 +505,55 @@ export interface GlobalSummaryLine {
   effectiveCount: number | null;
   achieved: number;
 }
+
+/** Mirrors com.excellence.back.goals.query.dto.GlobalSummaryResponse$ContinentSummary */
+export interface ContinentSummary {
+  continentId: string;
+  code: string | null;
+  name: string;
+  totalUnits: number;
+  totalMembers: number;
+  submittedMembers: number;
+  lateMembers: number;
+  lines: GlobalSummaryLine[];
+}
+
+/**
+ * Mirrors com.excellence.back.goals.query.dto.GlobalSummaryResponse
+ * RG-BQ-06 — `submittedUnits` a disparu : la soumission se compte en PERSONNES.
+ */
 export interface GlobalSummary {
   goalId: string;
   goalName: string;
+  /** Nombre d'assemblées (maille inchangée). */
   totalUnits: number;
-  submittedUnits: number;
+  totalMembers: number;
+  submittedMembers: number;
+  lateMembers: number;
   totals: GlobalSummaryLine[];
+  continents: ContinentSummary[];
 }
 export async function getGlobalSummary(year?: number): Promise<GlobalSummary> {
   const { data } = await apiClient.get<GlobalSummary>(`/api/church/goals/global/summary${yq(year)}`);
   return data;
 }
+
+/** Mirrors com.excellence.back.goals.query.dto.NationsStatusResponse$NationStatus */
 export interface NationStatus {
   countryId: string;
+  /** ISO 3166-1 alpha-2. */
+  code: string;
   name: string;
+  continentId: string | null;
+  continentCode: string | null;
+  continentName: string | null;
   totalUnits: number;
-  submittedUnits: number;
+  totalMembers: number;
+  submittedMembers: number;
+  lateMembers: number;
+  /** [0..1], maille PERSONNE. */
   submissionRate: number;
+  /** Échéance passée ET au moins un membre non soumis. */
   late: boolean;
 }
 export async function getNations(year?: number): Promise<{ deadlinePast: boolean; nations: NationStatus[] }> {
@@ -546,11 +564,15 @@ export async function getNations(year?: number): Promise<{ deadlinePast: boolean
 }
 
 // --- Lot V1 — vue COORDINATEUR : cumuls par Région + somme totale Nation ---
+/** Mirrors com.excellence.back.goals.query.dto.NationRegionsSummaryResponse$RegionSummary */
 export interface RegionSummary {
   regionId: string;
   regionName: string;
   totalUnits: number;
-  submittedUnits: number;
+  totalMembers: number;
+  submittedMembers: number;
+  lateMembers: number;
+  /** [0..1], maille PERSONNE. */
   submissionRate: number;
   lines: GlobalSummaryLine[];
 }

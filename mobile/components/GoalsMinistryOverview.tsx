@@ -104,13 +104,21 @@ export default function GoalsMinistryOverview({ secretariat }: { secretariat: bo
           {summary && (
             <Card variant="paper2" style={styles.block}>
               <Label style={{ marginBottom: 8 }}>{t('views.ministryTotals')}</Label>
+              {/* RG-BQ-06 — maille PERSONNE : `submittedUnits` a disparu du contrat. */}
               <Text style={styles.ratio}>
                 {t('views.submittedRatio', {
-                  submitted: summary.submittedUnits,
-                  total: summary.totalUnits,
-                  percent: summary.totalUnits > 0 ? Math.round((summary.submittedUnits / summary.totalUnits) * 100) : 0,
+                  submitted: summary.submittedMembers,
+                  total: summary.totalMembers,
+                  percent: summary.totalMembers > 0
+                    ? Math.round((summary.submittedMembers / summary.totalMembers) * 100)
+                    : 0,
                 })}
               </Text>
+              {summary.lateMembers > 0 && (
+                <Text style={styles.lateRatio}>
+                  {t('goals.members.lateCount', { count: summary.lateMembers })}
+                </Text>
+              )}
               {summary.totals.map((l) => {
                 const cat = catByCode.get(l.categoryCode);
                 const effective = l.unitType === 'CURRENCY'
@@ -135,11 +143,15 @@ export default function GoalsMinistryOverview({ secretariat }: { secretariat: bo
               <Label style={{ marginBottom: 8 }}>{t('views.nationsHeading')}</Label>
               {nations.map((n) => (
                 <View key={n.countryId} style={styles.nationRow}>
-                  <Text style={styles.nationName}>{n.name}</Text>
+                  <Text style={styles.nationName}>
+                    {n.name}
+                    {n.continentName ? ` · ${n.continentName}` : ''}
+                  </Text>
+                  {/* `submissionRate` est re-maillé PERSONNE côté serveur. */}
                   <Text style={[styles.ratio, n.late && { color: colors.clay }]}>
                     {t('views.submittedRatio', {
-                      submitted: n.submittedUnits,
-                      total: n.totalUnits,
+                      submitted: n.submittedMembers,
+                      total: n.totalMembers,
                       percent: Math.round(n.submissionRate * 100),
                     })}
                   </Text>
@@ -181,6 +193,7 @@ const styles = StyleSheet.create({
   bannerText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },
   block: { marginTop: 14, paddingHorizontal: 16, paddingVertical: 14 },
   ratio: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginBottom: 6 },
+  lateRatio: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.clay, marginBottom: 6 },
   lineText: { fontFamily: fonts.sans, fontSize: 13.5, marginTop: 4 },
   lineLabel: { color: colors.ink3 },
   lineValue: { color: colors.ink, fontWeight: '600' },

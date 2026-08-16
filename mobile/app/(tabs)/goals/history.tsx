@@ -26,9 +26,9 @@ import { confirmDialog, notify } from '../../../utils/dialogs';
 import {
   deleteProgress,
   updateProgress,
+  type GoalCategory,
   type ProgressResponse,
 } from '../../../services/goalsApi';
-import type { GoalCategory } from '../../../services/goalsApi';
 
 const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallback;
 
@@ -40,8 +40,9 @@ interface HistoryEntry {
 export default function HistoryScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { year: yearParam, unitId } = useLocalSearchParams<{ year?: string; unitId?: string }>();
-  const { goal, lines, progressByPledge, loading, reload } = useGoalsData(yearParam ? Number(yearParam) : null, false, unitId);
+  // RG-BQ-01 (16/08) : historique de MES avancements — plus de `unitId` d'assemblée.
+  const { year: yearParam } = useLocalSearchParams<{ year?: string }>();
+  const { goal, lines, progressByPledge, loading, reload } = useGoalsData(yearParam ? Number(yearParam) : null);
   const [filter, setFilter] = useState<string | null>(null);
   const [editing, setEditing] = useState<HistoryEntry | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -87,7 +88,12 @@ export default function HistoryScreen() {
       await deleteProgress(entry.progress.id);
       await reload();
     } catch (e: any) {
-      notify(t('common.appName'), errMsg(e, t('errors.deleteFailed')));
+      // ⚠ DEADLINE_PASSED reste levé après la date limite (RG-BQ-07).
+      const code = e?.response?.data?.error;
+      notify(
+        t('common.appName'),
+        code === 'DEADLINE_PASSED' ? t('errors.goals.DEADLINE_PASSED') : errMsg(e, t('errors.deleteFailed')),
+      );
     }
   };
 
@@ -237,7 +243,11 @@ function EditProgressModal({
       });
       await onSaved();
     } catch (e: any) {
-      notify(t('common.appName'), errMsg(e, t('errors.updateFailed')));
+      const code = e?.response?.data?.error;
+      notify(
+        t('common.appName'),
+        code === 'DEADLINE_PASSED' ? t('errors.goals.DEADLINE_PASSED') : errMsg(e, t('errors.updateFailed')),
+      );
     } finally {
       setSaving(false);
     }

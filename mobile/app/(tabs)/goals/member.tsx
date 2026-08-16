@@ -6,65 +6,40 @@ import ScreenShell from '../../../components/ScreenShell';
 import Button from '../../../components/Button';
 import Card from '../../../components/Card';
 import Label from '../../../components/Label';
-import { YearSelector, GoalLineCard } from './index';
+import { YearSelector, GoalLineCard, GoalEmptyState } from '../../../components/GoalCards';
+import UnitMembersAggregate from '../../../components/UnitMembersAggregate';
 import { colors, fonts } from '../../../theme';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { hasGoalsAccess } from '../../../services/authApi';
 import { useGoalsData } from '../../../hooks/useGoalsData';
 import {
-  submitMyMemberPledges,
   getMyAssemblyGoal,
   type ActiveGoal,
-  type MyAssemblyGoalLine,
+  type MyAssemblyGoalResponse,
 } from '../../../services/goalsApi';
-import { confirmDialog, notify } from '../../../utils/dialogs';
 import { fmtDate, fmtAmount } from '../../../utils/format';
 
 /**
- * Feature A — « Mes objectifs » du simple MEMBRE : un objectif personnel par catégorie, qui
- * alimente l'engagement de son assemblée de maison. Même structure et mêmes composants que la
- * vue assemblée du dirigeant (titre, chip de vue, sélecteur d'année, bandeau d'échéance,
- * cartes de catégorie ouvrant l'écran de saisie) — seules changent les actions de niveau
- * assemblée (soumission, avancement, historique), qui n'appartiennent pas au membre.
+ * « Mes objectifs » — l'écran de TOUT LE MONDE depuis le chantier du 16/08.
+ *
+ * <p>RG-BQ-01/11 : un engagement est personnel, y compris celui d'un dirigeant. Il n'existe donc
+ * plus d'écran de saisie « au nom de l'assemblée » ; un dirigeant déclare ici, dans SON assemblée,
+ * et retrouve ses vues de lecture (périmètre, assemblées, détail nominatif) en bas de page.
+ *
+ * <p>⚠ L'affichage des actions d'écriture est piloté par `PledgeResponse.editable` (server-driven,
+ * `anyEditable`), jamais par un calcul local de la date limite : la date limite bloque toujours
+ * (RG-BQ-07), mais le SECRETARIAT et le LEADER passent outre côté serveur.
  */
 export default function MemberGoalsScreen() {
   const { me } = useAuth();
   const { t } = useLanguage();
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const { goal, pledges, lines, submitted, loading, error, reload } = useGoalsData(selectedYear, true);
+  const { goal, pledges, lines, submitted, anyEditable, loading, error, reload } =
+    useGoalsData(selectedYear);
   const [refreshing, setRefreshing] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const year = selectedYear ?? goal?.currentYear ?? null;
-
-  // Décision JP 28/07 : le membre soumet SES objectifs lui-même ; ensuite, seul le
-  // secrétariat peut les rouvrir — d'où la confirmation avant l'appel.
-  const onSubmit = async () => {
-    const ok = await confirmDialog(
-      t('goals.member.submitTitle'),
-      t('goals.member.submitBody'),
-      t('goals.member.submitCta'),
-      true,
-    );
-    if (!ok) return;
-    setSubmitting(true);
-    try {
-      const res = await submitMyMemberPledges(year ?? undefined);
-      await reload();
-      notify(t('goals.member.submittedTitle'), t('goals.member.submittedBody', { count: res.lockedPledges }));
-    } catch (e: any) {
-      const code = e?.response?.data?.error;
-      notify(
-        t('goals.member.submitRefused'),
-        code === 'NO_PLEDGE_TO_SUBMIT'
-          ? t('goals.member.noPledgeToSubmit')
-          : code === 'ALREADY_SUBMITTED'
-            ? t('goals.member.alreadySubmitted')
-            : e?.response?.data?.message ?? t('errors.tryAgain'),
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const leader = hasGoalsAccess(me);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -75,12 +50,16 @@ export default function MemberGoalsScreen() {
     }
   };
 
+  // RG-BQ-03 : sans assemblée de rattachement, on ne peut rien déclarer. RG-BQ-13 : on en change
+  // soi-même, sans demande ni valideur — c'est donc l'action proposée ici.
   if (!me?.goalUnitId) {
     return (
-      <EmptyState
+      <GoalEmptyState
         icon="link-outline"
         title={t('goals.member.title')}
         hint={t('goals.member.noAssembly')}
+        actionLabel={t('assembly.changeCta')}
+        onAction={() => router.push('/(tabs)/goals/assembly')}
       />
     );
   }
@@ -97,7 +76,7 @@ export default function MemberGoalsScreen() {
 
   if (error === 'NO_GOAL' || !goal) {
     return (
-      <EmptyState
+      <GoalEmptyState
         icon="flag-outline"
         title={t('goals.noGoalTitle')}
         hint={t('goals.noGoalHint')}
@@ -105,7 +84,19 @@ export default function MemberGoalsScreen() {
     );
   }
 
-  // Lot G2 : deadline PAR ANNÉE (repli legacy sur celle du Goal).
+  if (error) {
+    return (
+      <GoalEmptyState
+        icon="cloud-offline-outline"
+        title={t('goals.loadingError')}
+        hint={t('goals.loadingErrorHint')}
+        onRetry={onRefresh}
+      />
+    );
+  }
+
+  // Lot G2 : deadline PAR ANNÉE (repli legacy sur celle du Goal). Affichage SEULEMENT — la
+  // permission d'écrire vient de `editable`.
   const deadlineIso =
     (year != null ? goal.yearDeadlines?.[String(year)] : null) ?? goal.submissionDeadline ?? null;
   const deadline = deadlineIso ? new Date(deadlineIso) : null;
@@ -166,20 +157,33 @@ export default function MemberGoalsScreen() {
             currency={goal.defaultCurrency ?? 'EUR'}
             showProgress
             onPress={() =>
-              router.push(`/(tabs)/goals/pledge/${line.category.id}?year=${year ?? ''}&scope=member`)
+              router.push(`/(tabs)/goals/pledge/${line.category.id}?year=${year ?? ''}`)
             }
           />
         ))}
       </View>
 
-      {pledges.length > 0 && !deadlinePast && (
+      {/* L'AVANCEMENT n'est pas verrouillé par la soumission (« les montants sont verrouillés,
+          l'état actuel reste modifiable ») : on ne le gate donc pas sur `anyEditable`, qui décrit
+          l'éditabilité de l'ENGAGEMENT. Passée la date limite, le serveur refuse (DEADLINE_PASSED)
+          et l'écran de saisie affiche le message — on ne recalcule pas la fenêtre ici. */}
+      {pledges.length > 0 && (
         <Button
           label={t('goals.addProgress')}
           variant="soft"
-          onPress={() => router.push(`/(tabs)/goals/progress?year=${year ?? ''}&scope=member`)}
+          onPress={() => router.push(`/(tabs)/goals/progress?year=${year ?? ''}`)}
           fullWidth
           style={{ marginTop: 16 }}
           iconLeft={<Ionicons name="trending-up-outline" size={18} color={colors.mossDeep} />}
+        />
+      )}
+      {pledges.length > 0 && (
+        <Button
+          label={t('goals.historyBtn')}
+          variant="ghost"
+          onPress={() => router.push(`/(tabs)/goals/history?year=${year ?? ''}`)}
+          fullWidth
+          style={{ marginTop: 10 }}
         />
       )}
 
@@ -189,11 +193,10 @@ export default function MemberGoalsScreen() {
           <Text style={styles.bannerText}>{t('goals.member.submittedBanner')}</Text>
         </Card>
       ) : (
-        pledges.length > 0 && !deadlinePast && (
+        pledges.length > 0 && anyEditable && (
           <Button
             label={t('goals.member.submitCta')}
-            onPress={onSubmit}
-            loading={submitting}
+            onPress={() => router.push(`/(tabs)/goals/submit?year=${year ?? ''}`)}
             fullWidth
             style={{ marginTop: 16 }}
             iconLeft={<Ionicons name="lock-closed-outline" size={18} color={colors.white} />}
@@ -201,8 +204,45 @@ export default function MemberGoalsScreen() {
         )
       )}
 
-      {/* Palier A1 — engagement de l'assemblée, en LECTURE SEULE (aucune action ici). */}
+      {/* Engagement de mon assemblée — ANONYME (RG-BQ-05, exception du simple membre). */}
       {year != null && <MyAssemblyBlock year={year} goal={goal} />}
+
+      {/* Détail NOMINATIF — réservé aux dirigeants (403 pour un simple membre). */}
+      {leader && year != null && me?.goalUnitId && (
+        <UnitMembersAggregate unitId={me.goalUnitId} year={year} goal={goal} />
+      )}
+
+      {/* Vues de lecture du dirigeant (RG-BQ-04) : elles ne sont plus l'écran d'entrée. */}
+      {leader && (
+        <View style={{ gap: 8, marginTop: 16 }}>
+          <Card variant="paper2" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/perimeter')}>
+            <Ionicons name="stats-chart-outline" size={18} color={colors.mossDeep} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.navTitle}>{t('goals.nav.perimeter')}</Text>
+              <Text style={styles.navHint}>{t('goals.nav.perimeterHint')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+          </Card>
+          <Card variant="paper2" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/units')}>
+            <Ionicons name="home-outline" size={18} color={colors.mossDeep} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.navTitle}>{t('goals.nav.units')}</Text>
+              <Text style={styles.navHint}>{t('goals.nav.unitsHint')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+          </Card>
+        </View>
+      )}
+
+      {/* RG-BQ-13 — changer d'assemblée soi-même, sans demande ni valideur. */}
+      <Card variant="paper2" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/assembly')}>
+        <Ionicons name="swap-horizontal-outline" size={18} color={colors.mossDeep} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.navTitle}>{t('assembly.changeCta')}</Text>
+          <Text style={styles.navHint}>{t('assembly.changeHintShort')}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+      </Card>
 
       <Text style={styles.footnote}>{t('goals.member.hint')}</Text>
     </ScreenShell>
@@ -210,36 +250,34 @@ export default function MemberGoalsScreen() {
 }
 
 /**
- * Palier A1 (JP 14/08) — bloc replié « Engagement de mon assemblée ».
+ * Palier A1 (JP 14/08, révisé 16/08) — bloc replié « Engagement de mon assemblée ».
  *
- * <p>Calqué sur `MembersAggregateBlock` de la vue dirigeant (carte paper2, chevron, badge de
- * source), mais <b>sans le détail par fidèle</b> : un simple membre voit ce que son assemblée
- * s'est engagée à faire, pas qui a déclaré quoi. Aucune action non plus — ni saisie, ni
- * avancement, ni soumission : ce n'est pas son niveau.
+ * <p>Sans AUCUNE donnée nominative : c'est ce qui le distingue de `UnitMembersAggregate`, réservé
+ * aux dirigeants. Un simple membre voit le total engagé de son assemblée et le compteur de
+ * soumission (« 7/12 membres ont soumis »), pas qui a déclaré quoi.
+ *
+ * <p>Le badge de source et le libellé « Retenu (MAX) » ont disparu : une ligne porte UNE valeur,
+ * la somme des engagements des membres (RG-BQ-02).
  */
 function MyAssemblyBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
-  const [lines, setLines] = useState<MyAssemblyGoalLine[] | null>(null);
-  const [unitName, setUnitName] = useState<string | null>(null);
+  const [data, setData] = useState<MyAssemblyGoalResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
   // L'année change → on invalide, le contenu sera rechargé au prochain dépli.
   useEffect(() => {
-    setLines(null);
+    setData(null);
   }, [year]);
 
   useEffect(() => {
-    if (!expanded || lines != null || loading) return;
+    if (!expanded || data != null || loading) return;
     setLoading(true);
     getMyAssemblyGoal(year)
-      .then((r) => {
-        setLines(r.lines);
-        setUnitName(r.unitName);
-      })
-      .catch(() => setLines([]))
+      .then(setData)
+      .catch(() => setData(null))
       .finally(() => setLoading(false));
-  }, [expanded, lines, loading, year]);
+  }, [expanded, data, loading, year]);
 
   const catById = new Map(goal.categories.map((c) => [c.id, c]));
   const fmtFor = (categoryId: string, v: number | null) => {
@@ -249,13 +287,8 @@ function MyAssemblyBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
       ? fmtAmount(v, goal.defaultCurrency)
       : `${v} ${cat?.unitLabel ?? ''}`.trim();
   };
-  const sourceLabel: Record<string, string> = {
-    AGGREGATE: t('goals.aggregate.sourceAggregate'),
-    DIRECT: t('goals.aggregate.sourceDirect'),
-    FAITH: t('goals.aggregate.sourceFaith'),
-  };
   // Une ligne sans engagement ni réalisé n'apprend rien au membre : on ne l'affiche pas.
-  const filled = (lines ?? []).filter(
+  const filled = (data?.lines ?? []).filter(
     (l) => (l.effectiveAmount ?? l.effectiveCount ?? 0) > 0 || (l.achievedAmount ?? l.achievedCount ?? 0) > 0,
   );
 
@@ -265,7 +298,7 @@ function MyAssemblyBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
         <Ionicons name="home-outline" size={18} color={colors.mossSoft} />
         <Text style={styles.assemblyTitle}>
           {t('goals.member.assemblyTitle')}
-          {unitName ? ` · ${unitName}` : ''}
+          {data?.unitName ? ` · ${data.unitName}` : ''}
         </Text>
         <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.ink3} />
       </Pressable>
@@ -274,6 +307,24 @@ function MyAssemblyBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
         <View style={{ marginTop: 10 }}>
           <Text style={styles.assemblyHint}>{t('goals.member.assemblyHint')}</Text>
           {loading && <ActivityIndicator color={colors.moss} style={{ marginTop: 10 }} />}
+
+          {/* RG-BQ-06 — le suivi de soumission est un COMPTEUR DE PERSONNES, jamais un booléen. */}
+          {!loading && data != null && data.totalMembers > 0 && (
+            <View style={styles.assemblyCounterRow}>
+              <Text style={styles.assemblyCounter}>
+                {t('goals.members.submittedRatioLong', {
+                  submitted: data.submittedMembers,
+                  total: data.totalMembers,
+                })}
+              </Text>
+              {data.lateMembers > 0 && (
+                <Text style={styles.assemblyLate}>
+                  {t('goals.members.lateCount', { count: data.lateMembers })}
+                </Text>
+              )}
+            </View>
+          )}
+
           {!loading && filled.length === 0 && (
             <Text style={styles.assemblyEmpty}>{t('goals.member.assemblyEmpty')}</Text>
           )}
@@ -282,17 +333,10 @@ function MyAssemblyBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
               const cat = catById.get(line.categoryId);
               return (
                 <View key={line.categoryId} style={styles.assemblyLine}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={styles.assemblyCat}>{cat?.name ?? line.categoryCode}</Text>
-                    <View style={styles.sourceBadge}>
-                      <Text style={styles.sourceBadgeText}>
-                        {sourceLabel[line.source] ?? line.source}
-                      </Text>
-                    </View>
-                  </View>
+                  <Text style={styles.assemblyCat}>{cat?.name ?? line.categoryCode}</Text>
                   <View style={styles.assemblyCols}>
                     <View>
-                      <Label>{t('goals.aggregate.retained')}</Label>
+                      <Label>{t('goals.pledged')}</Label>
                       <Text style={[styles.assemblyValue, { fontWeight: '600' }]}>
                         {fmtFor(line.categoryId, line.effectiveAmount ?? line.effectiveCount)}
                       </Text>
@@ -313,29 +357,7 @@ function MyAssemblyBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
   );
 }
 
-function EmptyState({
-  icon,
-  title,
-  hint,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  title: string;
-  hint: string;
-}) {
-  return (
-    <ScreenShell>
-      <View style={styles.centerBox}>
-        <View style={styles.emptyBubble}>
-          <Ionicons name={icon} size={30} color={colors.mossSoft} />
-        </View>
-        <Text style={styles.emptyTitle}>{title}</Text>
-        <Text style={styles.emptyHint}>{hint}</Text>
-      </View>
-    </ScreenShell>
-  );
-}
-
-// Styles alignés sur ceux de la vue assemblée (goals/index.tsx) — même hiérarchie visuelle.
+// Styles alignés sur ceux des primitives partagées (components/GoalCards.tsx).
 const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   title: {
@@ -381,6 +403,16 @@ const styles = StyleSheet.create({
     marginTop: 22,
   },
   sectionTitle: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink },
+  navCard: {
+    marginTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  navTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
+  navHint: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2, lineHeight: 16 },
   footnote: {
     fontFamily: fonts.sans,
     fontSize: 12,
@@ -389,7 +421,6 @@ const styles = StyleSheet.create({
     marginTop: 18,
     lineHeight: 18,
   },
-  // Palier A1 — bloc « Engagement de mon assemblée » (miroir de membersAgg* de la vue dirigeant).
   assemblyCard: { marginTop: 18, paddingHorizontal: 16, paddingVertical: 14 },
   assemblyHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   assemblyTitle: {
@@ -400,6 +431,12 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   assemblyHint: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, lineHeight: 17 },
+  assemblyCounterRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 8 },
+  assemblyCounter: {
+    fontFamily: fonts.sans, fontSize: 12, fontWeight: '700', color: colors.mossDeep,
+    backgroundColor: colors.mossTint, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 99,
+  },
+  assemblyLate: { fontFamily: fonts.sans, fontSize: 12, color: colors.clay },
   assemblyEmpty: {
     fontFamily: fonts.sans,
     fontSize: 12.5,
@@ -416,34 +453,7 @@ const styles = StyleSheet.create({
   assemblyCat: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
   assemblyCols: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
   assemblyValue: { fontFamily: fonts.serif, fontSize: 16, color: colors.ink, marginTop: 2 },
-  sourceBadge: {
-    backgroundColor: 'rgba(201,149,107,0.22)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 99,
-  },
-  sourceBadgeText: {
-    fontFamily: fonts.sans,
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: colors.earthDeep,
-  },
   centerBox: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 24 },
-  emptyBubble: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.mossTint2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyTitle: {
-    fontFamily: fonts.serif,
-    fontSize: 22,
-    color: colors.ink,
-    marginTop: 16,
-    textAlign: 'center',
-  },
   emptyHint: {
     fontFamily: fonts.sans,
     fontSize: 13,

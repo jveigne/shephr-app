@@ -6,11 +6,23 @@ import type { ModuleRole } from './authApi';
 // SUBTREE (dirigeant : son sous-arbre), CHAIN (membre : sa chaîne de rattachement remontante),
 // MINISTRY (LEADER/SECRETARIAT/SUPER_ADMIN : les arbres du ministère).
 
+/**
+ * Mirrors com.excellence.back.org.leaders.dto.HierarchyMemberView
+ *
+ * <p>Les trois champs `goal*` (chantier « objectifs individuels », JP 16/08) valent `null` s'il
+ * n'y a aucun Goal actif ou si la personne n'est pas rattachée → n'afficher AUCUNE pastille.
+ */
 export interface HierarchyMemberView {
   id: string;
   fullName: string;
   email: string | null;
   active: boolean;
+  /** A au moins un engagement déclaré pour l'année courante. */
+  goalHasPledges: boolean | null;
+  /** A soumis ses engagements. */
+  goalSubmitted: boolean | null;
+  /** Non soumis alors que la date limite est passée. */
+  goalLate: boolean | null;
 }
 
 export interface HierarchyUnitView {
@@ -25,12 +37,20 @@ export interface HierarchyUnitView {
   members: HierarchyMemberView[];
 }
 
+/** Mirrors com.excellence.back.org.leaders.dto.LeaderHierarchyNode */
 export interface LeaderHierarchyNode {
   id: string;
   fullName: string;
-  email: string;
+  email: string | null;
   donationRole: ModuleRole | null;
   goalRole: ModuleRole | null;
+  /**
+   * RG-BQ-11 — un dirigeant déclare SES engagements comme tout le monde : les trois champs
+   * ci-dessous sont identiques à ceux de {@link HierarchyMemberView}. `null` → aucune pastille.
+   */
+  goalHasPledges: boolean | null;
+  goalSubmitted: boolean | null;
+  goalLate: boolean | null;
   units: HierarchyUnitView[];
   children: LeaderHierarchyNode[];
 }

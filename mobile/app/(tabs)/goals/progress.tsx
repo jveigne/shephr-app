@@ -31,16 +31,10 @@ const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallb
 export default function AddProgressScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  // `scope=member` : mêmes écrans, mais on déclare l'état de SES objectifs personnels
-  // (décision JP 28/07 — le membre est sa propre unité d'engagement).
-  const { year: yearParam, scope, unitId } = useLocalSearchParams<{
-    year?: string;
-    scope?: string;
-    /** Palier A3 — assemblée ciblée : ses engagements, donc ses avancements. */
-    unitId?: string;
-  }>();
-  const member = scope === 'member';
-  const { goal, lines, loading, reload } = useGoalsData(yearParam ? Number(yearParam) : null, member, unitId);
+  // RG-BQ-01 (16/08) : on ne déclare l'état que de SES propres objectifs — les paramètres `scope`
+  // et `unitId` ont disparu avec l'engagement d'assemblée.
+  const { year: yearParam } = useLocalSearchParams<{ year?: string }>();
+  const { goal, lines, loading, reload } = useGoalsData(yearParam ? Number(yearParam) : null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [value, setValue] = useState('');
   const [note, setNote] = useState('');
@@ -73,7 +67,15 @@ export default function AddProgressScreen() {
       notify(t('common.appName'), t('progress.saved'));
       router.back();
     } catch (e: any) {
-      notify(t('common.appName'), errMsg(e, t('errors.saveFailed')));
+      // ⚠ DEADLINE_PASSED reste levé après la date limite (RG-BQ-07) — le secrétariat passe outre.
+      const code = e?.response?.data?.error;
+      const known: Record<string, string> = {
+        DEADLINE_PASSED: t('errors.goals.DEADLINE_PASSED'),
+        YEAR_NOT_OPEN: t('errors.goals.YEAR_NOT_OPEN'),
+        PROGRESS_AMOUNT_REQUIRED: t('errors.goals.PROGRESS_VALUE_REQUIRED'),
+        PROGRESS_COUNT_REQUIRED: t('errors.goals.PROGRESS_VALUE_REQUIRED'),
+      };
+      notify(t('common.appName'), known[code] ?? errMsg(e, t('errors.saveFailed')));
     } finally {
       setSaving(false);
     }

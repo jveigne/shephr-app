@@ -139,6 +139,18 @@ export default function ProfileScreen() {
         </>
       ) : null}
 
+      {/* RG-BQ-13 (JP 16/08) — on change d'assemblée SOI-MÊME, sans demande ni valideur. Le
+          profil est l'endroit naturel : c'est là qu'on lit son rattachement. */}
+      <Card style={{ paddingVertical: 0, marginTop: 12 }}>
+        <Row
+          icon="swap-horizontal-outline"
+          label={t('assembly.changeCta')}
+          value={t('assembly.changeHintShort')}
+          onPress={() => router.push('/(tabs)/goals/assembly')}
+          last
+        />
+      </Card>
+
 {/*      {canManageStructure(me) && (
         <>
           <Label style={{ marginTop: 26, marginBottom: 8, paddingHorizontal: 4 }}>{t('profile.management')}</Label>

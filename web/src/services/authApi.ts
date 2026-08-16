@@ -105,6 +105,17 @@ export function hasMinistryAccess(me: MeResponse | null): boolean {
 /**
  * Espace membre « Mes objectifs » (Feature A) : un MEMBRE du module Goals rattaché à une
  * assemblée. Espace minimal séparé — n'ouvre PAS le Web Espace ministère (hasMinistryAccess).
+ *
+ * ⚠ Le rattachement RESTE exigé (décision JP 16/08). J'avais brièvement retiré cette condition en
+ * croyant débloquer un compte sans assemblée ; c'était une erreur de raisonnement : l'assemblée est
+ * exigée À L'INSCRIPTION (RG-BQ-03), donc un compte non rattaché est une ANOMALIE, pas un état de
+ * départ normal à corriger soi-même.
+ *
+ * Les deux chemins prévus, et il n'y en a pas de troisième :
+ *  - compte neuf sans rattachement → parcours `/join` (hors shell), qui exige l'assemblée ;
+ *  - compte hérité non conforme → rattaché par le BACK-OFFICE ou le SECRÉTARIAT (palier G5).
+ *
+ * Le self-service (RG-BQ-13) sert à CHANGER d'assemblée, pas à s'en donner une première.
  */
 export function hasMemberSpace(me: MeResponse | null): boolean {
   return me?.goalRole === 'MEMBRE' && !!me?.goalUnitId;

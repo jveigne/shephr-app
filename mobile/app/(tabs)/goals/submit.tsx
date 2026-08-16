@@ -13,17 +13,19 @@ import { useGoalsData } from '../../../hooks/useGoalsData';
 import { goalCategoryMeta } from '../../../constants/goalCategories';
 import { fmtAmount, fmtDate } from '../../../utils/format';
 import { confirmDialog, notify } from '../../../utils/dialogs';
-import { submitMyPledges, type SubmitResponse } from '../../../services/goalsApi';
+import { submitMyMemberPledges, type SubmitResponse } from '../../../services/goalsApi';
 
-const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallback;
-
+/**
+ * Soumission INDIVIDUELLE (RG-BQ-06, JP 16/08) — chacun verrouille SES engagements. Il n'y a plus
+ * de soumission « au nom de l'assemblée » : le paramètre `unitId` a disparu avec la route qui le
+ * servait. Le suivi d'assemblée est devenu un compteur de personnes (« 7/12 »).
+ */
 export default function SubmitScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  // Palier A3 — `unitId` : l'assemblée que le dirigeant soumet (absente = son assemblée « home »).
-  const { year: yearParam, unitId } = useLocalSearchParams<{ year?: string; unitId?: string }>();
+  const { year: yearParam } = useLocalSearchParams<{ year?: string }>();
   const year = yearParam ? Number(yearParam) : null;
-  const { goal, lines, pledges, submitted, loading, reload } = useGoalsData(year, false, unitId);
+  const { goal, lines, pledges, submitted, loading, reload } = useGoalsData(year);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState<SubmitResponse | null>(null);
 
@@ -44,12 +46,21 @@ export default function SubmitScreen() {
   const doSubmit = async () => {
     setSubmitting(true);
     try {
-      const res = await submitMyPledges(year ?? undefined, unitId);
+      const res = await submitMyMemberPledges(year ?? undefined);
       setDone(res);
       await reload();
     } catch (e: any) {
-      const message = errMsg(e, t('submit.failed'));
-      notify(t('common.appName'), /already/i.test(message) ? t('submit.alreadySubmitted') : message);
+      // Les 422 métier portent leur code dans `error` : on les traite explicitement plutôt que de
+      // deviner sur le message (⚠ DEADLINE_PASSED reste levé — la date limite bloque toujours).
+      const code = e?.response?.data?.error;
+      const known: Record<string, string> = {
+        NO_PLEDGE_TO_SUBMIT: t('errors.goals.NO_PLEDGE_TO_SUBMIT'),
+        ALREADY_SUBMITTED: t('errors.goals.ALREADY_SUBMITTED'),
+        DEADLINE_PASSED: t('errors.goals.DEADLINE_PASSED'),
+        NO_ASSEMBLY_ATTACHMENT: t('errors.goals.NO_ASSEMBLY_ATTACHMENT'),
+        YEAR_NOT_OPEN: t('errors.goals.YEAR_NOT_OPEN'),
+      };
+      notify(t('common.appName'), known[code] ?? e?.response?.data?.message ?? t('submit.failed'));
     } finally {
       setSubmitting(false);
     }

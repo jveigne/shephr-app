@@ -133,10 +133,18 @@ export async function listUnits(params: { localityId?: string } = {}): Promise<U
 }
 
 /**
- * Palier C1-bis (JP 14/08) — `leaderUserId` : responsable de l'assemblée, compte EXISTANT.
- * Obligatoire hors SUPER_ADMIN (422 `UNIT_LEADER_REQUIRED`) : une assemblée sans responsable
- * n'est administrable par personne. L'affectation est faite par le backend dans la MÊME
- * transaction que la création — inutile (et risqué) d'enchaîner deux appels ici.
+ * RG-BQ-12 (JP 16/08) — la création d'une ASSEMBLÉE n'a plus aucune contrainte géographique :
+ * tout compte du ministère en crée une dans la ville de son choix (la VILLE, elle, reste créée
+ * par le secrétariat).
+ *
+ * <p>`leaderUserId` (compte EXISTANT) est FACULTATIF : omis, le CRÉATEUR devient responsable et
+ * passe `DIRIGEANT_UNITE` s'il était `MEMBRE` — jamais de rétrogradation, et son rôle Dons n'est
+ * pas promu. Son assemblée « maison » (`goalUnitId`) ne bouge pas. Le code 422
+ * `UNIT_LEADER_REQUIRED` ne peut donc plus être levé pour un non-superAdmin.
+ *
+ * <p>L'affectation est faite par le backend dans la MÊME transaction que la création — inutile
+ * (et risqué) d'enchaîner deux appels ici. Erreur métier : 422 `STRUCTURE_NAME_EXISTS` (deux
+ * assemblées du même nom dans une même ville).
  */
 export async function createUnit(payload: {
   ministryId: string; localityId: string; name: string; type: UnitType; leaderUserId?: string;
@@ -206,9 +214,12 @@ export interface AdminUserResponse {
   goalUnitId: string | null;
   active: boolean;
   /**
-   * A soumis son engagement pour l'année courante (JP 14/08).
-   * `true` soumis · `false` pas encore · `null` NON APPLICABLE (dirigeant de ville, région ou
-   * nation : il ne soumet rien à son niveau).
+   * A soumis SES engagements pour l'année courante.
+   *
+   * <p>RG-BQ-06 (16/08) — la sémantique a changé : `true` soumis · `false` pas encore ·
+   * `null` **uniquement** compte sans `goalUnitId` ou `superAdmin`. Un DIRIGEANT de ville, un
+   * SENIOR, un COORDINATEUR ou un SECRETARIAT rattachés valent désormais `true`/`false` comme
+   * les autres — ⚠ ne plus afficher de libellé « non applicable » attaché à un rôle.
    * Mirrors com.excellence.back.auth.admin.user.dto.AdminUserResponse#goalSubmitted
    */
   goalSubmitted: boolean | null;
