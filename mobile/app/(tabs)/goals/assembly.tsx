@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  TextInput,
   ActivityIndicator,
   Linking,
 } from 'react-native';
@@ -21,8 +20,15 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import { confirmDialog, notify } from '../../../utils/dialogs';
 import { changeMyAssembly } from '../../../services/unitApi';
 import { listUnits, type UnitResponse } from '../../../services/adminApi';
-import { listLocalities, type LocalitySummary } from '../../../services/orgApi';
+import {
+  listCountries, listLocalities, listZones,
+  type CountrySummary, type LocalitySummary, type ZoneSummary,
+} from '../../../services/orgApi';
 import { contactMailto, useContactSettings } from '../../../services/contactApi';
+import SelectField from '../../../components/SelectField';
+
+/** Région « fictive » pour les villes sans région — voir le `NO_ZONE` de `app/structure.tsx`. */
+const NO_ZONE = '__no_zone__';
 
 /**
  * RG-BQ-13 (JP 16/08) — « Changer d'assemblée », en libre-service.
@@ -39,35 +45,73 @@ export default function ChangeAssemblyScreen() {
   const { me, refreshMe } = useAuth();
   const { t } = useLanguage();
   const contact = useContactSettings();
+  const [countries, setCountries] = useState<CountrySummary[]>([]);
+  const [zones, setZones] = useState<ZoneSummary[]>([]);
   const [cities, setCities] = useState<LocalitySummary[]>([]);
   const [units, setUnits] = useState<UnitResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  // Cascade Nation → Région → Ville (JP 16/08) : la liste à plat des villes du ministère devenait
+  // illisible (des centaines d'entrées, homonymes d'une nation à l'autre). Seule la VILLE ouvre
+  // la liste des assemblées ; nation et région ne servent qu'à la trouver.
+  const [countryId, setCountryId] = useState('');
+  const [zoneId, setZoneId] = useState('');
   const [cityId, setCityId] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.allSettled([listLocalities(), listUnits()])
-      .then(([c, u]) => {
+    Promise.allSettled([listCountries(), listZones(), listLocalities(), listUnits()])
+      .then(([n, z, c, u]) => {
         if (cancelled) return;
-        if (c.status === 'fulfilled') setCities(c.value);
-        if (u.status === 'fulfilled') setUnits(u.value);
+        const nations = n.status === 'fulfilled' ? n.value : [];
+        const regions = z.status === 'fulfilled' ? z.value : [];
+        const villes = c.status === 'fulfilled' ? c.value : [];
+        const assemblees = u.status === 'fulfilled' ? u.value : [];
+        setCountries(nations); setZones(regions); setCities(villes); setUnits(assemblees);
+        // On ouvre la cascade SUR L'ASSEMBLÉE ACTUELLE : le cas courant est de rejoindre une
+        // autre assemblée de la même ville. À défaut, on présélectionne les niveaux à choix
+        // unique (ministère mono-nation).
+        const current = assemblees.find((a) => a.id === me?.goalUnitId);
+        const city = current ? villes.find((v) => v.id === current.localityId) : undefined;
+        const zone = city?.zoneId ? regions.find((r) => r.id === city.zoneId) : undefined;
+        const nationId = zone?.countryId ?? (nations.length === 1 ? nations[0].id : '');
+        setCountryId(nationId);
+        setZoneId(zone?.id ?? (city && !city.zoneId ? NO_ZONE : ''));
+        if (city) setCityId(city.id);
+        else if (nationId && !zone) {
+          const zs = regions.filter((r) => r.countryId === nationId);
+          if (zs.length === 1) setZoneId(zs[0].id);
+        }
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const visibleCities = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return cities;
-    return cities.filter((c) => c.name.toLowerCase().includes(q));
-  }, [cities, query]);
+  const zoneOptions = useMemo(() => {
+    const list = zones.filter((z) => z.countryId === countryId);
+    // Échappatoire pour les villes sans région, sinon injoignables depuis la cascade.
+    return cities.some((c) => !c.zoneId)
+      ? [...list, { id: NO_ZONE, countryId, countryName: '', name: t('structure.noZone') }]
+      : list;
+  }, [zones, cities, countryId, t]);
+
+  const cityOptions = useMemo(
+    () => cities.filter((c) => (zoneId === NO_ZONE ? !c.zoneId : c.zoneId === zoneId)),
+    [cities, zoneId],
+  );
 
   const cityUnits = useMemo(
     () => (cityId ? units.filter((u) => u.localityId === cityId) : []),
     [units, cityId],
   );
+
+  const pickCountry = (id: string) => {
+    setCountryId(id);
+    // Changer de nation invalide la région ET la ville déjà choisies.
+    const zs = zones.filter((z) => z.countryId === id);
+    setZoneId(zs.length === 1 ? zs[0].id : '');
+    setCityId(null);
+  };
 
   const onPick = async (unit: UnitResponse) => {
     if (unit.id === me?.goalUnitId) {
@@ -131,29 +175,62 @@ export default function ChangeAssemblyScreen() {
 
       {loading ? (
         <ActivityIndicator color={colors.moss} style={{ marginTop: 40 }} />
-      ) : cityId == null ? (
+      ) : (
         <>
-          <Label style={{ marginTop: 22, marginBottom: 8 }}>{t('assembly.pickCity')}</Label>
-          <View style={styles.searchBox}>
-            <Ionicons name="search" size={16} color={colors.ink3} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              style={styles.searchInput}
-              placeholder={t('assembly.searchCity')}
-              placeholderTextColor={colors.ink3}
-              autoCapitalize="none"
+          {/* Où chercher : nation → région → ville. Chaque niveau ouvre une liste cherchable
+              (SelectField) et reste désactivé tant que celui du dessus n'est pas choisi —
+              même cascade que l'écran « Rejoindre une assemblée ». */}
+          <View style={{ marginTop: 16 }}>
+            <SelectField
+              label={t('join.pickNation')}
+              options={countries}
+              pick={countries.find((c) => c.id === countryId) ?? null}
+              onChange={(c) => pickCountry(c.id)}
             />
+            <SelectField
+              label={t('join.pickRegion')}
+              options={zoneOptions}
+              pick={zoneOptions.find((z) => z.id === zoneId) ?? null}
+              onChange={(z) => { setZoneId(z.id); setCityId(null); }}
+              disabled={countryId === ''}
+            />
+            <SelectField
+              label={t('join.pickCity')}
+              options={cityOptions}
+              pick={cityOptions.find((c) => c.id === cityId) ?? null}
+              onChange={(c) => setCityId(c.id)}
+              disabled={zoneId === ''}
+            />
+            {zoneId !== '' && cityOptions.length === 0 && (
+              <Text style={styles.empty}>{t('assembly.noCity')}</Text>
+            )}
           </View>
-          <View style={{ gap: 8, marginTop: 12 }}>
-            {visibleCities.map((c) => (
-              <Card key={c.id} variant="paper2" style={styles.row} onPress={() => setCityId(c.id)}>
-                <Text style={styles.rowName}>{c.name}</Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
-              </Card>
-            ))}
-            {visibleCities.length === 0 && <Text style={styles.empty}>{t('assembly.noCity')}</Text>}
-          </View>
+
+          {cityId != null && (
+            <>
+              <Label style={{ marginTop: 22, marginBottom: 8 }}>{t('assembly.pickAssembly')}</Label>
+              <View style={{ gap: 8 }}>
+                {cityUnits.map((u) => (
+                  <Card
+                    key={u.id}
+                    variant="paper2"
+                    style={styles.row}
+                    onPress={saving ? undefined : () => onPick(u)}
+                  >
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.rowName}>{u.name}</Text>
+                      {u.id === me?.goalUnitId && (
+                        <Text style={styles.rowMeta}>{t('assembly.currentTag')}</Text>
+                      )}
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+                  </Card>
+                ))}
+                {cityUnits.length === 0 && <Text style={styles.empty}>{t('assembly.noAssembly')}</Text>}
+              </View>
+              {saving && <ActivityIndicator color={colors.moss} style={{ marginTop: 18 }} />}
+            </>
+          )}
 
           {/* La VILLE reste créée par le secrétariat (RG-BQ-12) : sans issue de secours, une
               personne dont la ville n'existe pas serait bloquée. */}
@@ -177,33 +254,6 @@ export default function ChangeAssemblyScreen() {
             </View>
           </View>
         </>
-      ) : (
-        <>
-          <Pressable onPress={() => setCityId(null)} hitSlop={6} style={{ marginTop: 18 }}>
-            <Text style={styles.backLink}>{t('assembly.backToCities')}</Text>
-          </Pressable>
-          <Label style={{ marginTop: 12, marginBottom: 8 }}>{t('assembly.pickAssembly')}</Label>
-          <View style={{ gap: 8 }}>
-            {cityUnits.map((u) => (
-              <Card
-                key={u.id}
-                variant="paper2"
-                style={styles.row}
-                onPress={saving ? undefined : () => onPick(u)}
-              >
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.rowName}>{u.name}</Text>
-                  {u.id === me?.goalUnitId && (
-                    <Text style={styles.rowMeta}>{t('assembly.currentTag')}</Text>
-                  )}
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
-              </Card>
-            ))}
-            {cityUnits.length === 0 && <Text style={styles.empty}>{t('assembly.noAssembly')}</Text>}
-          </View>
-          {saving && <ActivityIndicator color={colors.moss} style={{ marginTop: 18 }} />}
-        </>
       )}
     </ScreenShell>
   );
@@ -223,19 +273,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   warnText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },
-  searchBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderWidth: 1, borderColor: 'rgba(42,38,32,0.15)', borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 8, backgroundColor: colors.paper,
-  },
-  searchInput: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: colors.ink, padding: 0 },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingHorizontal: 16, paddingVertical: 13,
   },
   rowName: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
   rowMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.mossSoft, marginTop: 2 },
-  backLink: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: colors.moss },
   empty: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, fontStyle: 'italic', marginTop: 12 },
   contactBlock: { marginTop: 26, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.hair },
   contactHint: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, lineHeight: 18 },

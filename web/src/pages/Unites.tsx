@@ -10,7 +10,7 @@ import {
   Input,
   Modal,
   Pagination,
-  Select,
+  Picker,
   StatusBadge,
   Table,
   Toggle,
@@ -24,13 +24,17 @@ import {
   createUnit,
   deleteUnit,
   listAssemblyHistory,
+  listCountries,
   listLocalities,
   listUnits,
   listUsers,
+  listZones,
   updateUnit,
   type AssemblyCreationRow,
+  type CountryResponse,
   type LocalityResponse,
   type UnitResponse,
+  type ZoneResponse,
 } from '../services/adminApi';
 import { contactMailto, contactWhatsapp, useContactSettings } from '../services/contactApi';
 import { ConfirmDelete } from './Zones';
@@ -67,6 +71,10 @@ export function UnitesPage() {
 
   const localitiesQ = useQuery({ queryKey: ['admin', 'localities'], queryFn: () => listLocalities() });
   const unitsQ = useQuery({ queryKey: ['admin', 'units'], queryFn: () => listUnits() });
+  // Référentiel de la cascade Pays → Région → Ville du formulaire (mêmes clés de cache que les
+  // autres pages Structure). Lecture ouverte à tout membre du ministère depuis RG-BQ-12.
+  const countriesQ = useQuery({ queryKey: ['admin', 'countries'], queryFn: listCountries });
+  const zonesQ = useQuery({ queryKey: ['admin', 'zones'], queryFn: () => listZones() });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin', 'units'] });
 
@@ -211,6 +219,8 @@ export function UnitesPage() {
         open={creating}
         onClose={() => setCreating(false)}
         localities={localities}
+        zones={zonesQ.data ?? []}
+        countries={countriesQ.data ?? []}
         submitting={createM.isPending}
         onSubmit={(v) =>
           ministryId && createM.mutate({
@@ -222,6 +232,8 @@ export function UnitesPage() {
         open={editing != null}
         onClose={() => setEditing(null)}
         localities={localities}
+        zones={zonesQ.data ?? []}
+        countries={countriesQ.data ?? []}
         unit={editing ?? undefined}
         submitting={updateM.isPending}
         onSubmit={(v) => editing && updateM.mutate({ id: editing.id, name: v.name, localityId: v.localityId, active: v.active })}
@@ -363,10 +375,19 @@ function useDebouncedValue(value: string, delayMs: number): string {
   return debounced;
 }
 
+/**
+ * Région « fictive » de la cascade : une VILLE peut n'être rattachée à aucune région (création
+ * SUPER_ADMIN). Sans cette entrée, ces villes seraient injoignables. Le choix n'apparaît que
+ * s'il existe au moins une ville orpheline. Miroir exact du `NO_ZONE` mobile.
+ */
+const NO_ZONE = '__no_zone__';
+
 function UnitFormModal({
   open,
   onClose,
   localities,
+  zones,
+  countries,
   unit,
   submitting,
   onSubmit,
@@ -374,6 +395,8 @@ function UnitFormModal({
   open: boolean;
   onClose: () => void;
   localities: LocalityResponse[];
+  zones: ZoneResponse[];
+  countries: CountryResponse[];
   unit?: UnitResponse;
   submitting: boolean;
   onSubmit: (v: { localityId: string; name: string; active: boolean; leaderUserId?: string }) => void;
@@ -384,6 +407,11 @@ function UnitFormModal({
   useContactSettings();
   const isEdit = unit != null;
   const [localityId, setLocalityId] = useState('');
+  // Cascade Pays → Région → Ville (JP 16/08, parité mobile) : la liste à plat des villes du
+  // ministère est trop longue et ambiguë (homonymes d'une nation à l'autre). Seule la VILLE
+  // (`localityId`) part au serveur — pays et région ne servent qu'à filtrer.
+  const [countryId, setCountryId] = useState('');
+  const [zoneId, setZoneId] = useState('');
   const [name, setName] = useState('');
   const [active, setActive] = useState(true);
   const [leaderId, setLeaderId] = useState('');
@@ -391,12 +419,55 @@ function UnitFormModal({
 
   useEffect(() => {
     if (open) {
-      setLocalityId(unit?.localityId ?? localities[0]?.id ?? '');
+      if (unit) {
+        // Édition : on remonte la chaîne depuis la ville de l'assemblée.
+        const loc = localities.find((l) => l.id === unit.localityId);
+        const z = loc?.zoneId ?? '';
+        setZoneId(z || (loc ? NO_ZONE : ''));
+        setCountryId(z ? zones.find((zz) => zz.id === z)?.countryId ?? '' : '');
+        setLocalityId(unit.localityId);
+      } else {
+        // Création : on présélectionne les niveaux à choix unique (ministère mono-nation),
+        // jamais la ville — c'est LE choix que la personne doit poser elle-même. L'ancien
+        // `localities[0]` préchoisissait une ville arbitraire de la liste à plat.
+        const c = countries.length === 1 ? countries[0].id : '';
+        const zs = c ? zones.filter((z) => z.countryId === c) : [];
+        setCountryId(c);
+        setZoneId(zs.length === 1 ? zs[0].id : '');
+        setLocalityId('');
+      }
       setName(unit?.name ?? '');
       setActive(unit?.active ?? true);
       setLeaderId(''); setLeaderQuery('');
     }
-  }, [open, unit, localities]);
+  }, [open, unit, localities, zones, countries]);
+
+  const countryOptions = useMemo(
+    () => countries.map((c) => ({ id: c.id, label: c.name })),
+    [countries],
+  );
+  const zoneOptions = useMemo(() => {
+    const list = zones
+      .filter((z) => z.countryId === countryId)
+      .map((z) => ({ id: z.id, label: z.name }));
+    return localities.some((l) => !l.zoneId)
+      ? [...list, { id: NO_ZONE, label: t('geoPicker.noZone') }]
+      : list;
+  }, [zones, localities, countryId, t]);
+  const localityOptions = useMemo(
+    () => localities
+      .filter((l) => (zoneId === NO_ZONE ? !l.zoneId : l.zoneId === zoneId))
+      .map((l) => ({ id: l.id, label: l.name })),
+    [localities, zoneId],
+  );
+
+  const pickCountry = (id: string) => {
+    setCountryId(id);
+    // Changer de nation invalide la région ET la ville déjà choisies.
+    const zs = zones.filter((z) => z.countryId === id);
+    setZoneId(zs.length === 1 ? zs[0].id : '');
+    setLocalityId('');
+  };
 
   // RG-BQ-12 : le responsable est FACULTATIF. Omis, le créateur devient responsable de l'assemblée
   // (et passe DIRIGEANT_UNITE s'il était MEMBRE) — le code `UNIT_LEADER_REQUIRED` n'existe plus.
@@ -435,12 +506,34 @@ function UnitFormModal({
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* Trois listes déroulantes cherchables (`Picker`) plutôt qu'un `<select>` de toutes les
+            villes : le référentiel en compte des centaines. Chaque niveau reste désactivé tant
+            que celui du dessus n'est pas choisi — même cascade que l'onboarding et le mobile. */}
+        <Field label={t('common.country')}>
+          <Picker
+            value={countryId}
+            onChange={pickCountry}
+            options={countryOptions}
+            placeholder={t('common.choose')}
+          />
+        </Field>
+        <Field label={t('common.zone')}>
+          <Picker
+            value={zoneId}
+            onChange={(id) => { setZoneId(id); setLocalityId(''); }}
+            options={zoneOptions}
+            placeholder={t('common.choose')}
+            disabled={!countryId}
+          />
+        </Field>
         <Field label={t('common.locality')}>
-          <Select value={localityId} onChange={(e) => setLocalityId(e.target.value)}>
-            {localities.map((l) => (
-              <option key={l.id} value={l.id}>{l.name}{l.zoneName ? ` — ${l.zoneName}` : ''}</option>
-            ))}
-          </Select>
+          <Picker
+            value={localityId}
+            onChange={setLocalityId}
+            options={localityOptions}
+            placeholder={t('common.choose')}
+            disabled={!zoneId}
+          />
           {/* RG-BQ-12 : la VILLE, elle, reste fermée (secrétariat / back-office). Qui ne trouve
               pas la sienne contacte le support — coordonnées servies par GET /api/app/contact,
               donc modifiables sans redéployer. */}

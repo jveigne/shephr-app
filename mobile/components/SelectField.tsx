@@ -24,12 +24,21 @@ export default function SelectField<T extends SelectOption>({
   pick,
   onChange,
   disabled,
+  inline,
 }: {
   label: string;
   options: T[];
   pick: T | null;
   onChange: (p: T) => void;
   disabled?: boolean;
+  /**
+   * Déroule la liste SOUS le champ au lieu d'ouvrir une modale (JP 16/08).
+   *
+   * <p>Obligatoire quand ce composant est utilisé DANS une `Modal` (formulaire de la page
+   * Structure) : deux `Modal` React Native imbriquées laissent, à la fermeture, un calque
+   * invisible qui avale tous les appuis — l'écran s'affiche mais ne répond plus.
+   */
+  inline?: boolean;
 }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
@@ -43,11 +52,49 @@ export default function SelectField<T extends SelectOption>({
     setQuery('');
   };
 
+  const search = options.length >= SEARCH_FROM && (
+    <View style={styles.pickerSearch}>
+      <Ionicons name="search" size={15} color={colors.ink3} />
+      <Field
+        value={query}
+        onChangeText={setQuery}
+        placeholder={label}
+        autoCapitalize="none"
+        style={styles.pickerSearchInput}
+      />
+    </View>
+  );
+
+  const rows = (
+    <ScrollView
+      style={{ marginTop: 8, maxHeight: inline ? 240 : 360 }}
+      nestedScrollEnabled
+      keyboardShouldPersistTaps="handled"
+    >
+      {shown.length === 0 && <Text style={styles.emptyHint}>{t('join.noOption')}</Text>}
+      {shown.map((o) => (
+        <Pressable
+          key={o.id}
+          onPress={() => { onChange(o); close(); }}
+          style={styles.pickerRow}
+        >
+          <Text
+            style={[styles.pickerName, pick?.id === o.id && styles.pickerNameActive]}
+            numberOfLines={1}
+          >
+            {o.name}
+          </Text>
+          {pick?.id === o.id && <Ionicons name="checkmark" size={16} color={colors.moss} />}
+        </Pressable>
+      ))}
+    </ScrollView>
+  );
+
   return (
     <View style={{ marginTop: 10 }}>
       <Label style={{ marginBottom: 6 }}>{label}</Label>
       <Pressable
-        onPress={() => !disabled && options.length > 0 && setOpen(true)}
+        onPress={() => !disabled && options.length > 0 && setOpen((v) => (inline ? !v : true))}
         style={[styles.selectField, disabled && styles.selectFieldDisabled]}
       >
         <Text
@@ -56,53 +103,25 @@ export default function SelectField<T extends SelectOption>({
         >
           {pick ? pick.name : t('common.choose')}
         </Text>
-        <Ionicons name="chevron-down" size={16} color={colors.ink3} />
+        <Ionicons name={open && inline ? 'chevron-up' : 'chevron-down'} size={16} color={colors.ink3} />
       </Pressable>
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
-        <View style={styles.pickerBackdrop}>
-          <Card style={styles.pickerCard}>
-            <Label style={{ marginBottom: 8 }}>{label}</Label>
-            {options.length >= SEARCH_FROM && (
-              <View style={styles.pickerSearch}>
-                <Ionicons name="search" size={15} color={colors.ink3} />
-                <Field
-                  value={query}
-                  onChangeText={setQuery}
-                  placeholder={label}
-                  autoCapitalize="none"
-                  style={styles.pickerSearchInput}
-                />
-              </View>
-            )}
-            <ScrollView style={{ marginTop: 8, maxHeight: 360 }}>
-              {shown.length === 0 && (
-                <Text style={styles.emptyHint}>{t('join.noOption')}</Text>
-              )}
-              {shown.map((o) => (
-                <Pressable
-                  key={o.id}
-                  onPress={() => { onChange(o); close(); }}
-                  style={styles.pickerRow}
-                >
-                  <Text
-                    style={[styles.pickerName, pick?.id === o.id && styles.pickerNameActive]}
-                    numberOfLines={1}
-                  >
-                    {o.name}
-                  </Text>
-                  {pick?.id === o.id && (
-                    <Ionicons name="checkmark" size={16} color={colors.moss} />
-                  )}
-                </Pressable>
-              ))}
-            </ScrollView>
-            <Pressable onPress={close} style={{ marginTop: 12, alignItems: 'center' }}>
-              <Text style={styles.cancelLink}>{t('common.cancel')}</Text>
-            </Pressable>
-          </Card>
-        </View>
-      </Modal>
+      {inline ? (
+        open && <View style={styles.inlinePanel}>{search}{rows}</View>
+      ) : (
+        <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
+          <View style={styles.pickerBackdrop}>
+            <Card style={styles.pickerCard}>
+              <Label style={{ marginBottom: 8 }}>{label}</Label>
+              {search}
+              {rows}
+              <Pressable onPress={close} style={{ marginTop: 12, alignItems: 'center' }}>
+                <Text style={styles.cancelLink}>{t('common.cancel')}</Text>
+              </Pressable>
+            </Card>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -121,6 +140,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paper,
   },
   selectFieldDisabled: { opacity: 0.45 },
+  inlinePanel: {
+    marginTop: 6,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(42,38,32,0.12)',
+    backgroundColor: colors.paper2,
+  },
   selectValue: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: colors.ink },
   selectPlaceholder: { color: colors.ink3 },
   pickerBackdrop: {
