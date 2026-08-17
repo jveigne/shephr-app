@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import {
@@ -11,7 +10,7 @@ import {
   Input,
   Modal,
   Pagination,
-  Select,
+  Picker,
   StatusBadge,
   Table,
   Toggle,
@@ -20,32 +19,45 @@ import {
 } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { canManageUnits, isSecretariat } from '../services/authApi';
+import { canCreateAssembly, canManageUnits, isSecretariat } from '../services/authApi';
 import {
   createUnit,
   deleteUnit,
   listAssemblyHistory,
+  listCountries,
   listLocalities,
   listUnits,
   listUsers,
+  listZones,
   updateUnit,
   type AssemblyCreationRow,
+  type CountryResponse,
   type LocalityResponse,
   type UnitResponse,
+  type ZoneResponse,
 } from '../services/adminApi';
+import { contactMailto, contactWhatsapp, useContactSettings } from '../services/contactApi';
 import { ConfirmDelete } from './Zones';
 
 const errMsg = (err: unknown, fallback: string) =>
   (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
+
+/** Code métier d'une 422 (`ApiError.error`). */
+const errCode = (err: unknown): string | null =>
+  (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? null;
 
 export function UnitesPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { push } = useToast();
   const { me } = useAuth();
-  const navigate = useNavigate();
   const ministryId = me?.ministryId ?? null;
-  const canWrite = canManageUnits(me);
+  // Deux droits distincts sur cet écran, à ne pas confondre (RG-BQ-12) :
+  //  - ADMINISTRER (modifier / supprimer) reste gardé par `requireCanManageInLocality` côté
+  //    serveur → `canManageUnits`, inchangé. Afficher ces actions plus largement ne produirait
+  //    que des 403 ;
+  //  - CRÉER est ouvert à tout membre du ministère → `canCreate` plus bas.
+  const canAdminister = canManageUnits(me);
   // Palier C4 (JP 14/08) : l'onglet Historique n'est proposé qu'au SECRETARIAT et au SUPER_ADMIN,
   // miroir de la garde serveur de GET /units/history (tout autre rôle → 403).
   const canSeeHistory = isSecretariat(me) || !!me?.superAdmin;
@@ -59,13 +71,27 @@ export function UnitesPage() {
 
   const localitiesQ = useQuery({ queryKey: ['admin', 'localities'], queryFn: () => listLocalities() });
   const unitsQ = useQuery({ queryKey: ['admin', 'units'], queryFn: () => listUnits() });
+  // Référentiel de la cascade Pays → Région → Ville du formulaire (mêmes clés de cache que les
+  // autres pages Structure). Lecture ouverte à tout membre du ministère depuis RG-BQ-12.
+  const countriesQ = useQuery({ queryKey: ['admin', 'countries'], queryFn: listCountries });
+  const zonesQ = useQuery({ queryKey: ['admin', 'zones'], queryFn: () => listZones() });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin', 'units'] });
 
   const createM = useMutation({
     mutationFn: createUnit,
     onSuccess: () => { invalidate(); setCreating(false); push({ kind: 'ok', title: t('units.created') }); },
-    onError: (err) => push({ kind: 'error', title: t('units.createRefused'), msg: errMsg(err, t('units.createFailed')) }),
+    onError: (err) => {
+      // STRUCTURE_NAME_EXISTS (RG-DS-03 étendue à la création directe) : le message serveur dit
+      // déjà quoi faire (« … existe déjà dans <ville> »), on l'affiche tel quel sous un titre
+      // qui ne le contredit pas.
+      const code = errCode(err);
+      push({
+        kind: 'error',
+        title: code === 'STRUCTURE_NAME_EXISTS' ? t('units.nameExists') : t('units.createRefused'),
+        msg: errMsg(err, t('units.createFailed')),
+      });
+    },
   });
   const updateM = useMutation({
     mutationFn: ({ id, ...payload }: { id: string; name?: string; localityId?: string; active?: boolean }) =>
@@ -87,7 +113,11 @@ export function UnitesPage() {
   }, [unitsQ.data, search]);
 
   const localities = localitiesQ.data ?? [];
-  const canCreate = canWrite && localities.length > 0 && ministryId != null;
+  // RG-BQ-12 (JP 16/08) : la création d'une assemblée n'a PLUS aucune contrainte de rôle ni de
+  // géographie — tout compte du ministère en crée une dans la ville de son choix. Le droit passe
+  // par `canCreateAssembly` (même prédicat que l'offre de création des Réglages) ; reste le
+  // prérequis technique d'avoir au moins une ville où la poser.
+  const canCreate = canCreateAssembly(me) && localities.length > 0;
 
   const cols: Column<UnitResponse>[] = [
     { label: t('units.colUnit'), render: (u) => <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{u.name}</span> },
@@ -97,7 +127,7 @@ export function UnitesPage() {
       render: (u) => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-600)' }}>{u.joinCode}</span>,
     },
     { label: t('common.status'), render: (u) => <StatusBadge active={u.active} /> },
-    ...(canWrite
+    ...(canAdminister
       ? [{
           label: '',
           style: { width: 90 },
@@ -117,26 +147,15 @@ export function UnitesPage() {
         title={t('units.title')}
         crumbs={[t('common.brand'), t('nav.structure'), t('units.title')]}
         actions={
-          // Palier C1 (JP 14/08) : la création directe est ouverte aux dirigeants — le garde
-          // RG-DS-05 (« passez par une demande ») est retiré côté serveur. Le périmètre (« dans MA
-          // ville ») reste vérifié par le backend, qui répond 403.
+          // RG-BQ-12 : plus de repli « Demander une assemblée » — la création directe est ouverte
+          // à tous, la demande n'a plus d'objet pour ce niveau (ville/région/nation restent fermées).
           canCreate ? (
             <Button
               variant="primary"
               iconL={<Icon name="plus" size={15} />}
-              disabled={!canCreate}
-              title={canCreate ? undefined : t('units.noLocalityHint')}
               onClick={() => setCreating(true)}
             >
               {t('units.newUnit')}
-            </Button>
-          ) : (canWrite || me?.donationRole === 'DIRIGEANT_UNITE' || me?.goalRole === 'DIRIGEANT_UNITE') ? (
-            <Button
-              variant="primary"
-              iconL={<Icon name="plus" size={15} />}
-              onClick={() => navigate('/requests')}
-            >
-              {t('units.requestUnit')}
             </Button>
           ) : undefined
         }
@@ -184,7 +203,10 @@ export function UnitesPage() {
                   <div className="empty">
                     <div className="icon-wrap"><Icon name="unit" size={26} /></div>
                     <h4>{t('units.noUnit')}</h4>
-                    <p>{canCreate ? t('units.createFirst') : t('units.noneInScope')}</p>
+                    {/* RG-BQ-12 : la liste n'est plus scopée à un périmètre (lecture ouverte à
+                        tout le ministère). Si `canCreate` est faux ici, ce n'est pas un refus de
+                        droit — c'est qu'aucune ville n'existe encore où poser une assemblée. */}
+                    <p>{canCreate ? t('units.createFirst') : t('units.noCityYet')}</p>
                   </div>
                 }
               />
@@ -197,8 +219,9 @@ export function UnitesPage() {
         open={creating}
         onClose={() => setCreating(false)}
         localities={localities}
+        zones={zonesQ.data ?? []}
+        countries={countriesQ.data ?? []}
         submitting={createM.isPending}
-        requireLeader={!me?.superAdmin}
         onSubmit={(v) =>
           ministryId && createM.mutate({
             ministryId, localityId: v.localityId, name: v.name, leaderUserId: v.leaderUserId,
@@ -209,6 +232,8 @@ export function UnitesPage() {
         open={editing != null}
         onClose={() => setEditing(null)}
         localities={localities}
+        zones={zonesQ.data ?? []}
+        countries={countriesQ.data ?? []}
         unit={editing ?? undefined}
         submitting={updateM.isPending}
         onSubmit={(v) => editing && updateM.mutate({ id: editing.id, name: v.name, localityId: v.localityId, active: v.active })}
@@ -350,30 +375,43 @@ function useDebouncedValue(value: string, delayMs: number): string {
   return debounced;
 }
 
+/**
+ * Région « fictive » de la cascade : une VILLE peut n'être rattachée à aucune région (création
+ * SUPER_ADMIN). Sans cette entrée, ces villes seraient injoignables. Le choix n'apparaît que
+ * s'il existe au moins une ville orpheline. Miroir exact du `NO_ZONE` mobile.
+ */
+const NO_ZONE = '__no_zone__';
+
 function UnitFormModal({
   open,
   onClose,
   localities,
+  zones,
+  countries,
   unit,
   submitting,
-  requireLeader = false,
   onSubmit,
 }: {
   open: boolean;
   onClose: () => void;
   localities: LocalityResponse[];
+  zones: ZoneResponse[];
+  countries: CountryResponse[];
   unit?: UnitResponse;
   submitting: boolean;
-  /**
-   * Palier C1-bis (JP 14/08) — le responsable est obligatoire à la création, sauf pour le
-   * SUPER_ADMIN (le back-office construit l'arbre avant que les comptes n'existent).
-   */
-  requireLeader?: boolean;
   onSubmit: (v: { localityId: string; name: string; active: boolean; leaderUserId?: string }) => void;
 }) {
   const { t } = useTranslation();
+  // Charge les coordonnées de support et fait re-rendre quand elles arrivent : `contactMailto` /
+  // `contactWhatsapp` lisent une valeur SYNCHRONE alimentée par ce hook.
+  useContactSettings();
   const isEdit = unit != null;
   const [localityId, setLocalityId] = useState('');
+  // Cascade Pays → Région → Ville (JP 16/08, parité mobile) : la liste à plat des villes du
+  // ministère est trop longue et ambiguë (homonymes d'une nation à l'autre). Seule la VILLE
+  // (`localityId`) part au serveur — pays et région ne servent qu'à filtrer.
+  const [countryId, setCountryId] = useState('');
+  const [zoneId, setZoneId] = useState('');
   const [name, setName] = useState('');
   const [active, setActive] = useState(true);
   const [leaderId, setLeaderId] = useState('');
@@ -381,26 +419,69 @@ function UnitFormModal({
 
   useEffect(() => {
     if (open) {
-      setLocalityId(unit?.localityId ?? localities[0]?.id ?? '');
+      if (unit) {
+        // Édition : on remonte la chaîne depuis la ville de l'assemblée.
+        const loc = localities.find((l) => l.id === unit.localityId);
+        const z = loc?.zoneId ?? '';
+        setZoneId(z || (loc ? NO_ZONE : ''));
+        setCountryId(z ? zones.find((zz) => zz.id === z)?.countryId ?? '' : '');
+        setLocalityId(unit.localityId);
+      } else {
+        // Création : on présélectionne les niveaux à choix unique (ministère mono-nation),
+        // jamais la ville — c'est LE choix que la personne doit poser elle-même. L'ancien
+        // `localities[0]` préchoisissait une ville arbitraire de la liste à plat.
+        const c = countries.length === 1 ? countries[0].id : '';
+        const zs = c ? zones.filter((z) => z.countryId === c) : [];
+        setCountryId(c);
+        setZoneId(zs.length === 1 ? zs[0].id : '');
+        setLocalityId('');
+      }
       setName(unit?.name ?? '');
       setActive(unit?.active ?? true);
       setLeaderId(''); setLeaderQuery('');
     }
-  }, [open, unit, localities]);
+  }, [open, unit, localities, zones, countries]);
 
+  const countryOptions = useMemo(
+    () => countries.map((c) => ({ id: c.id, label: c.name })),
+    [countries],
+  );
+  const zoneOptions = useMemo(() => {
+    const list = zones
+      .filter((z) => z.countryId === countryId)
+      .map((z) => ({ id: z.id, label: z.name }));
+    return localities.some((l) => !l.zoneId)
+      ? [...list, { id: NO_ZONE, label: t('geoPicker.noZone') }]
+      : list;
+  }, [zones, localities, countryId, t]);
+  const localityOptions = useMemo(
+    () => localities
+      .filter((l) => (zoneId === NO_ZONE ? !l.zoneId : l.zoneId === zoneId))
+      .map((l) => ({ id: l.id, label: l.name })),
+    [localities, zoneId],
+  );
+
+  const pickCountry = (id: string) => {
+    setCountryId(id);
+    // Changer de nation invalide la région ET la ville déjà choisies.
+    const zs = zones.filter((z) => z.countryId === id);
+    setZoneId(zs.length === 1 ? zs[0].id : '');
+    setLocalityId('');
+  };
+
+  // RG-BQ-12 : le responsable est FACULTATIF. Omis, le créateur devient responsable de l'assemblée
+  // (et passe DIRIGEANT_UNITE s'il était MEMBRE) — le code `UNIT_LEADER_REQUIRED` n'existe plus.
+  const canPickLeader = !isEdit;
   // Recherche serveur : l'annuaire d'un ministère ne se charge pas en entier (cf. Utilisateurs).
-  const needsLeader = !isEdit && requireLeader;
   const debouncedLeaderQuery = useDebouncedValue(leaderQuery, 300);
   const leadersQ = useQuery({
     queryKey: ['admin', 'user-search', debouncedLeaderQuery],
     queryFn: () => listUsers({ search: debouncedLeaderQuery, active: true, size: 10 }),
-    enabled: needsLeader && debouncedLeaderQuery.trim().length >= 2,
+    enabled: canPickLeader && debouncedLeaderQuery.trim().length >= 2,
   });
   const leaders = leadersQ.data?.content ?? [];
 
-  const valid = name.trim().length > 0 && localityId !== ''
-    // Sans responsable, le backend refuse (422 UNIT_LEADER_REQUIRED).
-    && (!needsLeader || leaderId !== '');
+  const valid = name.trim().length > 0 && localityId !== '';
 
   return (
     <Modal
@@ -416,7 +497,7 @@ function UnitFormModal({
             disabled={!valid || submitting}
             onClick={() => onSubmit({
               localityId, name: name.trim(), active,
-              leaderUserId: needsLeader ? leaderId : undefined,
+              leaderUserId: canPickLeader ? leaderId || undefined : undefined,
             })}
           >
             {submitting ? t('common.saving') : isEdit ? t('common.save') : t('common.create')}
@@ -425,20 +506,56 @@ function UnitFormModal({
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* Trois listes déroulantes cherchables (`Picker`) plutôt qu'un `<select>` de toutes les
+            villes : le référentiel en compte des centaines. Chaque niveau reste désactivé tant
+            que celui du dessus n'est pas choisi — même cascade que l'onboarding et le mobile. */}
+        <Field label={t('common.country')}>
+          <Picker
+            value={countryId}
+            onChange={pickCountry}
+            options={countryOptions}
+            placeholder={t('common.choose')}
+          />
+        </Field>
+        <Field label={t('common.zone')}>
+          <Picker
+            value={zoneId}
+            onChange={(id) => { setZoneId(id); setLocalityId(''); }}
+            options={zoneOptions}
+            placeholder={t('common.choose')}
+            disabled={!countryId}
+          />
+        </Field>
         <Field label={t('common.locality')}>
-          <Select value={localityId} onChange={(e) => setLocalityId(e.target.value)}>
-            {localities.map((l) => (
-              <option key={l.id} value={l.id}>{l.name}{l.zoneName ? ` — ${l.zoneName}` : ''}</option>
-            ))}
-          </Select>
+          <Picker
+            value={localityId}
+            onChange={setLocalityId}
+            options={localityOptions}
+            placeholder={t('common.choose')}
+            disabled={!zoneId}
+          />
+          {/* RG-BQ-12 : la VILLE, elle, reste fermée (secrétariat / back-office). Qui ne trouve
+              pas la sienne contacte le support — coordonnées servies par GET /api/app/contact,
+              donc modifiables sans redéployer. */}
+          {!isEdit && (
+            <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--ink-500)' }}>
+              {t('units.cityMissingHint')}{' '}
+              <a href={contactMailto(t('units.cityMissingSubject'))} style={{ color: 'var(--green-700, #1E3A2F)' }}>
+                {t('units.contactSupport')}
+              </a>
+              {' · '}
+              <a href={contactWhatsapp(t('units.cityMissingSubject'))} target="_blank" rel="noreferrer" style={{ color: 'var(--green-700, #1E3A2F)' }}>
+                {t('units.contactWhatsapp')}
+              </a>
+            </p>
+          )}
         </Field>
         <Field label={t('units.nameLabel')}>
           <Input placeholder={t('units.namePlaceholder')} value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-        {/* Palier C1-bis — responsable OBLIGATOIRE : une assemblée sans dirigeant n'est
-            administrable par personne. Compte existant uniquement (décision JP 14/08). */}
-        {needsLeader && (
-          <Field label={t('units.leaderLabel')} hint={t('units.leaderHint')}>
+        {/* RG-BQ-12 — responsable FACULTATIF : sans choix, le créateur devient responsable. */}
+        {canPickLeader && (
+          <Field label={t('units.leaderLabel')} hint={t('units.leaderOptionalHint')}>
             <div style={{ display: 'grid', gap: 6 }}>
               <Input
                 placeholder={t('units.leaderSearchPlaceholder')}

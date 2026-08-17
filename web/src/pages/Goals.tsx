@@ -16,19 +16,16 @@ import {
 } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { isSecretariat } from '../services/authApi';
+import { canReadAssemblyMembers, goalPerimeterNodes, isSecretariat } from '../services/authApi';
 import {
   addProgress,
-  createFaithPledge,
-  createPledge,
-  deleteFaithPledge,
   deleteProgress,
   fetchMembersAggregate,
+  fetchMyMemberPledges,
   getActiveGoal,
   getAggregate,
   getGlobalSummary,
-  getMyPledges,
-  getMyProgress,
+  getMyMemberProgress,
   getMyPerimeterAggregate,
   getMyUnits,
   getNations,
@@ -36,21 +33,18 @@ import {
   getTimeline,
   getUnitDetail,
   getZoneUnits,
-  listFaithPledges,
-  sendReminder,
+  saveMemberPledge,
+  sendMemberReminder,
+  submitMyMemberPledges,
   unlockMemberPledges,
-  unlockUnit,
-  submitMyPledges,
-  updateFaithPledge,
-  updatePledge,
   updateProgress,
   updateYearDeadline,
   type ActiveGoal,
   type AggregateLevelPath,
-  type FaithLevelPath,
-  type FaithPledgeResponse,
   type GlobalSummary,
   type GoalCategory,
+  type MemberStatusItem,
+  type PerimeterLevelPath,
   type PledgeResponse,
   type ProgressResponse,
   type UnitPledgeDetail,
@@ -61,9 +55,17 @@ import { NationsMap } from '../components/NationsMap';
 import { GoalTimeline } from '../components/GoalTimeline';
 import { YearPicker } from '../components/YearPicker';
 import { currencySymbol, fmtAmount, fmtDateLabel, toLocalDate } from '../utils/format';
+import { goalName } from '../utils/goalName';
 
 const errMsg = (err: unknown, fallback: string) =>
   (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
+
+/** Code métier d'une 422 (`ApiError.error`) — ex. `DEADLINE_PASSED`, `PLEDGE_LOCKED`. */
+const errCode = (err: unknown): string | null =>
+  (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? null;
+
+/** « 7/12 » sans division par zéro (une assemblée peut n'avoir aucun membre rattaché). */
+const pct = (part: number, total: number) => (total > 0 ? Math.round((part / total) * 100) : 0);
 
 /** Regroupement d'assemblées par ville (localityName) — clé stable même sans localityId. */
 interface CityUnitsGroup {
@@ -86,7 +88,12 @@ function groupUnitsByCity(units: ZoneUnitStatus[]): CityUnitsGroup[] {
   return [...map.values()];
 }
 
-/** Données « mon unité » (UC-DIR-08) — chargées seulement si l'utilisateur a un goalUnitId. */
+/**
+ * Données « MES engagements » — chargées seulement si l'utilisateur a un goalUnitId.
+ *
+ * <p>RG-BQ-11 : un dirigeant ne déclare plus pour son assemblée, il déclare SES engagements comme
+ * tout le monde. Ce bloc lit donc `/member/me/**`, exactement comme l'espace membre.
+ */
 interface UnitData {
   pledges: PledgeResponse[];
   progressByPledge: Record<string, ProgressResponse[]>;
@@ -101,8 +108,11 @@ interface GoalLine {
 }
 
 async function loadUnitData(year: number): Promise<UnitData> {
-  // Lot 4.3 : un seul appel /me/progress remplace un listProgress par pledge.
-  const [pledges, progress] = await Promise.all([getMyPledges(year), getMyProgress(year)]);
+  // Un seul appel /member/me/progress remplace un listProgress par pledge.
+  const [pledges, progress] = await Promise.all([
+    fetchMyMemberPledges(year),
+    getMyMemberProgress(year),
+  ]);
   const progressByPledge: Record<string, ProgressResponse[]> = {};
   for (const p of progress) {
     (progressByPledge[p.pledgeId] ??= []).push(p);
@@ -121,6 +131,53 @@ function fmtTarget(line: GoalLine, value: number, currency: string): string {
   return `${value} ${line.category.unitLabel ?? ''}`.trim();
 }
 
+/** Compteurs de soumission d'une assemblée, à la maille PERSONNE (RG-BQ-06). */
+type UnitMemberCounts = {
+  totalMembers: number;
+  membersWithPledges: number;
+  submittedMembers: number;
+  lateMembers: number;
+};
+
+/**
+ * Statut d'une assemblée — règle du contrat backend (javadoc de `ZoneUnitStatusResponse`) :
+ * aucun engagement → Non démarré · tous les membres ont soumis → Soumis · sinon En cours.
+ * Le retard est une pastille SÉPARÉE (`lateMembers > 0`), pas un statut concurrent.
+ */
+function UnitStatusBadges({ u }: { u: UnitMemberCounts }) {
+  const { t } = useTranslation();
+  const badge =
+    u.membersWithPledges === 0 ? (
+      <Badge tone="gray" dot>{t('goals.statusNotStarted')}</Badge>
+    ) : u.totalMembers > 0 && u.submittedMembers === u.totalMembers ? (
+      <Badge tone="ok" dot>{t('goals.submitted')}</Badge>
+    ) : (
+      <Badge tone="warn" dot>{t('goals.statusInProgress')}</Badge>
+    );
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+      {badge}
+      {u.lateMembers > 0 && (
+        <Badge tone="err" dot>{t('goals.lateMembers', { count: u.lateMembers })}</Badge>
+      )}
+    </span>
+  );
+}
+
+/** « 7/12 membres ont soumis » — libellé unique, réutilisé partout où la maille est la personne. */
+function MembersSubmittedRatio({ u }: { u: Pick<UnitMemberCounts, 'submittedMembers' | 'totalMembers'> }) {
+  const { t } = useTranslation();
+  return (
+    <span>
+      {t('goals.membersSubmittedRatio', {
+        submitted: u.submittedMembers,
+        total: u.totalMembers,
+        percent: pct(u.submittedMembers, u.totalMembers),
+      })}
+    </span>
+  );
+}
+
 export function GoalsPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -132,14 +189,14 @@ export function GoalsPage() {
   // périmètre zone/pays (goalZoneId / goalCountryIds).
   const hasUnit = !!me?.goalUnitId;
   const zoneId = me?.goalZoneId ?? null;
-  // Multi-rattachements (home + set) : toutes les régions / villes portées, principale en tête.
-  const uniq = (home?: string | null, set?: string[] | null) => {
-    const rest = (set ?? []).filter((id) => id !== home);
-    return home ? [home, ...rest] : rest;
-  };
-  const zoneIds = uniq(me?.goalZoneId, me?.goalZoneIds);
-  const cityIds = uniq(me?.goalCityId, me?.goalCityIds);
-  const countryIds = me?.goalCountryIds ?? [];
+  // Nœuds de périmètre FILTRÉS PAR LE RANG (16/08) — miroir de AccessControlServiceImpl, partagé
+  // à l'identique avec le mobile. Les ids bruts de `me` ne suffisent pas : un rattachement
+  // résiduel (un SENIOR rétrogradé DIRIGEANT garde son goalZoneId — le PATCH `update` ne purge
+  // pas, seul `reassign` le fait) produisait une section que le serveur refuse.
+  const perimeterNodes = goalPerimeterNodes(me);
+  const zoneIds = perimeterNodes.zoneIds;
+  const cityIds = perimeterNodes.cityIds;
+  const countryIds = perimeterNodes.countryIds;
   // Lot 4.8 — pays qu'un SECRETARIAT/LEADER coordonne explicitement (vue pays éditable comme un coordinateur).
   const coordinatedCountryIds = me?.coordinatedCountryIds ?? [];
 
@@ -221,8 +278,9 @@ export function GoalsPage() {
     [lines, data],
   );
 
+  // RG-BQ-06 : la soumission est INDIVIDUELLE — je soumets MES engagements, pas ceux d'une assemblée.
   const submitM = useMutation({
-    mutationFn: () => submitMyPledges(year ?? undefined),
+    mutationFn: () => submitMyMemberPledges(year ?? undefined),
     onSuccess: (res) => {
       invalidate();
       setSubmitOpen(false);
@@ -232,8 +290,23 @@ export function GoalsPage() {
         msg: t('goals.lockedPledges', { count: res.lockedPledges }),
       });
     },
-    onError: (err) =>
-      push({ kind: 'error', title: t('goals.submitRefused'), msg: errMsg(err, t('goals.submitFailed')) }),
+    onError: (err) => {
+      // 422 métier : le message serveur est en FR et affichable, mais ces trois cas méritent
+      // une formulation qui dit QUOI FAIRE.
+      const code = errCode(err);
+      push({
+        kind: 'error',
+        title: t('goals.submitRefused'),
+        msg:
+          code === 'NO_PLEDGE_TO_SUBMIT'
+            ? t('memberGoals.noPledgeToSubmit')
+            : code === 'ALREADY_SUBMITTED'
+              ? t('memberGoals.alreadySubmitted')
+              : code === 'DEADLINE_PASSED'
+                ? t('goals.deadlinePassedHelp')
+                : errMsg(err, t('goals.submitFailed')),
+      });
+    },
   });
 
   const deleteProgressM = useMutation({
@@ -261,8 +334,14 @@ export function GoalsPage() {
   const isSecretariatView = (me?.superAdmin ?? false) || me?.goalRole === 'SECRETARIAT';
   const isCoordinatorView = countryIds.length > 0 || coordinatedCountryIds.length > 0;
   // Lot 3.5 : un dirigeant (sous-coordinateur) voit « Mon périmètre » = son SOUS-ARBRE (pas la zone géo).
+  // Chantier 16/08 : le DIRIGEANT_UNITE y est ajouté — /me/aggregate et /me/units lui sont ouverts
+  // côté backend, et sans eux il ne verrait jamais qui a soumis dans son assemblée.
   const showPerimeter =
-    !!me && !me.superAdmin && (me.goalRole === 'DIRIGEANT' || me.goalRole === 'DIRIGEANT_SENIOR');
+    !!me
+    && !me.superAdmin
+    && (me.goalRole === 'DIRIGEANT_UNITE'
+      || me.goalRole === 'DIRIGEANT'
+      || me.goalRole === 'DIRIGEANT_SENIOR');
   const noScope = !hasUnit && !hasPerimeter && !ministryWide && !showPerimeter;
 
   const zoneName = zonesQ.data?.find((z) => z.id === zoneId)?.name ?? null;
@@ -273,13 +352,11 @@ export function GoalsPage() {
       label: t('goals.colCategory'),
       render: (l) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <strong>{l.category.name}</strong>
+          <strong>{goalName(l.category)}</strong>
           <span style={{ fontSize: 12, color: 'var(--ink-400)' }}>
             {l.category.unitType === 'CURRENCY'
               ? t('goals.amountUnit', { symbol: currencySymbol(currency) })
-              : l.category.unitType === 'COUNT'
-              ? t('goals.countUnit', { label: l.category.unitLabel ?? '—' })
-              : t('goals.nominativeList')}
+              : t('goals.countUnit', { label: l.category.unitLabel ?? '—' })}
           </span>
         </div>
       ),
@@ -381,19 +458,24 @@ export function GoalsPage() {
       label: '',
       style: { width: 70 },
       cellStyle: { textAlign: 'right' },
-      render: (l) => (
-        <IconButton
-          icon={<Icon name={l.pledge?.locked ? 'eye' : 'edit'} size={15} />}
-          title={l.pledge?.locked ? t('goals.consult') : t('goals.editTooltip')}
-          onClick={() => setEditLine(l)}
-        />
-      ),
+      render: (l) => {
+        // RG-BQ-07/08 : l'éditabilité est SERVER-DRIVEN (`editable` intègre le verrou de
+        // soumission ET la date limite, contournement SECRETARIAT/LEADER compris).
+        const readOnly = l.pledge != null && l.pledge.editable === false;
+        return (
+          <IconButton
+            icon={<Icon name={readOnly ? 'eye' : 'edit'} size={15} />}
+            title={readOnly ? t('goals.consult') : t('goals.editTooltip')}
+            onClick={() => setEditLine(l)}
+          />
+        );
+      },
     },
   ];
 
   const historyCols: Column<{ id: string; progress: ProgressResponse; line: GoalLine }>[] = [
     { label: t('common.date'), render: (r) => fmtDateLabel(r.progress.progressDate) },
-    { label: t('goals.colCategory'), render: (r) => r.line.category.name },
+    { label: t('goals.colCategory'), render: (r) => goalName(r.line.category) },
     {
       label: t('goals.colValue'),
       render: (r) => (
@@ -491,7 +573,7 @@ export function GoalsPage() {
         ) : (
           <>
             <div style={{ marginBottom: 14 }}>
-              <h3 style={{ margin: '0 0 4px' }}>{goal?.name}</h3>
+              <h3 style={{ margin: '0 0 4px' }}>{goalName(goal)}</h3>
               {/* Lot G2 : la date limite est PAR ANNÉE (yearDeadlines), mise en exergue. */}
               <p style={{ margin: 0, fontSize: 13.5 }}>
                 {!hasUnit ? null : submitted ? (
@@ -527,6 +609,9 @@ export function GoalsPage() {
 
             {hasUnit && (
               <>
+                {/* RG-BQ-11 : ce bloc, ce sont MES engagements personnels — un dirigeant déclare
+                    dans SON assemblée, comme tout le monde. Il n'y a plus d'écran de saisie
+                    « au nom de l'assemblée ». */}
                 <ViewTitle label={t('views.unit')} />
                 <Table
                   columns={lineCols}
@@ -534,10 +619,14 @@ export function GoalsPage() {
                   zebra
                 />
 
-                {/* Feature A — le dirigeant voit les objectifs de SES membres et l'agrégat des
-                    fidèles sur sa propre assemblée (jusqu'ici, ce bloc n'existait que dans le
-                    drill-down des vues de périmètre : il ne le voyait jamais). */}
-                {goal && year != null && me?.goalUnitId && (
+                {/* Détail nominatif de MON assemblée : qui a déclaré, qui a soumis, qui est en
+                    retard. Réservé aux dirigeants côté Goals — `canReadAssemblyMembers` est le
+                    miroir de `GoalAccessGuard.coversAssembly`.
+                    Avant le 16/08 le bloc était monté sans garde et « s'effaçait proprement » sur
+                    403 : pour un dirigeant DONS-seul (qui atteint /goals via hasMinistryAccess),
+                    l'appel était refusé à chaque chargement et le refus disparaissait en silence.
+                    Un refus rendu en néant reste un refus — on ne le demande plus. */}
+                {goal && year != null && me?.goalUnitId && canReadAssemblyMembers(me) && (
                   <MembersGoalsBlock
                     unitId={me.goalUnitId}
                     goal={goal}
@@ -569,8 +658,6 @@ export function GoalsPage() {
                 goal={goal}
                 currency={currency}
                 year={year}
-                meId={me?.id ?? null}
-                isSuperAdmin={me?.superAdmin ?? false}
                 nodes={[
                   ...zoneIds.map((id) => ({ level: 'zones' as const, id, name: zonesQ.data?.find((z) => z.id === id)?.name ?? null })),
                   ...cityIds.map((id) => ({ level: 'cities' as const, id, name: localitiesQ.data?.find((l) => l.id === id)?.name ?? null })),
@@ -579,7 +666,9 @@ export function GoalsPage() {
               </>
             )}
 
-            {/* Lot V1 — vue Coordinateur : agrégats + foi Nation, puis cumuls PAR RÉGION (borné à la Région). */}
+            {/* Lot V1 — vue Coordinateur : total de la Nation, puis totaux PAR RÉGION (borné à la Région).
+                RG-BQ-02 : chaque total est la SOMME des engagements individuels dessous — plus de
+                foi de nœud, plus de MAX à départager. */}
             {goal && year != null && isCoordinatorView && <ViewTitle label={t('views.coordinator')} />}
             {goal && year != null &&
               countryIds.map((id) => (
@@ -591,8 +680,6 @@ export function GoalsPage() {
                   title={countryName(id) ? t('goals.myCountryNamed', { name: countryName(id) }) : t('goals.myCountry')}
                   goal={goal}
                   currency={currency}
-                  meId={me?.id ?? null}
-                  isSuperAdmin={me?.superAdmin ?? false}
                 />
               ))}
             {goal && year != null &&
@@ -613,8 +700,6 @@ export function GoalsPage() {
                     title={countryName(id) ? t('goals.coordinatedCountryNamed', { name: countryName(id) }) : t('goals.coordinatedCountry')}
                     goal={goal}
                     currency={currency}
-                    meId={me?.id ?? null}
-                    isSuperAdmin={me?.superAdmin ?? false}
                   />
                 ))}
             {goal && year != null &&
@@ -661,7 +746,7 @@ export function GoalsPage() {
           <tbody>
             {lines.map((l) => (
               <tr key={l.category.id}>
-                <td style={{ padding: '6px 0', color: 'var(--ink-400)' }}>{l.category.name}</td>
+                <td style={{ padding: '6px 0', color: 'var(--ink-400)' }}>{goalName(l.category)}</td>
                 <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 600 }}>
                   {l.target != null ? fmtTarget(l, l.target, currency) : '—'}
                 </td>
@@ -727,7 +812,12 @@ function EmptyNote({ title, text }: { title: string; text: string }) {
   );
 }
 
-/** Saisie/édition d'un engagement CURRENCY ou COUNT (UC-DIR-09). 0 = pas d'engagement explicite. */
+/**
+ * Saisie/édition de MON engagement sur une catégorie (CURRENCY ou COUNT). 0 = pas d'engagement.
+ *
+ * <p>Un seul appel, idempotent : `POST /member/me/pledges` (RG-BQ-01 — le seul chemin d'écriture).
+ * Le champ est piloté par `PledgeResponse.editable`, jamais par un calcul local de date limite.
+ */
 function PledgeFormModal({
   line,
   currency,
@@ -745,7 +835,9 @@ function PledgeFormModal({
   const { push } = useToast();
   const [value, setValue] = useState('');
   const isCurrency = line?.category.unitType === 'CURRENCY';
-  const locked = line?.pledge?.locked ?? false;
+  // Server-driven : `editable === false` = soumis OU date limite passée (le secrétariat, lui,
+  // reçoit `editable === true` et garde la main).
+  const locked = line?.pledge != null && line.pledge.editable === false;
 
   useEffect(() => {
     if (line) {
@@ -759,21 +851,26 @@ function PledgeFormModal({
       const num = Number.parseFloat(value.replace(',', '.'));
       if (!Number.isFinite(num) || num < 0) throw new Error('invalid');
       const payload = isCurrency ? { targetAmount: num } : { targetCount: Math.round(num) };
-      if (line!.pledge) return updatePledge(line!.pledge.id, payload);
-      return createPledge({ categoryId: line!.category.id, year, ...payload });
+      return saveMemberPledge({ categoryId: line!.category.id, year, ...payload });
     },
     onSuccess: () => {
       push({ kind: 'ok', title: t('goals.pledgeSaved') });
       onSaved();
     },
-    onError: (err) =>
+    onError: (err) => {
+      const code = errCode(err);
       push({
         kind: 'error',
         title: t('goals.saveRefused'),
         msg: (err as Error).message === 'invalid'
           ? t('goals.invalidValue')
-          : errMsg(err, t('goals.saveFailed')),
-      }),
+          : code === 'DEADLINE_PASSED'
+            ? t('goals.deadlinePassedHelp')
+            : code === 'PLEDGE_LOCKED'
+              ? t('memberGoals.lockedAskSecretariat')
+              : errMsg(err, t('goals.saveFailed')),
+      });
+    },
   });
 
   if (!line) return null;
@@ -781,7 +878,7 @@ function PledgeFormModal({
     <Modal
       open
       onClose={onClose}
-      title={line.category.name}
+      title={goalName(line.category)}
       sub={
         locked
           ? t('goals.pledgeLockedSub')
@@ -898,7 +995,7 @@ function ProgressFormModal({
           <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
             {lines.map((l) => (
               <option key={l.category.id} value={l.category.id}>
-                {l.category.name}
+                {goalName(l.category)}
               </option>
             ))}
           </Select>
@@ -1023,35 +1120,31 @@ function EditProgressModal({
 }
 
 /**
- * Vue agrégée d'un niveau (zone/pays) — UC-LDR-04 / UC-COO-04.
- * Par catégorie : agrégat des enfants, engagements de foi, effectif = MAX (RG-08).
- */
-/**
  * Lot 3.5 — « Mon périmètre » : vue d'un dirigeant sous-coordinateur scopée à son SOUS-ARBRE
  * (et non à la zone géographique). Deux dirigeants d'une même zone voient des agrégats DISTINCTS.
- * La foi (si une zone d'adressage est rattachée — cas DIRIGEANT_SENIOR) reste la SIENNE.
+ *
+ * <p>RG-BQ-02 : ce n'est plus qu'une SOMME — plus d'engagement de foi à déclarer sur le nœud,
+ * plus de comparaison à afficher.
  */
 /** Nœud de périmètre d'un dirigeant : ville ou région portée (multi-rattachements). */
-type PerimeterNode = { level: FaithLevelPath; id: string; name: string | null };
+type PerimeterNode = { level: PerimeterLevelPath; id: string; name: string | null };
 
 function MyPerimeterSection({
-  goal, currency, year, meId, isSuperAdmin, nodes,
+  goal, currency, year, nodes,
 }: {
   goal: ActiveGoal;
   currency: string;
   year: number;
-  meId: string | null;
-  isSuperAdmin: boolean;
-  /** Villes/régions portées (principale en tête) ; vide = dirigeant multi-unités (somme à plat, sans foi). */
+  /** Villes/régions portées (principale en tête) ; vide = dirigeant multi-unités (somme à plat). */
   nodes: PerimeterNode[];
 }) {
   return (
     <div style={{ marginTop: 32 }}>
       {nodes.length === 0 ? (
-        <PerimeterBlock goal={goal} currency={currency} year={year} meId={meId} isSuperAdmin={isSuperAdmin} node={null} />
+        <PerimeterBlock goal={goal} currency={currency} year={year} node={null} />
       ) : (
         nodes.map((n) => (
-          <PerimeterBlock key={n.id} goal={goal} currency={currency} year={year} meId={meId} isSuperAdmin={isSuperAdmin} node={n} />
+          <PerimeterBlock key={n.id} goal={goal} currency={currency} year={year} node={n} />
         ))
       )}
       <ZoneUnitsBlock zoneId={null} goal={goal} currency={currency} year={year} perimeterScoped />
@@ -1059,102 +1152,39 @@ function MyPerimeterSection({
   );
 }
 
-/** Un bloc « Mon périmètre » : agrégat + foi d'UN nœud (ville/région) — ou somme à plat du sous-arbre si node null. */
+/**
+ * Un bloc « Mon périmètre » : la SOMME des engagements des membres d'UN nœud (ville/région) —
+ * ou la somme à plat de mon sous-arbre si `node` est null (`/me/aggregate`).
+ */
 function PerimeterBlock({
-  goal, currency, year, meId, isSuperAdmin, node,
+  goal, currency, year, node,
 }: {
   goal: ActiveGoal;
   currency: string;
   year: number;
-  meId: string | null;
-  isSuperAdmin: boolean;
   node: PerimeterNode | null;
 }) {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const { push } = useToast();
-  const [faithCategory, setFaithCategory] = useState<GoalCategory | null>(null);
-  const [faithToDelete, setFaithToDelete] = useState<FaithPledgeResponse | null>(null);
 
-  // La foi se déclare sur le NŒUD (ville/région) : chaque bloc porte la sienne — un multi-villes
-  // déclare ville par ville, et chacune remonte vers SA région dans l'arbre.
-  const canFaith = node != null;
   const aggQ = useQuery(node != null
     ? { queryKey: ['goals', 'aggregate', node.level, node.id, year], queryFn: () => getAggregate(node.level, node.id, year) }
     : { queryKey: ['goals', 'me-aggregate', year], queryFn: () => getMyPerimeterAggregate(year) });
-  const faithQ = useQuery({
-    queryKey: ['goals', 'faith', node?.level, node?.id, year],
-    queryFn: () => listFaithPledges(node!.level, node!.id, year),
-    enabled: canFaith,
-  });
-
-  const refresh = () => {
-    if (node != null) {
-      queryClient.invalidateQueries({ queryKey: ['goals', 'aggregate', node.level, node.id] });
-      queryClient.invalidateQueries({ queryKey: ['goals', 'faith', node.level, node.id] });
-    } else {
-      queryClient.invalidateQueries({ queryKey: ['goals', 'me-aggregate'] });
-    }
-  };
-
-  const deleteM = useMutation({
-    mutationFn: (id: string) => deleteFaithPledge(id),
-    onSuccess: () => { refresh(); setFaithToDelete(null); push({ kind: 'ok', title: t('goals.faithRemoved') }); },
-    onError: (err) => push({ kind: 'error', title: t('goals.deleteRefused'), msg: errMsg(err, t('goals.deleteFailed')) }),
-  });
 
   const categories = [...goal.categories].sort((a, b) => a.displayOrder - b.displayOrder);
   const lineByCat = new Map((aggQ.data ?? []).map((l) => [l.categoryId, l]));
-  const myFaiths = (faithQ.data ?? []).filter((f) => f.createdById === meId);
-  const myFaithFor = (categoryId: string) => myFaiths.find((f) => f.categoryId === categoryId) ?? null;
 
   type AggRow = { id: string; category: GoalCategory };
+  // RG-BQ-02 : UNE valeur par ligne. Les anciennes colonnes « Mon sous-arbre » / « Mon engagement »
+  // / « Objectif retenu » (+ badge de source) fusionnent en une seule.
   const aggCols: Column<AggRow>[] = [
-    { label: t('goals.colCategory'), render: (r) => <strong>{r.category.name}</strong> },
+    { label: t('goals.colCategory'), render: (r) => <strong>{goalName(r.category)}</strong> },
     {
-      label: t('goals.colMySubtree'),
-      render: (r) => fmtCatValue(r.category, lineByCat.get(r.category.id)?.aggregateOfChildren ?? 0, currency),
-    },
-    ...(canFaith ? [{
-      label: t('goals.colMyFaith'),
-      render: (r: AggRow) => {
-        const mine = myFaithFor(r.category.id);
-        return mine
-          ? fmtCatValue(r.category, mine.targetAmount ?? mine.targetCount ?? 0, currency)
-          : <span style={{ color: 'var(--ink-400)' }}>—</span>;
-      },
-    } as Column<AggRow>] : []),
-    {
-      label: t('goals.colEffective'),
+      label: t('goals.colTotal'),
       render: (r) => {
         const line = lineByCat.get(r.category.id);
-        const eff = line?.effectiveAmount ?? line?.effectiveCount ?? 0;
-        return (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <strong>{fmtCatValue(r.category, eff, currency)}</strong>
-            {line && (
-              <Badge tone={line.source === 'FAITH' ? 'earth' : line.source === 'DIRECT' ? 'green' : 'gray'}>
-                {line.source === 'FAITH'
-                  ? t('goals.sourceFaith')
-                  : line.source === 'DIRECT'
-                  ? t('goals.sourceDirect')
-                  : t('goals.sourceAggregate')}
-              </Badge>
-            )}
-          </span>
-        );
+        return <strong>{fmtCatValue(r.category, line?.effectiveAmount ?? line?.effectiveCount ?? 0, currency)}</strong>;
       },
     },
-    ...(canFaith ? [{
-      label: '',
-      style: { width: 200 },
-      cellStyle: { textAlign: 'right' },
-      render: (r: AggRow) => (
-        <Button size="sm" onClick={() => setFaithCategory(r.category)}>
-          {myFaithFor(r.category.id) ? t('goals.editMyFaith') : t('goals.declareMyFaith')}
-        </Button>
-      ),
-    } as Column<AggRow>] : []),
   ];
 
   return (
@@ -1162,7 +1192,6 @@ function PerimeterBlock({
       <h3 style={{ margin: '0 0 4px' }}>{node?.name ? t('goals.myPerimeterNamed', { name: node.name }) : t('goals.myPerimeter')}</h3>
       <p style={{ margin: '0 0 10px', color: 'var(--ink-400)', fontSize: 13 }}>
         {t('goals.myPerimeterIntro')}
-        {canFaith && t('goals.myPerimeterFaithRule')}
       </p>
       {aggQ.isLoading ? (
         <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
@@ -1171,76 +1200,16 @@ function PerimeterBlock({
       ) : (
         <Table columns={aggCols} rows={categories.map((c) => ({ id: c.id, category: c }))} zebra />
       )}
-
-      {canFaith && myFaiths.length > 0 && (
-        <div style={{ marginTop: 14 }}>
-          <h4 style={{ margin: '0 0 8px' }}>{t('goals.myFaithPledges')}</h4>
-          <Table
-            columns={[
-              {
-                label: t('goals.colCategory'),
-                render: (f: FaithPledgeResponse) =>
-                  goal.categories.find((c) => c.id === f.categoryId)?.name ?? f.categoryCode,
-              },
-              {
-                label: t('goals.colValue'),
-                render: (f) => {
-                  const cat = goal.categories.find((c) => c.id === f.categoryId);
-                  return cat
-                    ? <strong>{fmtCatValue(cat, f.targetAmount ?? f.targetCount ?? 0, currency)}</strong>
-                    : (f.targetAmount ?? f.targetCount ?? 0);
-                },
-              },
-              {
-                label: '',
-                style: { width: 60 },
-                cellStyle: { textAlign: 'right' },
-                render: (f) =>
-                  f.createdById === meId || isSuperAdmin ? (
-                    <IconButton danger icon={<Icon name="trash" size={15} />} title={t('goals.remove')}
-                      onClick={() => setFaithToDelete(f)} />
-                  ) : null,
-              },
-            ]}
-            rows={myFaiths}
-          />
-        </div>
-      )}
-
-      {canFaith && (
-        <FaithFormModal
-          level={node!.level}
-          entityId={node!.id}
-          category={faithCategory}
-          year={year}
-          aggregate={faithCategory ? lineByCat.get(faithCategory.id)?.aggregateOfChildren ?? 0 : 0}
-          existing={faithCategory ? myFaithFor(faithCategory.id) : null}
-          currency={currency}
-          onClose={() => setFaithCategory(null)}
-          onSaved={() => { refresh(); setFaithCategory(null); }}
-        />
-      )}
-
-      <Modal
-        open={faithToDelete != null}
-        onClose={() => setFaithToDelete(null)}
-        title={t('goals.removeFaithTitle')}
-        footer={
-          <>
-            <Button onClick={() => setFaithToDelete(null)}>{t('common.cancel')}</Button>
-            <Button variant="danger" disabled={deleteM.isPending}
-              onClick={() => faithToDelete && deleteM.mutate(faithToDelete.id)}>
-              {t('goals.remove')}
-            </Button>
-          </>
-        }
-      >
-        <p>{t('goals.removeFaithSubtree')}</p>
-      </Modal>
     </div>
   );
 }
 
+/**
+ * Vue agrégée d'un niveau (ville / région / nation) — lecture seule.
+ *
+ * <p>RG-BQ-02 : une ligne = une valeur, la somme des engagements des membres du sous-arbre.
+ * Plus de foi à déclarer, plus de badge de source, plus de MAX à départager.
+ */
 function AggregateSection({
   level,
   entityId,
@@ -1248,103 +1217,33 @@ function AggregateSection({
   goal,
   currency,
   year,
-  meId,
-  isSuperAdmin,
 }: {
-  level: FaithLevelPath;
+  level: AggregateLevelPath;
   entityId: string;
   title: string;
   goal: ActiveGoal;
   currency: string;
   year: number;
-  meId: string | null;
-  isSuperAdmin: boolean;
 }) {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const { push } = useToast();
-  const [faithCategory, setFaithCategory] = useState<GoalCategory | null>(null);
-  const [faithToDelete, setFaithToDelete] = useState<FaithPledgeResponse | null>(null);
 
   const aggQ = useQuery({
     queryKey: ['goals', 'aggregate', level, entityId, year],
     queryFn: () => getAggregate(level, entityId, year),
   });
-  const faithQ = useQuery({
-    queryKey: ['goals', 'faith', level, entityId, year],
-    queryFn: () => listFaithPledges(level, entityId, year),
-  });
-
-  const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['goals', 'aggregate', level, entityId] });
-    queryClient.invalidateQueries({ queryKey: ['goals', 'faith', level, entityId] });
-  };
-
-  const deleteM = useMutation({
-    mutationFn: (id: string) => deleteFaithPledge(id),
-    onSuccess: () => {
-      refresh();
-      setFaithToDelete(null);
-      push({ kind: 'ok', title: t('goals.faithRemoved') });
-    },
-    onError: (err) =>
-      push({ kind: 'error', title: t('goals.deleteRefused'), msg: errMsg(err, t('goals.deleteFailed')) }),
-  });
 
   const categories = [...goal.categories].sort((a, b) => a.displayOrder - b.displayOrder);
   const lineByCat = new Map((aggQ.data ?? []).map((l) => [l.categoryId, l]));
-  const faiths = faithQ.data ?? [];
-  const myFaithFor = (categoryId: string) =>
-    faiths.find((f) => f.categoryId === categoryId && f.createdById === meId) ?? null;
 
   type AggRow = { id: string; category: GoalCategory };
   const aggCols: Column<AggRow>[] = [
-    { label: t('goals.colCategory'), render: (r) => <strong>{r.category.name}</strong> },
+    { label: t('goals.colCategory'), render: (r) => <strong>{goalName(r.category)}</strong> },
     {
-      label: t('goals.colAggregate'),
+      label: t('goals.colTotal'),
       render: (r) => {
         const line = lineByCat.get(r.category.id);
-        return fmtCatValue(r.category, line?.aggregateOfChildren ?? 0, currency);
+        return <strong>{fmtCatValue(r.category, line?.effectiveAmount ?? line?.effectiveCount ?? 0, currency)}</strong>;
       },
-    },
-    {
-      label: t('goals.colMyFaith'),
-      render: (r) => {
-        const mine = myFaithFor(r.category.id);
-        if (!mine) return <span style={{ color: 'var(--ink-400)' }}>—</span>;
-        return fmtCatValue(r.category, mine.targetAmount ?? mine.targetCount ?? 0, currency);
-      },
-    },
-    {
-      label: t('goals.colEffective'),
-      render: (r) => {
-        const line = lineByCat.get(r.category.id);
-        const eff = line?.effectiveAmount ?? line?.effectiveCount ?? 0;
-        return (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <strong>{fmtCatValue(r.category, eff, currency)}</strong>
-            {line && (
-              <Badge tone={line.source === 'FAITH' ? 'earth' : line.source === 'DIRECT' ? 'green' : 'gray'}>
-                {line.source === 'FAITH'
-                  ? t('goals.sourceFaith')
-                  : line.source === 'DIRECT'
-                  ? t('goals.sourceDirect')
-                  : t('goals.sourceAggregate')}
-              </Badge>
-            )}
-          </span>
-        );
-      },
-    },
-    {
-      label: '',
-      style: { width: 200 },
-      cellStyle: { textAlign: 'right' },
-      render: (r) => (
-        <Button size="sm" onClick={() => setFaithCategory(r.category)}>
-          {myFaithFor(r.category.id) ? t('goals.editMyFaith') : t('goals.declareMyFaith')}
-        </Button>
-      ),
     },
   ];
 
@@ -1362,200 +1261,23 @@ function AggregateSection({
         <Table columns={aggCols} rows={categories.map((c) => ({ id: c.id, category: c }))} zebra />
       )}
 
-      {faiths.length > 0 && (
-        <div style={{ marginTop: 14 }}>
-          <h4 style={{ margin: '0 0 8px' }}>{t('goals.faithDeclared')}</h4>
-          <Table
-            columns={[
-              {
-                label: t('goals.colCategory'),
-                render: (f: FaithPledgeResponse) =>
-                  goal.categories.find((c) => c.id === f.categoryId)?.name ?? f.categoryCode,
-              },
-              {
-                label: t('goals.colValue'),
-                render: (f) => {
-                  const cat = goal.categories.find((c) => c.id === f.categoryId);
-                  return cat ? (
-                    <strong>{fmtCatValue(cat, f.targetAmount ?? f.targetCount ?? 0, currency)}</strong>
-                  ) : (
-                    f.targetAmount ?? f.targetCount ?? 0
-                  );
-                },
-              },
-              {
-                label: t('goals.colDeclaredBy'),
-                render: (f) => (
-                  <span>
-                    {f.createdByName ?? '—'}
-                    {f.createdById === meId && <Badge tone="green">{t('goals.me')}</Badge>}
-                  </span>
-                ),
-              },
-              {
-                label: '',
-                style: { width: 60 },
-                cellStyle: { textAlign: 'right' },
-                render: (f) =>
-                  f.createdById === meId || isSuperAdmin ? (
-                    <IconButton
-                      danger
-                      icon={<Icon name="trash" size={15} />}
-                      title={t('goals.removeFaithTooltip')}
-                      onClick={() => setFaithToDelete(f)}
-                    />
-                  ) : null,
-              },
-            ]}
-            rows={faiths}
-          />
-        </div>
-      )}
-
       {level === 'zones' && <ZoneUnitsBlock zoneId={entityId} goal={goal} currency={currency} year={year} />}
-
-      <FaithFormModal
-        level={level}
-        entityId={entityId}
-        category={faithCategory}
-        year={year}
-        aggregate={
-          faithCategory ? lineByCat.get(faithCategory.id)?.aggregateOfChildren ?? 0 : 0
-        }
-        existing={faithCategory ? myFaithFor(faithCategory.id) : null}
-        currency={currency}
-        onClose={() => setFaithCategory(null)}
-        onSaved={() => {
-          refresh();
-          setFaithCategory(null);
-        }}
-      />
-
-      <Modal
-        open={faithToDelete != null}
-        onClose={() => setFaithToDelete(null)}
-        title={t('goals.removeFaithTitle')}
-        footer={
-          <>
-            <Button onClick={() => setFaithToDelete(null)}>{t('common.cancel')}</Button>
-            <Button
-              variant="danger"
-              disabled={deleteM.isPending}
-              onClick={() => faithToDelete && deleteM.mutate(faithToDelete.id)}
-            >
-              {t('goals.remove')}
-            </Button>
-          </>
-        }
-      >
-        <p>
-          {t('goals.removeFaithAggregate')}
-        </p>
-      </Modal>
     </div>
   );
 }
 
-/** Déclaration / modification d'un engagement de foi (UC-LDR-05, UC-COO-05). */
-function FaithFormModal({
-  level,
-  entityId,
-  category,
-  year,
-  aggregate,
-  existing,
-  currency,
-  onClose,
-  onSaved,
-}: {
-  level: FaithLevelPath;
-  entityId: string;
-  category: GoalCategory | null;
-  year: number;
-  aggregate: number;
-  existing: FaithPledgeResponse | null;
-  currency: string;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const { t } = useTranslation();
-  const { push } = useToast();
-  const [value, setValue] = useState('');
-  const isCurrency = category?.unitType === 'CURRENCY';
-
-  useEffect(() => {
-    if (category) {
-      const v = existing ? existing.targetAmount ?? existing.targetCount : null;
-      setValue(v != null ? String(v) : '');
-    }
-  }, [category, existing]);
-
-  const num = Number.parseFloat(value.replace(',', '.'));
-  const valid = Number.isFinite(num) && num > 0;
-
-  const saveM = useMutation({
-    mutationFn: async () => {
-      const payload = isCurrency ? { targetAmount: num } : { targetCount: Math.round(num) };
-      if (existing) return updateFaithPledge(existing.id, payload);
-      return createFaithPledge(level, entityId, { categoryId: category!.id, year, ...payload });
-    },
-    onSuccess: () => {
-      push({ kind: 'ok', title: t('goals.faithSaved') });
-      onSaved();
-    },
-    onError: (err) =>
-      push({ kind: 'error', title: t('goals.saveRefused'), msg: errMsg(err, t('goals.saveFailed')) }),
-  });
-
-  if (!category) return null;
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title={t('goals.faithModalTitle', { category: category.name })}
-      sub={t('goals.faithModalSub', { aggregate: fmtCatValue(category, aggregate, currency) })}
-      footer={
-        <>
-          <Button onClick={onClose}>{t('common.cancel')}</Button>
-          <Button variant="primary" disabled={!valid || saveM.isPending} onClick={() => saveM.mutate()}>
-            {saveM.isPending ? t('common.saving') : existing ? t('common.edit') : t('goals.declare')}
-          </Button>
-        </>
-      }
-    >
-      <Field
-        label={
-          isCurrency
-            ? t('goals.faithAmount', { symbol: currencySymbol(currency) })
-            : t('goals.faithCount', { label: category.unitLabel ?? t('goals.labelNumber') })
-        }
-        hint={
-          valid
-            ? num > aggregate
-              ? t('goals.faithAbove', { value: fmtCatValue(category, num - aggregate, currency) })
-              : t('goals.faithBelowOrEqual')
-            : undefined
-        }
-      >
-        <Input
-          value={value}
-          inputMode="decimal"
-          onChange={(e) => setValue(e.target.value.replace(/[^0-9.,]/g, ''))}
-        />
-      </Field>
-    </Modal>
-  );
-}
-
-/** Statut de soumission des unités de la zone (UC-LDR-06) + rappels (UC-LDR-07, Lot 4.4). */
+/**
+ * Statut de soumission des assemblées de la zone (UC-LDR-06), à la maille PERSONNE.
+ *
+ * <p>RG-BQ-06 : « cette assemblée a-t-elle soumis ? » (booléen) est remplacé par « combien de ses
+ * membres ont soumis ? » (compteur). Il n'y a plus de déverrouillage d'assemblée (l'endpoint
+ * n'existe plus) : la réouverture est PAR PERSONNE, dans {@link MembersGoalsBlock}, qui porte
+ * aussi le rappel nominatif.
+ */
 function ZoneUnitsBlock({
   zoneId, goal, currency, year, perimeterScoped = false,
 }: { zoneId: string | null; goal: ActiveGoal; currency: string; year: number; perimeterScoped?: boolean }) {
   const { t } = useTranslation();
-  const { push } = useToast();
-  const { me } = useAuth();
-  // Lot P2 (décision JP 17/07) : déverrouillage réservé à SUPER_ADMIN + SECRETARIAT (pas LEADER).
-  const canUnlock = (me?.superAdmin ?? false) || me?.goalRole === 'SECRETARIAT';
   const unitsQ = useQuery({
     queryKey: perimeterScoped ? ['goals', 'me-units', year] : ['goals', 'zone-units', zoneId, year],
     queryFn: () => (perimeterScoped ? getMyUnits(year) : getZoneUnits(zoneId!, year)),
@@ -1574,7 +1296,10 @@ function ZoneUnitsBlock({
   const activeUnits = showCityStep
     ? cityGroups.find((g) => g.key === selectedCity)?.units ?? []
     : units;
-  const allSubmitted = activeUnits.length > 0 && activeUnits.every((u) => u.submitted);
+  // Maille PERSONNE : « tout est soumis » = chaque assemblée a des membres, et tous ont soumis.
+  const allSubmitted =
+    activeUnits.length > 0
+    && activeUnits.every((u) => u.totalMembers > 0 && u.submittedMembers === u.totalMembers);
 
   const showingCityListPreview = showCityStep && selectedCity == null;
   // Résumé « comme un coordinateur » (UC-LDR-06 ter) : cumul + engagement effectif par catégorie,
@@ -1599,24 +1324,6 @@ function ZoneUnitsBlock({
   });
   const catsByOrder = [...goal.categories].sort((a, b) => a.displayOrder - b.displayOrder);
 
-  // Lot P2 : rouvrir la soumission d'une assemblée (elle pourra compléter puis resoumettre).
-  const [unlockUnitTarget, setUnlockUnitTarget] = useState<ZoneUnitStatus | null>(null);
-  const unlockM = useMutation({
-    mutationFn: () => unlockUnit(unlockUnitTarget!.unitId, year),
-    onSuccess: () => {
-      setUnlockUnitTarget(null);
-      unitsQ.refetch();
-      push({ kind: 'ok', title: t('goals.unitUnlocked') });
-    },
-    onError: (err) => {
-      push({ kind: 'error', title: t('goals.unlockFailed'), msg: errMsg(err, '') || undefined });
-    },
-  });
-
-  // UC-LDR-07 : modale de rappel avec message pré-rempli (modifiable).
-  const [reminderUnit, setReminderUnit] = useState<ZoneUnitStatus | null>(null);
-  const [reminderMsg, setReminderMsg] = useState('');
-
   // Lot 4.7 : détail (lecture seule) des engagements d'une unité du sous-arbre.
   const [detailUnit, setDetailUnit] = useState<ZoneUnitStatus | null>(null);
   const detailQ = useQuery({
@@ -1625,42 +1332,6 @@ function ZoneUnitsBlock({
     enabled: detailUnit != null,
   });
   const catByCode = new Map(goal.categories.map((c) => [c.code, c]));
-
-  const openReminder = (u: ZoneUnitStatus) => {
-    const deadline = goal.submissionDeadline
-      ? t('goals.reminderDeadline', { date: fmtDateLabel(goal.submissionDeadline.slice(0, 10)) })
-      : '';
-    setReminderMsg(
-      t('goals.reminderDefaultMessage', { deadline }),
-    );
-    setReminderUnit(u);
-  };
-
-  const reminderM = useMutation({
-    mutationFn: () => sendReminder(reminderUnit!.unitId, reminderMsg.trim() || undefined),
-    onSuccess: (res) => {
-      setReminderUnit(null);
-      push({ kind: 'ok', title: t('goals.reminderSent'), msg: res.sentToName ? t('goals.reminderSentTo', { name: res.sentToName }) : undefined });
-    },
-    onError: (err) => {
-      const raw = errMsg(err, '');
-      const msg = /already sent|24 hours/i.test(raw)
-        ? t('goals.reminderAlreadySent')
-        : /no DIRIGEANT|NO_LEADER/i.test(raw)
-        ? t('goals.reminderNoLeader')
-        : /already submitted/i.test(raw)
-        ? t('goals.reminderAlreadySubmitted')
-        : raw || t('goals.reminderSendFailed');
-      push({ kind: 'error', title: t('goals.reminderNotSent'), msg });
-    },
-  });
-
-  const statusBadge = (u: ZoneUnitStatus) => {
-    if (u.submitted) return <Badge tone="ok" dot>{t('goals.submitted')}</Badge>;
-    if (u.late) return <Badge tone="err" dot>{t('goals.late')}</Badge>;
-    if (u.pledgeCount > 0) return <Badge tone="warn" dot>{t('goals.draft')}</Badge>;
-    return <Badge tone="gray" dot>{t('goals.statusNotStarted')}</Badge>;
-  };
 
   const showingCityList = showCityStep && selectedCity == null;
 
@@ -1697,7 +1368,10 @@ function ZoneUnitsBlock({
       ) : showingCityList ? (
         <div>
           {cityGroups.map((g, i) => {
-            const submitted = g.units.filter((u) => u.submitted).length;
+            // Maille PERSONNE : on somme les membres des assemblées de la ville, pas les assemblées.
+            const submittedMembers = g.units.reduce((n, u) => n + u.submittedMembers, 0);
+            const totalMembers = g.units.reduce((n, u) => n + u.totalMembers, 0);
+            const lateMembers = g.units.reduce((n, u) => n + u.lateMembers, 0);
             const aggQ = cityAggQueries[i];
             const lineByCat = new Map((aggQ?.data ?? []).map((l) => [l.categoryId, l]));
             return (
@@ -1715,13 +1389,24 @@ function ZoneUnitsBlock({
                   <span style={{ fontSize: 12, color: 'var(--ink-400)' }}>
                     {t('goals.colAssemblies')} : {g.units.length}
                   </span>
-                  <Badge tone={submitted === g.units.length ? 'ok' : submitted > 0 ? 'warn' : 'gray'}>
+                  <Badge
+                    tone={
+                      totalMembers > 0 && submittedMembers === totalMembers
+                        ? 'ok'
+                        : submittedMembers > 0
+                          ? 'warn'
+                          : 'gray'
+                    }
+                  >
                     {t('views.submittedRatio', {
-                      submitted,
-                      total: g.units.length,
-                      percent: Math.round((submitted / g.units.length) * 100),
+                      submitted: submittedMembers,
+                      total: totalMembers,
+                      percent: pct(submittedMembers, totalMembers),
                     })}
                   </Badge>
+                  {lateMembers > 0 && (
+                    <Badge tone="err" dot>{t('goals.lateMembers', { count: lateMembers })}</Badge>
+                  )}
                   <Icon name="chevRight" size={13} />
                 </div>
                 {citiesLocalitiesQ.isLoading || aggQ?.isLoading ? (
@@ -1733,7 +1418,7 @@ function ZoneUnitsBlock({
                       const eff = line?.effectiveAmount ?? line?.effectiveCount ?? 0;
                       return (
                         <span key={cat.id}>
-                          <span style={{ color: 'var(--ink-400)' }}>{cat.name} : </span>
+                          <span style={{ color: 'var(--ink-400)' }}>{goalName(cat)} : </span>
                           <strong>{fmtCatValue(cat, eff, currency)}</strong>
                         </span>
                       );
@@ -1772,8 +1457,9 @@ function ZoneUnitsBlock({
             },
             { label: t('common.locality'), render: (u) => u.localityName ?? '—' },
             {
-              label: t('goals.colPledgesEntered'),
-              render: (u) => t('goals.pledgesCount5', { count: u.pledgeCount }),
+              // RG-BQ-06 : le suivi est un compteur de PERSONNES, plus un booléen d'assemblée.
+              label: t('goals.colMembersSubmitted'),
+              render: (u) => <MembersSubmittedRatio u={u} />,
             },
             {
               // Lot G1.b : dirigeant de l'unité, à côté du statut.
@@ -1782,45 +1468,7 @@ function ZoneUnitsBlock({
             },
             {
               label: t('goals.colStatus'),
-              render: (u) => (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                  {statusBadge(u)}
-                  {u.submittedAt && (
-                    <span style={{ fontSize: 12, color: 'var(--ink-400)' }}>
-                      {t('goals.submittedOn', { date: fmtDateLabel(u.submittedAt.slice(0, 10)) })}
-                    </span>
-                  )}
-                </span>
-              ),
-            },
-            {
-              label: '',
-              style: { width: 160 },
-              cellStyle: { textAlign: 'right' },
-              render: (u) =>
-                u.submitted ? (
-                  // Lot P2 : le secrétariat (ou super admin) rouvre une soumission.
-                  canUnlock ? (
-                    <Button
-                      size="sm"
-                      title={t('goals.unlockTooltip')}
-                      onClick={() => setUnlockUnitTarget(u)}
-                    >
-                      {t('goals.unlockUnit')}
-                    </Button>
-                  ) : null
-                ) : u.hasLeader ? (
-                  <Button size="sm" iconL={<Icon name="bell" size={14} />} onClick={() => openReminder(u)}>
-                    {t('goals.sendReminder')}
-                  </Button>
-                ) : (
-                  <span
-                    style={{ fontSize: 12, color: 'var(--ink-400)', fontStyle: 'italic' }}
-                    title={t('goals.attachLeaderTooltip')}
-                  >
-                    {t('goals.noLeader')}
-                  </span>
-                ),
+              render: (u) => <UnitStatusBadges u={u} />,
             },
           ]}
           rows={activeUnits.map((u) => ({ ...u, id: u.unitId }))}
@@ -1834,41 +1482,11 @@ function ZoneUnitsBlock({
       )}
 
       <Modal
-        open={reminderUnit != null}
-        onClose={() => setReminderUnit(null)}
-        title={t('goals.reminderModalTitle', { name: reminderUnit?.unitName ?? '' })}
-        sub={t('goals.reminderModalSub')}
-        footer={
-          <>
-            <Button onClick={() => setReminderUnit(null)}>{t('common.cancel')}</Button>
-            <Button
-              variant="primary"
-              disabled={reminderM.isPending || reminderMsg.trim().length === 0}
-              onClick={() => reminderM.mutate()}
-              iconL={<Icon name="bell" size={14} />}
-            >
-              {reminderM.isPending ? t('goals.sending') : t('goals.send')}
-            </Button>
-          </>
-        }
-      >
-        <Field label={t('goals.message')}>
-          <textarea
-            className="input"
-            rows={4}
-            maxLength={2000}
-            value={reminderMsg}
-            onChange={(e) => setReminderMsg(e.target.value)}
-            style={{ resize: 'vertical', fontFamily: 'inherit' }}
-          />
-        </Field>
-      </Modal>
-
-      <Modal
         open={detailUnit != null}
         onClose={() => setDetailUnit(null)}
         title={t('goals.unitPledgesTitle', { name: detailUnit?.unitName ?? '' })}
         sub={t('goals.unitPledgesSub', { year })}
+        size="lg"
         footer={<Button onClick={() => setDetailUnit(null)}>{t('common.close')}</Button>}
       >
         {detailQ.isLoading ? (
@@ -1884,14 +1502,15 @@ function ZoneUnitsBlock({
             <thead>
               <tr style={{ textAlign: 'left', color: 'var(--ink-400)', fontSize: 12 }}>
                 <th style={{ padding: '4px 8px' }}>{t('goals.colCategory')}</th>
-                <th style={{ padding: '4px 8px', textAlign: 'right' }}>{t('goals.colPledged')}</th>
+                {/* RG-BQ-02 : ce n'est plus une déclaration de dirigeant mais la Σ des membres. */}
+                <th style={{ padding: '4px 8px', textAlign: 'right' }}>{t('goals.colMembersSum')}</th>
                 <th style={{ padding: '4px 8px', textAlign: 'right' }}>{t('goals.colPaid')}</th>
               </tr>
             </thead>
             <tbody>
               {(detailQ.data ?? []).map((d: UnitPledgeDetail) => {
                 const cat = catByCode.get(d.categoryCode);
-                const label = cat?.name ?? d.categoryCode;
+                const label = goalName(cat, d.categoryCode);
                 const engaged =
                   d.unitType === 'CURRENCY'
                     ? d.targetAmount != null
@@ -1908,6 +1527,7 @@ function ZoneUnitsBlock({
                   <tr key={d.categoryId} style={{ borderTop: '1px solid var(--line, rgba(42,38,32,0.08))' }}>
                     <td style={{ padding: '8px' }}>
                       {label}
+                      {/* `locked` = TOUS les engagements des membres de cette catégorie sont soumis. */}
                       {d.locked && <Icon name="lock" size={11} />}
                     </td>
                     <td style={{ padding: '8px', textAlign: 'right' }}>{engaged}</td>
@@ -1917,25 +1537,14 @@ function ZoneUnitsBlock({
               })}
             </tbody>
           </table>
+
+          {/* RG-BQ-05 — le drill-down descend jusqu'au MEMBRE : sans ce bloc, un dirigeant de
+              ville ou de région n'aurait ici que des totaux, sans savoir QUI relancer. */}
+          {detailUnit && (
+            <MembersGoalsBlock unitId={detailUnit.unitId} goal={goal} currency={currency} year={year} />
+          )}
           </>
         )}
-      </Modal>
-
-      <Modal
-        open={unlockUnitTarget != null}
-        onClose={() => setUnlockUnitTarget(null)}
-        title={t('goals.unlockModalTitle', { name: unlockUnitTarget?.unitName ?? '' })}
-        sub={t('goals.unlockModalSub', { year })}
-        footer={
-          <>
-            <Button onClick={() => setUnlockUnitTarget(null)}>{t('common.cancel')}</Button>
-            <Button variant="primary" disabled={unlockM.isPending} onClick={() => unlockM.mutate()}>
-              {unlockM.isPending ? t('common.saving') : t('goals.unlockConfirm')}
-            </Button>
-          </>
-        }
-      >
-        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>{t('goals.unlockModalBody')}</p>
       </Modal>
     </div>
   );
@@ -1982,9 +1591,17 @@ function NationRegionsBlock({
         <div key={r.regionId} className="card" style={{ padding: '12px 16px', marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <strong>{r.regionName}</strong>
-            <Badge tone={r.submissionRate >= 1 ? 'ok' : r.submittedUnits > 0 ? 'warn' : 'gray'}>
-              {t('views.submittedRatio', { submitted: r.submittedUnits, total: r.totalUnits, percent: Math.round(r.submissionRate * 100) })}
+            {/* Maille PERSONNE (RG-BQ-06) : `submissionRate` est re-maillé côté serveur. */}
+            <Badge tone={r.submissionRate >= 1 ? 'ok' : r.submittedMembers > 0 ? 'warn' : 'gray'}>
+              {t('views.submittedRatio', {
+                submitted: r.submittedMembers,
+                total: r.totalMembers,
+                percent: Math.round(r.submissionRate * 100),
+              })}
             </Badge>
+            {r.lateMembers > 0 && (
+              <Badge tone="err" dot>{t('goals.lateMembers', { count: r.lateMembers })}</Badge>
+            )}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 22px', fontSize: 13 }}>
             {r.lines.map((l) => {
@@ -1997,7 +1614,7 @@ function NationRegionsBlock({
                 : `${l.achieved ?? 0} ${cat?.unitLabel ?? ''}`.trim();
               return (
                 <span key={l.categoryId}>
-                  <span style={{ color: 'var(--ink-400)' }}>{cat?.name ?? l.categoryCode} : </span>
+                  <span style={{ color: 'var(--ink-400)' }}>{goalName(cat, l.categoryCode)} : </span>
                   <strong>{effective}</strong>
                   <span style={{ color: 'var(--ink-400)' }}> · {t('views.achievedInline', { value: achieved })}</span>
                 </span>
@@ -2019,7 +1636,7 @@ function NationRegionsBlock({
               : `${l.achieved ?? 0} ${cat?.unitLabel ?? ''}`.trim();
             return (
               <span key={l.categoryId}>
-                <span style={{ color: 'var(--ink-400)' }}>{cat?.name ?? l.categoryCode} : </span>
+                <span style={{ color: 'var(--ink-400)' }}>{goalName(cat, l.categoryCode)} : </span>
                 <strong>{effective}</strong>
                 <span style={{ color: 'var(--ink-400)' }}> · {t('views.achievedInline', { value: achieved })}</span>
               </span>
@@ -2165,22 +1782,32 @@ function GlobalSummarySection({ goal, currency, year, drill = true }: { goal: Ac
         </p>
       ) : summary ? (
         <>
+          {/* RG-BQ-06 : maille PERSONNE. `totalUnits` reste un décompte d'assemblées, il ne se
+              mélange plus au ratio de soumission. */}
           <p style={{ margin: '0 0 10px', color: 'var(--ink-400)', fontSize: 13 }}>
-            {t('goals.unitsSubmittedRatio', {
-              submitted: summary.submittedUnits,
-              total: summary.totalUnits,
+            {t('goals.membersSubmittedRatioLong', {
+              submitted: summary.submittedMembers,
+              total: summary.totalMembers,
               percent:
-                summary.totalUnits > 0
-                  ? t('goals.percent', { value: Math.round((summary.submittedUnits / summary.totalUnits) * 100) })
+                summary.totalMembers > 0
+                  ? t('goals.percent', { value: pct(summary.submittedMembers, summary.totalMembers) })
                   : '',
             })}
+            {summary.lateMembers > 0 && (
+              <>
+                {' '}
+                <strong style={{ color: 'var(--err, #B86A4A)' }}>
+                  {t('goals.lateMembers', { count: summary.lateMembers })}
+                </strong>
+              </>
+            )}
           </p>
           <Table
             columns={[
               {
                 label: t('goals.colCategory'),
                 render: (l: GlobalSummary['totals'][number] & { id: string }) => (
-                  <strong>{catById.get(l.categoryId)?.name ?? l.categoryCode}</strong>
+                  <strong>{goalName(catById.get(l.categoryId), l.categoryCode)}</strong>
                 ),
               },
               {
@@ -2197,7 +1824,11 @@ function GlobalSummarySection({ goal, currency, year, drill = true }: { goal: Ac
               <h4 style={{ margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 10 }}>
                 {continent.name}{' '}
                 <span style={{ fontWeight: 400, fontSize: 13, color: 'var(--ink-400)' }}>
-                  {t('goals.continentSubmitted', { submitted: continent.submittedUnits, total: continent.totalUnits })}
+                  {t('goals.continentSubmitted', {
+                    submitted: continent.submittedMembers,
+                    total: continent.totalMembers,
+                    units: continent.totalUnits,
+                  })}
                 </span>
                 {drill && (
                   <Button
@@ -2216,7 +1847,7 @@ function GlobalSummarySection({ goal, currency, year, drill = true }: { goal: Ac
                   {
                     label: t('goals.colCategory'),
                     render: (l: GlobalSummary['totals'][number] & { id: string }) =>
-                      catById.get(l.categoryId)?.name ?? l.categoryCode,
+                      goalName(catById.get(l.categoryId), l.categoryCode),
                   },
                   {
                     label: t('goals.colEffectivePledged'),
@@ -2282,18 +1913,12 @@ function DrillView({
       </p>
 
       {current.level === 'units' && current.unitStatus && (
-        <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--ink-400)' }}>
-          {current.unitStatus.localityName ? t('goals.localityPrefix', { name: current.unitStatus.localityName }) : ''}
-          {t('goals.pledgesEnteredInline', { count: current.unitStatus.pledgeCount })}
-          {current.unitStatus.submitted ? (
-            <Badge tone="ok" dot>{t('goals.submitted')}</Badge>
-          ) : current.unitStatus.late ? (
-            <Badge tone="err" dot>{t('goals.late')}</Badge>
-          ) : current.unitStatus.pledgeCount > 0 ? (
-            <Badge tone="warn" dot>{t('goals.draft')}</Badge>
-          ) : (
-            <Badge tone="gray" dot>{t('goals.statusNotStarted')}</Badge>
-          )}
+        <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--ink-400)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {current.unitStatus.localityName
+            ? <span>{t('goals.localityPrefix', { name: current.unitStatus.localityName })}</span>
+            : null}
+          <MembersSubmittedRatio u={current.unitStatus} />
+          <UnitStatusBadges u={current.unitStatus} />
         </p>
       )}
 
@@ -2324,7 +1949,7 @@ function DrillView({
   );
 }
 
-/** Agrégats par catégorie d'un niveau + fois déclarées (lecture seule). */
+/** Totaux par catégorie d'un niveau — somme des engagements individuels dessous (lecture seule). */
 function LevelAggregateBlock({
   goal,
   currency,
@@ -2343,11 +1968,6 @@ function LevelAggregateBlock({
     queryKey: ['goals', 'aggregate', level, entityId, year],
     queryFn: () => getAggregate(level, entityId, year),
   });
-  const faithQ = useQuery({
-    queryKey: ['goals', 'faith', level, entityId, year],
-    queryFn: () => listFaithPledges(level as FaithLevelPath, entityId, year),
-    enabled: level !== 'units', // pas d'engagement de foi au niveau unité
-  });
   // Lot 7.1 — évolution dans le temps (versé cumulé par mois) à CE niveau.
   const timelineQ = useQuery({
     queryKey: ['goals', 'timeline', level, entityId, year],
@@ -2356,7 +1976,6 @@ function LevelAggregateBlock({
 
   const categories = [...goal.categories].sort((a, b) => a.displayOrder - b.displayOrder);
   const lineByCat = new Map((aggQ.data ?? []).map((l) => [l.categoryId, l]));
-  const faiths = faithQ.data ?? [];
 
   if (aggQ.isLoading) return <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>;
   if (aggQ.isError) {
@@ -2369,32 +1988,14 @@ function LevelAggregateBlock({
         columns={[
           {
             label: t('goals.colCategory'),
-            render: (r: { id: string; category: GoalCategory }) => <strong>{r.category.name}</strong>,
+            render: (r: { id: string; category: GoalCategory }) => <strong>{goalName(r.category)}</strong>,
           },
           {
-            label: level === 'units' ? t('goals.colDirectPledged') : t('goals.colAggregate'),
-            render: (r) =>
-              fmtCatValue(r.category, lineByCat.get(r.category.id)?.aggregateOfChildren ?? 0, currency),
-          },
-          {
-            label: t('goals.colEffective'),
+            // RG-BQ-02 : une seule colonne de valeur — la somme des engagements des membres.
+            label: t('goals.colTotal'),
             render: (r) => {
               const line = lineByCat.get(r.category.id);
-              const eff = line?.effectiveAmount ?? line?.effectiveCount ?? 0;
-              return (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                  <strong>{fmtCatValue(r.category, eff, currency)}</strong>
-                  {line && level !== 'units' && (
-                    <Badge tone={line.source === 'FAITH' ? 'earth' : line.source === 'DIRECT' ? 'green' : 'gray'}>
-                      {line.source === 'FAITH'
-                        ? t('goals.sourceFaith')
-                        : line.source === 'DIRECT'
-                        ? t('goals.sourceDirect')
-                        : t('goals.sourceAggregate')}
-                    </Badge>
-                  )}
-                </span>
-              );
+              return <strong>{fmtCatValue(r.category, line?.effectiveAmount ?? line?.effectiveCount ?? 0, currency)}</strong>;
             },
           },
         ]}
@@ -2402,23 +2003,10 @@ function LevelAggregateBlock({
         zebra
       />
 
-      {/* Feature A — au niveau ASSEMBLÉE : objectifs des membres + agrégat des fidèles /
-          engagement du dirigeant / retenu (MAX). */}
+      {/* RG-BQ-05 — le drill-down descend jusqu'au MEMBRE : au niveau assemblée, on ouvre le
+          détail nominatif (qui a déclaré, qui a soumis, qui est en retard). */}
       {level === 'units' && (
         <MembersGoalsBlock unitId={entityId} goal={goal} currency={currency} year={year} />
-      )}
-
-      {faiths.length > 0 && (
-        <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--ink-600)' }}>
-          {t('goals.faithPledgesInline')}
-          {faiths
-            .map((f) => {
-              const cat = goal.categories.find((c) => c.id === f.categoryId);
-              const value = cat ? fmtCatValue(cat, f.targetAmount ?? f.targetCount ?? 0, currency) : '';
-              return `${cat?.name ?? f.categoryCode} ${value} (${f.createdByName ?? '—'})`;
-            })
-            .join(' · ')}
-        </p>
       )}
 
       {/* Lot 7.1 — courbe d'évolution cumulée du versé, par catégorie, à ce niveau. */}
@@ -2444,9 +2032,18 @@ function LevelAggregateBlock({
 }
 
 /**
- * Feature A — « Objectifs des membres » d'une assemblée : tableau des membres avec leur objectif,
- * et les 3 valeurs Agrégat des fidèles / Engagement du dirigeant / Retenu (MAX) + badge de source.
- * Masqué proprement si le backend refuse (403) ou ne connaît pas l'endpoint.
+ * « Objectifs des membres » d'une assemblée — le cœur du modèle individuel (RG-BQ-05/06).
+ *
+ * <p>Deux tableaux :
+ * <ul>
+ *   <li>par catégorie : UNE valeur, la somme des engagements des membres ;</li>
+ *   <li>par PERSONNE : construit sur `roster` (donc y compris ceux qui n'ont RIEN déclaré — ce
+ *       sont précisément ceux qu'un dirigeant doit relancer), croisé avec `lines[].members`
+ *       pour les valeurs.</li>
+ * </ul>
+ *
+ * <p>Masqué proprement si le backend refuse (403 : hors périmètre, ou simple membre sur sa propre
+ * assemblée — celui-ci a `/me/assembly`, anonyme).
  */
 function MembersGoalsBlock({
   unitId, goal, currency, year,
@@ -2466,16 +2063,55 @@ function MembersGoalsBlock({
     retry: false,
   });
 
+  // Les compteurs « 7/12 » vivent aussi dans /me/units et /zones/{id}/units : on invalide
+  // le préfixe ['goals'] pour ne pas laisser un chiffre périmé à l'écran.
+  const invalidateAll = () => queryClient.invalidateQueries({ queryKey: ['goals'] });
+
   // Réouverture des objectifs d'un membre : SECRETARIAT / superAdmin (le backend refait le contrôle).
   const canUnlockMembers = isSecretariat(me) || (me?.superAdmin ?? false);
   const unlockM = useMutation({
     mutationFn: (memberId: string) => unlockMemberPledges(memberId, year),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['goals', 'members-aggregate', unitId, year] });
+      invalidateAll();
       push({ kind: 'ok', title: t('goals.memberUnlocked') });
     },
     onError: (err) =>
       push({ kind: 'error', title: t('goals.unlockRefused'), msg: errMsg(err, t('common.error')) }),
+  });
+
+  // RG-BQ-06 : le rappel cible une PERSONNE non soumise, plus une assemblée.
+  const [reminderTarget, setReminderTarget] = useState<MemberStatusItem | null>(null);
+  const [reminderMsg, setReminderMsg] = useState('');
+  const openReminder = (m: MemberStatusItem) => {
+    const deadline = goal.submissionDeadline
+      ? t('goals.reminderDeadline', { date: fmtDateLabel(goal.submissionDeadline.slice(0, 10)) })
+      : '';
+    setReminderMsg(t('goals.reminderDefaultMessage', { deadline }));
+    setReminderTarget(m);
+  };
+  const reminderM = useMutation({
+    mutationFn: () => sendMemberReminder(reminderTarget!.userId, reminderMsg.trim() || undefined),
+    onSuccess: (res) => {
+      setReminderTarget(null);
+      push({
+        kind: 'ok',
+        title: t('goals.reminderSent'),
+        msg: res.sentToName ? t('goals.reminderSentTo', { name: res.sentToName }) : undefined,
+      });
+    },
+    onError: (err) => {
+      const code = errCode(err);
+      push({
+        kind: 'error',
+        title: t('goals.reminderNotSent'),
+        msg:
+          code === 'REMINDER_ALREADY_SENT'
+            ? t('goals.reminderAlreadySent')
+            : code === 'MEMBER_ALREADY_SUBMITTED'
+              ? t('goals.reminderAlreadySubmitted')
+              : errMsg(err, t('goals.reminderSendFailed')),
+      });
+    },
   });
 
   if (q.isLoading) {
@@ -2483,100 +2119,107 @@ function MembersGoalsBlock({
   }
   if (q.isError || !q.data) return null;
 
+  const data = q.data;
   const catById = new Map(goal.categories.map((c) => [c.id, c]));
-  const lines = [...q.data.lines].sort(
+  const lines = [...data.lines].sort(
     (a, b) => (catById.get(a.categoryId)?.displayOrder ?? 0) - (catById.get(b.categoryId)?.displayOrder ?? 0),
   );
-  if (lines.length === 0) return null;
 
   const fmt = (categoryId: string, value: number | null | undefined) => {
     const cat = catById.get(categoryId);
     return cat ? fmtCatValue(cat, value ?? 0, currency) : String(value ?? 0);
   };
 
-  // Pivot membres : une ligne par membre, une colonne par catégorie.
-  const memberMap = new Map<string, { fullName: string; locked: boolean; values: Map<string, number | null> }>();
+  // Valeurs déclarées, indexées par personne puis catégorie (les non-déclarants n'y sont pas).
+  const valuesByMember = new Map<string, Map<string, number | null>>();
   for (const line of lines) {
     for (const m of line.members) {
-      const entry = memberMap.get(m.userId) ?? { fullName: m.fullName, locked: false, values: new Map() };
-      entry.values.set(line.categoryId, m.amount ?? m.count);
-      // Un membre est « soumis » dès qu'un de ses objectifs est verrouillé (il soumet tout d'un coup).
-      entry.locked = entry.locked || m.locked;
-      memberMap.set(m.userId, entry);
+      const values = valuesByMember.get(m.userId) ?? new Map<string, number | null>();
+      values.set(line.categoryId, m.amount ?? m.count);
+      valuesByMember.set(m.userId, values);
     }
   }
-  const memberRows = Array.from(memberMap.entries()).map(([userId, m]) => ({ id: userId, ...m }));
+
+  // ⚠ On part du ROSTER (les PERSONNES), pas des engagements : sans ça, les membres qui n'ont
+  // rien déclaré seraient invisibles — or ce sont eux qu'il faut relancer.
+  const roster = data.roster ?? [];
+  const memberRows = roster.map((m) => ({
+    id: m.userId,
+    member: m,
+    values: valuesByMember.get(m.userId) ?? new Map<string, number | null>(),
+  }));
+  type MemberRow = (typeof memberRows)[number];
 
   type Line = (typeof lines)[number];
+  // RG-BQ-02 : les trois colonnes d'antan (agrégat des fidèles / engagement du dirigeant /
+  // retenu MAX + badge de source) fusionnent en UNE valeur.
   const aggCols: Column<Line & { id: string }>[] = [
     {
       label: t('goals.colCategory'),
-      render: (l) => <strong>{catById.get(l.categoryId)?.name ?? l.categoryCode}</strong>,
-    },
-    { label: t('goals.membersAggregate'), render: (l) => fmt(l.categoryId, l.membersSum) },
-    {
-      label: t('goals.leaderPledge'),
-      render: (l) =>
-        l.leaderAmount != null || l.leaderCount != null
-          ? fmt(l.categoryId, l.leaderAmount ?? l.leaderCount)
-          : <span style={{ color: 'var(--ink-400)' }}>—</span>,
+      render: (l) => <strong>{goalName(catById.get(l.categoryId), l.categoryCode)}</strong>,
     },
     {
-      label: t('goals.retainedMax'),
-      render: (l) => (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <strong>{fmt(l.categoryId, l.effectiveAmount ?? l.effectiveCount)}</strong>
-          <Badge tone={l.source === 'FAITH' ? 'earth' : l.source === 'DIRECT' ? 'green' : 'gray'}>
-            {l.source === 'FAITH'
-              ? t('goals.sourceFaith')
-              : l.source === 'DIRECT'
-              ? t('goals.sourceDirect')
-              : t('goals.sourceMembers')}
-          </Badge>
-        </span>
-      ),
+      label: t('goals.colTotal'),
+      render: (l) => <strong>{fmt(l.categoryId, l.effectiveAmount ?? l.effectiveCount)}</strong>,
     },
   ];
 
-  const memberCols: Column<(typeof memberRows)[number]>[] = [
-    { label: t('goals.colMember'), render: (m) => <strong>{m.fullName}</strong> },
+  const memberCols: Column<MemberRow>[] = [
+    { label: t('goals.colMember'), render: (r) => <strong>{r.member.fullName}</strong> },
     ...lines.map((l) => ({
-      label: catById.get(l.categoryId)?.name ?? l.categoryCode,
-      render: (m: (typeof memberRows)[number]) => {
-        const v = m.values.get(l.categoryId);
+      label: goalName(catById.get(l.categoryId), l.categoryCode),
+      render: (r: MemberRow) => {
+        const v = r.values.get(l.categoryId);
         return v != null ? fmt(l.categoryId, v) : <span style={{ color: 'var(--ink-400)' }}>—</span>;
       },
-    } as Column<(typeof memberRows)[number]>)),
+    } as Column<MemberRow>)),
     {
       label: t('goals.colStatus'),
       cellStyle: { textAlign: 'right' },
-      render: (m) =>
-        !m.locked ? (
-          <Badge tone="warn" dot>{t('goals.draft')}</Badge>
-        ) : (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
+      render: (r) => (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          {r.member.submitted ? (
             <Badge tone="ok" dot>{t('goals.submitted')}</Badge>
-            {/* Décision JP 28/07 : le membre passe par le secrétariat pour corriger après coup. */}
-            {canUnlockMembers && (
-              <Button
-                size="sm"
-                variant="ghost"
-                title={t('goals.unlockMemberTooltip')}
-                disabled={unlockM.isPending}
-                onClick={() => unlockM.mutate(m.id)}
-              >
-                {t('goals.unlockMember')}
-              </Button>
-            )}
-          </span>
-        ),
-    } as Column<(typeof memberRows)[number]>,
+          ) : r.member.hasPledges ? (
+            <Badge tone="warn" dot>{t('goals.draft')}</Badge>
+          ) : (
+            <Badge tone="gray" dot>{t('goals.statusNotStarted')}</Badge>
+          )}
+          {r.member.late && <Badge tone="err" dot>{t('goals.late')}</Badge>}
+          {/* Décision JP 28/07 : le membre passe par le secrétariat pour corriger après coup. */}
+          {r.member.submitted && canUnlockMembers && (
+            <Button
+              size="sm"
+              variant="ghost"
+              title={t('goals.unlockMemberTooltip')}
+              disabled={unlockM.isPending}
+              onClick={() => unlockM.mutate(r.id)}
+            >
+              {t('goals.unlockMember')}
+            </Button>
+          )}
+          {/* Le rappel a désormais son domicile ici : c'est le seul endroit qui connaît les noms. */}
+          {!r.member.submitted && (
+            <Button size="sm" variant="ghost" iconL={<Icon name="bell" size={13} />} onClick={() => openReminder(r.member)}>
+              {t('goals.sendReminder')}
+            </Button>
+          )}
+        </span>
+      ),
+    } as Column<MemberRow>,
   ];
 
   return (
     <div style={{ marginTop: 18 }}>
-      <h4 style={{ margin: '0 0 8px' }}>{t('goals.membersGoalsTitle')}</h4>
-      <Table columns={aggCols} rows={lines.map((l) => ({ ...l, id: l.categoryId }))} zebra />
+      <h4 style={{ margin: '0 0 4px' }}>{t('goals.membersGoalsTitle')}</h4>
+      {/* Compteur « 7/12 membres ont soumis » (RG-BQ-06) — `pct` absorbe le cas 0 membre. */}
+      <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--ink-500, #4A443B)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <strong><MembersSubmittedRatio u={data} /></strong>
+        {data.lateMembers > 0 && (
+          <Badge tone="err" dot>{t('goals.lateMembers', { count: data.lateMembers })}</Badge>
+        )}
+      </p>
+      {lines.length > 0 && <Table columns={aggCols} rows={lines.map((l) => ({ ...l, id: l.categoryId }))} zebra />}
       <div style={{ marginTop: 12 }}>
         <Table
           columns={memberCols}
@@ -2584,11 +2227,42 @@ function MembersGoalsBlock({
           zebra
           empty={
             <p style={{ color: 'var(--ink-400)', fontStyle: 'italic', margin: '6px 0 0' }}>
-              {t('goals.noMemberPledges')}
+              {t('goals.noMemberInUnit')}
             </p>
           }
         />
       </div>
+
+      <Modal
+        open={reminderTarget != null}
+        onClose={() => setReminderTarget(null)}
+        title={t('goals.memberReminderTitle', { name: reminderTarget?.fullName ?? '' })}
+        sub={t('goals.memberReminderSub')}
+        footer={
+          <>
+            <Button onClick={() => setReminderTarget(null)}>{t('common.cancel')}</Button>
+            <Button
+              variant="primary"
+              disabled={reminderM.isPending || reminderMsg.trim().length === 0}
+              onClick={() => reminderM.mutate()}
+              iconL={<Icon name="bell" size={14} />}
+            >
+              {reminderM.isPending ? t('goals.sending') : t('goals.send')}
+            </Button>
+          </>
+        }
+      >
+        <Field label={t('goals.message')}>
+          <textarea
+            className="input"
+            rows={4}
+            maxLength={2000}
+            value={reminderMsg}
+            onChange={(e) => setReminderMsg(e.target.value)}
+            style={{ resize: 'vertical', fontFamily: 'inherit' }}
+          />
+        </Field>
+      </Modal>
     </div>
   );
 }
@@ -2653,9 +2327,17 @@ function DrillCities({ zoneId, year, onOpen }: { zoneId: string; year: number; o
   const localitiesQ = useQuery({ queryKey: ['admin', 'localities', zoneId], queryFn: () => listLocalities({ zoneId }) });
   const unitsQ = useQuery({ queryKey: ['goals', 'zone-units', zoneId, year], queryFn: () => getZoneUnits(zoneId, year) });
   const units = unitsQ.data ?? [];
+  // Maille PERSONNE (RG-BQ-06) : `assemblies` reste un décompte d'assemblées, le ratio de
+  // soumission somme les MEMBRES des assemblées de la ville.
   const rows = (localitiesQ.data ?? []).map((l) => {
     const cityUnits = units.filter((u) => u.localityName === l.name);
-    return { ...l, total: cityUnits.length, submitted: cityUnits.filter((u) => u.submitted).length };
+    return {
+      ...l,
+      assemblies: cityUnits.length,
+      total: cityUnits.reduce((n, u) => n + u.totalMembers, 0),
+      submitted: cityUnits.reduce((n, u) => n + u.submittedMembers, 0),
+      late: cityUnits.reduce((n, u) => n + u.lateMembers, 0),
+    };
   });
   return (
     <div style={{ marginTop: 16 }}>
@@ -2663,18 +2345,21 @@ function DrillCities({ zoneId, year, onOpen }: { zoneId: string; year: number; o
       <Table
         columns={[
           { label: t('common.locality'), render: (l: (typeof rows)[number]) => <strong>{l.name}</strong> },
-          { label: t('goals.colAssemblies'), render: (l) => String(l.total) },
+          { label: t('goals.colAssemblies'), render: (l) => String(l.assemblies) },
           {
-            label: t('goals.colStatus'),
+            label: t('goals.colMembersSubmitted'),
             render: (l) =>
               l.total > 0 ? (
-                <Badge tone={l.submitted === l.total ? 'ok' : l.submitted > 0 ? 'warn' : 'gray'}>
-                  {t('views.submittedRatio', {
-                    submitted: l.submitted,
-                    total: l.total,
-                    percent: Math.round((l.submitted / l.total) * 100),
-                  })}
-                </Badge>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <Badge tone={l.submitted === l.total ? 'ok' : l.submitted > 0 ? 'warn' : 'gray'}>
+                    {t('views.submittedRatio', {
+                      submitted: l.submitted,
+                      total: l.total,
+                      percent: pct(l.submitted, l.total),
+                    })}
+                  </Badge>
+                  {l.late > 0 && <Badge tone="err" dot>{t('goals.lateMembers', { count: l.late })}</Badge>}
+                </span>
               ) : (
                 <span style={{ color: 'var(--ink-400)' }}>—</span>
               ),
@@ -2695,27 +2380,16 @@ function DrillCities({ zoneId, year, onOpen }: { zoneId: string; year: number; o
   );
 }
 
+/**
+ * Assemblées d'une ville dans le drill-down.
+ *
+ * <p>Plus de bouton « Déverrouiller » : l'endpoint d'unité n'existe plus (RG-BQ-06). La
+ * réouverture est PAR PERSONNE, un cran plus bas — on ouvre l'assemblée pour l'atteindre.
+ */
 function DrillUnits({ zoneId, year, onOpen, cityName }: { zoneId: string; year: number; onOpen: (u: ZoneUnitStatus) => void; cityName?: string | null }) {
   const { t } = useTranslation();
-  const { push } = useToast();
-  const { me } = useAuth();
-  // Lot P2 (décision #14) : déverrouillage réservé à SUPER_ADMIN + SECRETARIAT.
-  const canUnlock = (me?.superAdmin ?? false) || me?.goalRole === 'SECRETARIAT';
   const unitsQ = useQuery({ queryKey: ['goals', 'zone-units', zoneId, year], queryFn: () => getZoneUnits(zoneId, year) });
   const rows = (unitsQ.data ?? []).filter((u) => cityName == null || u.localityName === cityName);
-
-  const [unlockTarget, setUnlockTarget] = useState<ZoneUnitStatus | null>(null);
-  const unlockM = useMutation({
-    mutationFn: () => unlockUnit(unlockTarget!.unitId, year),
-    onSuccess: () => {
-      setUnlockTarget(null);
-      unitsQ.refetch();
-      push({ kind: 'ok', title: t('goals.unitUnlocked') });
-    },
-    onError: (err) => {
-      push({ kind: 'error', title: t('goals.unlockFailed'), msg: errMsg(err, '') || undefined });
-    },
-  });
 
   return (
     <div style={{ marginTop: 16 }}>
@@ -2731,44 +2405,18 @@ function DrillUnits({ zoneId, year, onOpen, cityName }: { zoneId: string; year: 
             ),
           },
           { label: t('common.locality'), render: (u) => u.localityName ?? '—' },
-          { label: t('goals.colPledgesEntered'), render: (u) => t('goals.pledgesCount5', { count: u.pledgeCount }) },
+          { label: t('goals.colMembersSubmitted'), render: (u) => <MembersSubmittedRatio u={u} /> },
           // Lot G1.b : dirigeant de l'unité dans le drill-down.
           { label: t('goals.colLeader'), render: (u) => u.leaderName ?? '—' },
           {
             label: t('goals.colStatus'),
-            render: (u) =>
-              u.submitted ? (
-                <Badge tone="ok" dot>{t('goals.submitted')}</Badge>
-              ) : u.late ? (
-                <Badge tone="err" dot>{t('goals.late')}</Badge>
-              ) : u.pledgeCount > 0 ? (
-                <Badge tone="warn" dot>{t('goals.draft')}</Badge>
-              ) : (
-                <Badge tone="gray" dot>{t('goals.statusNotStarted')}</Badge>
-              ),
+            render: (u) => <UnitStatusBadges u={u} />,
           },
           {
             label: '',
-            style: { width: canUnlock ? 160 : 40 },
+            style: { width: 40 },
             cellStyle: { textAlign: 'right' },
-            render: (u) => (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                {/* Lot P2 : rouvrir une soumission depuis le drill-down secrétariat. */}
-                {canUnlock && u.submitted && (
-                  <Button
-                    size="sm"
-                    title={t('goals.unlockTooltip')}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setUnlockTarget(u);
-                    }}
-                  >
-                    {t('goals.unlockUnit')}
-                  </Button>
-                )}
-                <Icon name="chevRight" size={13} />
-              </span>
-            ),
+            render: () => <Icon name="chevRight" size={13} />,
           },
         ]}
         rows={rows.map((u) => ({ ...u, id: u.unitId }))}
@@ -2780,23 +2428,6 @@ function DrillUnits({ zoneId, year, onOpen, cityName }: { zoneId: string; year: 
           </p>
         }
       />
-
-      <Modal
-        open={unlockTarget != null}
-        onClose={() => setUnlockTarget(null)}
-        title={t('goals.unlockModalTitle', { name: unlockTarget?.unitName ?? '' })}
-        sub={t('goals.unlockModalSub', { year })}
-        footer={
-          <>
-            <Button onClick={() => setUnlockTarget(null)}>{t('common.cancel')}</Button>
-            <Button variant="primary" disabled={unlockM.isPending} onClick={() => unlockM.mutate()}>
-              {unlockM.isPending ? t('common.saving') : t('goals.unlockConfirm')}
-            </Button>
-          </>
-        }
-      >
-        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>{t('goals.unlockModalBody')}</p>
-      </Modal>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
+  Linking,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,10 +18,12 @@ import ScreenShell from '../components/ScreenShell';
 import Card from '../components/Card';
 import Label from '../components/Label';
 import Button from '../components/Button';
+import SelectField from '../components/SelectField';
 import { colors, fonts } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { canCreateAssembly, canManageStructure, canManageZones, isSecretariat } from '../services/authApi';
+import { canManageStructure, canManageZones, isSecretariat } from '../services/authApi';
+import { contactMailto, useContactSettings } from '../services/contactApi';
 import { confirmDialog, notify } from '../utils/dialogs';
 import i18n from '../utils/i18n/i18n';
 import {
@@ -37,6 +40,13 @@ import { fmtDate } from '../utils/format';
 type Level = 'countries' | 'zones' | 'localities' | 'units';
 
 const HISTORY_PAGE_SIZE = 20;
+
+/**
+ * Région « fictive » du sélecteur en cascade (JP 16/08) : une VILLE peut n'être rattachée à
+ * aucune région (création SUPER_ADMIN, `zoneOptional`). Sans cette entrée, ces villes seraient
+ * injoignables depuis la cascade Nation → Région → Ville. Le chip n'apparaît que s'il en existe.
+ */
+const NO_ZONE = '__no_zone__';
 
 const errMsg = (e: any, fb: string) =>
   e?.response ? e.response.data?.message ?? fb : i18n.t('errors.serverUnreachableShort');
@@ -118,15 +128,19 @@ export default function StructureScreen() {
   const isAdmin = me?.superAdmin ?? false;
   // RDG 25/07 : la création ET la suppression directes de nation/région/ville sont réservées au
   // SUPER_ADMIN (back-office) et au SECRETARIAT. Les assemblées ont leurs propres règles — voir
-  // `canAdd` ci-dessous (palier C1 : création directe ouverte aux dirigeants).
+  // `canAdd` ci-dessous.
   const secretariat = isSecretariat(me);
   const canDirect = isAdmin || secretariat;
   const canEdit = level === 'countries' ? false
     : level === 'zones' ? canManageZones(me)
     : canManageStructure(me);
-  // Palier C1 (JP 14/08) : la création d'ASSEMBLÉE est ouverte aux dirigeants (le backend garde le
-  // périmètre : « dans MA ville » → 403 sinon). Nation/région/ville restent SUPER_ADMIN/SECRETARIAT.
-  const canAdd = level === 'units' ? canCreateAssembly(me) : canDirect;
+  // RG-BQ-12 (JP 16/08) : la création d'une ASSEMBLÉE n'a PLUS AUCUNE contrainte géographique —
+  // tout compte du ministère en crée une dans la ville de son choix, sans y être rattaché ni en
+  // être dirigeant. Le créateur en devient responsable (et passe DIRIGEANT_UNITE s'il était
+  // MEMBRE ; jamais de rétrogradation, et son rôle Dons n'est pas promu).
+  // ⚠ MODIFIER / SUPPRIMER une assemblée reste gardé côté serveur (`canEdit` ci-dessus) : on ouvre
+  // la création, pas l'administration. Nation/région/ville restent SUPER_ADMIN/SECRETARIAT.
+  const canAdd = level === 'units' ? true : canDirect;
   // Suppression sans passer par la modale d'édition (pas de modification in-app pour les
   // nations ; le SECRETARIAT ne modifie pas les régions/villes).
   const canDeleteRow = level === 'countries' ? canDirect
@@ -175,7 +189,10 @@ export default function StructureScreen() {
       refreshControl={<RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={styles.headerRow}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
+        {/* `back()` est un no-op silencieux quand la pile est vide (écran atteint par un lien
+            direct, ou navigateur recréé) : on retombe alors sur l'accueil plutôt que sur une
+            flèche morte. */}
+        <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/home'))} hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={colors.ink2} />
         </Pressable>
         <Text style={styles.title}>{t('structure.title')}</Text>
@@ -444,8 +461,14 @@ function StructureFormModal({
   onDelete: (lvl: Level, id: string, name: string) => Promise<void>;
 }) {
   const { t } = useLanguage();
+  const contact = useContactSettings();
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState('');
+  // Sélecteur en cascade des ASSEMBLÉES (JP 16/08) : la ville seule ne suffisait pas à situer
+  // le lieu (homonymes entre nations, liste à plat de tout le ministère). `parentId` reste la
+  // VILLE — seule valeur envoyée au serveur ; nation/région ne servent qu'à filtrer.
+  const [countryId, setCountryId] = useState('');
+  const [zoneId, setZoneId] = useState('');
   const [saving, setSaving] = useState(false);
   // Palier C1-bis (JP 14/08) — responsable de l'assemblée : compte EXISTANT, obligatoire.
   const [leaderId, setLeaderId] = useState('');
@@ -455,8 +478,11 @@ function StructureFormModal({
   const open = editing != null;
   const level = editing?.level ?? 'zones';
   const item = editing?.item ?? null;
-  /** Uniquement à la CRÉATION d'une assemblée : renommer une assemblée ne redemande pas son dirigeant. */
-  const needsLeader = level === 'units' && item == null;
+  /**
+   * Champ « responsable » proposé à la CRÉATION d'une assemblée — FACULTATIF depuis RG-BQ-12 :
+   * laissé vide, le créateur devient lui-même responsable. Renommer n'en redemande pas.
+   */
+  const canPickLeader = level === 'units' && item == null;
 
   useEffect(() => {
     if (open) {
@@ -466,13 +492,31 @@ function StructureFormModal({
           : level === 'localities' ? item?.zoneId ?? ''
           : item?.localityId ?? '',
       );
+      if (level === 'units') {
+        if (item) {
+          // Édition : on remonte la chaîne depuis la ville de l'assemblée pour préremplir la cascade.
+          const loc = localities.find((l) => l.id === item.localityId);
+          const z = loc?.zoneId ?? '';
+          setZoneId(z || (loc ? NO_ZONE : ''));
+          setCountryId(z ? zones.find((zz) => zz.id === z)?.countryId ?? '' : '');
+        } else {
+          // Création : on présélectionne les niveaux à choix unique (ministère mono-nation),
+          // jamais la ville — c'est LE choix que la personne doit poser elle-même.
+          const c = countries.length === 1 ? countries[0].id : '';
+          const zs = c ? zones.filter((z) => z.countryId === c) : [];
+          setCountryId(c);
+          setZoneId(zs.length === 1 ? zs[0].id : '');
+        }
+      } else {
+        setCountryId(''); setZoneId('');
+      }
       setLeaderId(''); setLeaderQuery(''); setLeaderResults([]);
     }
   }, [open, editing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Recherche serveur, débounce court : l'annuaire d'un ministère ne se charge pas en entier.
   useEffect(() => {
-    if (!needsLeader) return;
+    if (!canPickLeader) return;
     const q = leaderQuery.trim();
     if (q.length < 2) { setLeaderResults([]); return; }
     let cancelled = false;
@@ -484,7 +528,7 @@ function StructureFormModal({
         .finally(() => { if (!cancelled) setLeaderLoading(false); });
     }, 300);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [leaderQuery, needsLeader]);
+  }, [leaderQuery, canPickLeader]);
 
   const parentLabel = level === 'zones' ? t('structure.parentCountry') : level === 'localities' ? t('structure.parentZone') : t('structure.parentLocality');
   const parents = level === 'zones'
@@ -493,11 +537,35 @@ function StructureFormModal({
     ? zones.map((z) => ({ id: z.id, name: z.name }))
     : localities.map((l) => ({ id: l.id, name: l.name }));
 
+  // --- Cascade Nation → Région → Ville (assemblées uniquement) ---
+  const countryOptions = useMemo(() => countries.map((c) => ({ id: c.id, name: c.name })), [countries]);
+  const zoneOptions = useMemo(() => {
+    const list = zones.filter((z) => z.countryId === countryId).map((z) => ({ id: z.id, name: z.name }));
+    // Échappatoire pour les villes sans région — voir NO_ZONE.
+    return localities.some((l) => !l.zoneId)
+      ? [...list, { id: NO_ZONE, name: t('structure.noZone') }]
+      : list;
+  }, [zones, localities, countryId, t]);
+  const localityOptions = useMemo(
+    () => localities
+      .filter((l) => (zoneId === NO_ZONE ? !l.zoneId : l.zoneId === zoneId))
+      .map((l) => ({ id: l.id, name: l.name })),
+    [localities, zoneId],
+  );
+
+  const pickCountry = (id: string) => {
+    setCountryId(id);
+    // Changer de nation invalide la région ET la ville déjà choisies.
+    const zs = zones.filter((z) => z.countryId === id);
+    setZoneId(zs.length === 1 ? zs[0].id : '');
+    setParentId('');
+  };
+  const pickZone = (id: string) => { setZoneId(id); setParentId(''); };
+
+  // RG-BQ-12 : `leaderUserId` est FACULTATIF — omis, le créateur devient responsable. Le code
+  // 422 `UNIT_LEADER_REQUIRED` ne peut plus être levé, il n'y a donc plus rien à désactiver.
   const valid = name.trim().length > 0
-    && (level === 'localities' ? (zoneOptional || parentId !== '') : parentId !== '')
-    // Sans responsable, le backend refuse (422 UNIT_LEADER_REQUIRED) : on désactive plutôt que
-    // de laisser l'utilisateur buter sur une erreur.
-    && (!needsLeader || leaderId !== '');
+    && (level === 'localities' ? (zoneOptional || parentId !== '') : parentId !== '');
 
   const onSave = async () => {
     if (!valid) { notify(t('common.appName'), t('structure.fillFields')); return; }
@@ -515,12 +583,20 @@ function StructureFormModal({
         if (item) await updateUnit(item.id, { name: name.trim(), localityId: parentId, type: 'ASSEMBLY' });
         else await createUnit({
           ministryId: ministryId!, localityId: parentId, name: name.trim(), type: 'ASSEMBLY',
-          leaderUserId: leaderId,
+          leaderUserId: leaderId || undefined,
         });
       }
       await onSaved();
     } catch (e: any) {
-      notify(t('structure.saveRefusedTitle'), errMsg(e, t('structure.saveRefusedBody')));
+      // RG-BQ-12 / RG-DS-03 — sans contrainte de lieu, le doublon de nom dans une même ville
+      // devient banal : on lui donne son propre message plutôt que le refus générique.
+      const code = e?.response?.data?.error;
+      notify(
+        t('structure.saveRefusedTitle'),
+        code === 'STRUCTURE_NAME_EXISTS'
+          ? errMsg(e, t('errors.goals.STRUCTURE_NAME_EXISTS'))
+          : errMsg(e, t('structure.saveRefusedBody')),
+      );
     } finally {
       setSaving(false);
     }
@@ -530,72 +606,148 @@ function StructureFormModal({
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <Card style={styles.modalCard}>
-          <Text style={styles.modalTitle}>
-            {item ? (level === 'zones' ? t('structure.modalEditZone') : level === 'localities' ? t('structure.modalEditLocality') : t('structure.modalEditUnit')) : (level === 'zones' ? t('structure.modalAddZone') : level === 'localities' ? t('structure.modalAddLocality') : t('structure.modalAddUnit'))}
-          </Text>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <Text style={styles.modalTitle}>
+              {item ? (level === 'zones' ? t('structure.modalEditZone') : level === 'localities' ? t('structure.modalEditLocality') : t('structure.modalEditUnit')) : (level === 'zones' ? t('structure.modalAddZone') : level === 'localities' ? t('structure.modalAddLocality') : t('structure.modalAddUnit'))}
+            </Text>
 
-          <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.name')}</Label>
-          <TextInput value={name} onChangeText={setName} style={styles.input} placeholder={t('structure.namePlaceholder')} placeholderTextColor={colors.ink3} />
+            <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.name')}</Label>
+            <TextInput value={name} onChangeText={setName} style={styles.input} placeholder={t('structure.namePlaceholder')} placeholderTextColor={colors.ink3} />
 
-          <Label style={{ marginTop: 14, marginBottom: 6 }}>
-            {parentLabel}{level === 'localities' && zoneOptional ? t('structure.optional') : ''}
-          </Label>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            {parents.map((p) => (
-              <Pressable key={p.id} onPress={() => setParentId(p.id)} style={[styles.chip, parentId === p.id && styles.chipActive]}>
-                <Text style={[styles.chipText, parentId === p.id && styles.chipTextActive]}>{p.name}</Text>
+            {/* Listes déroulantes (SelectField) et non des pastilles : le référentiel compte
+                des centaines de nations/régions/villes — une rangée de chips était illisible.
+                Même cascade que `join.tsx` / `membres.tsx` : chaque niveau ouvre une liste
+                cherchable, et reste désactivé tant que le niveau au-dessus n'est pas choisi.
+                ⚠ `inline` OBLIGATOIRE ici : on est déjà dans une `Modal`, et deux Modal RN
+                imbriquées laissent un calque invisible qui gèle l'écran à la fermeture. */}
+            {level === 'units' ? (
+              // JP 16/08 — on situe l'assemblée par les trois niveaux, la ville seule étant
+              // ambiguë (homonymes d'une nation à l'autre) et sa liste à plat trop longue.
+              <View style={{ marginTop: 6 }}>
+                <SelectField
+                  inline
+                  label={t('structure.parentCountry')}
+                  options={countryOptions}
+                  pick={countryOptions.find((c) => c.id === countryId) ?? null}
+                  onChange={(c) => pickCountry(c.id)}
+                />
+                {countryOptions.length === 0 && (
+                  <Text style={styles.empty}>{t('structure.noParent', { parent: t('structure.parentCountry').toLowerCase() })}</Text>
+                )}
+
+                <SelectField
+                  inline
+                  label={t('structure.parentZone')}
+                  options={zoneOptions}
+                  pick={zoneOptions.find((z) => z.id === zoneId) ?? null}
+                  onChange={(z) => pickZone(z.id)}
+                  disabled={countryId === ''}
+                />
+                {countryId !== '' && zoneOptions.length === 0 && (
+                  <Text style={styles.empty}>{t('structure.noParent', { parent: t('structure.parentZone').toLowerCase() })}</Text>
+                )}
+
+                <SelectField
+                  inline
+                  label={t('structure.parentLocality')}
+                  options={localityOptions}
+                  pick={localityOptions.find((l) => l.id === parentId) ?? null}
+                  onChange={(l) => setParentId(l.id)}
+                  disabled={zoneId === ''}
+                />
+                {zoneId !== '' && localityOptions.length === 0 && (
+                  <Text style={styles.empty}>{t('structure.noParent', { parent: t('structure.parentLocality').toLowerCase() })}</Text>
+                )}
+              </View>
+            ) : (
+              <View style={{ marginTop: 6 }}>
+                <SelectField
+                  inline
+                  label={`${parentLabel}${level === 'localities' && zoneOptional ? t('structure.optional') : ''}`}
+                  options={parents}
+                  pick={parents.find((p) => p.id === parentId) ?? null}
+                  onChange={(p) => setParentId(p.id)}
+                />
+                {parents.length === 0 && (
+                  <Text style={styles.empty}>{t('structure.noParent', { parent: parentLabel.toLowerCase() })}</Text>
+                )}
+              </View>
+            )}
+
+            {/* RG-BQ-12 : la VILLE reste créée par le secrétariat. Sans issue de secours, une
+                personne dont la ville n'existe pas ne pourrait pas implanter son assemblée. */}
+            {level === 'units' && item == null && (
+              <View style={styles.contactBlock}>
+                <Text style={styles.leaderHint}>{t('structure.missingCityHint')}</Text>
+                <View style={{ gap: 8, marginTop: 8 }}>
+                  <Button
+                    label={t('join.contactWhatsapp')}
+                    variant="soft"
+                    height={44}
+                    onPress={() => Linking.openURL(contact.whatsappUrl).catch(() => {})}
+                    iconLeft={<Ionicons name="logo-whatsapp" size={17} color={colors.mossDeep} />}
+                  />
+                  <Button
+                    label={t('join.contactMail')}
+                    variant="ghost"
+                    height={44}
+                    onPress={() =>
+                      Linking.openURL(contactMailto(t('structure.contactMailSubject'))).catch(() => {})
+                    }
+                    iconLeft={<Ionicons name="mail-outline" size={17} color={colors.mossDeep} />}
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* RG-BQ-12 — responsable FACULTATIF : laissé vide, le créateur devient responsable.
+                Compte existant uniquement quand on en désigne un (décision JP 14/08). */}
+            {canPickLeader && (
+              <>
+                <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.leader')}</Label>
+                <Text style={styles.leaderHint}>{t('structure.leaderHint')}</Text>
+                <TextInput
+                  value={leaderQuery}
+                  onChangeText={(v) => { setLeaderQuery(v); setLeaderId(''); }}
+                  style={styles.input}
+                  placeholder={t('structure.leaderSearchPlaceholder')}
+                  placeholderTextColor={colors.ink3}
+                  autoCapitalize="none"
+                />
+                {leaderLoading && <Text style={styles.empty}>{t('common.loading')}</Text>}
+                {!leaderLoading && leaderQuery.trim().length >= 2 && leaderResults.length === 0 && (
+                  <Text style={styles.empty}>{t('structure.leaderNoResult')}</Text>
+                )}
+                {leaderResults.map((u) => (
+                  <Pressable
+                    key={u.id}
+                    onPress={() => { setLeaderId(u.id); setLeaderQuery(u.fullName); setLeaderResults([]); }}
+                    style={[styles.leaderRow, leaderId === u.id && styles.leaderRowActive]}
+                  >
+                    <Text style={styles.itemName}>{u.fullName}</Text>
+                    <Text style={styles.itemMeta}>{u.username ?? u.email ?? ''}</Text>
+                  </Pressable>
+                ))}
+              </>
+            )}
+
+            <Button
+              label={item ? t('common.save') : t('common.create')}
+              onPress={onSave}
+              loading={saving}
+              disabled={!valid}
+              fullWidth
+              style={{ marginTop: 18 }}
+            />
+            {item && (
+              <Pressable onPress={() => { onClose(); onDelete(level, item.id, item.name); }} style={{ marginTop: 12, alignItems: 'center' }}>
+                <Text style={styles.deleteLink}>{t('common.delete')}</Text>
               </Pressable>
-            ))}
-            {parents.length === 0 && <Text style={styles.empty}>{t('structure.noParent', { parent: parentLabel.toLowerCase() })}</Text>}
-          </ScrollView>
-
-          {/* Palier C1-bis — responsable OBLIGATOIRE : une assemblée sans dirigeant n'est
-              administrable par personne. Compte existant uniquement (décision JP 14/08). */}
-          {needsLeader && (
-            <>
-              <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.leader')}</Label>
-              <Text style={styles.leaderHint}>{t('structure.leaderHint')}</Text>
-              <TextInput
-                value={leaderQuery}
-                onChangeText={(v) => { setLeaderQuery(v); setLeaderId(''); }}
-                style={styles.input}
-                placeholder={t('structure.leaderSearchPlaceholder')}
-                placeholderTextColor={colors.ink3}
-                autoCapitalize="none"
-              />
-              {leaderLoading && <Text style={styles.empty}>{t('common.loading')}</Text>}
-              {!leaderLoading && leaderQuery.trim().length >= 2 && leaderResults.length === 0 && (
-                <Text style={styles.empty}>{t('structure.leaderNoResult')}</Text>
-              )}
-              {leaderResults.map((u) => (
-                <Pressable
-                  key={u.id}
-                  onPress={() => { setLeaderId(u.id); setLeaderQuery(u.fullName); setLeaderResults([]); }}
-                  style={[styles.leaderRow, leaderId === u.id && styles.leaderRowActive]}
-                >
-                  <Text style={styles.itemName}>{u.fullName}</Text>
-                  <Text style={styles.itemMeta}>{u.username ?? u.email ?? ''}</Text>
-                </Pressable>
-              ))}
-            </>
-          )}
-
-          <Button
-            label={item ? t('common.save') : t('common.create')}
-            onPress={onSave}
-            loading={saving}
-            disabled={!valid}
-            fullWidth
-            style={{ marginTop: 18 }}
-          />
-          {item && (
-            <Pressable onPress={() => { onClose(); onDelete(level, item.id, item.name); }} style={{ marginTop: 12, alignItems: 'center' }}>
-              <Text style={styles.deleteLink}>{t('common.delete')}</Text>
+            )}
+            <Pressable onPress={onClose} style={{ marginTop: 10, alignItems: 'center' }}>
+              <Text style={styles.cancelLink}>{t('common.cancel')}</Text>
             </Pressable>
-          )}
-          <Pressable onPress={onClose} style={{ marginTop: 10, alignItems: 'center' }}>
-            <Text style={styles.cancelLink}>{t('common.cancel')}</Text>
-          </Pressable>
+          </ScrollView>
         </Card>
       </View>
     </Modal>
@@ -624,9 +776,12 @@ const styles = StyleSheet.create({
   historyHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   historyTitle: { fontFamily: fonts.serif, fontSize: 17, color: colors.ink },
   backdrop: { flex: 1, backgroundColor: 'rgba(22,41,31,0.45)', justifyContent: 'center', padding: 20 },
-  modalCard: { paddingHorizontal: 20, paddingVertical: 20 },
+  // maxHeight : la modale « assemblée » porte désormais trois sélecteurs — sans plafond, elle
+  // dépasserait l'écran sur les petits téléphones (le contenu défile dans la carte).
+  modalCard: { paddingHorizontal: 20, paddingVertical: 20, maxHeight: '88%' },
   modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink },
   leaderHint: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginBottom: 6, lineHeight: 17 },
+  contactBlock: { marginTop: 18, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.hair },
   leaderRow: {
     paddingHorizontal: 12, paddingVertical: 10, marginTop: 6, borderRadius: 10,
     borderWidth: 1, borderColor: 'rgba(42,38,32,0.12)', backgroundColor: colors.paper,

@@ -5,11 +5,23 @@ import type { ModuleRole } from './authApi';
 // Contenu adapté au rôle côté serveur : SUBTREE (dirigeant : son sous-arbre), CHAIN (membre :
 // sa chaîne de rattachement remontante), MINISTRY (LEADER/SECRETARIAT/SUPER_ADMIN).
 
+/**
+ * Mirrors com.excellence.back.org.leaders.dto.HierarchyMemberView
+ *
+ * <p>Les trois champs `goal*` (16/08) valent `null` s'il n'y a aucun Goal actif ou si la personne
+ * n'est pas rattachée : n'afficher AUCUNE pastille dans ce cas.
+ */
 export interface HierarchyMemberView {
   id: string;
   fullName: string;
   email: string | null;
   active: boolean;
+  /** A déclaré au moins un engagement pour l'année. */
+  goalHasPledges: boolean | null;
+  /** A soumis (tous ses engagements verrouillés). */
+  goalSubmitted: boolean | null;
+  /** Non soumis alors que la date limite est passée. */
+  goalLate: boolean | null;
 }
 
 export interface HierarchyUnitView {
@@ -24,12 +36,17 @@ export interface HierarchyUnitView {
   members: HierarchyMemberView[];
 }
 
+// Mirrors com.excellence.back.org.leaders.dto.LeaderHierarchyNode
 export interface LeaderHierarchyNode {
   id: string;
   fullName: string;
   email: string;
   donationRole: ModuleRole | null;
   goalRole: ModuleRole | null;
+  /** RG-BQ-11 (16/08) — un dirigeant déclare comme tout le monde : mêmes 3 pastilles. */
+  goalHasPledges: boolean | null;
+  goalSubmitted: boolean | null;
+  goalLate: boolean | null;
   units: HierarchyUnitView[];
   children: LeaderHierarchyNode[];
 }

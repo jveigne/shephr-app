@@ -4,8 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from './ScreenShell';
 import Card from './Card';
 import Label from './Label';
+import { GoalScreenTitle } from './GoalCards';
 import { colors, fonts } from '../theme';
 import { useLanguage } from '../contexts/LanguageContext';
+import { goalName } from '../utils/goalName';
 import { fmtAmount, fmtDate } from '../utils/format';
 import {
   getActiveGoal,
@@ -60,17 +62,14 @@ export default function GoalsMinistryOverview({ secretariat }: { secretariat: bo
     <ScreenShell
       refreshControl={<RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <View style={styles.titleRow}>
-        <Ionicons name="flag-outline" size={22} color={colors.mossSoft} />
-        <Text style={styles.title}>{t('goals.title')}</Text>
-      </View>
+      <GoalScreenTitle title={t('goals.title')} />
       {/* Lot V1 : vue NOMMÉE à l'écran. */}
       <View style={styles.viewChip}>
         <Text style={styles.viewChipText}>
           {t('views.badge')} : {secretariat ? t('views.secretariat') : t('views.overview')}
         </Text>
       </View>
-      <Text style={styles.subtitle}>{goal?.name ?? ''}</Text>
+      <Text style={styles.subtitle}>{goalName(goal)}</Text>
 
       {years.length > 0 && year != null && (
         <View style={styles.yearRow}>
@@ -104,13 +103,21 @@ export default function GoalsMinistryOverview({ secretariat }: { secretariat: bo
           {summary && (
             <Card variant="paper2" style={styles.block}>
               <Label style={{ marginBottom: 8 }}>{t('views.ministryTotals')}</Label>
+              {/* RG-BQ-06 — maille PERSONNE : `submittedUnits` a disparu du contrat. */}
               <Text style={styles.ratio}>
                 {t('views.submittedRatio', {
-                  submitted: summary.submittedUnits,
-                  total: summary.totalUnits,
-                  percent: summary.totalUnits > 0 ? Math.round((summary.submittedUnits / summary.totalUnits) * 100) : 0,
+                  submitted: summary.submittedMembers,
+                  total: summary.totalMembers,
+                  percent: summary.totalMembers > 0
+                    ? Math.round((summary.submittedMembers / summary.totalMembers) * 100)
+                    : 0,
                 })}
               </Text>
+              {summary.lateMembers > 0 && (
+                <Text style={styles.lateRatio}>
+                  {t('goals.members.lateCount', { count: summary.lateMembers })}
+                </Text>
+              )}
               {summary.totals.map((l) => {
                 const cat = catByCode.get(l.categoryCode);
                 const effective = l.unitType === 'CURRENCY'
@@ -121,7 +128,7 @@ export default function GoalsMinistryOverview({ secretariat }: { secretariat: bo
                   : `${l.achieved ?? 0} ${cat?.unitLabel ?? ''}`.trim();
                 return (
                   <Text key={l.categoryId} style={styles.lineText}>
-                    <Text style={styles.lineLabel}>{cat?.name ?? l.categoryCode} : </Text>
+                    <Text style={styles.lineLabel}>{goalName(cat, l.categoryCode)} : </Text>
                     <Text style={styles.lineValue}>{effective}</Text>
                     <Text style={styles.lineLabel}> · {t('views.achievedInline', { value: achieved })}</Text>
                   </Text>
@@ -135,11 +142,15 @@ export default function GoalsMinistryOverview({ secretariat }: { secretariat: bo
               <Label style={{ marginBottom: 8 }}>{t('views.nationsHeading')}</Label>
               {nations.map((n) => (
                 <View key={n.countryId} style={styles.nationRow}>
-                  <Text style={styles.nationName}>{n.name}</Text>
+                  <Text style={styles.nationName}>
+                    {n.name}
+                    {n.continentName ? ` · ${n.continentName}` : ''}
+                  </Text>
+                  {/* `submissionRate` est re-maillé PERSONNE côté serveur. */}
                   <Text style={[styles.ratio, n.late && { color: colors.clay }]}>
                     {t('views.submittedRatio', {
-                      submitted: n.submittedUnits,
-                      total: n.totalUnits,
+                      submitted: n.submittedMembers,
+                      total: n.totalMembers,
                       percent: Math.round(n.submissionRate * 100),
                     })}
                   </Text>
@@ -154,8 +165,6 @@ export default function GoalsMinistryOverview({ secretariat }: { secretariat: bo
 }
 
 const styles = StyleSheet.create({
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.5 },
   viewChip: {
     alignSelf: 'flex-start',
     backgroundColor: colors.earthDeep + '1F',
@@ -181,6 +190,7 @@ const styles = StyleSheet.create({
   bannerText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },
   block: { marginTop: 14, paddingHorizontal: 16, paddingVertical: 14 },
   ratio: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginBottom: 6 },
+  lateRatio: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.clay, marginBottom: 6 },
   lineText: { fontFamily: fonts.sans, fontSize: 13.5, marginTop: 4 },
   lineLabel: { color: colors.ink3 },
   lineValue: { color: colors.ink, fontWeight: '600' },

@@ -140,15 +140,16 @@ export function NationsMap({
           >
             <div style={{ fontWeight: 600 }}>{hover.nation.name}</div>
             <div style={{ opacity: 0.85, marginTop: 2 }}>
-              {t('map.unitsSubmittedPercent', {
-                submitted: hover.nation.submittedUnits,
-                total: hover.nation.totalUnits,
+              {/* RG-BQ-06 : maille PERSONNE — « 7/12 membres », plus « 7/12 assemblées ». */}
+              {t('map.membersSubmittedPercent', {
+                submitted: hover.nation.submittedMembers,
+                total: hover.nation.totalMembers,
                 percent: Math.round(hover.nation.submissionRate * 100),
               })}
             </div>
             {hover.nation.late && (
               <div style={{ color: '#F0B6A6', marginTop: 2 }}>
-                {t('map.lateUnits', { count: hover.nation.lateUnits })}
+                {t('map.lateMembers', { count: hover.nation.lateMembers })}
               </div>
             )}
           </div>
@@ -271,7 +272,7 @@ export function NationsMap({
               >
                 <strong>{n.name}</strong>
                 <span style={{ color: 'var(--err, #B23A2E)' }}>
-                  {t('map.notSubmittedRatio', { late: n.lateUnits, total: n.totalUnits })}
+                  {t('map.notSubmittedRatio', { late: n.lateMembers, total: n.totalMembers })}
                 </span>
               </button>
             ))}

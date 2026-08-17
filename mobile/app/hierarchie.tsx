@@ -15,7 +15,15 @@ import Card from '../components/Card';
 import { colors, fonts } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { canManageUsers, MODULE_ROLE_LABELS } from '../services/authApi';
+import { canManageUsers, isSubCoordinatorLeader, MODULE_ROLE_LABELS } from '../services/authApi';
+import {
+  getActiveGoal,
+  getMyPerimeterAggregate,
+  type ActiveGoal,
+  type AggregateLine,
+} from '../services/goalsApi';
+import { goalName } from '../utils/goalName';
+import { fmtAmount } from '../utils/format';
 import {
   fetchLeaderHierarchy,
   type HierarchyUnitView,
@@ -91,6 +99,22 @@ export default function HierarchieScreen() {
   }
 
   const roots = data?.roots ?? [];
+  // Portée de MON leadership, comptée sur l'arbre déjà chargé : les assemblées que je supervise
+  // (directement ou via mes dirigeants) et les personnes qui y sont rattachées. Dédoublonné —
+  // une même assemblée peut apparaître sous deux nœuds.
+  const scope = (() => {
+    const units = new Set<string>();
+    const members = new Set<string>();
+    const walk = (node: LeaderHierarchyNode) => {
+      node.units.forEach((u) => {
+        units.add(u.id);
+        u.members.forEach((m) => members.add(m.id));
+      });
+      node.children.forEach(walk);
+    };
+    roots.forEach(walk);
+    return { units: units.size, members: members.size };
+  })();
   const intro =
     data?.mode === 'CHAIN'
       ? t('hierarchy.introChain')
@@ -121,6 +145,14 @@ export default function HierarchieScreen() {
             {t('hierarchy.reportsTo')} <Text style={styles.reportsToName}>{data.supervisor.fullName}</Text>
           </Text>
         </View>
+      )}
+
+      {/* Ce que porte mon leadership (JP 17/08) : la Σ des engagements des membres des assemblées
+          de mon sous-arbre. Même source que « Mon périmètre » (`GET /goals/me/aggregate`, scopé
+          par le serveur au sous-arbre de personnes) — ici on la met en face de l'arbre qui la
+          produit, ce que la demande visait : « ce que mon leadership porte ». */}
+      {isSubCoordinatorLeader(me) && (
+        <LeadershipTotals unitCount={scope.units} memberCount={scope.members} />
       )}
 
       {/* Déclaration de SON superviseur (JP 30/07) : réservée aux DIRIGEANTS, et logée ici —
@@ -195,6 +227,106 @@ export default function HierarchieScreen() {
   );
 }
 
+/**
+ * « Ce que porte mon leadership » — Σ des engagements des membres de mon sous-arbre, par catégorie.
+ *
+ * <p>Aucune addition côté client : le total vient de `GET /goals/me/aggregate`, que le backend
+ * calcule sur `getVisibleUnitIds(user, GOAL)` — exactement les assemblées dont je suis le
+ * superviseur (directement ou par la chaîne de dirigeants). Sommer les pastilles de l'arbre aurait
+ * donné un autre chiffre : l'arbre porte des personnes, pas des montants.
+ *
+ * <p>En cas de refus ou de panne, le bloc ne s'affiche PAS : un total à zéro se lirait comme
+ * « mon leadership n'a rien engagé », ce qui serait faux.
+ */
+function LeadershipTotals({ unitCount, memberCount }: { unitCount: number; memberCount: number }) {
+  const { t } = useLanguage();
+  const [goal, setGoal] = useState<ActiveGoal | null>(null);
+  const [lines, setLines] = useState<AggregateLine[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getActiveGoal()
+      .then(async (g) => {
+        const l = await getMyPerimeterAggregate(g.currentYear);
+        if (!cancelled) { setGoal(g); setLines(l); }
+      })
+      .catch(() => { if (!cancelled) { setGoal(null); setLines(null); } });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!goal || !lines) return null;
+
+  const categories = [...goal.categories].sort((a, b) => a.displayOrder - b.displayOrder);
+  const valueOf = (categoryId: string) => {
+    const line = lines.find((l) => l.categoryId === categoryId);
+    return line?.effectiveAmount ?? line?.effectiveCount ?? 0;
+  };
+  const nothing = categories.every((c) => valueOf(c.id) === 0);
+
+  return (
+    <Card variant="tinted" style={styles.totalsCard}>
+      <View style={styles.totalsHeader}>
+        <Ionicons name="trending-up-outline" size={18} color={colors.mossDeep} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.totalsTitle}>{t('hierarchy.leadershipTitle', { year: goal.currentYear })}</Text>
+          <Text style={styles.nodeMeta}>
+            {t('hierarchy.unitsCount', { count: unitCount })} · {t('hierarchy.membersCount', { count: memberCount })}
+          </Text>
+        </View>
+      </View>
+
+      {nothing ? (
+        <Text style={styles.totalsEmpty}>{t('hierarchy.leadershipEmpty')}</Text>
+      ) : (
+        categories.map((category) => {
+          const value = valueOf(category.id);
+          return (
+            <View key={category.id} style={styles.totalsLine}>
+              <Text style={styles.totalsCat} numberOfLines={1}>{goalName(category)}</Text>
+              <Text style={styles.totalsValue}>
+                {category.unitType === 'CURRENCY'
+                  ? fmtAmount(value, goal.defaultCurrency)
+                  : `${value} ${category.unitLabel ?? ''}`.trim()}
+              </Text>
+            </View>
+          );
+        })
+      )}
+      <Text style={styles.totalsHint}>{t('hierarchy.leadershipHint')}</Text>
+    </Card>
+  );
+}
+
+/**
+ * Pastille de soumission du But Quinquennal (RG-BQ-06/11, 16/08).
+ *
+ * <p>Un dirigeant voit d'un coup d'œil qui, dans son arbre, n'a pas déclaré. `null` = pas de Goal
+ * actif ou personne non rattachée → AUCUNE pastille (ne pas confondre avec « pas encore soumis »).
+ */
+function GoalPill({
+  hasPledges,
+  submitted,
+  late,
+}: {
+  hasPledges: boolean | null;
+  submitted: boolean | null;
+  late: boolean | null;
+}) {
+  const { t } = useLanguage();
+  if (submitted == null) return null;
+  if (submitted) {
+    return <Text style={[styles.goalPill, styles.goalPillDone]}>{t('hierarchy.goalSubmitted')}</Text>;
+  }
+  if (late) {
+    return <Text style={[styles.goalPill, styles.goalPillLate]}>{t('hierarchy.goalLate')}</Text>;
+  }
+  return (
+    <Text style={[styles.goalPill, styles.goalPillPending]}>
+      {hasPledges ? t('hierarchy.goalDraft') : t('hierarchy.goalNothing')}
+    </Text>
+  );
+}
+
 function LeaderNodeRow({ node, depth, meId }: { node: LeaderHierarchyNode; depth: number; meId: string | null }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(depth < 2);
@@ -216,6 +348,11 @@ function LeaderNodeRow({ node, depth, meId }: { node: LeaderHierarchyNode; depth
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <Text style={styles.nodeName} numberOfLines={1}>{node.fullName}</Text>
             {meId === node.id && <Text style={styles.youPill}>{t('hierarchy.you')}</Text>}
+            <GoalPill
+              hasPledges={node.goalHasPledges}
+              submitted={node.goalSubmitted}
+              late={node.goalLate}
+            />
           </View>
           <Text style={styles.nodeMeta} numberOfLines={1}>
             {role ? MODULE_ROLE_LABELS[role] : '—'}
@@ -279,6 +416,11 @@ function UnitRow({ unit, depth, leaderName, hideLocality }: {
             <View key={m.id} style={styles.memberRow}>
               <Text style={styles.memberName} numberOfLines={1}>{m.fullName}</Text>
               {!m.active && <Text style={styles.inactivePill}>{t('membres.inactive')}</Text>}
+              <GoalPill
+                hasPledges={m.goalHasPledges}
+                submitted={m.goalSubmitted}
+                late={m.goalLate}
+              />
             </View>
           ))}
         </View>
@@ -288,6 +430,17 @@ function UnitRow({ unit, depth, leaderName, hideLocality }: {
 }
 
 const styles = StyleSheet.create({
+  totalsCard: { marginTop: 14, paddingHorizontal: 16, paddingVertical: 14 },
+  totalsHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
+  totalsTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '700', color: colors.ink },
+  totalsLine: {
+    flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12,
+    marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(42,38,32,0.07)',
+  },
+  totalsCat: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
+  totalsValue: { fontFamily: fonts.serif, fontSize: 17, color: colors.ink },
+  totalsEmpty: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, fontStyle: 'italic', marginTop: 10 },
+  totalsHint: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, lineHeight: 16, marginTop: 12 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2 },
   reportsToRow: {
     flexDirection: 'row',
@@ -341,6 +494,14 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99,
     backgroundColor: 'rgba(169,129,44,0.14)', overflow: 'hidden',
   },
+  goalPill: {
+    fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.6,
+    textTransform: 'uppercase', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99,
+    overflow: 'hidden',
+  },
+  goalPillDone: { color: colors.mossDeep, backgroundColor: colors.mossTint2 },
+  goalPillPending: { color: colors.earthDeep, backgroundColor: 'rgba(201,149,107,0.22)' },
+  goalPillLate: { color: colors.clay, backgroundColor: 'rgba(176,90,62,0.13)' },
   inactivePill: {
     fontFamily: fonts.mono, fontSize: 9, color: colors.ink3, letterSpacing: 0.6,
     textTransform: 'uppercase', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99,

@@ -94,21 +94,10 @@ export function isSecretariat(me: MeResponse | null): boolean {
   return me.donationRole === 'SECRETARIAT' || me.goalRole === 'SECRETARIAT';
 }
 
-/**
- * Palier C1 (JP 14/08) — peut CRÉER une assemblée de maison.
- *
- * <p>Miroir du backend {@code AccessControlServiceImpl.requireCanManageInLocality} : superAdmin,
- * SECRETARIAT de son ministère, DIRIGEANT de la ville, DIRIGEANT_UNITE dans la ville de ses
- * assemblées, SENIOR/COORDINATEUR de la région englobante — soit, côté écran, tout rang de manager
- * ≥ DIRIGEANT_UNITE plus le SECRETARIAT.
- *
- * <p>⚠ Le gating d'écran sert à ne pas afficher un bouton inutile ; la garde de périmètre (« dans
- * MA ville ») reste côté serveur, qui répond 403. Ne pas l'assouplir pour contourner un 403.
- */
-export function canCreateAssembly(me: MeResponse | null): boolean {
-  if (!me) return false;
-  return me.superAdmin || isSecretariat(me) || managerRank(me) >= ROLE_RANK.DIRIGEANT_UNITE;
-}
+// `canCreateAssembly` (palier C1, 14/08) a été SUPPRIMÉ le 16/08 : RG-BQ-12 ouvre la création
+// d'une assemblée à tout compte du ministère, sans contrainte géographique ni de rang. Le backend
+// a retiré la garde correspondante — il n'y a donc plus rien à refléter côté écran.
+// ⚠ La copie de `web/` a divergé : ne pas y propager ce retrait sans vérifier ses appelants.
 
 export interface UserDTO {
   id: string;
@@ -199,6 +188,118 @@ export function hasGoalsAccess(me: MeResponse | null): boolean {
  */
 export function hasMemberGoals(me: MeResponse | null): boolean {
   return me?.goalRole === 'MEMBRE' && !!me?.goalUnitId;
+}
+
+/** Vue Objectifs ministère-large (totaux + nations) : superAdmin, LEADER ou SECRETARIAT Objectifs. */
+export function isMinistryWideGoals(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return me.superAdmin || me.goalRole === 'LEADER' || me.goalRole === 'SECRETARIAT';
+}
+
+/**
+ * Dirigeant SOUS-COORDINATEUR — miroir exact de
+ * `GoalQueryServiceImpl.requireSubCoordinatorLeader` : seuls ces profils obtiennent
+ * `/goals/me/aggregate` et `/goals/me/units` (le superAdmin en est explicitement exclu côté
+ * backend, il a la vue ministère-large).
+ */
+export function isSubCoordinatorLeader(me: MeResponse | null): boolean {
+  if (!me || me.superAdmin) return false;
+  return me.goalRole === 'DIRIGEANT_UNITE'
+    || me.goalRole === 'DIRIGEANT'
+    || me.goalRole === 'DIRIGEANT_SENIOR';
+}
+
+/** Rang du rôle OBJECTIFS seul : un périmètre Goals ne se lit JAMAIS sur `donationRole`. */
+function goalRank(me: MeResponse | null): number {
+  return me?.goalRole ? ROLE_RANK[me.goalRole] : 0;
+}
+
+// ==============================================================================================
+//  Niveaux d'agrégat LISIBLES — miroirs de `AccessControlServiceImpl` (module GOAL)
+//
+//  ⚠ Porter un `goal*Id` ne donne AUCUN droit : le backend gate d'abord sur le RANG, la géographie
+//  ne fait que désigner la branche. `goalZoneId` est notamment servi à l'affichage pour la région
+//  de la ville d'un compte, y compris à un simple membre — s'en servir de garde produisait un 403
+//  rendu en zéros (chantier « objectifs individuels », 16/08).
+// ==============================================================================================
+
+/**
+ * Niveau RÉGION (`GET /goals/zones/{id}/aggregate`) — miroir de `getVisibleZoneIds` :
+ * superAdmin, ministère-large, ou rang Objectifs ≥ DIRIGEANT_SENIOR. En dessous, le backend
+ * renvoie `Set.of()` et le garde répond 403.
+ */
+export function canReadZoneAggregate(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return me.superAdmin || isMinistryWideGoals(me) || goalRank(me) >= ROLE_RANK.DIRIGEANT_SENIOR;
+}
+
+/**
+ * Niveau VILLE (`GET /goals/cities/{id}/aggregate`) — miroir de `getVisibleLocalityIds` :
+ * SENIOR et au-dessus, PLUS le dirigeant DE ville (`DIRIGEANT` effectivement rattaché à une
+ * ville — sans rattachement il reste unité-only, exactement comme côté backend).
+ */
+export function canReadCityAggregate(me: MeResponse | null): boolean {
+  if (!me) return false;
+  if (me.superAdmin || isMinistryWideGoals(me) || goalRank(me) >= ROLE_RANK.DIRIGEANT_SENIOR) return true;
+  const cities = [me.goalCityId, ...(me.goalCityIds ?? [])].filter(Boolean);
+  return me.goalRole === 'DIRIGEANT' && cities.length > 0;
+}
+
+/**
+ * Niveau NATION (`GET /goals/countries/{id}/aggregate`) — miroir de `getVisibleCountryIds` :
+ * réservé au COORDINATEUR, aux viewers ministère-large et au superAdmin. Un SENIOR n'y passe pas.
+ */
+export function canReadCountryAggregate(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return me.superAdmin || isMinistryWideGoals(me) || me.goalRole === 'DIRIGEANT_COORDINATEUR';
+}
+
+/** Nœuds de rattachement, principal en tête, sans doublon. */
+function uniqNodes(home?: string | null, set?: string[] | null): string[] {
+  const rest = (set ?? []).filter((id) => id !== home);
+  return home ? [home, ...rest] : rest;
+}
+
+/**
+ * Les nœuds de périmètre que le compte peut RÉELLEMENT lire, par niveau — source unique de
+ * `hasPerimeterView` et de `app/(tabs)/goals/perimeter.tsx`, pour qu'aucune section ne soit
+ * construite sur un niveau que le serveur refusera.
+ *
+ * <p>Le rôle gate, la géographie ne fait que désigner la branche : un rattachement porté par un
+ * rang trop bas est écarté ici, il ne doit pas devenir une section à zéros.
+ */
+export function goalPerimeterNodes(me: MeResponse | null): {
+  zoneIds: string[];
+  cityIds: string[];
+  countryIds: string[];
+} {
+  return {
+    zoneIds: canReadZoneAggregate(me) ? uniqNodes(me?.goalZoneId, me?.goalZoneIds) : [],
+    cityIds: canReadCityAggregate(me) ? uniqNodes(me?.goalCityId, me?.goalCityIds) : [],
+    countryIds: canReadCountryAggregate(me) ? (me?.goalCountryIds ?? []) : [],
+  };
+}
+
+/**
+ * « Mon périmètre » a-t-il quelque chose à montrer ? (chantier « objectifs individuels », 16/08)
+ *
+ * <p>Miroir de l'aiguillage de `app/(tabs)/goals/perimeter.tsx` — les deux doivent bouger ensemble,
+ * sans quoi la carte réapparaît devant un écran vide. **Le RÔLE d'abord**, comme le web
+ * (`Goals.tsx`, `showPerimeter`) : ministère-large → vue globale ; sous-coordinateur → SON
+ * SOUS-ARBRE (`GET /goals/me/aggregate`), y compris sans aucun rattachement géographique (cas du
+ * DIRIGEANT_UNITE, qui ne porte ni ville ni région) ; sinon les seuls nœuds que son rang lui ouvre
+ * (`goalPerimeterNodes`) — en pratique les nations d'un COORDINATEUR.
+ *
+ * <p>⚠ La version précédente testait la géographie AVANT le rôle : tout compte portant un
+ * `goalZoneId` d'affichage (jusqu'au simple membre) se voyait proposer la carte, puis un 403
+ * rendu en zéros. Ne pas réintroduire de test « un id est présent » sans passer par
+ * `goalPerimeterNodes`.
+ */
+export function hasPerimeterView(me: MeResponse | null): boolean {
+  if (!me) return false;
+  if (isMinistryWideGoals(me) || isSubCoordinatorLeader(me)) return true;
+  const { zoneIds, cityIds, countryIds } = goalPerimeterNodes(me);
+  return zoneIds.length > 0 || cityIds.length > 0 || countryIds.length > 0;
 }
 
 /** Human label for the user's most significant role ('Membre' for a plain member). */

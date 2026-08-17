@@ -33,9 +33,13 @@ export interface AdminUserResponse {
   coordinatedCountryIds: string[];
   active: boolean;
   /**
-   * A soumis son engagement pour l'année courante (JP 14/08).
-   * `true` soumis · `false` pas encore · `null` NON APPLICABLE (dirigeant de ville, région ou
-   * nation : il ne soumet rien à son niveau).
+   * A soumis SES engagements personnels pour l'année courante.
+   *
+   * <p>⚠ Sémantique revue par le chantier « objectifs individuels » (JP 16/08, RG-BQ-03/11) :
+   * `true` soumis · `false` pas encore · `null` UNIQUEMENT pour un compte sans `goalUnitId` ou
+   * `superAdmin`. Un dirigeant de ville, un SENIOR, un COORDINATEUR ou un SECRETARIAT rattachés
+   * valent désormais `true`/`false` comme les autres — il n'y a plus de « non applicable » lié
+   * au rôle.
    * Mirrors com.excellence.back.auth.admin.user.dto.AdminUserResponse#goalSubmitted
    */
   goalSubmitted: boolean | null;
@@ -354,9 +358,12 @@ export interface CreateUnitRequest {
   localityId: string;
   name: string;
   /**
-   * Palier C1-bis (JP 14/08) — responsable de l'assemblée, compte EXISTANT. Obligatoire hors
-   * SUPER_ADMIN (422 `UNIT_LEADER_REQUIRED`) ; l'affectation est faite par le backend dans la
-   * MÊME transaction que la création.
+   * Responsable de l'assemblée, compte EXISTANT — FACULTATIF (RG-BQ-12, JP 16/08).
+   *
+   * <p>Omis, le CRÉATEUR devient responsable et passe à `DIRIGEANT_UNITE` s'il était `MEMBRE`
+   * (jamais de rétrogradation) ; son assemblée « maison » (`goalUnitId`) ne bouge pas, et son
+   * rôle Dons n'est pas promu. Le code `UNIT_LEADER_REQUIRED` n'existe plus.
+   * ⚠ Anti-doublon : deux assemblées du même nom dans la même ville → 422 `STRUCTURE_NAME_EXISTS`.
    */
   leaderUserId?: string;
 }
@@ -386,6 +393,41 @@ export async function updateUnit(id: string, payload: UpdateUnitRequest) {
 
 export async function deleteUnit(id: string) {
   await apiClient.delete(`/api/church/admin/units/${id}`);
+}
+
+// ---------------- Mon assemblée (RG-BQ-13 — changement en LIBRE-SERVICE) ----------------
+// PUT /api/church/units/me/assembly — une personne change d'assemblée ELLE-MÊME, sans demande ni
+// valideur. Volontairement hors de `goalsApi` : l'endpoint n'est PAS gaté `@RequiresModule("GOALS")`,
+// son échec ne doit donc pas être confondu avec un défaut d'abonnement.
+
+/** Mirrors com.excellence.back.org.unit.dto.ChangeMyAssemblyRequest */
+export interface ChangeMyAssemblyRequest {
+  unitId: string;
+}
+
+/** Mirrors com.excellence.back.org.unit.dto.MyUnitResponse */
+export interface MyUnitResponse {
+  unitId: string;
+  unitName: string;
+  type: UnitType;
+  ministryId: string;
+  ministryName: string;
+  localityId: string | null;
+  localityName: string | null;
+}
+
+/**
+ * Change MON assemblée de rattachement : pose `goalUnitId` ET `donationUnitId` sur la cible
+ * (RG-BQ-13). Ne touche PAS `goalUnitIds` — déménager ne fait pas démissionner des assemblées
+ * qu'on dirige.
+ *
+ * <p>⚠ Les engagements SUIVENT la personne, années passées comprises : le total de l'ancienne
+ * assemblée baisse et celui de la nouvelle monte dès la lecture suivante.
+ * Erreurs : 404 (assemblée inconnue ou inactive), 422 `ASSEMBLY_MINISTRY_MISMATCH` (autre ministère).
+ */
+export async function changeMyAssembly(unitId: string) {
+  const { data } = await apiClient.put<MyUnitResponse>('/api/church/units/me/assembly', { unitId });
+  return data;
 }
 
 /**

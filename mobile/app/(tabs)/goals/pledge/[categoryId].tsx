@@ -18,39 +18,39 @@ import Label from '../../../../components/Label';
 import Button from '../../../../components/Button';
 import { colors, fonts } from '../../../../theme';
 import { useLanguage } from '../../../../contexts/LanguageContext';
+import { goalName } from '../../../../utils/goalName';
 import { goalCategoryMeta } from '../../../../constants/goalCategories';
 import { useGoalsData } from '../../../../hooks/useGoalsData';
 import { currencySymbol } from '../../../../utils/format';
 import { notify } from '../../../../utils/dialogs';
-import {
-  createPledge,
-  saveMemberPledge,
-  updatePledge,
-  type PledgeResponse,
-} from '../../../../services/goalsApi';
+import { saveMemberPledge, type PledgeResponse } from '../../../../services/goalsApi';
 
 const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallback;
 
+/**
+ * Saisie de MON engagement sur une catégorie — seul chemin d'écriture depuis le 16/08 (RG-BQ-01).
+ *
+ * <p>Les paramètres `scope` et `unitId` ont disparu : il n'existe plus d'engagement déclaré au nom
+ * d'une assemblée, donc plus de variante à choisir. `POST /member/me/pledges` est un upsert :
+ * un seul appel couvre création et modification.
+ */
 export default function PledgeEditScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { categoryId, year: yearParam, scope, unitId } = useLocalSearchParams<{
+  const { categoryId, year: yearParam } = useLocalSearchParams<{
     categoryId: string;
     year?: string;
-    scope?: string;
-    /** Palier A3 — assemblée ciblée (dirigeant multi-assemblées) ; absente = son assemblée « home ». */
-    unitId?: string;
   }>();
   const year = yearParam ? Number(yearParam) : null;
-  // Feature A — `scope=member` : même écran de saisie, mais l'objectif est PERSONNEL
-  // (niveau MEMBER) et non l'engagement de l'assemblée.
-  const member = scope === 'member';
-  const { goal, lines, loading, reload } = useGoalsData(year, member, unitId);
+  const { goal, lines, loading, reload } = useGoalsData(year);
 
   const line = lines.find((l) => l.category.id === categoryId) ?? null;
   const category = line?.category ?? null;
   const pledge = line?.pledge ?? null;
   const locked = pledge?.locked ?? false;
+  // ⚠ Server-driven : `editable` vaut `!locked && (secretariat || !deadlinePassed)`. Un engagement
+  // neuf (pledge == null) est saisissable — le serveur tranchera (422 DEADLINE_PASSED le cas échéant).
+  const editable = pledge == null || pledge.editable === true;
 
   if (loading || !category) {
     return (
@@ -77,7 +77,7 @@ export default function PledgeEditScreen() {
           <View style={[styles.titleIcon, { backgroundColor: meta.tone + '1F' }]}>
             <Ionicons name={meta.icon} size={20} color={meta.tone} />
           </View>
-          <Text style={styles.title}>{category.name}</Text>
+          <Text style={styles.title}>{goalName(category)}</Text>
         </View>
 
         {locked && (
@@ -102,9 +102,7 @@ export default function PledgeEditScreen() {
           unitLabel={category.unitLabel}
           currency={goal?.defaultCurrency ?? 'EUR'}
           pledge={pledge}
-          locked={locked}
-          member={member}
-          unitId={unitId}
+          editable={editable}
           onSaved={async () => {
             await reload();
             router.back();
@@ -123,9 +121,7 @@ function TargetSection({
   unitLabel,
   currency,
   pledge,
-  locked,
-  member = false,
-  unitId,
+  editable,
   onSaved,
 }: {
   categoryId: string;
@@ -134,10 +130,8 @@ function TargetSection({
   unitLabel: string | null;
   currency: string;
   pledge: PledgeResponse | null;
-  locked: boolean;
-  member?: boolean;
-  /** Palier A3 — assemblée ciblée ; absente = l'assemblée « home » du dirigeant. */
-  unitId?: string;
+  /** Server-driven (`PledgeResponse.editable`) — ne pas recalculer la fenêtre d'édition ici. */
+  editable: boolean;
   onSaved: () => Promise<void>;
 }) {
   const { t } = useLanguage();
@@ -155,17 +149,20 @@ function TargetSection({
     setSaving(true);
     try {
       const payload = isCurrency ? { targetAmount: num } : { targetCount: Math.round(num) };
-      if (member) {
-        // Upsert côté serveur : un seul appel couvre création et modification.
-        await saveMemberPledge({ categoryId, year, ...payload });
-      } else if (pledge) {
-        await updatePledge(pledge.id, payload);
-      } else {
-        await createPledge({ categoryId, year, unitId, ...payload });
-      }
+      // Upsert côté serveur : un seul appel couvre création et modification.
+      await saveMemberPledge({ categoryId, year, ...payload });
       await onSaved();
     } catch (e: any) {
-      notify(t('common.appName'), errMsg(e, t('errors.saveFailed')));
+      // ⚠ DEADLINE_PASSED reste levé (RG-BQ-07) ; PLEDGE_LOCKED renvoie vers le secrétariat.
+      const code = e?.response?.data?.error;
+      const known: Record<string, string> = {
+        DEADLINE_PASSED: t('errors.goals.DEADLINE_PASSED'),
+        PLEDGE_LOCKED: t('errors.goals.PLEDGE_LOCKED'),
+        YEAR_NOT_OPEN: t('errors.goals.YEAR_NOT_OPEN'),
+        NO_ASSEMBLY_ATTACHMENT: t('errors.goals.NO_ASSEMBLY_ATTACHMENT'),
+        CATEGORY_GOAL_MISMATCH: t('errors.goals.CATEGORY_GOAL_MISMATCH'),
+      };
+      notify(t('common.appName'), known[code] ?? errMsg(e, t('errors.saveFailed')));
     } finally {
       setSaving(false);
     }
@@ -185,14 +182,14 @@ function TargetSection({
             keyboardType={isCurrency ? 'decimal-pad' : 'number-pad'}
             style={styles.amountInput}
             maxLength={10}
-            editable={!locked}
+            editable={editable}
             placeholder="0"
             placeholderTextColor={colors.ink3}
           />
         </View>
       </Card>
 
-      {!locked && (
+      {editable && (
         <Button
           label={pledge ? t('pledge.save') : t('pledge.declarePledge')}
           onPress={onSubmit}
