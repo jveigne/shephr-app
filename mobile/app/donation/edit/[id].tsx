@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  TextInput,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -13,52 +12,75 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenShell from '../../../components/ScreenShell';
-import Card from '../../../components/Card';
-import Label from '../../../components/Label';
-import Field from '../../../components/Field';
 import Button from '../../../components/Button';
+import ErrorBanner from '../../../components/ErrorBanner';
+import DeclarationForm, {
+  draftLinesToRequest,
+  draftTotal,
+  firstDraftError,
+  newDraftLine,
+  round2,
+  type DraftLine,
+} from '../../../components/DeclarationForm';
 import { colors, fonts } from '../../../theme';
 import {
-  CATEGORIES,
-  CATEGORY_ORDER,
-  type DonationCategory,
-} from '../../../constants/categories';
-import {
-  getDonation,
-  updateDonation,
-  type DonationResponse,
+  getDeclaration,
+  updateDeclaration,
+  type DeclarationResponse,
 } from '../../../services/donationApi';
-import { fmtDateLong, parseLocalDate } from '../../../utils/format';
+import { parseLocalDate, toLocalDate } from '../../../utils/format';
 import { notify } from '../../../utils/dialogs';
+import { declarationErrorMessage } from '../../../utils/donationErrors';
 import { useLanguage } from '../../../contexts/LanguageContext';
 
-const CURRENCIES = ['GBP', 'EUR', 'USD'];
-
-/** Édition d'un don dans la fenêtre de 24h (UC-MBR-05). Date figée (lecture seule). */
-export default function EditDonationScreen() {
+/**
+ * Lot T7 (décision J-1, JP 14/09) — CORRIGER SA DÉCLARATION, TANT QU'ELLE EST « DÉCLARÉ ».
+ *
+ * <p>Cette règle REMPLACE la fenêtre de 24 h (UC-MBR-05) : on corrige tant que personne n'a
+ * regardé, on ne touche plus après validation. Plus aucun calcul d'ancienneté côté client — le
+ * serveur dit `editable`, l'écran l'affiche.
+ *
+ * <p>Une correction offre exactement ce que la déclaration initiale offrait, date comprise : elle
+ * passe par le même formulaire. Le corps envoyé décrit la ventilation COMPLÈTE (une ligne absente
+ * est supprimée côté serveur), d'où les `id` conservés sur les lignes déjà enregistrées — sans
+ * eux, chaque correction renumérote l'historique comptable.
+ */
+export default function EditDeclarationScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const [donation, setDonation] = useState<DonationResponse | null>(null);
+  const [declaration, setDeclaration] = useState<DeclarationResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const [amount, setAmount] = useState('');
+  const [date, setDate] = useState(new Date());
   const [currency, setCurrency] = useState('GBP');
-  const [category, setCategory] = useState<DonationCategory>('dime');
-  const [note, setNote] = useState('');
+  const [lines, setLines] = useState<DraftLine[]>([]);
 
   useEffect(() => {
     if (!id) return;
     (async () => {
       try {
-        const d = await getDonation(id);
-        setDonation(d);
-        setAmount(String(d.amount));
+        const d = await getDeclaration(id);
+        setDeclaration(d);
+        setDate(parseLocalDate(d.donationDate));
         setCurrency(d.currency);
-        if (d.category in CATEGORIES) setCategory(d.category as DonationCategory);
-        setNote(d.note ?? '');
+        setLines(
+          d.lines.map((line) =>
+            newDraftLine({
+              id: line.id,
+              // La rubrique d'origine est conservée telle quelle, même si elle a depuis été
+              // désactivée : corriger un montant ne doit pas forcer à changer de rubrique.
+              category: line.category,
+              amount: String(line.amount),
+              note: line.note ?? '',
+            }),
+          ),
+        );
+      } catch {
+        setFailed(true);
       } finally {
         setLoading(false);
       }
@@ -66,29 +88,37 @@ export default function EditDonationScreen() {
   }, [id]);
 
   const onSave = async () => {
-    if (!donation) return;
-    const num = Number.parseFloat(amount.replace(',', '.'));
-    if (!Number.isFinite(num) || num <= 0) {
+    if (!declaration) return;
+    const problem = firstDraftError(lines);
+    if (problem === 'INVALID_AMOUNT') {
       notify(t('common.appName'), t('declare.invalidAmount'));
+      return;
+    }
+    if (problem === 'NO_CATEGORY') {
+      notify(t('common.appName'), t('declare.lineNeedsCategory'));
+      return;
+    }
+    if (problem === 'NO_LINES') {
+      notify(t('common.appName'), t('declare.needsOneLine'));
       return;
     }
     setSaving(true);
     try {
-      await updateDonation(donation.id, {
-        amount: num,
+      await updateDeclaration(declaration.id, {
+        donationDate: toLocalDate(date),
         currency,
-        category,
-        note: note || undefined,
+        declaredTotal: round2(draftTotal(lines)),
+        lines: draftLinesToRequest(lines),
       });
       router.back();
     } catch (e: any) {
-      notify(t('common.appName'), e?.response?.data?.message ?? t('errors.saveFailed'));
+      notify(t('common.appName'), declarationErrorMessage(e, t, t('errors.updateFailed')));
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading || !donation) {
+  if (loading) {
     return (
       <ScreenShell withTabBar={false}>
         <View style={{ marginTop: 60, alignItems: 'center' }}>
@@ -98,108 +128,84 @@ export default function EditDonationScreen() {
     );
   }
 
-  const date = parseLocalDate(donation.donationDate);
+  if (!declaration) {
+    return (
+      <ScreenShell withTabBar={false}>
+        <Header title={t('declarations.editTitle')} />
+        <ErrorBanner message={failed ? t('declarations.loadFailed') : t('declarations.notFound')} />
+      </ScreenShell>
+    );
+  }
+
+  // Une déclaration vérifiée ne s'ouvre pas en correction : l'écran le DIT, au lieu de laisser
+  // saisir puis d'échouer à l'appel (422 DECLARATION_VERIFIED) — §8b.9 de docs/donations-recette.md.
+  if (!declaration.editable) {
+    return (
+      <ScreenShell withTabBar={false}>
+        <Header title={t('declarations.editTitle')} />
+        <View style={styles.locked}>
+          <Ionicons name="lock-closed-outline" size={18} color={colors.mossSoft} />
+          <Text style={styles.lockedText}>{t('declarations.lockedHint')}</Text>
+        </View>
+        <Button
+          label={t('common.back')}
+          variant="ghost"
+          fullWidth
+          style={{ marginTop: 18 }}
+          onPress={() => router.back()}
+        />
+      </ScreenShell>
+    );
+  }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={{ flex: 1 }}
+    >
       <ScreenShell withTabBar={false} paddingTop={insets.top ? 4 : 16}>
         <View style={styles.headerRow}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
             <Ionicons name="close" size={26} color={colors.ink2} />
           </Pressable>
-          <Text style={styles.headerTitle}>{t('editDon.title')}</Text>
+          <Text style={styles.headerTitle}>{t('declarations.editTitle')}</Text>
           <View style={{ width: 26 }} />
         </View>
 
-        <Card style={styles.amountCard}>
-          <Label style={{ color: colors.mossSoft, textAlign: 'center' }}>{t('declare.amount')}</Label>
-          <View style={styles.amountRow}>
-            <Text style={styles.cur}>
-              {currency === 'GBP' ? '£' : currency === 'EUR' ? '€' : '$'}
-            </Text>
-            <TextInput
-              value={amount}
-              onChangeText={(v) => setAmount(v.replace(/[^0-9.,]/g, ''))}
-              keyboardType="decimal-pad"
-              style={styles.amountInput}
-              maxLength={9}
-            />
-          </View>
-          <View style={styles.currencyRow}>
-            {CURRENCIES.map((c) => (
-              <Pressable
-                key={c}
-                onPress={() => setCurrency(c)}
-                style={[styles.currencyBtn, c === currency && styles.currencyBtnOn]}
-              >
-                <Text style={[styles.currencyText, { color: c === currency ? colors.moss : colors.ink3 }]}>
-                  {c}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </Card>
-
-        <View style={{ marginTop: 18 }}>
-          <Label style={{ marginBottom: 8 }}>{t('declare.date')}</Label>
-          <Card style={styles.dateRow}>
-            <Ionicons name="calendar-outline" size={20} color={colors.mossSoft} />
-            <Text style={styles.dateText}>{fmtDateLong(date)}</Text>
-            <Ionicons name="lock-closed-outline" size={15} color={colors.ink3} />
-          </Card>
-        </View>
-
-        <View style={{ marginTop: 18 }}>
-          <Label style={{ marginBottom: 8 }}>{t('declare.category')}</Label>
-          <View style={styles.catGrid}>
-            {CATEGORY_ORDER.map((k) => {
-              const c = CATEGORIES[k];
-              const on = category === k;
-              return (
-                <Pressable
-                  key={k}
-                  onPress={() => setCategory(k)}
-                  style={[
-                    styles.catBtn,
-                    {
-                      borderColor: on ? c.tone : colors.hair,
-                      backgroundColor: on ? c.tone + '14' : colors.paper,
-                    },
-                  ]}
-                >
-                  <View style={[styles.catIcon, { backgroundColor: c.tone + '22' }]}>
-                    <Ionicons name={c.icon} size={18} color={c.tone} />
-                  </View>
-                  <Text style={styles.catLabel}>{t('categories.' + c.key)}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={{ marginTop: 18 }}>
-          <Label style={{ marginBottom: 8 }}>{t('declare.note')}</Label>
-          <Field
-            value={note}
-            onChangeText={setNote}
-            multiline
-            numberOfLines={3}
-            placeholder={t('declare.notePlaceholder')}
-            style={{ minHeight: 90, textAlignVertical: 'top' }}
-          />
-        </View>
+        <DeclarationForm
+          date={date}
+          onDateChange={setDate}
+          currency={currency}
+          onCurrencyChange={setCurrency}
+          lines={lines}
+          onLinesChange={setLines}
+        />
 
         <Button
           label={t('common.save')}
-          onPress={onSave}
+          onPress={() => void onSave()}
           loading={saving}
           fullWidth
           height={58}
           style={{ marginTop: 22 }}
           iconLeft={<Ionicons name="checkmark" size={20} color={colors.white} />}
         />
+
+        <Text style={styles.footnote}>{t('declarations.editableHint')}</Text>
       </ScreenShell>
     </KeyboardAvoidingView>
+  );
+}
+
+function Header({ title }: { title: string }) {
+  return (
+    <View style={styles.headerRow}>
+      <Pressable onPress={() => router.back()} hitSlop={10}>
+        <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+      </Pressable>
+      <Text style={styles.headerTitle}>{title}</Text>
+      <View style={{ width: 22 }} />
+    </View>
   );
 }
 
@@ -211,54 +217,23 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   headerTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink2 },
-  amountCard: { paddingVertical: 22, paddingHorizontal: 22, marginTop: 12, alignItems: 'center' },
-  amountRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 10 },
-  cur: { fontFamily: fonts.serif, fontSize: 34, color: colors.ink3, marginRight: 4 },
-  amountInput: {
-    fontFamily: fonts.serif,
-    fontSize: 64,
-    fontWeight: '500',
-    color: colors.ink,
+  footnote: {
     textAlign: 'center',
-    minWidth: 140,
-    letterSpacing: -1.2,
-    paddingVertical: 0,
+    marginTop: 14,
+    fontSize: 12,
+    color: colors.ink3,
+    fontFamily: fonts.sans,
+    lineHeight: 18,
+    paddingHorizontal: 24,
   },
-  currencyRow: {
-    flexDirection: 'row',
-    marginTop: 8,
-    backgroundColor: 'rgba(42,38,32,0.05)',
-    borderRadius: 99,
-    padding: 3,
-  },
-  currencyBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99 },
-  currencyBtnOn: {
-    backgroundColor: colors.paper,
-    shadowColor: 'rgba(0,0,0,0.08)',
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 3,
-    shadowOpacity: 1,
-  },
-  currencyText: { fontFamily: fonts.mono, fontSize: 12, fontWeight: '600' },
-  dateRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  dateText: { flex: 1, fontFamily: fonts.sans, fontSize: 15, fontWeight: '500', color: colors.ink },
-  catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  catBtn: {
-    width: '48%',
+  locked: {
+    marginTop: 22,
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: 'rgba(42,38,32,0.04)',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1,
   },
-  catIcon: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  catLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink },
+  lockedText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },
 });

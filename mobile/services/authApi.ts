@@ -129,6 +129,22 @@ export interface MeResponse {
   donationUnitId: string | null;
   donationZoneId: string | null;
   active: boolean;
+  // Lot T2/T4 (décision J-1 14/09) — LA FONCTION DE TRÉSORIER (module Dons).
+  // Miroir de `don_treasurer_assignment`, relu en base à chaque /me (jamais un claim JWT) : une
+  // nomination — ou un retrait — prend effet immédiatement, sans nouveau login (recette §4.10).
+  /**
+   * Vrai si la personne porte au moins une affectation de trésorier ACTIVE (ou est superAdmin).
+   * C'est CE booléen, et lui seul, qui gate l'onglet « Trésorerie » : `donationRole` ne confère
+   * plus rien côté Dons — « on ne mélange pas Dons et Goals ». Un simple MEMBRE peut être
+   * trésorier ; un DIRIGEANT Goals peut ne pas l'être.
+   */
+  treasurer: boolean;
+  /**
+   * Nœuds sur lesquels la personne est trésorière (assemblée, ville, région ou nation). Le
+   * périmètre EFFECTIF en assemblées n'est PAS exposé : il est dérivé serveur du sous-arbre,
+   * donc toujours à jour. Vide pour un non-trésorier.
+   */
+  treasurerNodeIds: string[] | null;
   // Lot 4.2 — périmètre GOALS (UC-LDR-04/05, COO-04/05) :
   /** Unité du DIRIGEANT côté Goals ; null sinon. */
   goalUnitId: string | null;
@@ -174,6 +190,16 @@ function isElevated(role: ModuleRole | null): boolean {
 export function isLeaderRole(me: MeResponse | null): boolean {
   if (!me) return false;
   return me.superAdmin || isElevated(me.donationRole) || isElevated(me.goalRole);
+}
+
+/**
+ * Lot T4 (défaut C, §8 de docs/donations-etat-des-lieux.md) — accès aux vues de TRÉSORERIE.
+ * Ne JAMAIS y substituer `isLeaderRole` : celui-ci dérive aussi de `goalRole`, si bien qu'un
+ * dirigeant Goals voyait l'onglet puis récoltait trois 403 silencieux. Miroir exact de
+ * `TreasuryAccessService.isTreasurer` côté backend.
+ */
+export function isTreasurerRole(me: MeResponse | null): boolean {
+  return !!me?.treasurer;
 }
 
 /** Goals tab access (Lot 4.1) : dirigeant+ du module Goals, ou superAdmin. */

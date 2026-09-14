@@ -7,56 +7,72 @@ import Card from '../../components/Card';
 import Chip from '../../components/Chip';
 import Label from '../../components/Label';
 import Amount from '../../components/Amount';
-import DonationRow from '../../components/DonationRow';
+import ErrorBanner from '../../components/ErrorBanner';
+import DeclarationStatusPill from '../../components/DeclarationStatusPill';
 import { colors, fonts } from '../../theme';
-import { CATEGORIES, CATEGORY_ORDER } from '../../constants/categories';
+import { useDonationCategories } from '../../hooks/useDonationCategories';
 import {
-  listDonations,
-  type DonationResponse,
+  listDeclarations,
+  type DeclarationResponse,
+  type DeclarationStatus,
 } from '../../services/donationApi';
-import { fmtAmount, monthLabel, parseLocalDate, toLocalDate } from '../../utils/format';
+import { fmtAmount, fmtDate, monthLabel, parseLocalDate, toLocalDate } from '../../utils/format';
 import { useLanguage } from '../../contexts/LanguageContext';
+
+/**
+ * Lot T7 (décision J-1, JP 14/09) — « MES DÉCLARATIONS ».
+ *
+ * <p>L'écran listait des lignes comptables (`don_donation`) ; il liste désormais les VERSEMENTS
+ * déclarés, avec leur pastille de statut (Déclaré / Vérifié) et leur ventilation. C'est ce que la
+ * personne a réellement fait : un versement de 300 avec deux rubriques, pas deux dons sans lien.
+ *
+ * <p>`mine=true` est explicite : sans lui, un trésorier verrait ici tout son périmètre de
+ * trésorerie au lieu de ses propres déclarations (sa file de vérification est un autre écran, T8).
+ *
+ * <p>Défaut E (14/09) : le total additionnait TOUTES les devises et les étiquetait « GBP ». Les
+ * totaux sont regroupés PAR DEVISE, ici comme dans les sous-totaux mensuels — ne pas régresser.
+ */
 
 type Period = 'month' | '3m' | '6m' | 'year' | 'all';
 
-const PERIODS: { key: Period; label: string }[] = [
-  { key: 'month', label: 'Ce mois' },
-  { key: '3m', label: '3 mois' },
-  { key: '6m', label: '6 mois' },
-  { key: 'year', label: 'Année' },
-  { key: 'all', label: 'Tout' },
-];
+const PERIODS: Period[] = ['month', '3m', '6m', 'year', 'all'];
+const STATUSES: DeclarationStatus[] = ['DECLARE', 'VERIFIE'];
 
-export default function DonationsScreen() {
+export default function DeclarationsScreen() {
   const { t } = useLanguage();
-  const periodLabel = (k: Period) => t('history.periods.' + k);
+  const { labelOf, metaOf } = useDonationCategories();
   const [period, setPeriod] = useState<Period>('month');
-  const [catFilter, setCatFilter] = useState<string>('all');
-  const [donations, setDonations] = useState<DonationResponse[]>([]);
+  const [statusFilter, setStatusFilter] = useState<DeclarationStatus | 'all'>('all');
+  const [declarations, setDeclarations] = useState<DeclarationResponse[]>([]);
+  const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const from = useMemo(() => computeFrom(period), [period]);
 
   const load = useCallback(async () => {
     try {
-      const res = await listDonations({
+      const res = await listDeclarations({
+        mine: true,
         from: from ?? undefined,
-        category: catFilter === 'all' ? undefined : catFilter,
+        status: statusFilter === 'all' ? undefined : statusFilter,
         size: 100,
       });
-      setDonations(res.content);
+      setDeclarations(res.content);
+      setFailed(false);
     } catch {
-      setDonations([]);
+      // Un appel qui échoue se DIT : afficher une liste vide ferait croire à l'absence de dons.
+      setDeclarations([]);
+      setFailed(true);
     }
-  }, [from, catFilter]);
+  }, [from, statusFilter]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   useFocusEffect(
     useCallback(() => {
-      load();
+      void load();
     }, [load]),
   );
 
@@ -69,8 +85,8 @@ export default function DonationsScreen() {
     }
   };
 
-  const total = donations.reduce((s, d) => s + d.amount, 0);
-  const grouped = groupByMonth(donations);
+  const totals = totalsByCurrency(declarations);
+  const grouped = groupByMonth(declarations);
 
   return (
     <ScreenShell
@@ -78,16 +94,31 @@ export default function DonationsScreen() {
         <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <Text style={styles.title}>{t('history.title')}</Text>
+      <Text style={styles.title}>{t('declarations.title')}</Text>
+
+      {failed && <ErrorBanner message={t('declarations.loadFailed')} onRetry={() => void load()} />}
 
       <Card style={styles.totalCard}>
         <Label style={{ color: colors.mossSoft }}>{t('history.totalPeriod')}</Label>
-        <View style={styles.totalRow}>
-          <Amount value={total} currency="GBP" size={32} showDecimals />
-          <Text style={styles.count}>
-            {t('history.donations', { count: donations.length })}
-          </Text>
-        </View>
+        {totals.length === 0 ? (
+          <View style={styles.totalRow}>
+            <Text style={styles.noTotal}>{t('declarations.noTotal')}</Text>
+            <Text style={styles.count}>
+              {t('declarations.count', { count: declarations.length })}
+            </Text>
+          </View>
+        ) : (
+          totals.map((c, i) => (
+            <View key={c.currency} style={styles.totalRow}>
+              <Amount value={c.total} currency={c.currency} size={i === 0 ? 32 : 22} showDecimals />
+              {i === 0 && (
+                <Text style={styles.count}>
+                  {t('declarations.count', { count: declarations.length })}
+                </Text>
+              )}
+            </View>
+          ))
+        )}
       </Card>
 
       <ScrollView
@@ -98,14 +129,15 @@ export default function DonationsScreen() {
       >
         {PERIODS.map((p) => (
           <Chip
-            key={p.key}
-            label={periodLabel(p.key)}
-            selected={period === p.key}
-            onPress={() => setPeriod(p.key)}
+            key={p}
+            label={t('history.periods.' + p)}
+            selected={period === p}
+            onPress={() => setPeriod(p)}
           />
         ))}
       </ScrollView>
 
+      {/* DEUX statuts, pas davantage (J-1) : ni « écart », ni « rejeté ». */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -113,34 +145,24 @@ export default function DonationsScreen() {
         style={{ marginTop: 4 }}
       >
         <Chip
-          label={t('history.categoriesAll')}
+          label={t('declarations.statusAll')}
           accent
-          selected={catFilter === 'all'}
-          onPress={() => setCatFilter('all')}
+          selected={statusFilter === 'all'}
+          onPress={() => setStatusFilter('all')}
         />
-        {CATEGORY_ORDER.map((k) => {
-          const c = CATEGORIES[k];
-          return (
-            <Chip
-              key={k}
-              accent
-              label={t('categories.' + c.key)}
-              selected={catFilter === k}
-              onPress={() => setCatFilter(k)}
-              iconLeft={
-                <Ionicons
-                  name={c.icon}
-                  size={12}
-                  color={catFilter === k ? colors.white : colors.ink3}
-                />
-              }
-            />
-          );
-        })}
+        {STATUSES.map((s) => (
+          <Chip
+            key={s}
+            accent
+            label={t(`declarations.status.${s}`)}
+            selected={statusFilter === s}
+            onPress={() => setStatusFilter(s)}
+          />
+        ))}
       </ScrollView>
 
-      {donations.length === 0 ? (
-        <EmptyState />
+      {declarations.length === 0 ? (
+        !failed && <EmptyState />
       ) : (
         <View style={{ marginTop: 22 }}>
           {grouped.map((g) => (
@@ -149,16 +171,44 @@ export default function DonationsScreen() {
                 <Text style={styles.groupLabel}>
                   {capitalize(monthLabel(g.month, true))} {g.year}
                 </Text>
-                <Text style={styles.groupSum}>{fmtAmount(g.sum, 'GBP')}</Text>
+                <Text style={styles.groupSum}>
+                  {g.sums.map((c) => fmtAmount(c.total, c.currency)).join(' · ')}
+                </Text>
               </View>
               <View style={{ gap: 6 }}>
                 {g.items.map((d) => (
-                  <DonationRow
-                    key={d.id}
-                    donation={d}
-                    onPress={() => router.push(`/donation/${d.id}`)}
-                    compact
-                  />
+                  <Pressable key={d.id} onPress={() => router.push(`/donation/${d.id}`)}>
+                    <Card style={styles.row}>
+                      <View style={styles.rowIcons}>
+                        {d.lines.slice(0, 3).map((line) => {
+                          const meta = metaOf(line.category);
+                          return (
+                            <View
+                              key={line.id}
+                              style={[styles.rowIcon, { backgroundColor: meta.tone + '1A' }]}
+                            >
+                              <Ionicons name={meta.icon} size={15} color={meta.tone} />
+                            </View>
+                          );
+                        })}
+                      </View>
+                      <View style={styles.rowBody}>
+                        <Text style={styles.rowTitle} numberOfLines={1}>
+                          {d.lines.map((l) => labelOf(l.category)).join(' · ')}
+                        </Text>
+                        <View style={styles.rowSubRow}>
+                          <Text style={styles.rowSub}>
+                            {fmtDate(parseLocalDate(d.donationDate))} ·{' '}
+                            {t('declarations.lines', { count: d.lines.length })}
+                          </Text>
+                        </View>
+                        <View style={{ marginTop: 6 }}>
+                          <DeclarationStatusPill status={d.status} size="sm" />
+                        </View>
+                      </View>
+                      <Amount value={d.declaredTotal} currency={d.currency} size={18} />
+                    </Card>
+                  </Pressable>
                 ))}
               </View>
             </View>
@@ -174,7 +224,7 @@ function EmptyState() {
   return (
     <View style={{ alignItems: 'center', paddingVertical: 48 }}>
       <Ionicons name="leaf-outline" size={36} color={colors.mossSoft} />
-      <Text style={styles.emptyText}>{t('history.emptyState')}</Text>
+      <Text style={styles.emptyText}>{t('declarations.emptyState')}</Text>
     </View>
   );
 }
@@ -189,15 +239,30 @@ function computeFrom(period: Period): string | null {
   return toLocalDate(d);
 }
 
+interface CurrencyTotal {
+  currency: string;
+  total: number;
+}
+
 interface MonthGroup {
   key: string;
   year: number;
   month: number;
-  items: DonationResponse[];
-  sum: number;
+  items: DeclarationResponse[];
+  /** Un sous-total PAR DEVISE — jamais une somme unique (défaut E, 14/09). */
+  sums: CurrencyTotal[];
 }
 
-function groupByMonth(items: DonationResponse[]): MonthGroup[] {
+/** Totaux par devise, du plus gros au plus petit — ordre d'affichage stable. */
+function totalsByCurrency(items: DeclarationResponse[]): CurrencyTotal[] {
+  const map = new Map<string, number>();
+  items.forEach((d) => map.set(d.currency, (map.get(d.currency) ?? 0) + d.declaredTotal));
+  return Array.from(map, ([currency, total]) => ({ currency, total })).sort(
+    (a, b) => b.total - a.total,
+  );
+}
+
+function groupByMonth(items: DeclarationResponse[]): MonthGroup[] {
   const map = new Map<string, MonthGroup>();
   items.forEach((d) => {
     const date = parseLocalDate(d.donationDate);
@@ -208,16 +273,14 @@ function groupByMonth(items: DonationResponse[]): MonthGroup[] {
         year: date.getFullYear(),
         month: date.getMonth(),
         items: [],
-        sum: 0,
+        sums: [],
       });
     }
-    const g = map.get(key)!;
-    g.items.push(d);
-    g.sum += d.amount;
+    map.get(key)!.items.push(d);
   });
-  return Array.from(map.values()).sort(
-    (a, b) => b.year - a.year || b.month - a.month,
-  );
+  return Array.from(map.values())
+    .map((g) => ({ ...g, sums: totalsByCurrency(g.items) }))
+    .sort((a, b) => b.year - a.year || b.month - a.month);
 }
 
 function capitalize(s: string): string {
@@ -240,6 +303,31 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   count: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3 },
+  noTotal: {
+    fontFamily: fonts.serif,
+    fontStyle: 'italic',
+    fontSize: 16,
+    color: colors.ink3,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  rowIcons: { flexDirection: 'row', gap: 4 },
+  rowIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowBody: { flex: 1, minWidth: 0 },
+  rowTitle: { fontFamily: fonts.sans, fontWeight: '600', fontSize: 14.5, color: colors.ink },
+  rowSubRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
+  rowSub: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3 },
   groupHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

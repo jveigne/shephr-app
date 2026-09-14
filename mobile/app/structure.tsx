@@ -35,6 +35,7 @@ import {
   type ContinentResponse, type CountryResponse, type LocalityResponse,
   type UnitResponse, type ZoneResponse,
 } from '../services/adminApi';
+import { fetchUnassignedUnits } from '../services/leadersApi';
 import { fmtDate } from '../utils/format';
 
 type Level = 'countries' | 'zones' | 'localities' | 'units';
@@ -71,15 +72,24 @@ export default function StructureScreen() {
   const [historyLast, setHistoryLast] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
+  // J-4 (14/09) — assemblées de MON périmètre sans dirigeant rattaché (RG-DS-10). La fonction
+  // vient de l'écran Hiérarchie, qui ne doit plus afficher QUE la chaîne de supervision : le
+  // « dirigeant requis » est une information géographique, sa place est ici.
+  const [needsLeaderIds, setNeedsLeaderIds] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
-    const [c, z, l, u] = await Promise.allSettled([
-      listCountries(), listZones(), listLocalities(), listUnits(),
+    const [c, z, l, u, orphans] = await Promise.allSettled([
+      listCountries(), listZones(), listLocalities(), listUnits(), fetchUnassignedUnits(),
     ]);
     if (c.status === 'fulfilled') setCountries(c.value);
     if (z.status === 'fulfilled') setZones(z.value);
     if (l.status === 'fulfilled') setLocalities(l.value);
     if (u.status === 'fulfilled') setUnits(u.value);
+    // En échec, on ne marque RIEN : mieux vaut aucun label qu'un « dirigeant requis » posé au
+    // hasard sur des assemblées qui en ont un.
+    setNeedsLeaderIds(new Set(
+      orphans.status === 'fulfilled' ? orphans.value.map((unit) => unit.id) : [],
+    ));
     setLoading(false);
   }, []);
 
@@ -243,11 +253,26 @@ export default function StructureScreen() {
         />
       )}
 
+      {/* J-4 (14/09) : le rappel « des assemblées de votre périmètre attendent un dirigeant »
+          vivait sur l'écran Hiérarchie. Il est ici, avec les assemblées elles-mêmes. */}
+      {level === 'units' && needsLeaderIds.size > 0 && (
+        <Text style={styles.needsLeaderHint}>
+          {t('structure.needsLeaderHint', { count: needsLeaderIds.size })}
+        </Text>
+      )}
+
       <View style={{ gap: 8, marginTop: 12 }}>
         {rows.map((r: any) => (
           <Card key={r.id} style={styles.itemCard} onPress={canEdit ? () => setEditing({ level, item: r }) : undefined}>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.itemName}>{r.name}</Text>
+              <View style={styles.itemTitleRow}>
+                <Text style={styles.itemName}>{r.name}</Text>
+                {/* RG-DS-10 — label « dirigeant requis » (déménagé de la Hiérarchie, J-4) :
+                    posé par le SERVEUR, jamais déduit ici. */}
+                {level === 'units' && needsLeaderIds.has(r.id) && (
+                  <Text style={styles.needsLeaderPill}>{t('structure.needsLeader')}</Text>
+                )}
+              </View>
               <Text style={styles.itemMeta}>
                 {level === 'countries' && (r.code ?? '')}
                 {level === 'zones' && (r.countryName ?? '')}
@@ -769,7 +794,16 @@ const styles = StyleSheet.create({
   segmentText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink2 },
   segmentTextActive: { color: colors.white },
   itemCard: { paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  itemTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   itemName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
+  needsLeaderPill: {
+    fontFamily: fonts.mono, fontSize: 9, color: colors.earthDeep, letterSpacing: 0.6,
+    textTransform: 'uppercase', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99,
+    backgroundColor: colors.mossTint, overflow: 'hidden',
+  },
+  needsLeaderHint: {
+    fontFamily: fonts.sans, fontSize: 12, color: colors.earthDeep, lineHeight: 17, marginTop: 12,
+  },
   itemMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2 },
   empty: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, fontStyle: 'italic', marginTop: 8 },
   historyBlock: { marginTop: 22, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.hair },

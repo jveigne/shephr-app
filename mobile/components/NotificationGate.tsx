@@ -13,6 +13,7 @@ import {
   type UserNotification,
 } from '../services/notificationsApi';
 import { getCampaigns, type CampaignNotification } from '../services/appNotificationsApi';
+import { abonnerRechargement, declarerGateOuverte } from './push/fileNotifications';
 
 /**
  * Porte d'entrée des messages à l'ouverture — UNE seule modale à la fois, dans l'ordre :
@@ -85,6 +86,39 @@ export default function NotificationGate() {
     });
     return () => sub.remove();
   }, [isAuthenticated, loadCampaigns]);
+
+  // ---- N4c (J-3 14/09) — le push ne remplace pas cette porte, il la réveille ----
+  // Un tap sur une bannière recharge la file : l'application était en arrière-plan, et rien
+  // n'aurait rechargé sans ça. Le push TRANSPORTE une notification déjà écrite en base — qui a
+  // refusé les notifications système, dont le jeton est mort, ou qui a coupé l'interrupteur
+  // « Rappels », la lit quand même ici, à l'ouverture. Cet abonnement n'ajoute aucun affichage.
+  useEffect(
+    () =>
+      abonnerRechargement((notificationId) => {
+        setDismissed(false);
+        void (async () => {
+          try {
+            const unread = await getUnreadNotifications();
+            // Cas mono-destinataire : la notification tapée passe devant, les autres suivent.
+            const visee = notificationId ? unread.filter((n) => n.id === notificationId) : [];
+            const autres = notificationId ? unread.filter((n) => n.id !== notificationId) : unread;
+            setQueue([...visee, ...autres]);
+          } catch {
+            // silencieux : un échec de chargement ne doit pas bloquer l'app
+          }
+        })();
+      }),
+    [],
+  );
+
+  // L'invitation d'activation du push (N4b) attend que cette porte soit libre : deux `Modal`
+  // affichées en même temps ne laissent voir que la dernière, et le message déjà écrit passe
+  // avant la demande de permission.
+  const modaleAffichee = !!campaign || (queue.length > 0 && !dismissed);
+  useEffect(() => {
+    declarerGateOuverte(modaleAffichee);
+    return () => declarerGateOuverte(false);
+  }, [modaleAffichee]);
 
   const snoozeCampaign = async () => {
     if (!campaign) return;

@@ -11,7 +11,7 @@ import NotificationGate from '../../components/NotificationGate';
 export default function TabLayout() {
   const { t, applyAccountLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { isLeader, hasGoals, hasMemberCare, hasDonations, me } = useAuth();
+  const { isLeader, isTreasurer, hasGoals, hasMemberCare, hasDonations, me } = useAuth();
 
   // Initialise la langue depuis le compte (me.language) tant que l'utilisateur
   // n'a pas choisi explicitement une langue dans l'app (cf. LanguageContext).
@@ -82,11 +82,14 @@ export default function TabLayout() {
       <Tabs.Screen
         name="leader"
         options={{
-          // « Périmètre » = vues de lecture des DONS → suit l'accès au module.
-          href: hasDonations && isLeader ? '/(tabs)/leader' : null,
-          title: t('tabs.leader'),
+          // « Trésorerie » (ex-« Périmètre ») — Lot T4, défaut C (14/09).
+          // Gaté sur `isTreasurer` (= MeResponse.treasurer), JAMAIS sur `isLeader` : ce dernier
+          // dérive aussi de `goalRole`, si bien qu'un dirigeant Goals voyait l'onglet puis
+          // récoltait trois 403 silencieux. Le rang pastoral ne confère plus rien côté Dons.
+          href: hasDonations && isTreasurer ? '/(tabs)/leader' : null,
+          title: t('tabs.treasury'),
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" size={size} color={color} />
+            <Ionicons name="wallet-outline" size={size} color={color} />
           ),
         }}
       />

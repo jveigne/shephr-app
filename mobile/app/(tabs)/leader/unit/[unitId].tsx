@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,8 +6,8 @@ import ScreenShell from '../../../../components/ScreenShell';
 import Card from '../../../../components/Card';
 import Label from '../../../../components/Label';
 import Amount from '../../../../components/Amount';
-import HandDivider from '../../../../components/HandDivider';
 import Chip from '../../../../components/Chip';
+import ErrorBanner from '../../../../components/ErrorBanner';
 import { colors, fonts } from '../../../../theme';
 import {
   listMyMembers,
@@ -18,26 +18,30 @@ import {
 import { getByUnit, type DonationByUnitStat } from '../../../../services/statsApi';
 import { useLanguage } from '../../../../contexts/LanguageContext';
 import { toLocalDate } from '../../../../utils/format';
+import { sumByCurrency, type CurrencyLine } from '../../../../utils/currencyTotals';
 
 type Period = 'month' | '3m' | '6m' | 'year';
-const PRIMARY = 'GBP';
 
-const PERIODS: { key: Period; label: string }[] = [
-  { key: 'month', label: 'Ce mois' },
-  { key: '3m', label: '3 mois' },
-  { key: '6m', label: '6 mois' },
-  { key: 'year', label: 'Année' },
-];
+const PERIODS: Period[] = ['month', '3m', '6m', 'year'];
 
+/**
+ * Détail d'une assemblée du périmètre de TRÉSORERIE — Lot T4 (14/09).
+ *
+ * Les trois appels exigent depuis T2 une affectation de trésorier couvrant cette assemblée. Un
+ * échec est annoncé (bandeau + « Réessayer ») au lieu d'un écran de zéros, et les totaux sont
+ * affichés par devise : le filtre `currency === 'GBP'` masquait purement et simplement les dons
+ * en euros ou en dollars.
+ */
 export default function UnitDetailScreen() {
   const { unitId } = useLocalSearchParams<{ unitId: string }>();
   const { t } = useLanguage();
   const periodLabel = (k: Period) => t('history.periods.' + k);
   const [period, setPeriod] = useState<Period>('month');
   const [unit, setUnit] = useState<LeaderUnitView | null>(null);
-  const [unitStat, setUnitStat] = useState<DonationByUnitStat | null>(null);
+  const [unitStats, setUnitStats] = useState<DonationByUnitStat[]>([]);
   const [members, setMembers] = useState<LeaderMemberView[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
 
   const from = useMemo(() => {
     const d = new Date();
@@ -48,28 +52,33 @@ export default function UnitDetailScreen() {
     return toLocalDate(d);
   }, [period]);
 
-  useEffect(() => {
-    (async () => {
-      if (!unitId) return;
-      setLoading(true);
-      try {
-        const [units, stats, allMembers] = await Promise.all([
-          listMyUnits(),
-          getByUnit({ from }),
-          listMyMembers({ from }),
-        ]);
-        setUnit(units.find((u) => u.unitId === unitId) ?? null);
-        setUnitStat(
-          stats.find((s) => s.unitId === unitId && s.currency === PRIMARY) ?? null,
-        );
-        setMembers(allMembers.filter((m) => m.unitId === unitId));
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const load = useCallback(async () => {
+    if (!unitId) return;
+    setLoading(true);
+    setFailed(false);
+    try {
+      const [units, stats, allMembers] = await Promise.all([
+        listMyUnits(),
+        getByUnit({ from }),
+        listMyMembers({ from }),
+      ]);
+      setUnit(units.find((u) => u.unitId === unitId) ?? null);
+      setUnitStats(stats.filter((s) => s.unitId === unitId));
+      setMembers(allMembers.filter((m) => m.unitId === unitId));
+    } catch {
+      setUnitStats([]);
+      setMembers([]);
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
   }, [unitId, from]);
 
-  if (loading || !unit) {
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (loading) {
     return (
       <ScreenShell>
         <View style={{ marginTop: 60, alignItems: 'center' }}>
@@ -79,14 +88,30 @@ export default function UnitDetailScreen() {
     );
   }
 
-  const total = unitStat?.total ?? 0;
-  const memberTotal = members.reduce(
-    (s, m) =>
-      s +
-      (m.donationTotals.find((dt) => dt.currency === PRIMARY)?.total ?? 0),
-    0,
+  // L'assemblée est introuvable (hors périmètre) ou le chargement a échoué : on le dit.
+  if (!unit) {
+    return (
+      <ScreenShell>
+        <View style={styles.headerRow}>
+          <Pressable onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+          </Pressable>
+        </View>
+        <ErrorBanner message={t('unit.loadError')} onRetry={load} />
+      </ScreenShell>
+    );
+  }
+
+  const totals: CurrencyLine[] = sumByCurrency(unitStats);
+  // Moyenne PAR DEVISE : diviser un total toutes devises confondues par un nombre de membres
+  // produirait un chiffre que personne ne peut présenter devant un conseil d'assemblée.
+  const memberTotals: CurrencyLine[] = sumByCurrency(
+    members.flatMap((m) => m.donationTotals),
   );
-  const avg = members.length > 0 ? Math.round(memberTotal / members.length) : 0;
+  const averages: CurrencyLine[] =
+    members.length > 0
+      ? memberTotals.map((l) => ({ ...l, total: l.total / members.length }))
+      : [];
 
   return (
     <ScreenShell>
@@ -109,22 +134,10 @@ export default function UnitDetailScreen() {
         </Pressable>
       </View>
 
-      <View
-        style={[
-          styles.typePill,
-          {
-            backgroundColor:
-              unit.type === 'CENTER' ? 'rgba(30,58,47,0.10)' : 'rgba(201,149,107,0.20)',
-          },
-        ]}
-      >
-        <Text
-          style={[
-            styles.typePillText,
-            { color: unit.type === 'CENTER' ? colors.moss : colors.earthDeep },
-          ]}
-        >
-          {unit.type === 'CENTER' ? t('unit.center') : t('unit.assembly')} · {unit.localityName}
+      {/* Chantier B : le type CENTER n'existe plus — toute unité est une assemblée de maison. */}
+      <View style={styles.typePill}>
+        <Text style={styles.typePillText}>
+          {t('unit.assembly')} · {unit.localityName}
         </Text>
       </View>
 
@@ -133,18 +146,28 @@ export default function UnitDetailScreen() {
       <View style={{ flexDirection: 'row', gap: 6, marginTop: 16, flexWrap: 'wrap' }}>
         {PERIODS.map((p) => (
           <Chip
-            key={p.key}
-            label={periodLabel(p.key)}
-            selected={period === p.key}
-            onPress={() => setPeriod(p.key)}
+            key={p}
+            label={periodLabel(p)}
+            selected={period === p}
+            onPress={() => setPeriod(p)}
           />
         ))}
       </View>
 
+      {failed && <ErrorBanner message={t('unit.loadError')} onRetry={load} />}
+
       <View style={styles.statsRow}>
         <Card style={[styles.statCard, { flex: 1.6 }]}>
           <Label style={{ color: colors.mossSoft }}>{t('unit.total')}</Label>
-          <Amount value={total} currency={PRIMARY} size={24} />
+          {totals.length === 0 ? (
+            <Text style={styles.emptyLine}>{t('leader.noDataPeriod')}</Text>
+          ) : (
+            totals.map((l, i) => (
+              <View key={l.currency} style={i > 0 ? styles.extraCurrency : undefined}>
+                <Amount value={l.total} currency={l.currency} size={i === 0 ? 24 : 18} />
+              </View>
+            ))
+          )}
         </Card>
         <Card style={[styles.statCard, { flex: 1 }]}>
           <Label style={{ color: colors.mossSoft }}>{t('unit.members')}</Label>
@@ -152,7 +175,15 @@ export default function UnitDetailScreen() {
         </Card>
         <Card style={[styles.statCard, { flex: 1 }]}>
           <Label style={{ color: colors.mossSoft }}>{t('unit.average')}</Label>
-          <Amount value={avg} currency={PRIMARY} size={22} />
+          {averages.length === 0 ? (
+            <Text style={styles.emptyLine}>—</Text>
+          ) : (
+            averages.map((l, i) => (
+              <View key={l.currency} style={i > 0 ? styles.extraCurrency : undefined}>
+                <Amount value={Math.round(l.total)} currency={l.currency} size={i === 0 ? 22 : 16} />
+              </View>
+            ))
+          )}
         </Card>
       </View>
 
@@ -177,8 +208,7 @@ export default function UnitDetailScreen() {
           </View>
         ) : (
           members.map((m, i) => {
-            const memberAmt =
-              m.donationTotals.find((c) => c.currency === PRIMARY)?.total ?? 0;
+            const memberLines = sumByCurrency(m.donationTotals);
             const initials = m.fullName
               .split(' ')
               .filter(Boolean)
@@ -204,7 +234,15 @@ export default function UnitDetailScreen() {
                     {m.active ? t('unit.memberActive') : t('unit.memberInactive')}
                   </Text>
                 </View>
-                <Amount value={memberAmt} currency={PRIMARY} size={16} />
+                <View style={{ alignItems: 'flex-end' }}>
+                  {memberLines.length === 0 ? (
+                    <Text style={styles.emptyLine}>—</Text>
+                  ) : (
+                    memberLines.map((l) => (
+                      <Amount key={l.currency} value={l.total} currency={l.currency} size={16} />
+                    ))
+                  )}
+                </View>
               </View>
             );
           })
@@ -238,6 +276,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 99,
+    backgroundColor: 'rgba(201,149,107,0.20)',
   },
   typePillText: {
     fontFamily: fonts.sans,
@@ -245,7 +284,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
+    color: colors.earthDeep,
   },
+  extraCurrency: { marginTop: 4 },
+  emptyLine: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 6 },
   title: {
     fontFamily: fonts.serif,
     fontSize: 26,

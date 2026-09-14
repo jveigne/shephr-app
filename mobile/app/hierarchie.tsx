@@ -33,26 +33,33 @@ import {
 
 /**
  * Hiérarchie des dirigeants (Lot H3 — 21/07) : arbre du leadership renvoyé par le backend,
- * déjà scopé par rôle — sous-arbre pour un dirigeant, chaîne de rattachement pour un membre,
+ * déjà scopé par rôle — sous-arbre pour un dirigeant, chaîne de dirigeants pour un membre,
  * arbres du ministère pour LEADER/SECRETARIAT/SUPER_ADMIN.
+ *
+ * J-4 (14/09) — CET ÉCRAN N'AFFICHE QUE LA CHAÎNE DE SUPERVISION, jamais le leadership
+ * géographique : les assemblées du périmètre sans dirigeant (`unassignedUnits`) en sont parties
+ * pour l'écran Structure, où le label « dirigeant requis » (RG-DS-10) est à sa place. Ne pas les
+ * réintroduire ici : les deux notions doivent rester séparées.
+ * J-5 (14/09) — la chaîne est une chaîne de DIRIGEANTS : un simple fidèle n'y est pas un nœud,
+ * et sa propre vue part de son assemblée (côté serveur).
  */
 type ViewMode = 'leaders' | 'units';
 
 type UnitEntry = { unit: HierarchyUnitView; leaderName?: string };
 
 /**
- * Aplatis l'arbre en liste d'assemblées (chacune avec son dirigeant), et y AJOUTE les
- * assemblées du périmètre sans dirigeant (le label « dirigeant requis » vient du serveur —
- * `unit.needsLeader`, RG-DS-10).
+ * Aplatis l'arbre en liste d'assemblées, chacune avec SON DIRIGEANT.
+ *
+ * <p>J-4 (14/09) : uniquement les assemblées portées par l'arbre de supervision. Les assemblées
+ * du périmètre sans dirigeant ne sont plus ajoutées ici — elles sont sur l'écran Structure.
  */
-function flattenUnits(nodes: LeaderHierarchyNode[], unassigned: HierarchyUnitView[]): UnitEntry[] {
+function flattenUnits(nodes: LeaderHierarchyNode[]): UnitEntry[] {
   const out: UnitEntry[] = [];
   const walk = (node: LeaderHierarchyNode) => {
     node.units.forEach((unit) => out.push({ unit, leaderName: node.fullName }));
     node.children.forEach(walk);
   };
   nodes.forEach(walk);
-  unassigned.forEach((unit) => out.push({ unit }));
   // Regroupement pays → région → ville (22/07) : le tri porte l'ordre des sections.
   return out.sort((a, b) =>
     (a.unit.countryName ?? '').localeCompare(b.unit.countryName ?? '')
@@ -157,7 +164,9 @@ export default function HierarchieScreen() {
 
       {/* Déclaration de SON superviseur (JP 30/07) : réservée aux DIRIGEANTS, et logée ici —
           jamais dans le parcours de création d'assemblée, qu'elle alourdirait. Un membre ne la
-          voit pas : son rattachement à une assemblée détermine implicitement son dirigeant. */}
+          voit pas : son rattachement à une assemblée détermine implicitement son dirigeant.
+          J-5 (14/09) : la même règle est désormais gardée CÔTÉ SERVEUR (403) — ce test ne fait
+          plus que masquer un chemin fermé, il ne le ferme plus à lui seul. */}
       {canManageUsers(me) && (
         <Card
           variant="paper2"
@@ -191,7 +200,7 @@ export default function HierarchieScreen() {
               <LeaderNodeRow key={root.id} node={root} depth={0} meId={me?.id ?? null} />
             ))
           : (() => {
-              const units = flattenUnits(roots, data?.unassignedUnits ?? []);
+              const units = flattenUnits(roots);
               if (!error && roots.length > 0 && units.length === 0) {
                 return <Text style={styles.empty}>{t('hierarchy.noUnits')}</Text>;
               }

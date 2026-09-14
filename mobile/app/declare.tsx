@@ -1,88 +1,94 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  TextInput,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, Text, StyleSheet, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenShell from '../components/ScreenShell';
 import Card from '../components/Card';
 import Label from '../components/Label';
-import Field from '../components/Field';
 import Button from '../components/Button';
 import HandDivider from '../components/HandDivider';
+import DeclarationForm, {
+  draftLinesToRequest,
+  draftTotal,
+  firstDraftError,
+  newDraftLine,
+  round2,
+  type DraftLine,
+} from '../components/DeclarationForm';
 import { colors, fonts } from '../theme';
-import {
-  CATEGORIES,
-  CATEGORY_ORDER,
-  type DonationCategory,
-} from '../constants/categories';
-import { createDonation } from '../services/donationApi';
-import { fmtDateLong, toLocalDate } from '../utils/format';
+import { useDonationCategories } from '../hooks/useDonationCategories';
+import { createDeclaration, type DeclarationResponse } from '../services/donationApi';
+import { fmtAmount, fmtDateLong, parseLocalDate, toLocalDate } from '../utils/format';
+import { notify } from '../utils/dialogs';
+import { declarationErrorMessage } from '../utils/donationErrors';
 import { useLanguage } from '../contexts/LanguageContext';
 
-const CURRENCIES = ['GBP', 'EUR', 'USD'];
-
+/**
+ * Lot T7 (décision J-1, JP 14/09) — DÉCLARER UN VERSEMENT, PAS UN DON ISOLÉ.
+ *
+ * <p>L'écran saisissait un montant, une rubrique, une date. Il saisit désormais l'acte réel :
+ * une date, une devise, et N lignes « rubrique + montant » dont le total se calcule en direct.
+ * Sans ce regroupement, le trésorier voit deux lignes de 200 et 100 là où il a constaté UN
+ * versement de 300, et ne peut pas les rapprocher (§9 de docs/donations-etat-des-lieux.md).
+ *
+ * <p>Rien de bancaire, aucun moyen de versement, aucune référence (D0-10) : le module est 100 %
+ * déclaratif. La « référence CMCI-xxxx » fabriquée côté client a disparu au lot T1 (défaut G) —
+ * ne pas la réintroduire sous une autre forme.
+ */
 export default function DeclareScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
-  const [amount, setAmount] = useState('40');
+
   const [currency, setCurrency] = useState('GBP');
-  const [category, setCategory] = useState<DonationCategory>('dime');
-  const [note, setNote] = useState('');
-  const [date] = useState(new Date());
+  // Défaut F (14/09) : la date était figée — on ne pouvait déclarer qu'aujourd'hui. Elle est
+  // saisissable, dans le PASSÉ uniquement (`@PastOrPresent` côté serveur).
+  const [date, setDate] = useState(new Date());
+  // Une déclaration part avec UNE ligne vierge : le cas courant reste un versement d'une seule
+  // rubrique, et « Ajouter une rubrique » ouvre les autres sans imposer un formulaire vide.
+  const [lines, setLines] = useState<DraftLine[]>(() => [newDraftLine()]);
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState<{
-    amount: number;
-    category: DonationCategory;
-    date: Date;
-    note: string;
-    reference: string;
-  } | null>(null);
+  const [done, setDone] = useState<DeclarationResponse | null>(null);
 
   const onSubmit = async () => {
-    const num = Number.parseFloat(amount.replace(',', '.'));
-    if (!Number.isFinite(num) || num <= 0) {
-      Alert.alert(t('common.appName'), t('declare.invalidAmount'));
+    const problem = firstDraftError(lines);
+    if (problem === 'INVALID_AMOUNT') {
+      notify(t('common.appName'), t('declare.invalidAmount'));
+      return;
+    }
+    if (problem === 'NO_CATEGORY') {
+      notify(t('common.appName'), t('declare.lineNeedsCategory'));
+      return;
+    }
+    if (problem === 'NO_LINES') {
+      notify(t('common.appName'), t('declare.needsOneLine'));
       return;
     }
     setLoading(true);
     try {
-      const res = await createDonation({
-        amount: num,
-        currency,
-        category,
+      // Le total est CALCULÉ, jamais saisi : le serveur exige `declaredTotal = Σ des lignes`
+      // (422 DECLARED_TOTAL_MISMATCH), l'envoyer calculé rend l'écart impossible côté mobile.
+      const declaration = await createDeclaration({
         donationDate: toLocalDate(date),
-        note: note || undefined,
+        currency,
+        declaredTotal: round2(draftTotal(lines)),
+        lines: draftLinesToRequest(lines),
       });
-      setDone({
-        amount: num,
-        category,
-        date,
-        note,
-        reference: 'CMCI-' + res.id.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0'),
-      });
+      setDone(declaration);
     } catch (e: any) {
-      Alert.alert(
-        t('common.appName'),
-        e?.response?.data?.message ?? t('errors.saveFailed'),
-      );
+      notify(t('common.appName'), declarationErrorMessage(e, t, t('errors.saveFailed')));
     } finally {
       setLoading(false);
     }
   };
 
-  if (done) return <SuccessScreen done={done} />;
+  if (done) return <SuccessScreen declaration={done} />;
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={{ flex: 1 }}
+    >
       <ScreenShell withTabBar={false} paddingTop={insets.top ? 4 : 16}>
         <View style={styles.headerRow}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
@@ -90,95 +96,16 @@ export default function DeclareScreen() {
           </Pressable>
         </View>
         <Text style={styles.title}>{t('declare.title')}</Text>
-        <Text style={styles.intro}>
-          {t('declare.intro')}
-        </Text>
+        <Text style={styles.intro}>{t('declare.intro')}</Text>
 
-        <Card style={styles.amountCard}>
-          <Label style={{ color: colors.mossSoft, textAlign: 'center' }}>{t('declare.amount')}</Label>
-          <View style={styles.amountRow}>
-            <Text style={styles.cur}>
-              {currency === 'GBP' ? '£' : currency === 'EUR' ? '€' : '$'}
-            </Text>
-            <TextInput
-              value={amount}
-              onChangeText={(v) => setAmount(v.replace(/[^0-9.,]/g, ''))}
-              keyboardType="decimal-pad"
-              style={styles.amountInput}
-              maxLength={9}
-            />
-          </View>
-          <View style={styles.currencyRow}>
-            {CURRENCIES.map((c) => (
-              <Pressable
-                key={c}
-                onPress={() => setCurrency(c)}
-                style={[
-                  styles.currencyBtn,
-                  c === currency && styles.currencyBtnOn,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.currencyText,
-                    { color: c === currency ? colors.moss : colors.ink3 },
-                  ]}
-                >
-                  {c}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </Card>
-
-        <View style={{ marginTop: 18 }}>
-          <Label style={{ marginBottom: 8 }}>{t('declare.date')}</Label>
-          <Card style={styles.dateRow}>
-            <Ionicons name="calendar-outline" size={20} color={colors.mossSoft} />
-            <Text style={styles.dateText}>{fmtDateLong(date)}</Text>
-            <Text style={styles.dateChip}>{t('common.today')}</Text>
-          </Card>
-        </View>
-
-        <View style={{ marginTop: 18 }}>
-          <Label style={{ marginBottom: 8 }}>{t('declare.category')}</Label>
-          <View style={styles.catGrid}>
-            {CATEGORY_ORDER.map((k) => {
-              const c = CATEGORIES[k];
-              const on = category === k;
-              return (
-                <Pressable
-                  key={k}
-                  onPress={() => setCategory(k)}
-                  style={[
-                    styles.catBtn,
-                    {
-                      borderColor: on ? c.tone : colors.hair,
-                      backgroundColor: on ? c.tone + '14' : colors.paper,
-                    },
-                  ]}
-                >
-                  <View style={[styles.catIcon, { backgroundColor: c.tone + '22' }]}>
-                    <Ionicons name={c.icon} size={18} color={c.tone} />
-                  </View>
-                  <Text style={styles.catLabel}>{t('categories.' + c.key)}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={{ marginTop: 18 }}>
-          <Label style={{ marginBottom: 8 }}>{t('declare.note')}</Label>
-          <Field
-            value={note}
-            onChangeText={setNote}
-            multiline
-            numberOfLines={3}
-            placeholder={t('declare.notePlaceholder')}
-            style={{ minHeight: 90, textAlignVertical: 'top' }}
-          />
-        </View>
+        <DeclarationForm
+          date={date}
+          onDateChange={setDate}
+          currency={currency}
+          onCurrencyChange={setCurrency}
+          lines={lines}
+          onLinesChange={setLines}
+        />
 
         <Button
           label={t('declare.submit')}
@@ -190,27 +117,16 @@ export default function DeclareScreen() {
           iconLeft={<Ionicons name="checkmark" size={20} color={colors.white} />}
         />
 
-        <Text style={styles.footnote}>
-          {t('declare.footnote')}
-        </Text>
+        <Text style={styles.footnote}>{t('declare.footnote')}</Text>
       </ScreenShell>
     </KeyboardAvoidingView>
   );
 }
 
-function SuccessScreen({
-  done,
-}: {
-  done: {
-    amount: number;
-    category: DonationCategory;
-    date: Date;
-    note: string;
-    reference: string;
-  };
-}) {
+function SuccessScreen({ declaration }: { declaration: DeclarationResponse }) {
   const { t } = useLanguage();
-  const cat = CATEGORIES[done.category];
+  const { labelOf, metaOf } = useDonationCategories();
+
   return (
     <ScreenShell withTabBar={false} paddingTop={40}>
       <View style={{ alignItems: 'center' }}>
@@ -218,37 +134,46 @@ function SuccessScreen({
           <Ionicons name="checkmark" size={38} color={colors.white} />
         </View>
         <Text style={styles.successTitle}>{t('declare.successTitle')}</Text>
-        <Text style={styles.successHint}>
-          {t('declare.successHint')}
-        </Text>
+        <Text style={styles.successHint}>{t('declare.successHint')}</Text>
       </View>
 
       <Card variant="paper2" style={styles.receipt}>
         <View style={styles.receiptHeader}>
-          <Text style={styles.receiptMono}>{t('declare.receiptHeader', { reference: done.reference })}</Text>
-          <Text style={styles.receiptMono}>CMCI UK</Text>
+          <Text style={styles.receiptMono}>{t('declare.receipt')}</Text>
         </View>
         <HandDivider style={{ marginVertical: 12 }} />
         <View style={styles.rec1}>
-          <Text style={styles.recLabel}>{t('declare.amount')}</Text>
+          <Text style={styles.recLabel}>{t('declare.totalDeclared')}</Text>
           <Text style={styles.recAmount}>
-            {done.amount % 1 === 0 ? done.amount.toFixed(0) : done.amount.toFixed(2)} GBP
+            {fmtAmount(declaration.declaredTotal, declaration.currency)}
           </Text>
         </View>
         <View style={styles.recRow}>
-          <Text style={styles.recLabel}>{t('declare.category')}</Text>
-          <Text style={[styles.recValue, { color: cat.tone, fontWeight: '700' }]}>{t('categories.' + cat.key)}</Text>
-        </View>
-        <View style={styles.recRow}>
           <Text style={styles.recLabel}>{t('detail.date')}</Text>
-          <Text style={styles.recValue}>{fmtDateLong(done.date)}</Text>
+          <Text style={styles.recValue}>
+            {fmtDateLong(parseLocalDate(declaration.donationDate))}
+          </Text>
         </View>
-        {!!done.note && (
-          <View style={styles.recRow}>
-            <Text style={styles.recLabel}>{t('detail.note')}</Text>
-            <Text style={[styles.recValue, { fontStyle: 'italic' }]}>« {done.note} »</Text>
-          </View>
-        )}
+
+        <HandDivider style={{ marginVertical: 14 }} />
+        <Label style={{ marginBottom: 8 }}>{t('declare.breakdown')}</Label>
+        {declaration.lines.map((line) => {
+          const meta = metaOf(line.category);
+          return (
+            <View key={line.id} style={styles.recRow}>
+              <View style={styles.recLineLabel}>
+                <Ionicons name={meta.icon} size={14} color={meta.tone} />
+                <Text style={[styles.recValue, { color: meta.tone, fontWeight: '700' }]}>
+                  {labelOf(line.category)}
+                </Text>
+              </View>
+              <Text style={styles.recValue}>
+                {fmtAmount(line.amount, declaration.currency)}
+              </Text>
+            </View>
+          );
+        })}
+
         <HandDivider style={{ marginVertical: 14 }} />
         <Text style={styles.verse}>{t('declare.verseQuote')}</Text>
       </Card>
@@ -263,11 +188,7 @@ function SuccessScreen({
           }}
           style={{ flex: 1 }}
         />
-        <Button
-          label={t('declare.finish')}
-          onPress={() => router.back()}
-          style={{ flex: 1 }}
-        />
+        <Button label={t('declare.finish')} onPress={() => router.back()} style={{ flex: 1 }} />
       </View>
     </ScreenShell>
   );
@@ -290,63 +211,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     maxWidth: 320,
   },
-  amountCard: { paddingVertical: 22, paddingHorizontal: 22, marginTop: 22, alignItems: 'center' },
-  amountRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 10 },
-  cur: { fontFamily: fonts.serif, fontSize: 34, color: colors.ink3, marginRight: 4 },
-  amountInput: {
-    fontFamily: fonts.serif,
-    fontSize: 64,
-    fontWeight: '500',
-    color: colors.ink,
-    textAlign: 'center',
-    minWidth: 140,
-    letterSpacing: -1.2,
-    paddingVertical: 0,
-  },
-  currencyRow: {
-    flexDirection: 'row',
-    marginTop: 8,
-    backgroundColor: 'rgba(42,38,32,0.05)',
-    borderRadius: 99,
-    padding: 3,
-  },
-  currencyBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99 },
-  currencyBtnOn: {
-    backgroundColor: colors.paper,
-    shadowColor: 'rgba(0,0,0,0.08)',
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 3,
-    shadowOpacity: 1,
-  },
-  currencyText: { fontFamily: fonts.mono, fontSize: 12, fontWeight: '600' },
-  dateRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  dateText: { flex: 1, fontFamily: fonts.sans, fontSize: 15, fontWeight: '500', color: colors.ink },
-  dateChip: { fontFamily: fonts.sans, fontSize: 12, color: colors.earthDeep, fontWeight: '700' },
-  catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  catBtn: {
-    width: '48%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  catIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  catLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink },
   footnote: {
     textAlign: 'center',
     marginTop: 14,
@@ -396,7 +260,14 @@ const styles = StyleSheet.create({
   },
   rec1: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   recAmount: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink },
-  recRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+  recRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 12,
+  },
+  recLineLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 },
   recLabel: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
   recValue: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink, textAlign: 'right' },
   verse: {

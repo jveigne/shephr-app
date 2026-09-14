@@ -1,12 +1,13 @@
 {
   "tabs": {
     "home": "Home",
-    "donations": "My giving",
+    "donations": "Declarations",
     "leader": "Scope",
     "profile": "Profile",
     "goals": "Goals",
     "care": "Flock",
-    "requests": "Requests"
+    "requests": "Requests",
+    "treasury": "Treasury"
   },
   "common": {
     "today": "Today",
@@ -24,7 +25,9 @@
     "comingSoon": "Soon",
     "all": "All",
     "allF": "All",
-    "choose": "Choose…"
+    "choose": "Choose…",
+    "monthsLong": "January,February,March,April,May,June,July,August,September,October,November,December",
+    "weekdayInitials": "M,T,W,T,F,S,S"
   },
   "errors": {
     "serverUnreachable": "Server unreachable — make sure the backend is running and your phone is on the same network as the Mac.",
@@ -46,7 +49,17 @@
       "MEMBER_ALREADY_SUBMITTED": "This person has already submitted their goals.",
       "REMINDER_ALREADY_SENT": "A reminder was already sent to them less than 24 h ago.",
       "STRUCTURE_NAME_EXISTS": "An assembly with this name already exists in this city. Pick another name, or join the existing one.",
-      "ASSEMBLY_MINISTRY_MISMATCH": "This assembly belongs to another ministry — contact the secretariat."
+      "ASSEMBLY_MINISTRY_MISMATCH": "This assembly belongs to another ministry — contact the secretariat.",
+      "SCOPE_REQUIRED": "Choose the perimeter to remind.",
+      "SCOPE_ID_REQUIRED": "You carry several perimeters at this level: pick the one to remind."
+    },
+    "donations": {
+      "DECLARATION_VERIFIED": "This declaration has been verified by the treasurer and can no longer be changed.",
+      "DECLARED_TOTAL_MISMATCH": "The declared total does not match the sum of the categories.",
+      "DECLARATION_SINGLE_CURRENCY": "A declaration carries a single currency.",
+      "INVALID_DECLARATION": "A declaration needs at least one category — delete it instead to give up.",
+      "INVALID_CURRENCY": "Unknown currency.",
+      "USER_NO_UNIT": "Your account is not attached to any assembly: you cannot declare anything."
     }
   },
   "categories": {
@@ -135,12 +148,11 @@
     "thisMonth": "Your giving this month",
     "vsLastMonth": "vs. last month ({{amount}})",
     "yearTotal": "Year total",
-    "yearGoal": "goal {{amount}}",
     "recent": "Recent giving",
     "seeAll": "See all →",
     "empty": "No giving yet. Your first gift will appear here.",
-    "scope": "My scope",
-    "scopeSub": "Track your assemblies and members",
+    "scope": "Treasury",
+    "scopeSub": "Giving across your treasury scope",
     "tiles": {
       "declare": "Record a gift",
       "declareHint": "Cash, cheque, transfer",
@@ -168,26 +180,40 @@
       "compteRenduBody": "Coming soon — take and share notes from services: teachings, testimonies, decisions of the local assembly.",
       "cantiqueKicker": "Available on the CMFIPraise app",
       "cantiqueDownload": "Download CMFIPraise"
-    }
+    },
+    "noneThisMonth": "No giving recorded this month.",
+    "summaryUnavailable": "Your totals could not be loaded."
   },
   "declare": {
     "title": "Record a gift",
-    "intro": "Record a gift already given during a service — the app does not process any payment.",
+    "intro": "Record a gift already given during a service — one date, one currency, and as many categories as needed. The app does not process any payment.",
     "amount": "Amount",
     "date": "Gift date",
     "category": "Category",
     "note": "Note (optional)",
     "notePlaceholder": "An intention, a detail to remember…",
     "submit": "Confirm declaration",
-    "footnote": "A receipt will be added to your personal journal. You can edit it within 24 h.",
+    "footnote": "Your declaration starts as “Declared”. You can correct it until the treasurer has verified it.",
     "invalidAmount": "Enter a valid amount.",
-    "successTitle": "Gift recorded, with gratitude.",
-    "successHint": "Your declaration is now in your journal.",
-    "receipt": "Receipt",
-    "receiptHeader": "RECEIPT · {{reference}}",
-    "viewDonations": "View my giving",
+    "successTitle": "Declaration recorded, with gratitude.",
+    "successHint": "It now appears in “My declarations”, waiting for the treasurer to verify it.",
+    "receipt": "Declaration",
+    "viewDonations": "View my declarations",
     "finish": "Finish",
-    "verseQuote": "“Each one must give as he has decided in his heart.”"
+    "verseQuote": "“Each one must give as he has decided in his heart.”",
+    "pickDate": "Gift date",
+    "pickDateHint": "Pick the day the gift was given. A future date cannot be recorded.",
+    "noCategories": "No category is available for your ministry. The secretariat configures them from the back office.",
+    "totalDeclared": "Declared total",
+    "totalComputed": "The total is computed from the categories below.",
+    "singleCurrency": "One currency per declaration.",
+    "breakdown": "Breakdown by category",
+    "addLine": "Add a category",
+    "removeLine": "Remove this category",
+    "pickCategory": "Choose a category",
+    "lineIndex": "Line {{index}}",
+    "lineNeedsCategory": "Choose a category for every line.",
+    "needsOneLine": "Add at least one category."
   },
   "history": {
     "title": "My giving",
@@ -203,22 +229,14 @@
       "custom": "Custom"
     },
     "categoriesAll": "All",
-    "emptyState": "No giving yet — your first gift will appear here."
+    "emptyState": "No giving yet — your first gift will appear here.",
+    "noTotal": "No giving in this period."
   },
   "detail": {
-    "title": "Gift detail",
-    "certificate": "GIFT CERTIFICATE",
-    "amount": "Amount",
     "date": "Date",
-    "reference": "Reference",
     "unit": "Assembly",
-    "means": "Method",
-    "meansDefault": "Cash · envelope",
     "note": "Note",
-    "footer": "Recorded in shephr",
-    "deleteConfirm": "Delete this gift?",
-    "deleteFailed": "Could not delete.",
-    "locked": "This gift is locked (over 24 h). Contact a leader for any correction."
+    "footer": "Recorded in shephr"
   },
   "profile": {
     "title": "Profile",
@@ -235,7 +253,7 @@
     "preferences": "Preferences",
     "language": "Language",
     "notifications": "Notifications",
-    "notificationsValue": "Reminders",
+    "notificationsValue": "Reminders, information, updates",
     "receipts": "Annual receipts",
     "receiptsValue": "Enabled",
     "privacy": "Privacy",
@@ -274,7 +292,13 @@
     "center": "Center",
     "assembly": "Assembly",
     "donations_one": "{{count}} gift",
-    "donations_other": "{{count}} gifts"
+    "donations_other": "{{count}} gifts",
+    "treasuryTitle": "Treasury",
+    "loadError": "Some treasury data could not be loaded.",
+    "notTreasurer": "This area is reserved for treasurers. You have no active assignment.",
+    "myDonations": "My giving",
+    "myDonationsHint": "Your own declarations",
+    "noneThisMonth": "No giving this month."
   },
   "unit": {
     "invite": "Invite",
@@ -288,7 +312,8 @@
     "shownMembers": "{{count}} shown",
     "noMembersPeriod": "No members for this period.",
     "memberActive": "Active",
-    "memberInactive": "Inactive"
+    "memberInactive": "Inactive",
+    "loadError": "This assembly could not be loaded."
   },
   "stats": {
     "headerTitle": "Statistics",
@@ -302,7 +327,51 @@
       "3m": "3 months",
       "6m": "6 months",
       "year": "Year"
-    }
+    },
+    "loadError": "Statistics could not be loaded.",
+    "byUnit": "By assembly",
+    "officialHint": "Official totals: only verified declarations are counted.",
+    "allStatusHint": "Everything declared, verified or not."
+  },
+  "treasury": {
+    "queueTitle": "To verify",
+    "queueHeading": "Declarations",
+    "queueSubtitle": "Compare each declaration with what you actually received, then verify it.",
+    "filter": {
+      "DECLARE": "To verify",
+      "VERIFIE": "Verified",
+      "ALL": "All"
+    },
+    "statusSelfVerified": "Self-verified",
+    "scopeAll": "My whole scope",
+    "scopeMine": "My giving",
+    "resultCount_one": "{{count}} declaration",
+    "resultCount_other": "{{count}} declarations",
+    "emptyQueue": "Nothing to verify right now.",
+    "emptyList": "No declaration for this filter.",
+    "loadMore": "Show more",
+    "loadError": "Declarations could not be loaded.",
+    "pendingCount_one": "{{count}} declaration waiting",
+    "pendingCount_other": "{{count}} declarations waiting",
+    "pendingUnknown": "Declarations waiting to be verified",
+    "detailTitle": "Declaration",
+    "declaredTotal": "Declared total",
+    "linesCount_one": "{{count}} category",
+    "linesCount_other": "{{count}} categories",
+    "breakdown": "Breakdown",
+    "mismatchHint": "Amount does not match what you received? Do not verify it: talk to the person, they will correct their own declaration.",
+    "selfVerifyAhead": "This declaration is your own. You may verify it; it will be marked as self-verified.",
+    "verify": "Verify",
+    "verifyConfirmTitle": "Verify this declaration?",
+    "verifyConfirmBody": "You confirm you received this giving. The person will no longer be able to correct it.",
+    "verifyFailed": "The verification could not be saved.",
+    "unverify": "Undo verification",
+    "unverifyConfirmTitle": "Undo the verification?",
+    "unverifyConfirmBody": "The person who declared it will be able to correct it again.",
+    "selfVerifiedTitle": "Self-verified",
+    "selfVerifiedHint": "The verifier is also the giver.",
+    "verifiedBy": "Verified by {{name}} on {{date}}.",
+    "notFound": "Declaration not found, or outside your treasury scope."
   },
   "goals": {
     "title": "Goals",
@@ -349,7 +418,9 @@
       "perimeter": "My scope",
       "perimeterHint": "The totals of the assemblies in your scope — read only.",
       "units": "My assemblies",
-      "unitsHint": "Pledge tracking, assembly by assembly, down to the member."
+      "unitsHint": "Pledge tracking, assembly by assembly, down to the member.",
+      "remind": "Send reminders",
+      "remindHint": "The people in your perimeter who have not submitted yet."
     },
     "members": {
       "show": "Show member detail",
@@ -372,6 +443,46 @@
       "reminderSentBody": "{{name}} has been reminded.",
       "reminderRefused": "Reminder not sent",
       "loadFailed": "Could not load members' commitments. Please try again later."
+    },
+    "remind": {
+      "title": "Send reminders",
+      "intro": "Remind everyone who has not submitted their pledges yet — in a single step.",
+      "geoSection": "My perimeter",
+      "geoHint": "The people attached to the assemblies of the selected perimeter.",
+      "disciplesSection": "People I disciple",
+      "disciplesHint": "The people who declared you as their discipler. A separate choice from the geographic perimeter: the two are never combined.",
+      "disciplesCaption": "Those who declared you",
+      "scope": {
+        "ASSEMBLY": "My assembly",
+        "CITY": "My city",
+        "ZONE": "My region",
+        "COUNTRY": "My nation",
+        "DISCIPLES": "My disciples"
+      },
+      "pendingBadge_one": "{{count}} to remind",
+      "pendingBadge_other": "{{count}} to remind",
+      "preview_one": "{{count}} person will be reminded, out of {{total}} in this perimeter.",
+      "preview_other": "{{count}} people will be reminded, out of {{total}} in this perimeter.",
+      "previewNone": "Nobody to remind here: everyone has submitted.",
+      "messageLabel": "Message (optional)",
+      "messagePlaceholder": "Leave empty for the default message, with the deadline.",
+      "messageHint": "The same message is sent to every person in the perimeter.",
+      "sendCta": "Send reminders",
+      "confirmTitle": "Send reminders",
+      "confirmBody_one": "Remind {{count}} person in “{{scope}}”?",
+      "confirmBody_other": "Remind {{count}} people in “{{scope}}”?",
+      "confirmCta": "Send",
+      "doneTitle": "Reminders sent",
+      "resultSent": "Reminders sent",
+      "resultSkipped": "Already reminded",
+      "resultSubmitted": "Already submitted",
+      "skippedHint": "Anyone reminded within the last 24 hours is skipped: nobody gets the same reminder twice.",
+      "sentToLabel": "Recipients",
+      "backCta": "Done",
+      "antispamHint": "People who already submitted are never reminded, and each person receives at most one reminder per 24 hours.",
+      "loadError": "Could not load the reminder perimeters.",
+      "failed": "Sending the reminders failed.",
+      "denied": "This perimeter is not yours. Only a leader reminds a geographic perimeter; you can always remind the people you disciple."
     }
   },
   "goalsAgg": {
@@ -530,7 +641,9 @@
     "historyUnknownAuthor": "—",
     "historyLoadMore": "Load more",
     "missingCityHint": "Your city is missing from the list? It is created by the secretariat: get in touch.",
-    "contactMailSubject": "Shephr — new city request"
+    "contactMailSubject": "Shephr — new city request",
+    "needsLeader": "Leader needed",
+    "needsLeaderHint": "{{count}} assembly/assemblies in your scope are waiting for a leader."
   },
   "notifications": {
     "morePending": "{{count}} more reminder(s) pending",
@@ -742,9 +855,6 @@
     "errEmail": "Invalid username (expected format: first.last@shephr.org).",
     "errFailed": "The invitation failed."
   },
-  "editDon": {
-    "title": "Edit donation"
-  },
   "care": {
     "title": "Flock care",
     "subtitle": "Record the spiritual state of the members in your assembly.",
@@ -818,9 +928,9 @@
     "loadError": "Could not load your attachment.",
     "searchLabel": "Search for the person",
     "searchPlaceholder": "Name, email or username",
-    "searchHint": "Only people from your ministry.",
+    "searchHint": "Only leaders from your ministry.",
     "searchTooShort": "Type at least 2 characters.",
-    "noResult": "No one found in your ministry.",
+    "noResult": "No leader found in your ministry.",
     "inviteHint": "Can't find the person? Invite them to create an account, then come back and declare them.",
     "invite": "Invite this person",
     "shareMessage": "Hello, join me on the shephr app: install it and create your account. I will then be able to declare you as my supervisor.",
@@ -832,7 +942,8 @@
       "SUPERVISOR_OUT_OF_MINISTRY": "This person does not belong to your ministry.",
       "SUPERVISOR_CYCLE": "This person is already someone you supervise.",
       "NO_MINISTRY": "Your account has no ministry — contact the secretariat.",
-      "QUERY_TOO_SHORT": "Type at least 2 characters."
+      "QUERY_TOO_SHORT": "Type at least 2 characters.",
+      "SUPERVISOR_NOT_A_LEADER": "Only a leader can be declared: this person is not one."
     }
   },
   "assembly": {
@@ -856,5 +967,75 @@
     "doneBody": "You are now a member of {{name}}.",
     "refusedTitle": "Change refused",
     "notFound": "This assembly cannot be found or is no longer active."
+  },
+  "declarations": {
+    "title": "My declarations",
+    "count_one": "{{count}} declaration",
+    "count_other": "{{count}} declarations",
+    "lines_one": "{{count}} category",
+    "lines_other": "{{count}} categories",
+    "statusAll": "All",
+    "status": {
+      "DECLARE": "Declared",
+      "VERIFIE": "Verified"
+    },
+    "emptyState": "No declaration yet — your first recorded gift will appear here.",
+    "noTotal": "No declaration in this period.",
+    "loadFailed": "Could not load your declarations.",
+    "notFound": "This declaration cannot be found.",
+    "detailTitle": "Declaration detail",
+    "editTitle": "Edit declaration",
+    "certificate": "GIFT DECLARATION",
+    "breakdown": "Breakdown",
+    "verifiedBy": "Verified by",
+    "selfVerified": "Self-verified",
+    "deleteConfirm": "Delete this declaration? The lines it carries will be removed with it.",
+    "editableHint": "You can correct or delete this declaration until the treasurer has verified it.",
+    "lockedHint": "This declaration has been verified by the treasurer and can no longer be changed. Contact them if a correction is needed."
+  },
+  "donationReminder": {
+    "title": "Send a reminder",
+    "subtitle": "Write in one go to the people in your scope who have declared nothing for the period. Those who already declared are never reminded.",
+    "scope": "Scope",
+    "scopeHint_one": "{{scope}} — {{count}} assembly",
+    "scopeHint_other": "{{scope}} — {{count}} assemblies",
+    "message": "Message (optional)",
+    "messagePlaceholder": "Leave empty for the default message.",
+    "send": "Send reminder",
+    "confirmTitle": "Remind this scope?",
+    "confirmBody": "People in {{scope}} who have declared nothing for the period will get a reminder next time they open the app.",
+    "loadError": "Could not load your reminder scopes.",
+    "sendError": "The reminder could not be sent.",
+    "resultSent_one": "{{count}} person reminded",
+    "resultSent_other": "{{count}} people reminded",
+    "resultSkipped_one": "{{count}} already reminded in the last 24 h",
+    "resultSkipped_other": "{{count}} already reminded in the last 24 h",
+    "resultDeclared_one": "{{count}} had already declared",
+    "resultDeclared_other": "{{count}} had already declared",
+    "resultPeriod": "Period observed: {{from}} to {{to}}."
+  },
+  "push": {
+    "title": "Notifications",
+    "intro": "Choose what shephr may announce on this phone. You can change your mind at any time.",
+    "reminders": "Reminders",
+    "remindersHelp": "Follow-ups from your treasurer and your leader",
+    "infos": "Information",
+    "infosHelp": "Announcements and ministry news",
+    "updates": "App updates",
+    "updatesHelp": "When a new version is available",
+    "inAppNote": "Turning a category off silences the banner, not the message: reminders stay readable when you open the app.",
+    "inviteTitle": "Don't miss anything",
+    "inviteBody": "shephr can let you know when your treasurer or your leader follows up with you, and when the ministry posts an announcement. Nothing else.",
+    "inviteAccept": "Turn on",
+    "inviteLater": "Later",
+    "enableTitle": "Notifications turned off",
+    "enableBody": "Nothing will reach you until notifications are allowed on this device.",
+    "enableAction": "Turn on notifications",
+    "blockedTitle": "Notifications blocked",
+    "blockedBody": "Your phone does not allow notifications from shephr. Nothing will reach you while they stay blocked.",
+    "openSettings": "Open phone settings",
+    "unsupportedTitle": "Not available on this device",
+    "unsupportedBody": "Notifications require a phone or tablet: they work neither on the web nor on a simulator.",
+    "saveError": "Setting saved on this device. It will be sent the next time you open the app."
   }
 }

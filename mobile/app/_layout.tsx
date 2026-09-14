@@ -22,6 +22,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '../contexts/AuthContext';
 import { LanguageProvider } from '../contexts/LanguageContext';
+import PushBridge from '../components/push/PushBridge';
 import { loadContactSettings } from '../services/contactApi';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -71,6 +72,12 @@ export default function RootLayout() {
         <LanguageProvider>
           <AuthProvider>
             <StatusBar style="dark" />
+            {/* Lot N4b (J-3 14/09) — push Expo : enregistrement de l'appareil, canaux Android,
+                routage du tap, invitation d'activation. Sous `AuthProvider` parce qu'il suit la
+                connexion et la déconnexion ; il ne rend rien tant qu'il n'y a rien à demander, et
+                il ne bloque JAMAIS le démarrage — sans clé APNs ni `google-services.json`,
+                l'application s'ouvre et la file in-app fonctionne à l'identique. */}
+            <PushBridge />
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#E8DCC4' } }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="(auth)" />
@@ -92,6 +99,9 @@ export default function RootLayout() {
               <Stack.Screen name="membres" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="hierarchie" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="superviseur" options={{ animation: 'slide_from_right' }} />
+              {/* Réglages des notifications — hors onglets : on y vient du Profil, et la
+                  catégorie « Rappels » de N4a y a son interrupteur. */}
+              <Stack.Screen name="notification-settings" options={{ animation: 'slide_from_right' }} />
             </Stack>
           </AuthProvider>
         </LanguageProvider>

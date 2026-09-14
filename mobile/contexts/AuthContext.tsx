@@ -4,6 +4,7 @@ import {
   fetchMe,
   hasGoalsAccess,
   isLeaderRole,
+  isTreasurerRole,
   login as loginRequest,
   register as registerRequest,
   type AuthResponse,
@@ -13,6 +14,7 @@ import {
   type UserDTO,
 } from '../services/authApi';
 import { getAuthToken, setAuthToken } from '../services/apiClient';
+import { resetDonationCategoriesCache } from '../hooks/useDonationCategories';
 
 interface AuthState {
   ready: boolean;
@@ -24,6 +26,12 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   isAuthenticated: boolean;
   isLeader: boolean;
+  /**
+   * Lot T4 (défaut C, 14/09) — fonction de TRÉSORIER, lue sur `me.treasurer`. Elle seule ouvre
+   * l'onglet « Trésorerie » et les vues `/api/church/leader/**` : un rang pastoral (`isLeader`)
+   * n'y donne plus rien. Relue à chaque `/me`, donc une nomination vaut sans nouveau login.
+   */
+  isTreasurer: boolean;
   hasGoals: boolean;
   hasUnit: boolean;
   /** Modules accessibles (codes) ; alimente le gating de navigation. */
@@ -64,6 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Charge les modules accessibles à chaque changement de session (login/logout/restauration).
   useEffect(() => {
     let active = true;
+    // Lot T5 — le référentiel des rubriques est SCOPÉ AU MINISTÈRE du compte (décision D0-5) :
+    // son cache doit tomber au même moment que la session, sinon le compte suivant verrait
+    // d'abord les rubriques du précédent. Même raison que le `queryClient.clear()` du web.
+    resetDonationCategoriesCache();
     if (!state.token) {
       setModules([]);
       return;
@@ -137,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ...state,
     isAuthenticated: !!state.token,
     isLeader: isLeaderRole(state.me),
+    isTreasurer: isTreasurerRole(state.me),
     hasGoals: hasGoalsAccess(state.me),
     hasUnit: !!state.me?.donationUnitId,
     modules,

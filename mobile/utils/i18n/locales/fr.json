@@ -1,12 +1,13 @@
 {
   "tabs": {
     "home": "Accueil",
-    "donations": "Mes dons",
+    "donations": "Déclarations",
     "leader": "Périmètre",
     "profile": "Profil",
     "goals": "Objectifs",
     "care": "Brebis",
-    "requests": "Demandes"
+    "requests": "Demandes",
+    "treasury": "Trésorerie"
   },
   "common": {
     "today": "Aujourd'hui",
@@ -24,7 +25,9 @@
     "comingSoon": "Bientôt",
     "all": "Tous",
     "allF": "Toutes",
-    "choose": "Choisir…"
+    "choose": "Choisir…",
+    "monthsLong": "janvier,février,mars,avril,mai,juin,juillet,août,septembre,octobre,novembre,décembre",
+    "weekdayInitials": "L,M,M,J,V,S,D"
   },
   "errors": {
     "serverUnreachable": "Serveur injoignable — vérifiez que le backend tourne et que le téléphone est sur le même réseau que le Mac.",
@@ -46,7 +49,17 @@
       "MEMBER_ALREADY_SUBMITTED": "Cette personne a déjà soumis ses objectifs.",
       "REMINDER_ALREADY_SENT": "Un rappel lui a déjà été envoyé il y a moins de 24 h.",
       "STRUCTURE_NAME_EXISTS": "Une assemblée porte déjà ce nom dans cette ville. Choisissez-en un autre, ou rejoignez celle qui existe.",
-      "ASSEMBLY_MINISTRY_MISMATCH": "Cette assemblée appartient à un autre ministère — contactez le secrétariat."
+      "ASSEMBLY_MINISTRY_MISMATCH": "Cette assemblée appartient à un autre ministère — contactez le secrétariat.",
+      "SCOPE_REQUIRED": "Choisissez le périmètre à relancer.",
+      "SCOPE_ID_REQUIRED": "Vous portez plusieurs périmètres de ce niveau : précisez lequel relancer."
+    },
+    "donations": {
+      "DECLARATION_VERIFIED": "Cette déclaration a été vérifiée par le trésorier : elle ne peut plus être modifiée.",
+      "DECLARED_TOTAL_MISMATCH": "Le total déclaré ne correspond pas à la somme des rubriques.",
+      "DECLARATION_SINGLE_CURRENCY": "Une déclaration ne porte qu’une seule devise.",
+      "INVALID_DECLARATION": "Une déclaration comporte au moins une rubrique — pour renoncer, supprimez-la.",
+      "INVALID_CURRENCY": "Devise inconnue.",
+      "USER_NO_UNIT": "Votre compte n'est rattaché à aucune assemblée : vous ne pouvez rien déclarer."
     }
   },
   "categories": {
@@ -135,12 +148,11 @@
     "thisMonth": "Vos dons ce mois-ci",
     "vsLastMonth": "vs. mois dernier ({{amount}})",
     "yearTotal": "Total de l'année",
-    "yearGoal": "objectif {{amount}}",
     "recent": "Dons récents",
     "seeAll": "Tout voir →",
     "empty": "Aucun don encore. Votre premier geste se posera ici.",
-    "scope": "Mon périmètre",
-    "scopeSub": "Suivez vos assemblées et membres",
+    "scope": "Trésorerie",
+    "scopeSub": "Les dons de votre périmètre de trésorerie",
     "tiles": {
       "declare": "Déclarer un don",
       "declareHint": "Espèces, chèque, virement",
@@ -168,26 +180,40 @@
       "compteRenduBody": "Bientôt — prenez et partagez les notes des cultes : enseignements, témoignages, décisions de l'assemblée locale.",
       "cantiqueKicker": "Disponible sur l'app CMFIPraise",
       "cantiqueDownload": "Télécharger CMFIPraise"
-    }
+    },
+    "noneThisMonth": "Aucun don déclaré ce mois-ci.",
+    "summaryUnavailable": "Vos totaux n'ont pas pu être chargés."
   },
   "declare": {
     "title": "Déclarer un don",
-    "intro": "Inscrivez un don déjà remis lors d'un culte — l'app ne traite aucun paiement.",
+    "intro": "Inscrivez un versement déjà remis lors d'un culte — une date, une devise, et autant de rubriques que nécessaire. L'app ne traite aucun paiement.",
     "amount": "Montant",
     "date": "Date du don",
     "category": "Catégorie",
     "note": "Note (facultatif)",
     "notePlaceholder": "Une intention, un détail à se rappeler…",
     "submit": "Confirmer la déclaration",
-    "footnote": "Un reçu sera ajouté à votre journal personnel. Vous pourrez le modifier dans les 24 h.",
+    "footnote": "Votre déclaration part en « Déclaré ». Vous pourrez la corriger tant que le trésorier ne l'a pas vérifiée.",
     "invalidAmount": "Saisissez un montant valide.",
-    "successTitle": "Don enregistré, avec gratitude.",
-    "successHint": "Votre déclaration figure désormais dans votre journal.",
-    "receipt": "Reçu",
-    "receiptHeader": "REÇU · {{reference}}",
-    "viewDonations": "Voir mes dons",
+    "successTitle": "Déclaration enregistrée, avec gratitude.",
+    "successHint": "Elle figure dans « Mes déclarations », en attente de vérification par le trésorier.",
+    "receipt": "Déclaration",
+    "viewDonations": "Voir mes déclarations",
     "finish": "Terminer",
-    "verseQuote": "« Que chacun donne comme il l'a résolu en son cœur. »"
+    "verseQuote": "« Que chacun donne comme il l'a résolu en son cœur. »",
+    "pickDate": "Date du don",
+    "pickDateHint": "Choisissez le jour où le don a été remis. Une date future ne peut pas être déclarée.",
+    "noCategories": "Aucune rubrique n'est disponible pour votre ministère. Le secrétariat les configure depuis le back-office.",
+    "totalDeclared": "Total déclaré",
+    "totalComputed": "Le total se calcule à partir des rubriques ci-dessous.",
+    "singleCurrency": "Une seule devise par déclaration.",
+    "breakdown": "Ventilation par rubrique",
+    "addLine": "Ajouter une rubrique",
+    "removeLine": "Retirer cette rubrique",
+    "pickCategory": "Choisir une rubrique",
+    "lineIndex": "Ligne {{index}}",
+    "lineNeedsCategory": "Choisissez une rubrique pour chaque ligne.",
+    "needsOneLine": "Ajoutez au moins une rubrique."
   },
   "history": {
     "title": "Mes dons",
@@ -203,22 +229,14 @@
       "custom": "Personnalisé"
     },
     "categoriesAll": "Toutes",
-    "emptyState": "Aucun don encore — votre premier geste sera ici."
+    "emptyState": "Aucun don encore — votre premier geste sera ici.",
+    "noTotal": "Aucun don sur la période."
   },
   "detail": {
-    "title": "Détail du don",
-    "certificate": "ATTESTATION DE DON",
-    "amount": "Montant",
     "date": "Date",
-    "reference": "Référence",
     "unit": "Assemblée",
-    "means": "Moyen",
-    "meansDefault": "Espèces · enveloppe",
     "note": "Note",
-    "footer": "Enregistré dans shephr",
-    "deleteConfirm": "Supprimer ce don ?",
-    "deleteFailed": "Suppression impossible.",
-    "locked": "Ce don est verrouillé (plus de 24 h). Contactez un responsable pour toute correction."
+    "footer": "Enregistré dans shephr"
   },
   "profile": {
     "title": "Profil",
@@ -235,7 +253,7 @@
     "preferences": "Préférences",
     "language": "Langue",
     "notifications": "Notifications",
-    "notificationsValue": "Rappels",
+    "notificationsValue": "Rappels, informations, mises à jour",
     "receipts": "Reçus annuels",
     "receiptsValue": "Activés",
     "privacy": "Confidentialité",
@@ -274,7 +292,13 @@
     "center": "Centre",
     "assembly": "Assemblée",
     "donations_one": "{{count}} don",
-    "donations_other": "{{count}} dons"
+    "donations_other": "{{count}} dons",
+    "treasuryTitle": "Trésorerie",
+    "loadError": "Certaines données de trésorerie n'ont pas pu être chargées.",
+    "notTreasurer": "Cet espace est réservé aux trésoriers. Vous n'avez aucune affectation active.",
+    "myDonations": "Mes dons",
+    "myDonationsHint": "Vos déclarations personnelles",
+    "noneThisMonth": "Aucun don ce mois-ci."
   },
   "unit": {
     "invite": "Inviter",
@@ -288,7 +312,8 @@
     "shownMembers": "{{count}} affichés",
     "noMembersPeriod": "Aucun membre sur la période.",
     "memberActive": "Actif",
-    "memberInactive": "Inactif"
+    "memberInactive": "Inactif",
+    "loadError": "Impossible de charger cette assemblée."
   },
   "stats": {
     "headerTitle": "Statistiques",
@@ -302,7 +327,51 @@
       "3m": "3 mois",
       "6m": "6 mois",
       "year": "Année"
-    }
+    },
+    "loadError": "Impossible de charger les statistiques.",
+    "byUnit": "Par assemblée",
+    "officialHint": "Totaux officiels : seules les déclarations vérifiées sont comptées.",
+    "allStatusHint": "Tout ce qui a été déclaré, vérifié ou non."
+  },
+  "treasury": {
+    "queueTitle": "À vérifier",
+    "queueHeading": "Déclarations",
+    "queueSubtitle": "Comparez chaque déclaration avec ce que vous avez constaté, puis validez.",
+    "filter": {
+      "DECLARE": "À vérifier",
+      "VERIFIE": "Vérifiées",
+      "ALL": "Toutes"
+    },
+    "statusSelfVerified": "Auto-validée",
+    "scopeAll": "Tout mon périmètre",
+    "scopeMine": "Mes dons",
+    "resultCount_one": "{{count}} déclaration",
+    "resultCount_other": "{{count}} déclarations",
+    "emptyQueue": "Rien à vérifier pour l'instant.",
+    "emptyList": "Aucune déclaration pour ce filtre.",
+    "loadMore": "Afficher plus",
+    "loadError": "Impossible de charger les déclarations.",
+    "pendingCount_one": "{{count}} déclaration en attente",
+    "pendingCount_other": "{{count}} déclarations en attente",
+    "pendingUnknown": "Déclarations en attente de validation",
+    "detailTitle": "Déclaration",
+    "declaredTotal": "Total déclaré",
+    "linesCount_one": "{{count}} rubrique",
+    "linesCount_other": "{{count}} rubriques",
+    "breakdown": "Ventilation",
+    "mismatchHint": "Le montant ne correspond pas à ce que vous avez constaté ? Ne validez pas : contactez la personne, elle corrigera elle-même sa déclaration.",
+    "selfVerifyAhead": "Cette déclaration est la vôtre. Vous pouvez la valider ; la mention « auto-validée » sera conservée.",
+    "verify": "Valider",
+    "verifyConfirmTitle": "Valider cette déclaration ?",
+    "verifyConfirmBody": "Vous confirmez avoir constaté ce versement. La personne ne pourra plus le corriger.",
+    "verifyFailed": "La validation n'a pas pu être enregistrée.",
+    "unverify": "Dévalider",
+    "unverifyConfirmTitle": "Dévalider cette déclaration ?",
+    "unverifyConfirmBody": "Elle redeviendra modifiable par la personne qui l'a déclarée.",
+    "selfVerifiedTitle": "Auto-validée",
+    "selfVerifiedHint": "Le validateur est aussi le donateur.",
+    "verifiedBy": "Validée par {{name}} le {{date}}.",
+    "notFound": "Déclaration introuvable, ou hors de votre périmètre de trésorerie."
   },
   "goals": {
     "title": "Objectifs",
@@ -349,7 +418,9 @@
       "perimeter": "Mon périmètre",
       "perimeterHint": "Les cumuls des assemblées de votre périmètre — en lecture.",
       "units": "Mes assemblées",
-      "unitsHint": "Suivi des engagements, assemblée par assemblée, jusqu’au membre."
+      "unitsHint": "Suivi des engagements, assemblée par assemblée, jusqu’au membre.",
+      "remind": "Relancer",
+      "remindHint": "Les personnes de votre périmètre qui n'ont pas encore soumis."
     },
     "members": {
       "show": "Voir le détail des membres",
@@ -372,6 +443,46 @@
       "reminderSentBody": "{{name}} a reçu un rappel.",
       "reminderRefused": "Rappel non envoyé",
       "loadFailed": "Impossible de charger les engagements des membres. Réessayez plus tard."
+    },
+    "remind": {
+      "title": "Relancer",
+      "intro": "Envoyez un rappel, en un seul geste, aux personnes qui n'ont pas encore soumis leurs engagements.",
+      "geoSection": "Mon périmètre",
+      "geoHint": "Les personnes rattachées aux assemblées du périmètre choisi.",
+      "disciplesSection": "Mon accompagnement",
+      "disciplesHint": "Les personnes qui vous ont déclaré comme faiseur de disciple. Choix distinct du périmètre géographique : les deux ne sont jamais cumulés.",
+      "disciplesCaption": "Celles qui vous ont déclaré",
+      "scope": {
+        "ASSEMBLY": "Mon assemblée",
+        "CITY": "Ma ville",
+        "ZONE": "Ma région",
+        "COUNTRY": "Ma nation",
+        "DISCIPLES": "Mes disciples"
+      },
+      "pendingBadge_one": "{{count}} à relancer",
+      "pendingBadge_other": "{{count}} à relancer",
+      "preview_one": "{{count}} personne sera relancée, sur {{total}} dans ce périmètre.",
+      "preview_other": "{{count}} personnes seront relancées, sur {{total}} dans ce périmètre.",
+      "previewNone": "Personne à relancer ici : tout le monde a soumis.",
+      "messageLabel": "Message (facultatif)",
+      "messagePlaceholder": "Laissez vide pour le message par défaut, avec la date limite.",
+      "messageHint": "Le même message est envoyé à chaque personne du périmètre.",
+      "sendCta": "Envoyer les rappels",
+      "confirmTitle": "Envoyer les rappels",
+      "confirmBody_one": "Relancer {{count}} personne dans « {{scope}} » ?",
+      "confirmBody_other": "Relancer {{count}} personnes dans « {{scope}} » ?",
+      "confirmCta": "Envoyer",
+      "doneTitle": "Rappels envoyés",
+      "resultSent": "Rappels envoyés",
+      "resultSkipped": "Déjà relancées",
+      "resultSubmitted": "Ont déjà soumis",
+      "skippedHint": "Une personne déjà relancée dans les 24 dernières heures est sautée : elle ne reçoit pas deux fois le même rappel.",
+      "sentToLabel": "Destinataires",
+      "backCta": "Terminer",
+      "antispamHint": "Les personnes ayant déjà soumis ne sont jamais relancées, et un rappel au plus est envoyé à chacune par 24 heures.",
+      "loadError": "Impossible de charger les périmètres de relance.",
+      "failed": "L'envoi des rappels a échoué.",
+      "denied": "Ce périmètre n'est pas le vôtre. Seul un dirigeant relance un périmètre géographique ; vous pouvez relancer les personnes que vous accompagnez."
     }
   },
   "goalsAgg": {
@@ -530,7 +641,9 @@
     "historyUnknownAuthor": "—",
     "historyLoadMore": "Charger plus",
     "missingCityHint": "Votre ville n'apparaît pas dans la liste ? Elle est créée par le secrétariat : contactez-le.",
-    "contactMailSubject": "Shephr — création d'une ville"
+    "contactMailSubject": "Shephr — création d'une ville",
+    "needsLeader": "Dirigeant requis",
+    "needsLeaderHint": "{{count}} assemblée(s) de votre périmètre attendent un dirigeant."
   },
   "notifications": {
     "morePending": "{{count}} autre(s) rappel(s) en attente",
@@ -742,9 +855,6 @@
     "errEmail": "Identifiant invalide (format attendu : prenom.nom@shephr.org).",
     "errFailed": "L'invitation a échoué."
   },
-  "editDon": {
-    "title": "Modifier le don"
-  },
   "care": {
     "title": "Suivi des brebis",
     "subtitle": "Renseignez l'état spirituel des membres de votre assemblée.",
@@ -818,9 +928,9 @@
     "loadError": "Impossible de charger votre rattachement.",
     "searchLabel": "Chercher la personne",
     "searchPlaceholder": "Nom, email ou identifiant",
-    "searchHint": "Uniquement les personnes de votre ministère.",
+    "searchHint": "Uniquement les dirigeants de votre ministère.",
     "searchTooShort": "Saisissez au moins 2 caractères.",
-    "noResult": "Aucune personne trouvée dans votre ministère.",
+    "noResult": "Aucun dirigeant trouvé dans votre ministère.",
     "inviteHint": "Vous ne trouvez pas la personne ? Invitez-la à créer son compte, puis revenez la déclarer.",
     "invite": "Inviter cette personne",
     "shareMessage": "Bonjour, rejoins-moi sur l'application shephr : installe l'app et crée ton compte. Je pourrai ensuite te déclarer comme mon superviseur.",
@@ -832,7 +942,8 @@
       "SUPERVISOR_OUT_OF_MINISTRY": "Cette personne n'appartient pas à votre ministère.",
       "SUPERVISOR_CYCLE": "Cette personne fait déjà partie des dirigeants que vous supervisez.",
       "NO_MINISTRY": "Votre compte n'est rattaché à aucun ministère — contactez le secrétariat.",
-      "QUERY_TOO_SHORT": "Saisissez au moins 2 caractères."
+      "QUERY_TOO_SHORT": "Saisissez au moins 2 caractères.",
+      "SUPERVISOR_NOT_A_LEADER": "Seul un dirigeant peut être déclaré : cette personne n'en est pas un."
     }
   },
   "assembly": {
@@ -856,5 +967,75 @@
     "doneBody": "Vous êtes maintenant membre de {{name}}.",
     "refusedTitle": "Changement refusé",
     "notFound": "Cette assemblée est introuvable ou n'est plus active."
+  },
+  "declarations": {
+    "title": "Mes déclarations",
+    "count_one": "{{count}} déclaration",
+    "count_other": "{{count}} déclarations",
+    "lines_one": "{{count}} rubrique",
+    "lines_other": "{{count}} rubriques",
+    "statusAll": "Toutes",
+    "status": {
+      "DECLARE": "Déclaré",
+      "VERIFIE": "Vérifié"
+    },
+    "emptyState": "Aucune déclaration encore — votre premier versement déclaré apparaîtra ici.",
+    "noTotal": "Aucune déclaration sur la période.",
+    "loadFailed": "Impossible de charger vos déclarations.",
+    "notFound": "Cette déclaration est introuvable.",
+    "detailTitle": "Détail de la déclaration",
+    "editTitle": "Modifier la déclaration",
+    "certificate": "DÉCLARATION DE DON",
+    "breakdown": "Ventilation",
+    "verifiedBy": "Vérifiée par",
+    "selfVerified": "Auto-validée",
+    "deleteConfirm": "Supprimer cette déclaration ? Les lignes qu'elle porte seront retirées avec elle.",
+    "editableHint": "Vous pouvez corriger ou supprimer cette déclaration tant que le trésorier ne l'a pas vérifiée.",
+    "lockedHint": "Cette déclaration a été vérifiée par le trésorier : elle ne peut plus être modifiée. Contactez-le si une correction est nécessaire."
+  },
+  "donationReminder": {
+    "title": "Relancer",
+    "subtitle": "Écrire d'un seul geste aux personnes de votre périmètre qui n'ont rien déclaré sur la période. Celles qui ont déjà déclaré ne sont jamais relancées.",
+    "scope": "Périmètre",
+    "scopeHint_one": "{{scope}} — {{count}} assemblée",
+    "scopeHint_other": "{{scope}} — {{count}} assemblées",
+    "message": "Message (facultatif)",
+    "messagePlaceholder": "Laissez vide pour le message par défaut.",
+    "send": "Relancer",
+    "confirmTitle": "Relancer ce périmètre ?",
+    "confirmBody": "Les personnes de {{scope}} n'ayant rien déclaré sur la période recevront un rappel à leur prochaine ouverture de l'application.",
+    "loadError": "Impossible de charger vos périmètres de relance.",
+    "sendError": "La relance n'a pas pu être envoyée.",
+    "resultSent_one": "{{count}} personne relancée",
+    "resultSent_other": "{{count}} personnes relancées",
+    "resultSkipped_one": "{{count}} déjà relancée depuis moins de 24 h",
+    "resultSkipped_other": "{{count}} déjà relancées depuis moins de 24 h",
+    "resultDeclared_one": "{{count}} avait déjà déclaré",
+    "resultDeclared_other": "{{count}} avaient déjà déclaré",
+    "resultPeriod": "Période observée : du {{from}} au {{to}}."
+  },
+  "push": {
+    "title": "Notifications",
+    "intro": "Choisissez ce que shephr peut vous annoncer sur ce téléphone. Vous pouvez changer d'avis à tout moment.",
+    "reminders": "Rappels",
+    "remindersHelp": "Relances de votre trésorier et de votre dirigeant",
+    "infos": "Informations",
+    "infosHelp": "Annonces et nouvelles du ministère",
+    "updates": "Mises à jour de l'application",
+    "updatesHelp": "Quand une nouvelle version est disponible",
+    "inAppNote": "Couper une catégorie coupe la bannière, pas le message : les rappels restent lisibles à l'ouverture de l'application.",
+    "inviteTitle": "Ne rien manquer",
+    "inviteBody": "shephr peut vous prévenir quand votre trésorier ou votre dirigeant vous relance, et quand le ministère publie une annonce. Rien d'autre.",
+    "inviteAccept": "Activer",
+    "inviteLater": "Plus tard",
+    "enableTitle": "Notifications désactivées",
+    "enableBody": "Rien ne vous parviendra tant que les notifications ne sont pas autorisées sur cet appareil.",
+    "enableAction": "Activer les notifications",
+    "blockedTitle": "Notifications bloquées",
+    "blockedBody": "Votre téléphone n'autorise pas les notifications de shephr. Rien ne vous parviendra tant qu'elles resteront bloquées.",
+    "openSettings": "Ouvrir les réglages du téléphone",
+    "unsupportedTitle": "Indisponible sur cet appareil",
+    "unsupportedBody": "Les notifications demandent un téléphone ou une tablette : elles ne fonctionnent ni sur le web ni sur un simulateur.",
+    "saveError": "Réglage enregistré sur l'appareil. Il sera transmis à la prochaine ouverture de l'application."
   }
 }

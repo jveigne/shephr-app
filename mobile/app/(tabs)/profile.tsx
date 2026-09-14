@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, Platform, Linking } from 'react-native';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '../../components/ScreenShell';
 import Button from '../../components/Button';
@@ -176,8 +176,20 @@ export default function ProfileScreen() {
           value={language === 'fr' ? 'Français' : 'English'}
           onPress={() => setLanguage(language === 'fr' ? 'en' : 'fr')}
         />
-{/*        <Row icon="notifications-outline" label={t('profile.notifications')} value={t('profile.notificationsValue')} />
-        <Row icon="receipt-outline" label={t('profile.receipts')} value={t('profile.receiptsValue')} />
+        {/* Lot N4b (J-3 14/09) — l'entrée vers les réglages de notifications. Elle n'est pas
+            décorative : une catégorie de push sans interrupteur atteignable est la cause
+            numéro un de désinstallation, et c'est ici qu'on coupe « Rappels ». */}
+        <Row
+          icon="notifications-outline"
+          label={t('profile.notifications')}
+          value={t('profile.notificationsValue')}
+          // `typedRoutes` régénère `.expo/types/router.d.ts` au démarrage d'Expo, pas à la
+          // compilation : la route reste inconnue de TypeScript tant que le serveur n'a pas
+          // tourné. C'est la seule raison de la conversion.
+          onPress={() => router.push('/notification-settings' as unknown as Href)}
+          last
+        />
+{/*        <Row icon="receipt-outline" label={t('profile.receipts')} value={t('profile.receiptsValue')} />
         <Row icon="shield-outline" label={t('profile.privacy')} value={t('profile.privacyValue')} last />*/}
       </Card>
 

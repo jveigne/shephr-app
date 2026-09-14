@@ -1,10 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { CATEGORIES, DonationCategory } from '../constants/categories';
+import { useDonationCategories } from '../hooks/useDonationCategories';
 import { colors, fonts } from '../theme';
 import { fmtDate, parseLocalDate } from '../utils/format';
-import { useLanguage } from '../contexts/LanguageContext';
 import Amount from './Amount';
 import Card from './Card';
 
@@ -24,8 +23,10 @@ interface Props {
 }
 
 export default function DonationRow({ donation, onPress, compact }: Props) {
-  const { t } = useLanguage();
-  const cat = CATEGORIES[donation.category as DonationCategory] ?? CATEGORIES.autre;
+  // Lot T5 — libellé ET apparence dérivés du référentiel serveur. Le hook partage un cache
+  // mémoire entre toutes les lignes montées : une liste de 30 dons ne fait pas 30 requêtes.
+  const { labelOf, metaOf } = useDonationCategories();
+  const cat = metaOf(donation.category);
   const dateLabel = fmtDate(parseLocalDate(donation.donationDate));
   return (
     <Card onPress={onPress} style={styles.card}>
@@ -34,7 +35,7 @@ export default function DonationRow({ donation, onPress, compact }: Props) {
       </View>
       <View style={styles.body}>
         <Text style={styles.title} numberOfLines={1}>
-          {t('categories.' + cat.key)}
+          {labelOf(donation.category)}
         </Text>
         <Text style={styles.sub} numberOfLines={1}>
           {dateLabel}

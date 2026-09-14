@@ -2,10 +2,10 @@
   "expo": {
     "name": "shephr",
     "slug": "shephr",
-    "version": "0.1.6",
+    "version": "0.1.7",
     "sdkVersion": "54.0.0",
     "extra": {
-      "API_URL": "http://localhost:8080",
+      "API_URL": "https://cmfipraise-prod-production.up.railway.app",
       "router": {
         "origin": false
       },
@@ -55,6 +55,15 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#000"
+        }
+      ],
+      "expo-localization",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#1E3A2F",
+          "defaultChannel": "default"
         }
       ]
     ],

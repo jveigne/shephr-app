@@ -379,6 +379,87 @@ export async function sendMemberReminder(
   return data;
 }
 
+// ==============================================================================================
+//  Rappel GROUPÉ — lot G3 (docs/goals-hierarchie-et-rappels.md §3, cadrage JP 14/09)
+//
+//  ⚠ N'ANNULE PAS `sendMemberReminder` ci-dessus : le rappel unitaire reste en service. Ce qui
+//  change, c'est le geste — un dirigeant d'assemblée de 40 fidèles dont 25 n'ont pas soumis ne
+//  fait plus 25 gestes.
+//
+//  LE POINT CAPITAL (J-4 / J-5) : le périmètre est CHOISI EXPLICITEMENT. « Mes disciples » et les
+//  périmètres géographiques sont DEUX OPTIONS SÉPARÉES dans l'écran, jamais additionnées — on ne
+//  mélange pas leadership géographique et supervision.
+// ==============================================================================================
+
+/** Mirrors com.excellence.back.goals.reminder.ReminderScope */
+export type ReminderScope = 'ASSEMBLY' | 'CITY' | 'ZONE' | 'COUNTRY' | 'DISCIPLES';
+
+/**
+ * Mirrors com.excellence.back.goals.reminder.dto.ReminderScopeOption
+ *
+ * Une option proposée par le SERVEUR — l'écran n'en calcule aucune : le backend ne renvoie que les
+ * périmètres réellement visables (rôle + géographie), si bien qu'aucun choix ne finit en 403.
+ */
+export interface ReminderScopeOption {
+  scope: ReminderScope;
+  /** Nœud visé ; `null` pour `DISCIPLES`, qui ne désigne aucun nœud. */
+  scopeId: string | null;
+  /** Nom du nœud ; `null` pour `DISCIPLES` (l'écran affiche son propre libellé i18n). */
+  name: string | null;
+  /** Personnes du périmètre (hors soi-même). */
+  total: number;
+  /** Parmi elles, celles qui N'ONT PAS soumis — l'aperçu des destinataires, avant envoi. */
+  pending: number;
+}
+
+/** Mirrors com.excellence.back.goals.reminder.dto.BulkReminderRequest */
+export interface BulkReminderRequest {
+  scope: ReminderScope;
+  /** Facultatif ; obligatoire dès que l'acteur porte plusieurs nœuds du niveau (422 SCOPE_ID_REQUIRED). */
+  scopeId?: string | null;
+  /** max 2000 ; absent → message serveur par défaut (avec la date limite). */
+  message?: string;
+}
+
+/**
+ * Mirrors com.excellence.back.goals.reminder.dto.BulkReminderResponse
+ *
+ * Le compte rendu du §3.1 : `sent` = envoyés, `alreadyReminded` = déjà relancés (anti-spam 24 h,
+ * appliqué personne par personne), `alreadySubmitted` = déjà soumis (jamais relancés).
+ */
+export interface BulkReminderResponse {
+  scope: ReminderScope;
+  scopeId: string | null;
+  scopeName: string | null;
+  targeted: number;
+  sent: number;
+  alreadyReminded: number;
+  alreadySubmitted: number;
+  sentToNames: string[];
+}
+
+/** Les périmètres que le compte peut relancer, avec l'aperçu du nombre de destinataires. */
+export async function fetchReminderScopes(): Promise<ReminderScopeOption[]> {
+  const { data } = await apiClient.get<ReminderScopeOption[]>('/api/church/goals/reminders/scopes');
+  return data;
+}
+
+/**
+ * Relance d'un geste les non-soumis du périmètre choisi.
+ *
+ * ⚠ Contrat différent du rappel unitaire : l'anti-spam 24 h ne lève PAS d'erreur ici — les
+ * personnes déjà relancées sont sautées et comptées dans `alreadyReminded`.
+ * Erreurs : 403 (périmètre hors du sien, ou viewer ministère-large sur un périmètre géographique),
+ * 422 SCOPE_ID_REQUIRED / SCOPE_REQUIRED.
+ */
+export async function sendBulkReminder(payload: BulkReminderRequest): Promise<BulkReminderResponse> {
+  const { data } = await apiClient.post<BulkReminderResponse>(
+    '/api/church/goals/reminders/bulk',
+    payload,
+  );
+  return data;
+}
+
 /**
  * Déverrouille les engagements d'une personne pour l'année (SECRETARIAT / superAdmin) — l'unique
  * recours back-office de RG-BQ-08 : on rouvre, la personne corrige elle-même.
