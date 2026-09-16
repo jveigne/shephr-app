@@ -11,7 +11,7 @@ import NotificationGate from '../../components/NotificationGate';
 export default function TabLayout() {
   const { t, applyAccountLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { isLeader, isTreasurer, hasGoals, hasMemberCare, hasDonations, me } = useAuth();
+  const { isLeader, hasGoals, hasMemberCare, hasDonations, me } = useAuth();
 
   // Initialise la langue depuis le compte (me.language) tant que l'utilisateur
   // n'a pas choisi explicitement une langue dans l'app (cf. LanguageContext).
@@ -86,7 +86,11 @@ export default function TabLayout() {
           // Gaté sur `isTreasurer` (= MeResponse.treasurer), JAMAIS sur `isLeader` : ce dernier
           // dérive aussi de `goalRole`, si bien qu'un dirigeant Goals voyait l'onglet puis
           // récoltait trois 403 silencieux. Le rang pastoral ne confère plus rien côté Dons.
-          href: hasDonations && isTreasurer ? '/(tabs)/leader' : null,
+          // JP 15/09 — onglet MASQUÉ : la Trésorerie s'atteint par sa tuile sur l'accueil, la
+          // barre du bas était trop chargée. `href: null` et non suppression du <Tabs.Screen> :
+          // la route doit rester atteignable par `router.push('/(tabs)/leader')` et par le deep
+          // link des notifications (digest trésorier → file « À vérifier »).
+          href: null,
           title: t('tabs.treasury'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="wallet-outline" size={size} color={color} />

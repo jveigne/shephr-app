@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { goBack } from '../../../../utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '../../../../components/ScreenShell';
 import Card from '../../../../components/Card';
@@ -249,7 +250,7 @@ function Head() {
   const { t } = useLanguage();
   return (
     <View style={styles.headerRow}>
-      <Pressable onPress={() => router.back()} hitSlop={10}>
+      <Pressable onPress={() => goBack()} hitSlop={10}>
         <Ionicons name="chevron-back" size={22} color={colors.ink2} />
       </Pressable>
       <Text style={styles.headerTitle}>{t('treasury.detailTitle')}</Text>

@@ -33,7 +33,8 @@ import {
   View,
   type AppStateStatus,
 } from 'react-native';
-import { router } from 'expo-router';
+
+import { goBack } from '../utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 
 import ScreenShell from '../components/ScreenShell';
@@ -178,7 +179,7 @@ export default function NotificationSettingsScreen() {
   return (
     <ScreenShell withTabBar={false}>
       <Pressable
-        onPress={() => router.back()}
+        onPress={() => goBack()}
         hitSlop={12}
         accessibilityRole="button"
         accessibilityLabel={t('common.back')}

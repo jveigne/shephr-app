@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { goBack } from '../../../../utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '../../../../components/ScreenShell';
 import Card from '../../../../components/Card';
@@ -73,7 +74,7 @@ export default function RecordDetailScreen() {
     if (!ok) return;
     try {
       await deleteRecord(detail.record.id);
-      router.back();
+      goBack();
     } catch (e: any) {
       notify(t('common.appName'), e?.response?.data?.message ?? t('care.deleteFailed'));
     }
@@ -96,7 +97,7 @@ export default function RecordDetailScreen() {
   return (
     <ScreenShell>
       <View style={styles.headerRow}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
+        <Pressable onPress={() => goBack()} hitSlop={10}>
           <Ionicons name="chevron-back" size={22} color={colors.ink2} />
         </Pressable>
         <View style={{ flex: 1 }} />

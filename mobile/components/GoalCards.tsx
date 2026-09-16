@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { router } from 'expo-router';
+import { goBack } from '../utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from './ScreenShell';
 import Card from './Card';
@@ -34,7 +35,7 @@ export function GoalScreenTitle({ title }: { title: string }) {
   return (
     <View style={styles.titleRow}>
       {router.canGoBack() && (
-        <Pressable onPress={() => router.back()} hitSlop={10}>
+        <Pressable onPress={() => goBack()} hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={colors.ink2} />
         </Pressable>
       )}

@@ -24,9 +24,16 @@
 
 ### 0.1 Environnement
 
-- [ ] Backend lancé (JDK 17) : `JAVA_HOME=$(/usr/libexec/java_home -v 17) mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local"`
-- [ ] Backend reconstruit **avec réseau** au moins une fois : le `pom.xml` a gagné `org.apache.poi:poi-ooxml:5.2.5` (export Excel), il doit se télécharger — `mvn -DskipTests package` → BUILD SUCCESS
-- [ ] Les 5 migrations du chantier ont été jouées **sans erreur** au démarrage (`don_treasurer_assignment`, `don_category`, `don_declaration` + `don_declaration_line`, `push_devices.pref_rappels`) :
+> **Poste de recette (relevé le 15/09)** — `psql` n'est **pas dans le PATH**. Binaire Postgres.app 17 :
+> `/Users/Shared/Previously Relocated Items 7/Security/Applications/Postgres.app/Contents/Versions/17/bin/psql`
+> Base : `cmfipraise` @ `localhost:5432`, utilisateur `postgres`.
+> Volumétrie au démarrage de la recette : **3 ministères, 115 nœuds, 50 assemblées, 98 comptes actifs**.
+> Un seul super-admin : **`superadmin@cmci.dev`** (Olivia SuperAdmin, ministère CMCI).
+
+- [x] Backend lancé (JDK 17) : `JAVA_HOME=$(/usr/libexec/java_home -v 17) mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local"`
+- [x] Backend reconstruit **avec réseau** au moins une fois : le `pom.xml` a gagné `org.apache.poi:poi-ooxml:5.2.5` (export Excel), il doit se télécharger — `mvn -DskipTests package` → BUILD SUCCESS
+      **✅ 15/09** — `poi-ooxml-5.2.5.jar` présent au classpath du processus (Corretto 17.0.14).
+- [x] Les 5 migrations du chantier ont été jouées **sans erreur** au démarrage (`don_treasurer_assignment`, `don_category`, `don_declaration` + `don_declaration_line`, `push_devices.pref_rappels`) :
       ```sql
       SELECT * FROM don_treasurer_assignment;   -- la table existe, vide sur une base neuve
       SELECT count(*) FROM don_category;        -- 6 rubriques par ministère existant
@@ -35,26 +42,65 @@
         FROM information_schema.columns
        WHERE table_name='push_devices' AND column_name='pref_rappels';  -- boolean, NO, true
       ```
-- [ ] ⚠️ La base de recette est **PostgreSQL**. La reprise d'historique (`13-don-declaration.sql`) n'est pas exercée par les tests automatisés (profil `test` = H2, Liquibase désactivé) : c'est ici qu'elle se valide.
+      **✅ 15/09** — `don_treasurer_assignment` : 0 ligne · `don_category` : **6 rubriques × 3 ministères**
+      (CMCI, CMCI Sandbox, EMCI) · `pref_rappels` : `boolean, NO, true` · `don_declaration` : **0**,
+      cohérent car `don_donation` est **vide** (voir la ligne suivante).
+- [x] ⚠️ La base de recette est **PostgreSQL**. La reprise d'historique (`13-don-declaration.sql`) n'est pas exercée par les tests automatisés (profil `test` = H2, Liquibase désactivé) : c'est ici qu'elle se valide.
+      **⚠️ 15/09 — SANS OBJET, et c'est la conclusion.** `don_donation` est vide en recette : la
+      migration s'est exécutée sans erreur mais sur **zéro ligne**, elle n'a donc rien converti.
+      Le code de reprise (rattachement `declaration_id`, don orphelin « réputé déclaré ») reste
+      **non exercé**. **Arbitrage JP 15/09 : il n'y a pas non plus de dons en production** — la
+      reprise n'aura jamais rien à convertir nulle part. Réserve close, non par validation mais
+      par absence d'objet.
 - [ ] Back-office lancé : `cd shephr-webapp && npm run dev`
-- [ ] Mobile lancé : `cd shephr-app/mobile && npx expo start`
-- [ ] ⚠️ **Vérifier `mobile/app.json` › `extra.API_URL`** : il pointe la **production Railway** par
+- [x] Mobile lancé : `cd shephr-app/mobile && npx expo start`
+- [x] ⚠️ **Vérifier `mobile/app.json` › `extra.API_URL`** : il pointe la **production Railway** par
       défaut. Pour tester en local, le passer à `http://localhost:8080` — **et ne pas committer ce
       changement**.
+      > ⛔ **PIÈGE RENCONTRÉ LE 15/09 — changer `app.json` ne suffit pas : il faut RELANCER Expo.**
+      > `Constants.expoConfig.extra.API_URL` est lu par le serveur de dev **au démarrage** et figé
+      > dans le bundle. Expo avait été lancé à 12:34:31, `app.json` modifié à 12:35:44 : l'app a
+      > continué de taper **la production Railway** pendant dix minutes.
+      >
+      > **Symptôme trompeur** : l'app affiche « Serveur injoignable — vérifiez que le backend
+      > tourne… » alors que le backend local tourne parfaitement. En réalité la requête part vers
+      > Railway, dont le CORS n'autorise pas `http://localhost:8081` ; le navigateur bloque la
+      > réponse, axios remonte un `Network Error` **sans `e.response`**, et `login.tsx:53-55` traduit
+      > l'absence de réponse par « serveur injoignable ». Le serveur est joignable — c'est le
+      > **mauvais** serveur.
+      >
+      > **Danger réel** : tant que l'URL n'est pas locale, toute la recette (création de Testland
+      > comprise) s'exécute **en production**. Vérifier l'URL complète de la ligne `login` dans
+      > l'onglet Network **avant** le §0.3.
+      >
+      > **Correctif** : arrêter Expo puis `npx expo start --clear` (le dossier `.metro-cache` est
+      > présent : une config figée mérite un cache vidé).
+      >
+      > Diagnostics écartés au passage, inutile d'y revenir : CORS local correct (préflight 200,
+      > `Access-Control-Allow-Origin: http://localhost:8081`, y compris avec `Authorization`) ;
+      > backend local à 340 ms ; `UserDTO` n'expose que des scalaires — pas de lazy loading.
 - [ ] Pour la section 11.c (push) : **build de développement sur un téléphone réel**. Expo Go ne
       délivre plus le push distant sur Android depuis le SDK 53 ; simulateur et web sont inertes.
 
 ### 0.2 Assainissement de la base (indispensable)
 
-- [ ] **Neutraliser l'abonnement de rétro-compatibilité.** La migration `01-subscriptions.sql:47-49`
+- [x] **Neutraliser l'abonnement de rétro-compatibilité.** La migration `01-subscriptions.sql:47-49`
       a donné `DONATIONS` au niveau `MINISTRY` à tout ministère existant : sans cela, tout le monde
       voit déjà le module et le test d'activation ciblée ne démontre rien.
+      > ⚠️ **Requête corrigée le 15/09 — celle d'origine ne s'exécute plus.** Le schéma a évolué :
+      > les modules sont passés dans la table de jointure `sub_subscription_modules`, et la colonne
+      > d'état s'appelle `status` (`ACTIVE`/`SUSPENDED`/`EXPIRED`), pas `active`. La requête du
+      > cahier tombait en `ERROR: column "module_code" does not exist`.
       ```sql
-      SELECT id, module_code, scope, scope_entity_id, active
-        FROM sub_subscription WHERE module_code = 'DONATIONS';
+      SELECT s.id, m.module_code, s.scope, s.scope_entity_id, s.status
+        FROM sub_subscription s
+        JOIN sub_subscription_modules m ON m.subscription_id = s.id
+       WHERE m.module_code = 'DONATIONS';
       -- puis désactiver l'abonnement MINISTRY depuis le back-office (Abonnements › Suspendre)
       ```
-- [ ] **Aucune assemblée « node-only »** (sinon couverture d'abonnement rompue et rattachement impossible) :
+      **✅ 15/09** — les **2** abonnements `DONATIONS` de scope `MINISTRY` (CMCI, CMCI Sandbox) sont
+      déjà `SUSPENDED`. Rien à neutraliser : le test d'activation ciblée (Point 3) est démontrable.
+- [x] **Aucune assemblée « node-only »** (sinon couverture d'abonnement rompue et rattachement impossible) :
       ```sql
       SELECT n.id, n.name, p.name AS ville, n.active
         FROM org_node n
@@ -62,7 +108,8 @@
         LEFT JOIN org_node p ON p.id = n.parent_id
        WHERE n.type = 'ASSEMBLY' AND u.id IS NULL;      -- doit renvoyer 0 ligne
       ```
-- [ ] **Anomalie symétrique** — assemblée legacy sans miroir `org_node` (le miroir `OrgNodeMirror`
+      **✅ 15/09** — 0 ligne.
+- [x] **Anomalie symétrique** — assemblée legacy sans miroir `org_node` (le miroir `OrgNodeMirror`
       est best-effort : il journalise et avale ses erreurs). Elle casse le repli de couverture, la
       recherche d'assemblée du rattachement et les agrégats par nœud :
       ```sql
@@ -70,7 +117,8 @@
         LEFT JOIN org_node n ON n.id = u.id
        WHERE u.active AND n.id IS NULL;                  -- doit renvoyer 0 ligne
       ```
-- [ ] **Aucun compte actif sans rattachement Dons** — la colonne `reparable` dit si la réparation
+      **✅ 15/09** — 0 ligne.
+- [x] **Aucun compte actif sans rattachement Dons** — la colonne `reparable` dit si la réparation
       est possible (l'assemblée Goals doit exister dans `org_unit`, sinon la clé étrangère refuse) :
       ```sql
       SELECT u.id, u.username, u.full_name, u.goal_unit_id,
@@ -83,11 +131,26 @@
       Si la requête rend des lignes : jouer **à la main** `src/main/resources/db/changes/donation/10-repair-user-donation-unit.sql`
       (volontairement **hors** de `db.changelog-master.xml` : une réparation de données se lance en
       connaissance de cause, pas au démarrage).
-- [ ] **À surveiller à part** — comptes sans aucun rattachement : le script ne peut rien pour eux
+      **✅ 15/09 — 6 comptes trouvés, script joué (accord JP), 0 ligne restante.**
+      Comptes réparés : `unit1@gmail.com`, `juliana@cmci.com`, `ayoundjeu@shephr.org`,
+      `user3@shephr.com`, `user20@shephr.com`, `user2@shephr.com` — tous issus du parcours
+      « invitation » abandonné, tous `reparable`. Résultat : `UPDATE 6` puis `UPDATE 7`.
+      > ⚠️ **Le 2ᵉ ordre touche un compte de plus que le 1ᵉʳ** : `donation_role := 'MEMBRE'` a aussi
+      > visé `stephen@gmail.com`, dont les deux domiciles étaient **déjà** alignés mais le rôle Dons
+      > `NULL`. Neutre en droits (`NULL` se comporte déjà comme `MEMBRE`, cf. 0t.11), mais à savoir :
+      > l'impact du script n'est pas exactement la liste rendue par la requête de contrôle.
+      Contrôles d'après : contrôle n°3 → 0 ligne · contrôle n°4 (node-only) → 0 ligne ·
+      rejeu à blanc → 0/0 (**idempotence vérifiée**) · `t_user_donation_units` (périmètre géré)
+      inchangé à 22 lignes — **la réparation n'a promu personne responsable d'assemblée**.
+      Trace d'avant réparation (6 lignes) conservée, comme le script le demande.
+- [x] **À surveiller à part** — comptes sans aucun rattachement : le script ne peut rien pour eux
       (il n'y a rien à recopier), ils relèvent du parcours de rattachement.
       ```sql
       SELECT count(*) FROM t_user WHERE active AND goal_unit_id IS NULL AND donation_unit_id IS NULL;
       ```
+      **👁 15/09 — 49 comptes**, soit **la moitié des 98 comptes actifs**. Le script ne peut rien pour
+      eux (rien à recopier). Ne bloque pas la recette ; relève du parcours de rattachement, ou du
+      ménage si ce sont des comptes de test morts. **À trancher hors recette.**
 
 ### 0.3 Jeu de données
 
@@ -170,6 +233,63 @@ sont pas levées, les tests correspondants sont **sans objet** — ne pas les co
 | 0t.17 | `shephr-app/web` lit encore `data.unassignedUnits` (hors périmètre, non modifié) : sa section « dirigeant requis » devient simplement **vide**, sans erreur | aucun — noté pour mémoire |
 
 ---
+
+## 0 quater. Constats de la séance du 15/09 — et correctifs livrés
+
+Relevé au fil de la recette du 15/09, **pendant** le déroulé des points 1 à 4. Tout ce qui suit est
+**corrigé et vérifié** (`npx tsc --noEmit` et `npx expo lint` propres après chaque correctif :
+0 erreur, 7 warnings tous préexistants et hors des fichiers touchés ; arbres i18n `fr`/`en`
+alignés, contrôlés clé à clé).
+
+> ⚠️ **À lire avant de dérouler les sections 4, 6 et 8 bis** : plusieurs de ces correctifs changent
+> ce qui s'affiche à l'écran. Un testeur qui suivrait le cahier à la lettre y verrait des écarts
+> qui n'en sont pas.
+
+### A. Ce qui a été corrigé
+
+| # | Constat | Correctif | Fichier |
+|---|---|---|---|
+| C-01 | Les cartes « Mes objectifs » et « Vos dons ce mois-ci » se touchaient. `hero` était le **seul bloc racine sans `marginTop`** ; invisible jusqu'ici car la tuile Objectifs disparaissait à l'activation des Dons — c'est le correctif du **défaut A (14/09)** qui les a rendues voisines | `marginTop: 18`, le rythme vertical de l'écran | `app/(tabs)/home.tsx` |
+| C-02 | L'écran **Structure** proposait Régions / Villes / Assemblées ; sur mobile les deux premiers niveaux ne servaient à rien | Devient **« Créer une assemblée »**. Onglets, création de nation (`CountryFormModal`) et suppression en ligne retirés — 834 → 684 lignes. **La cascade Nation → Région → Ville est conservée** dans la modale de création : c'est elle qui situe la ville (commit `d61fc22`) | `app/structure.tsx` |
+| C-03 | La déclaration se construisait rubrique par rubrique (sélecteur + « Ajouter une rubrique ») | **Grille fixe** : toutes les rubriques d'emblée, saisie en une passe, vide = 0. ⚠️ **Une ligne à 0 n'est jamais envoyée** — `don_declaration_line.amount` porte `CHECK (amount > 0)` et `declared_total` aussi : le zéro est un fait d'affichage. Validation : au moins un montant saisi | `components/DeclarationForm.tsx` |
+| C-04 | Sur « Déclarer un don », **la croix ne faisait rien**. `router.back()` nu est un no-op silencieux quand la pile est vide (lien direct, rechargement, Fast Refresh sur Expo web) | Garde partagée `goBack()` ; **34 appels corrigés dans 22 fichiers** (6 écrans Dons, 6 Goals, 2 Care, et 8 autres). Seul `structure.tsx` s'en prémunissait | `utils/navigation.ts` (nouveau) |
+| C-05 | Le parcours d'**invitation** subsistait (bouton « + Inviter », entrée dans `membres.tsx` neutralisée par `{false && …}`, écran d'activation par code) | **Supprimé** : `app/invite.tsx`, `app/(auth)/activate.tsx`, le lien de connexion, `previewInvitationByCode` / `acceptInvitationByCode`, sections i18n `activate` et `invite`. **Le test 2.5 passe désormais** | plusieurs |
+| C-06 | La **Trésorerie** était une carte pleine largeur tout en bas de l'accueil, sous les dons récents | Devient une **tuile** à côté de « Déclarer un don ». Onglet de la barre du bas **masqué** (`href: null`, pas suppression du `<Tabs.Screen>` : la route reste atteignable par le deep link des notifications) | `home.tsx`, `(tabs)/_layout.tsx` |
+| C-07 | « Dons récents » répétait sur l'accueil la liste qui est l'objet de l'onglet Déclarations | Bloc retiré, ainsi que l'appel `listDonations` qui ne servait plus qu'à lui (un aller-retour HTTP de moins à chaque ouverture **et** à chaque retour de focus) | `app/(tabs)/home.tsx` |
+| C-08 | **Aucun bouton d'export** dans l'app — c'était la réserve **0t.12** | Bouton dans l'en-tête de Trésorerie › Statistiques : **xlsx · pdf · csv**, sur la période et le statut déjà affichés | `(tabs)/leader/stats.tsx`, `services/statsApi.ts` |
+| C-09 | La vue d'ensemble ne savait regarder qu'à partir de 3 mois | Période **« Ce mois »** ajoutée, **et retenue par défaut à l'ouverture** | `(tabs)/leader/stats.tsx` |
+
+### B. Ce que le §6 (exports) devient
+
+**La réserve 0t.12 est levée** : l'export se démontre **depuis l'application**, plus par curl. Deux
+obstacles ont dû être levés, et ils expliquent pourquoi le lot T9 s'était arrêté à mi-chemin :
+
+1. **L'endpoint est gardé** (`treasuryAccessService.requireTreasurer`) : il exige le Bearer. Un
+   `Linking.openURL` sur l'URL nue serait parti **sans jeton** — 401. Le téléchargement passe donc
+   par `apiClient`, qui l'injecte, et les octets sont traités ensuite.
+2. **`buildExportUrl` codait `format: 'csv'` en dur** : elle ne savait produire ni Excel ni PDF.
+   Signature changée en `buildExportUrl(format, params)`, et `downloadExport(format, params)`
+   ajoutée — `Blob` + lien de téléchargement sur le web, fichier en cache + feuille de partage sur
+   mobile.
+
+> ⛔ **Deux dépendances ont été ajoutées** : `expo-sharing` (~14.0.8) et `expo-file-system`
+> (~19.0.24, jusqu'ici seulement transitif via `expo`, désormais déclaré). **Expo doit être relancé**
+> (`npx expo start --clear`) avant de tester le §6, sinon l'export échoue.
+>
+> Note : l'API moderne `File`/`Paths` d'`expo-file-system` 19 est utilisée — `FileSystem.cacheDirectory`
+> et `EncodingType` n'existent plus dans cette version.
+
+### C. Ce qui reste ouvert
+
+| # | Point | Pourquoi |
+|---|---|---|
+| 0q.1 | Les endpoints `/api/cmfipraise/auth/invitation/**` **existent toujours côté backend**, et le back-office peut encore inviter | Seul le **mobile** a été débranché. À trancher si l'on veut fermer la porte partout |
+| 0q.2 | **49 comptes actifs sur 98 n'ont aucun rattachement** (relevé au §0.2) | Le script de réparation ne peut rien pour eux. Relève du parcours de rattachement, ou du ménage |
+| 0q.3 | La reprise d'historique `13-don-declaration.sql` reste **non exercée** | `don_donation` est vide en recette **et en production** (arbitrage JP 15/09) : sans objet, pas validée |
+| 0q.4 | `CLAUDE.md` indique `cd mobile && yarn install` | Le dépôt suit en réalité **`package-lock.json`** et n'a aucun `yarn.lock`, malgré `packageManager: yarn@1.22.22`. À corriger avant que quelqu'un ne crée un lockfile concurrent |
+| 0q.5 | L'accès à la Trésorerie passe désormais **uniquement par la tuile de l'accueil** (C-06) | Aller-retour plus long depuis la file « À vérifier » qu'avec l'onglet. À juger à l'usage pendant la section 4.d |
+
+---
 ## 1. Point 1 — Le périmètre se crée au back-office 🔒 socle
 
 | # | Étape | Résultat attendu | ✅ | Constat |
@@ -177,7 +297,7 @@ sont pas levées, les tests correspondants sont **sans objet** — ne pas les co
 | 1.1 | Back-office › Structure : créer Nation → Région → Ville → Assemblée | L'arbre se crée, les 4 niveaux apparaissent | ☐ | |
 | 1.2 | Vérifier en base que l'assemblée existe dans `org_unit` **et** `org_node` | 1 ligne dans chaque, même `id` | ☐ | |
 | 1.3 | Back-office › Abonnements : l'arbre org s'affiche avec « Activer ici » sur chaque nœud | Bouton présent aux 4 niveaux | ☐ | |
-| 1.4 | Activer `DONATIONS` sur **Assemblée A1** | L'abonnement apparaît, badge « actif » sur A1 | ☐ | |
+| 1.4 | Activer `DONATIONS` sur **Assemblée A1** | L'abonnement apparaît, badge « actif » sur A1 | ✅ | **15/09** — activé depuis le back-office ; l'onglet Dons est apparu côté mobile après reconnexion |
 
 ---
 
@@ -189,7 +309,7 @@ sont pas levées, les tests correspondants sont **sans objet** — ne pas les co
 | 2.2 | Demander le rattachement à A1, faire approuver par `dirigeant-a1` | Compte rattaché ; en base `goal_unit_id` **et** `donation_unit_id` = A1 | ☐ | |
 | 2.3 | Variante : rejoindre A1 avec le **code d'adhésion** | Mêmes deux champs posés | ☐ | |
 | 2.4 | Le nouveau compte déclare un don | ✅ succès (pas de `USER_NO_UNIT`) | ☐ | |
-| 2.5 | Vérifier qu'aucun parcours d'invitation n'est proposé sur mobile | Aucun écran d'invitation | ☐ | |
+| 2.5 | Vérifier qu'aucun parcours d'invitation n'est proposé sur mobile | Aucun écran d'invitation | ✅ | **15/09 (C-05)** — `app/invite.tsx` et `app/(auth)/activate.tsx` **supprimés**, avec leurs points d'entrée. ⚠️ Les endpoints backend `/auth/invitation/**` subsistent (voir 0q.1) |
 | 2.6 | 🧪 Fabriquer l'anomalie : `UPDATE t_user SET donation_unit_id = NULL WHERE username = 'membre-a1';` puis jouer à la main `db/changes/donation/10-repair-user-donation-unit.sql` | Le premier ordre rapporte `UPDATE 1` et `membre-a1` retrouve `donation_unit_id = goal_unit_id` | ☐ | |
 | 2.7 | 🧪 Rejouer le même script une seconde fois, sans rien modifier entre les deux | `UPDATE 0` sur les deux ordres — le script est rejouable sans effet | ☐ | |
 | 2.8 | 🧪 Compter `t_user_donation_units` pour le compte réparé, avant puis après le script | Compte identique avant et après : le script ne touche jamais au périmètre géré | ☐ | |
@@ -203,7 +323,7 @@ sont pas levées, les tests correspondants sont **sans objet** — ne pas les co
 
 | # | Étape | Résultat attendu | ✅ | Constat |
 |---|---|---|---|---|
-| 3.1 | Abonnement actif sur **A1** · se connecter avec `membre-a1` | L'onglet Dons est visible | ☐ | |
+| 3.1 | Abonnement actif sur **A1** · se connecter avec `membre-a1` | L'onglet Dons est visible | ✅ | **15/09** — vérifié. ⚠️ Avant activation, un compte **dirigeant** ne voyait rien : normal, c'est le test 3.2. Rôle et abonnement sont orthogonaux (RG-06) |
 | 3.2 | Se connecter avec `membre-b1` (assemblée B1, non abonnée) | **Aucun** onglet Dons ; l'appel `/api/church/donations` renvoie 403 `MODULE_ACCESS_DENIED` | ☐ | |
 | 3.3 | Back-office : suspendre l'abonnement de A1 · relancer l'app avec `membre-a1` | L'onglet Dons **disparaît** | ☐ | |
 | 3.4 | Réactiver, puis déplacer l'abonnement au niveau **Ville-A** | `membre-a1` **et** `membre-a2` voient l'onglet ; `membre-b1` non | ☐ | |
@@ -385,10 +505,10 @@ doit rien lui retirer.
 
 | # | Étape | Résultat attendu | ✅ | Constat |
 |---|---|---|---|---|
-| 8b.1 | « Déclarer un don » : saisir 200 sur la première ligne, « Ajouter une rubrique », choisir Mission, saisir 100 | Le total affiché en haut passe de £200 à £300 **au fil de la frappe**, sans validation ni recalcul manuel | ☐ | |
-| 8b.2 | Appuyer sur la croix de la ligne Mission, puis regarder la ligne restante | La ligne disparaît, le total revient à £200, et **aucune croix** n'est proposée sur la dernière ligne | ☐ | |
+| 8b.1 | ♻️ **Réécrit le 15/09 (C-03)** — « Déclarer un don » : saisir 200 sur la ligne **Dîme**, puis 100 sur la ligne **Mission** (toutes les rubriques sont déjà à l'écran) | Le total affiché en haut passe de £200 à £300 **au fil de la frappe**, sans validation ni recalcul manuel | ☐ | |
+| 8b.2 | ♻️ **Réécrit le 15/09 (C-03)** — vider le montant de la ligne Mission | Le total revient à £200. Il n'y a **aucune croix de suppression** : une rubrique ne se retire pas, elle se laisse vide — et une rubrique vide **n'est pas envoyée** (`CHECK (amount > 0)` en base). Sa note se referme en même temps | ☐ | |
 | 8b.3 | Chercher un sélecteur de devise **par ligne** | Il n'y en a pas : un seul sélecteur GBP/EUR/USD, au niveau de la déclaration, avec la mention « Une seule devise par déclaration » | ☐ | |
-| 8b.4 | Appuyer sur la rubrique d'une ligne (pastille + libellé) | Une liste des rubriques du ministère s'ouvre, et le choix ne s'applique **qu'à cette ligne** | ☐ | |
+| 8b.4 | ♻️ **Réécrit le 15/09 (C-03)** — appuyer sur la rubrique d'une ligne (pastille + libellé) | **Rien ne s'ouvre** : la rubrique n'est plus un choix, c'est l'intitulé de la ligne. Vérifier en revanche que **toutes** les rubriques du référentiel sont présentes, dans l'ordre du référentiel — et qu'une rubrique désactivée depuis, mais portant un montant déjà déclaré, reste affichée en fin de grille | ☐ | |
 | 8b.5 | Confirmer la déclaration du 3 août : 200 dîme + 100 mission · lire l'écran de confirmation | Reçu : total £300, date du 3 août, les deux rubriques avec leur montant — **une seule** déclaration, pas deux | ☐ | |
 | 8b.6 | Onglet « Déclarations » : lire la ligne de cette déclaration | Pastille **« Déclaré »**, libellé des deux rubriques, total £300 — et non deux lignes distinctes | ☐ | |
 | 8b.7 | Parcourir la barre de filtres de « Mes déclarations » | **Trois** puces exactement : Toutes, Déclaré, Vérifié — aucune « écart », aucune « rejeté » | ☐ | |
@@ -398,7 +518,7 @@ doit rien lui retirer.
 | 8b.11 | Tenter d'atteindre l'écran de correction de cette déclaration vérifiée (lien direct, retour arrière) | Aucun formulaire : un bandeau verrouillé et un bouton Retour — l'échec est montré **avant** la saisie, pas après l'appel | ☐ | |
 | 8b.12 | `tresorier-a1` déclare puis valide sa propre déclaration, et en ouvre le détail | La mention **« Auto-validée »** apparaît sous le nom du validateur | ☐ | |
 | 8b.13 | Lire la note de bas de page de « Déclarer » et le bandeau du détail | **Aucune mention d'un délai de 24 h** nulle part — la règle affichée est « tant que le trésorier ne l'a pas vérifiée » | ☐ | |
-| 8b.14 | Accueil › « Dons récents » : toucher un don issu d'une déclaration à deux rubriques | Le détail de la **déclaration complète** s'ouvre, avec ses deux rubriques — pas une ligne isolée | ☐ | |
+| 8b.14 | ♻️ **Réécrit le 15/09 (C-07)** — le bloc « Dons récents » **n'existe plus sur l'accueil**. Faire le test depuis l'onglet **Déclarations** : toucher un don issu d'une déclaration à deux rubriques | Le détail de la **déclaration complète** s'ouvre, avec ses deux rubriques — pas une ligne isolée | ☐ | |
 
 ### 8 bis.b — Le trésorier vérifie (mobile)
 

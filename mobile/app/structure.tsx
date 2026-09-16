@@ -12,6 +12,7 @@ import {
   Linking,
 } from 'react-native';
 import { router } from 'expo-router';
+import { goBack } from '../utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenShell from '../components/ScreenShell';
@@ -22,17 +23,17 @@ import SelectField from '../components/SelectField';
 import { colors, fonts } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { canManageStructure, canManageZones, isSecretariat } from '../services/authApi';
+import { canManageStructure, isSecretariat } from '../services/authApi';
 import { contactMailto, useContactSettings } from '../services/contactApi';
 import { confirmDialog, notify } from '../utils/dialogs';
 import i18n from '../utils/i18n/i18n';
 import {
-  createCountry, createLocality, createUnit, createZone, listUsers, type AdminUserResponse,
+  createLocality, createUnit, createZone, listUsers, type AdminUserResponse,
   deleteCountry, deleteLocality, deleteUnit, deleteZone,
   listAssemblyHistory, type AssemblyCreationRow,
-  listContinents, listCountries, listLocalities, listUnits, listZones,
+  listCountries, listLocalities, listUnits, listZones,
   updateLocality, updateUnit, updateZone,
-  type ContinentResponse, type CountryResponse, type LocalityResponse,
+  type CountryResponse, type LocalityResponse,
   type UnitResponse, type ZoneResponse,
 } from '../services/adminApi';
 import { fetchUnassignedUnits } from '../services/leadersApi';
@@ -56,7 +57,15 @@ export default function StructureScreen() {
   const insets = useSafeAreaInsets();
   const { me } = useAuth();
   const { t } = useLanguage();
-  const [level, setLevel] = useState<Level>('zones');
+  // Recette 15/09 (JP) — CET ÉCRAN NE FAIT PLUS QU'UNE CHOSE : créer une assemblée.
+  // Les onglets Régions / Villes ont été retirés : gérer nation/région/ville depuis le mobile
+  // ne servait à rien (listes en lecture pour presque tout le monde). La capacité n'est pas
+  // perdue — le SECRETARIAT garde /structure/{pays,zones,localites} sur l'Espace ministère web
+  // et le back-office. La cascade Nation → Région → Ville RESTE, mais à l'intérieur de la
+  // modale de création : c'est elle qui situe la ville de l'assemblée (commit d61fc22).
+  // `level` reste typé `Level` : `onDelete` et la modale sont génériques et le restent ;
+  // seule la branche 'units' est désormais atteignable depuis le mobile.
+  const level: Level = 'units';
   const [countries, setCountries] = useState<CountryResponse[]>([]);
   const [zones, setZones] = useState<ZoneResponse[]>([]);
   const [localities, setLocalities] = useState<LocalityResponse[]>([]);
@@ -137,24 +146,19 @@ export default function StructureScreen() {
 
   const isAdmin = me?.superAdmin ?? false;
   // RDG 25/07 : la création ET la suppression directes de nation/région/ville sont réservées au
-  // SUPER_ADMIN (back-office) et au SECRETARIAT. Les assemblées ont leurs propres règles — voir
-  // `canAdd` ci-dessous.
+  // SUPER_ADMIN (back-office) et au SECRETARIAT — depuis le 15/09 elles ne se font PLUS ICI
+  // (voir l'en-tête de `level`), mais sur le web. Ne restent que les règles des assemblées.
   const secretariat = isSecretariat(me);
-  const canDirect = isAdmin || secretariat;
-  const canEdit = level === 'countries' ? false
-    : level === 'zones' ? canManageZones(me)
-    : canManageStructure(me);
+  const canEdit = canManageStructure(me);
   // RG-BQ-12 (JP 16/08) : la création d'une ASSEMBLÉE n'a PLUS AUCUNE contrainte géographique —
   // tout compte du ministère en crée une dans la ville de son choix, sans y être rattaché ni en
   // être dirigeant. Le créateur en devient responsable (et passe DIRIGEANT_UNITE s'il était
   // MEMBRE ; jamais de rétrogradation, et son rôle Dons n'est pas promu).
   // ⚠ MODIFIER / SUPPRIMER une assemblée reste gardé côté serveur (`canEdit` ci-dessus) : on ouvre
   // la création, pas l'administration. Nation/région/ville restent SUPER_ADMIN/SECRETARIAT.
-  const canAdd = level === 'units' ? true : canDirect;
-  // Suppression sans passer par la modale d'édition (pas de modification in-app pour les
-  // nations ; le SECRETARIAT ne modifie pas les régions/villes).
-  const canDeleteRow = level === 'countries' ? canDirect
-    : level !== 'units' && secretariat && !canEdit;
+  // (`canAdd` a disparu : sur les assemblées il valait TOUJOURS true — RG-BQ-12 ci-dessus.
+  //  `canDeleteRow` aussi : il ne visait que nation/région/ville, jamais les assemblées, dont
+  //  la suppression passe par la modale d'édition.)
   // Palier C4 (JP 14/08) : l'historique des créations est réservé au SECRETARIAT et au superAdmin
   // (garde serveur identique — 403 pour les autres).
   const canSeeHistory = isAdmin || secretariat;
@@ -183,14 +187,7 @@ export default function StructureScreen() {
     );
   }
 
-  const rows = level === 'countries' ? countries
-    : level === 'zones' ? zones
-    : level === 'localities' ? localities
-    : units;
-  // Le niveau Pays n'apparaît que pour ceux qui le gèrent (secrétariat / superAdmin).
-  const levels: Level[] = canDirect
-    ? ['countries', 'zones', 'localities', 'units']
-    : ['zones', 'localities', 'units'];
+  const rows = units;
 
   return (
     <ScreenShell
@@ -202,7 +199,7 @@ export default function StructureScreen() {
         {/* `back()` est un no-op silencieux quand la pile est vide (écran atteint par un lien
             direct, ou navigateur recréé) : on retombe alors sur l'accueil plutôt que sur une
             flèche morte. */}
-        <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/home'))} hitSlop={10}>
+        <Pressable onPress={() => (router.canGoBack() ? goBack() : router.replace('/(tabs)/home'))} hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={colors.ink2} />
         </Pressable>
         <Text style={styles.title}>{t('structure.title')}</Text>
@@ -233,29 +230,17 @@ export default function StructureScreen() {
         </Card>
       )}
 
-      <View style={styles.segmentRow}>
-        {levels.map((lv) => (
-          <Pressable key={lv} onPress={() => setLevel(lv)} style={[styles.segment, level === lv && styles.segmentActive]}>
-            <Text style={[styles.segmentText, level === lv && styles.segmentTextActive]}>
-              {lv === 'countries' ? t('structure.countriesTab') : lv === 'zones' ? t('structure.zones') : lv === 'localities' ? t('structure.localities') : t('structure.units')}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      {canAdd && (
-        <Button
-          label={level === 'countries' ? t('structure.addCountry') : level === 'zones' ? t('structure.addZone') : level === 'localities' ? t('structure.addLocality') : t('structure.addUnit')}
-          variant="soft"
-          onPress={() => setEditing({ level, item: null })}
-          style={{ marginTop: 12 }}
-          iconLeft={<Ionicons name="add" size={18} color={colors.mossDeep} />}
-        />
-      )}
+      <Button
+        label={t('structure.addUnit')}
+        variant="soft"
+        onPress={() => setEditing({ level, item: null })}
+        style={{ marginTop: 16 }}
+        iconLeft={<Ionicons name="add" size={18} color={colors.mossDeep} />}
+      />
 
       {/* J-4 (14/09) : le rappel « des assemblées de votre périmètre attendent un dirigeant »
           vivait sur l'écran Hiérarchie. Il est ici, avec les assemblées elles-mêmes. */}
-      {level === 'units' && needsLeaderIds.size > 0 && (
+      {needsLeaderIds.size > 0 && (
         <Text style={styles.needsLeaderHint}>
           {t('structure.needsLeaderHint', { count: needsLeaderIds.size })}
         </Text>
@@ -269,45 +254,23 @@ export default function StructureScreen() {
                 <Text style={styles.itemName}>{r.name}</Text>
                 {/* RG-DS-10 — label « dirigeant requis » (déménagé de la Hiérarchie, J-4) :
                     posé par le SERVEUR, jamais déduit ici. */}
-                {level === 'units' && needsLeaderIds.has(r.id) && (
+                {needsLeaderIds.has(r.id) && (
                   <Text style={styles.needsLeaderPill}>{t('structure.needsLeader')}</Text>
                 )}
               </View>
               <Text style={styles.itemMeta}>
-                {level === 'countries' && (r.code ?? '')}
-                {level === 'zones' && (r.countryName ?? '')}
-                {level === 'localities' && (r.zoneName ?? t('structure.noZone'))}
-                {level === 'units' && t('structure.unitMeta', { locality: r.localityName, code: r.joinCode })}
+                {t('structure.unitMeta', { locality: r.localityName, code: r.joinCode })}
               </Text>
             </View>
-            {canDeleteRow && (
-              <Pressable onPress={() => onDelete(level, r.id, r.name)} hitSlop={8}>
-                <Ionicons name="trash-outline" size={17} color={colors.clay} />
-              </Pressable>
-            )}
             {canEdit && <Ionicons name="chevron-forward" size={16} color={colors.ink3} />}
           </Card>
         ))}
-        {/* Niveau Région gaté par rang (lecture admin dès SENIOR) : un dirigeant de ville a une
-            liste vide — on affiche sa/ses région(s) de rattachement en LECTURE SEULE (info). */}
-        {rows.length === 0 && level === 'zones' && (me?.zoneNames?.length ?? 0) > 0 ? (
-          (me?.zoneNames ?? []).map((name) => (
-            <Card key={name} style={styles.itemCard}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.itemName}>{name}</Text>
-                <Text style={styles.itemMeta}>{t('structure.attachedRegionReadOnly')}</Text>
-              </View>
-              <Ionicons name="lock-closed-outline" size={14} color={colors.ink3} />
-            </Card>
-          ))
-        ) : rows.length === 0 ? (
-          <Text style={styles.empty}>{t('structure.emptyPerimeter')}</Text>
-        ) : null}
+        {rows.length === 0 && <Text style={styles.empty}>{t('structure.emptyUnits')}</Text>}
       </View>
 
       {/* Palier C4 (JP 14/08) — historique des créations d'assemblées : LECTURE SEULE, affiché
           uniquement sur l'onglet Assemblées et pour le secrétariat / superAdmin. */}
-      {canSeeHistory && level === 'units' && (
+      {canSeeHistory && (
         <View style={styles.historyBlock}>
           <Pressable onPress={() => setHistoryOpen((v) => !v)} style={styles.historyHeader} hitSlop={6}>
             <Text style={styles.historyTitle}>{t('structure.historyTitle')}</Text>
@@ -353,7 +316,7 @@ export default function StructureScreen() {
       )}
 
       <StructureFormModal
-        editing={editing?.level === 'countries' ? null : editing}
+        editing={editing}
         countries={countries}
         zones={zones}
         localities={localities}
@@ -364,110 +327,7 @@ export default function StructureScreen() {
         onDelete={onDelete}
       />
 
-      <CountryFormModal
-        open={editing?.level === 'countries'}
-        ministryId={me?.ministryId ?? null}
-        onClose={() => setEditing(null)}
-        onSaved={async () => { setEditing(null); await load(); }}
-      />
     </ScreenShell>
-  );
-}
-
-// RDG 25/07 — création d'une NATION in-app (secrétariat / superAdmin) : continent, nom, code
-// ISO 2 lettres et devise ISO 3 lettres (mêmes contraintes que le back-office).
-function CountryFormModal({
-  open, ministryId, onClose, onSaved,
-}: {
-  open: boolean;
-  ministryId: string | null;
-  onClose: () => void;
-  onSaved: () => Promise<void>;
-}) {
-  const { t } = useLanguage();
-  const [continents, setContinents] = useState<ContinentResponse[]>([]);
-  const [continentId, setContinentId] = useState('');
-  const [name, setName] = useState('');
-  const [nameEn, setNameEn] = useState('');
-  const [code, setCode] = useState('');
-  const [currency, setCurrency] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      setName(''); setNameEn(''); setCode(''); setCurrency(''); setContinentId('');
-      listContinents()
-        .then((list) => { setContinents(list); setContinentId(list[0]?.id ?? ''); })
-        .catch(() => setContinents([]));
-    }
-  }, [open]);
-
-  const valid = ministryId != null && continentId !== ''
-    && name.trim().length > 0
-    && /^[A-Z]{2}$/.test(code.trim().toUpperCase())
-    && /^[A-Z]{3}$/.test(currency.trim().toUpperCase());
-
-  const onSave = async () => {
-    if (!valid) { notify(t('common.appName'), t('structure.fillFields')); return; }
-    setSaving(true);
-    try {
-      await createCountry({
-        ministryId: ministryId!,
-        continentId,
-        code: code.trim().toUpperCase(),
-        name: name.trim(),
-        nameEn: nameEn.trim() || name.trim(),
-        defaultCurrency: currency.trim().toUpperCase(),
-      });
-      await onSaved();
-    } catch (e: any) {
-      notify(t('structure.saveRefusedTitle'), errMsg(e, t('structure.saveRefusedBody')));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const isEn = i18n.language?.startsWith('en');
-
-  return (
-    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <Card style={styles.modalCard}>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={styles.modalTitle}>{t('structure.modalAddCountry')}</Text>
-
-            <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.continent')}</Label>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              {continents.map((c) => (
-                <Pressable key={c.id} onPress={() => setContinentId(c.id)} style={[styles.chip, continentId === c.id && styles.chipActive]}>
-                  <Text style={[styles.chipText, continentId === c.id && styles.chipTextActive]}>
-                    {isEn ? c.nameEn : c.name}
-                  </Text>
-                </Pressable>
-              ))}
-              {continents.length === 0 && <Text style={styles.empty}>{t('structure.noContinent')}</Text>}
-            </ScrollView>
-
-            <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.countryName')}</Label>
-            <TextInput value={name} onChangeText={setName} style={styles.input} placeholder={t('structure.countryNamePlaceholder')} placeholderTextColor={colors.ink3} />
-
-            <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.countryNameEn')}</Label>
-            <TextInput value={nameEn} onChangeText={setNameEn} style={styles.input} placeholder={t('structure.countryNameEnPlaceholder')} placeholderTextColor={colors.ink3} />
-
-            <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.countryCode')}</Label>
-            <TextInput value={code} onChangeText={(v) => setCode(v.toUpperCase())} style={styles.input} placeholder="CM" autoCapitalize="characters" maxLength={2} placeholderTextColor={colors.ink3} />
-
-            <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.countryCurrency')}</Label>
-            <TextInput value={currency} onChangeText={(v) => setCurrency(v.toUpperCase())} style={styles.input} placeholder="XAF" autoCapitalize="characters" maxLength={3} placeholderTextColor={colors.ink3} />
-
-            <Button label={t('common.create')} onPress={onSave} loading={saving} fullWidth style={{ marginTop: 18 }} />
-            <Pressable onPress={onClose} style={{ marginTop: 10, alignItems: 'center' }}>
-              <Text style={styles.cancelLink}>{t('common.cancel')}</Text>
-            </Pressable>
-          </ScrollView>
-        </Card>
-      </View>
-    </Modal>
   );
 }
 
@@ -788,11 +648,6 @@ const styles = StyleSheet.create({
   attachNames: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
   title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4 },
   subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4 },
-  segmentRow: { flexDirection: 'row', gap: 8, marginTop: 16 },
-  segment: { flex: 1, paddingVertical: 9, borderRadius: 99, backgroundColor: 'rgba(42,38,32,0.06)', alignItems: 'center' },
-  segmentActive: { backgroundColor: colors.moss },
-  segmentText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink2 },
-  segmentTextActive: { color: colors.white },
   itemCard: { paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
   itemTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   itemName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
@@ -825,10 +680,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans, fontSize: 15, color: colors.ink,
     borderWidth: 1, borderColor: 'rgba(42,38,32,0.15)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
   },
-  chip: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 99, backgroundColor: 'rgba(42,38,32,0.06)' },
-  chipActive: { backgroundColor: colors.moss },
-  chipText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink2 },
-  chipTextActive: { color: colors.white },
   deleteLink: { fontFamily: fonts.sans, fontSize: 14, color: colors.clay, fontWeight: '600' },
   cancelLink: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink3 },
 });
