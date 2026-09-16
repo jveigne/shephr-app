@@ -627,7 +627,8 @@
   "notifications": {
     "morePending": "{{count}} more reminder(s) pending",
     "later": "Later",
-    "updateNow": "Update now"
+    "updateNow": "Update now",
+    "see": "View"
   },
   "membres": {
     "title": "Members",

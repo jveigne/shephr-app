@@ -627,7 +627,8 @@
   "notifications": {
     "morePending": "{{count}} autre(s) rappel(s) en attente",
     "later": "Plus tard",
-    "updateNow": "Mettre à jour"
+    "updateNow": "Mettre à jour",
+    "see": "Voir"
   },
   "membres": {
     "title": "Membres",

@@ -74,6 +74,64 @@ function naviguer(chemin: string): void {
 }
 
 /**
+ * Destination d'une notification, d'après sa `source`.
+ *
+ * <p>Extrait de `useRouteurPush` le 16/09 pour que `NotificationGate` s'en serve aussi : le tap
+ * sur une bannière push et le bouton de la modale d'ouverture mènent désormais au MÊME écran.
+ * Sans ça, le résumé quotidien du trésorier (§2 de `docs/dons-reste-a-faire.md`) s'affichait sans
+ * issue — on lui disait qu'il avait du travail, et on le laissait chercher l'onglet lui-même.
+ *
+ * <p>Renvoie `null` plutôt qu'une route quand la personne n'y a pas droit, pour que l'appelant
+ * puisse le savoir AVANT de naviguer — c'est ce qui permet à la modale d'étiqueter son bouton
+ * « Voir » ou « OK » selon qu'il y a quelque chose à ouvrir.
+ *
+ * <p>Les gardes ne sont pas décoratives : un onglet masqué (`href: null`) reste une route
+ * atteignable, et y pousser quelqu'un qui n'y a pas droit lui montrerait un écran vide puis
+ * un 403. Elles ne remplacent pas la garde serveur — elles évitent d'y envoyer pour rien.
+ */
+export function useConduireParSource() {
+  const { isTreasurer, hasDonations, hasGoals, me } = useAuth();
+
+  const destination = useCallback(
+    (source: string | undefined): string | null => {
+      switch (source) {
+        // Résumé des déclarations à vérifier → la file de travail du trésorier (N1).
+        case SOURCE_RESUME_TRESORERIE:
+          return hasDonations && isTreasurer ? '/(tabs)/leader/verify' : null;
+        // « Vous n'avez rien déclaré » → ses propres dons, d'où l'on déclare (N2).
+        case SOURCE_RELANCE_DONS:
+          return hasDonations ? '/(tabs)/donations' : null;
+        // Rappel d'engagement → l'écran des engagements de la personne (N3).
+        case SOURCE_RAPPEL_GOALS:
+          return hasGoals || hasMemberGoals(me) ? '/(tabs)/goals/member' : null;
+        default:
+          // Source inconnue de cette version de l'app : la file rechargée suffit, elle porte le
+          // texte. Inventer une destination serait pire que ne pas en avoir.
+          return null;
+      }
+    },
+    [hasDonations, isTreasurer, hasGoals, me],
+  );
+
+  /** Conduit à l'écran où agir. Sans destination autorisée, ne fait rien — jamais de 403 provoqué. */
+  const conduire = useCallback(
+    (source: string | undefined) => {
+      const chemin = destination(source);
+      if (chemin) naviguer(chemin);
+    },
+    [destination],
+  );
+
+  /** Y a-t-il un écran à ouvrir pour cette source, pour CETTE personne ? */
+  const estActionnable = useCallback(
+    (source: string | undefined) => destination(source) !== null,
+    [destination],
+  );
+
+  return { conduire, estActionnable };
+}
+
+/**
  * Routeur du tap.
  *
  * @returns une fonction qui prend la charge utile BRUTE (`content.data`) et l'exécute. Elle ne
@@ -81,38 +139,8 @@ function naviguer(chemin: string): void {
  *   serait rattrapée nulle part.
  */
 export function useRouteurPush() {
-  const { isAuthenticated, isTreasurer, hasDonations, hasGoals, me } = useAuth();
-
-  /**
-   * Conduit à l'écran où agir, d'après la source de la notification qu'on vient d'ouvrir.
-   *
-   * <p>Les gardes ne sont pas décoratives : un onglet masqué (`href: null`) reste une route
-   * atteignable, et y pousser quelqu'un qui n'y a pas droit lui montrerait un écran vide puis
-   * un 403. Elles ne remplacent pas la garde serveur — elles évitent d'y envoyer pour rien.
-   */
-  const conduire = useCallback(
-    (source: string | undefined) => {
-      switch (source) {
-        // Résumé des déclarations à vérifier → la file de travail du trésorier (N1).
-        case SOURCE_RESUME_TRESORERIE:
-          if (hasDonations && isTreasurer) naviguer('/(tabs)/leader/verify');
-          return;
-        // « Vous n'avez rien déclaré » → ses propres dons, d'où l'on déclare (N2).
-        case SOURCE_RELANCE_DONS:
-          if (hasDonations) naviguer('/(tabs)/donations');
-          return;
-        // Rappel d'engagement → l'écran des engagements de la personne (N3).
-        case SOURCE_RAPPEL_GOALS:
-          if (hasGoals || hasMemberGoals(me)) naviguer('/(tabs)/goals/member');
-          return;
-        default:
-          // Source inconnue de cette version de l'app : la file rechargée suffit, elle porte le
-          // texte. Inventer une destination serait pire que ne pas en avoir.
-          return;
-      }
-    },
-    [hasDonations, isTreasurer, hasGoals, me],
-  );
+  const { isAuthenticated } = useAuth();
+  const { conduire } = useConduireParSource();
 
   const ouvrirFile = useCallback(
     async (notificationId?: string) => {
