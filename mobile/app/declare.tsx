@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { router } from 'expo-router';
+import { goBack } from '../utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenShell from '../components/ScreenShell';
@@ -12,7 +13,6 @@ import DeclarationForm, {
   draftLinesToRequest,
   draftTotal,
   firstDraftError,
-  newDraftLine,
   round2,
   type DraftLine,
 } from '../components/DeclarationForm';
@@ -36,6 +36,15 @@ import { useLanguage } from '../contexts/LanguageContext';
  * déclaratif. La « référence CMCI-xxxx » fabriquée côté client a disparu au lot T1 (défaut G) —
  * ne pas la réintroduire sous une autre forme.
  */
+/**
+ * Fermeture de la modale de déclaration — la garde contre la croix morte vit dans
+ * `utils/navigation.goBack`.
+ *
+ * Au niveau module, et pas dans `DeclareScreen` : `SuccessScreen` est un composant séparé qui
+ * ferme lui aussi (bouton « Terminer »).
+ */
+const dismiss = () => goBack();
+
 export default function DeclareScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
@@ -44,9 +53,9 @@ export default function DeclareScreen() {
   // Défaut F (14/09) : la date était figée — on ne pouvait déclarer qu'aujourd'hui. Elle est
   // saisissable, dans le PASSÉ uniquement (`@PastOrPresent` côté serveur).
   const [date, setDate] = useState(new Date());
-  // Une déclaration part avec UNE ligne vierge : le cas courant reste un versement d'une seule
-  // rubrique, et « Ajouter une rubrique » ouvre les autres sans imposer un formulaire vide.
-  const [lines, setLines] = useState<DraftLine[]>(() => [newDraftLine()]);
+  // Vide au départ : depuis le 15/09 la ventilation est une GRILLE FIXE, `DeclarationForm` la
+  // remplit avec une ligne par rubrique dès que le référentiel arrive (`syncLinesToCategories`).
+  const [lines, setLines] = useState<DraftLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState<DeclarationResponse | null>(null);
 
@@ -56,11 +65,8 @@ export default function DeclareScreen() {
       notify(t('common.appName'), t('declare.invalidAmount'));
       return;
     }
-    if (problem === 'NO_CATEGORY') {
-      notify(t('common.appName'), t('declare.lineNeedsCategory'));
-      return;
-    }
-    if (problem === 'NO_LINES') {
+    // Plus de 'NO_CATEGORY' : chaque ligne EST une rubrique du référentiel (grille fixe, 15/09).
+    if (problem === 'NO_AMOUNT') {
       notify(t('common.appName'), t('declare.needsOneLine'));
       return;
     }
@@ -91,7 +97,7 @@ export default function DeclareScreen() {
     >
       <ScreenShell withTabBar={false} paddingTop={insets.top ? 4 : 16}>
         <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()} hitSlop={10}>
+          <Pressable onPress={dismiss} hitSlop={10}>
             <Ionicons name="close" size={26} color={colors.ink2} />
           </Pressable>
         </View>
@@ -182,13 +188,10 @@ function SuccessScreen({ declaration }: { declaration: DeclarationResponse }) {
         <Button
           label={t('declare.viewDonations')}
           variant="ghost"
-          onPress={() => {
-            router.back();
-            setTimeout(() => router.push('/(tabs)/donations'), 50);
-          }}
+          onPress={() => router.replace('/(tabs)/donations')}
           style={{ flex: 1 }}
         />
-        <Button label={t('declare.finish')} onPress={() => router.back()} style={{ flex: 1 }} />
+        <Button label={t('declare.finish')} onPress={dismiss} style={{ flex: 1 }} />
       </View>
     </ScreenShell>
   );

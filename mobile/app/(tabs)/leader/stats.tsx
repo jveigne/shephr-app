@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
-import { router } from 'expo-router';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Modal } from 'react-native';
+
+import { goBack } from '../../../utils/navigation';
 import Svg, { Defs, LinearGradient, Rect, Stop, Text as SvgText, G, Line, Path, Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '../../../components/ScreenShell';
@@ -9,25 +10,32 @@ import Label from '../../../components/Label';
 import Amount from '../../../components/Amount';
 import Chip from '../../../components/Chip';
 import ErrorBanner from '../../../components/ErrorBanner';
+import Button from '../../../components/Button';
 import { colors, fonts } from '../../../theme';
 import {
+  downloadExport,
   getByCategory,
   getByMonth,
   getByUnit,
   type DonationByCategoryStat,
   type DonationByMonthStat,
   type DonationByUnitStat,
+  type ExportFormat,
 } from '../../../services/statsApi';
 import type { DeclarationStatus } from '../../../services/donationApi';
 import { donationCategoryMeta } from '../../../constants/categories';
 import { useDonationCategories } from '../../../hooks/useDonationCategories';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { notify } from '../../../utils/dialogs';
 import { currencySymbol, fmtAmount, monthLabel } from '../../../utils/format';
 import { sumByCurrency } from '../../../utils/currencyTotals';
 
-type Period = '3m' | '6m' | 'year';
+// Recette 15/09 (JP) — « 1m » = LE MOIS EN COURS, ajouté en tête : la vue d'ensemble ne savait
+// regarder qu'à partir de trois mois, alors que la question quotidienne du trésorier est
+// « qu'a-t-on reçu CE mois-ci ». Placé en premier parce que c'est la lecture la plus fréquente.
+type Period = '1m' | '3m' | '6m' | 'year';
 
-const PERIODS: Period[] = ['3m', '6m', 'year'];
+const PERIODS: Period[] = ['1m', '3m', '6m', 'year'];
 
 /**
  * Lot T8 (J-1, 14/09) — filtre de STATUT du tableau de bord. `ALL` n'est pas un statut : c'est
@@ -52,7 +60,10 @@ export default function StatsScreen() {
   // (ton du secteur) reste locale, via `donationCategoryMeta`.
   const { labelOf } = useDonationCategories();
   const periodLabel = (k: Period) => t('stats.periods.' + k);
-  const [period, setPeriod] = useState<Period>('6m');
+  // Recette 15/09 (JP) — l'écran s'ouvre sur LE MOIS EN COURS (et non plus sur six mois) :
+  // la première question du trésorier est « qu'a-t-on reçu ce mois-ci », l'historique se
+  // consulte ensuite. Les autres périodes restent à un clic.
+  const [period, setPeriod] = useState<Period>('1m');
   const [status, setStatus] = useState<StatusFilter>('ALL');
   const [monthStats, setMonthStats] = useState<DonationByMonthStat[]>([]);
   const [catStats, setCatStats] = useState<DonationByCategoryStat[]>([]);
@@ -60,6 +71,12 @@ export default function StatsScreen() {
   const [currency, setCurrency] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  // Lot T9 — l'export était livré côté serveur (csv · xlsx · pdf) mais n'avait AUCUN point
+  // d'entrée dans l'app (réserve 0t.12 du cahier de recette) : `buildExportUrl` existait sans
+  // être appelée nulle part. Le voici, branché sur la période et le statut DÉJÀ à l'écran —
+  // on exporte ce qu'on regarde, il n'y a pas un deuxième jeu de filtres à tenir à jour.
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exporting, setExporting] = useState<ExportFormat | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,7 +114,41 @@ export default function StatsScreen() {
   );
   const active = currency && currencies.includes(currency) ? currency : currencies[0] ?? null;
 
-  const windowSize = period === '3m' ? 3 : period === '6m' ? 6 : 12;
+  const windowSize = period === '1m' ? 1 : period === '3m' ? 3 : period === '6m' ? 6 : 12;
+
+  /**
+   * Bornes de l'export = la fenêtre affichée. `from` au 1er du mois le plus ancien, `to` à
+   * aujourd'hui — le serveur attend des dates ISO (`@DateTimeFormat(ISO.DATE)`).
+   */
+  const exportRange = useMemo(() => {
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth() - (windowSize - 1), 1);
+    const iso = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return { from: iso(first), to: iso(now) };
+  }, [windowSize]);
+
+  const runExport = async (format: ExportFormat) => {
+    setExporting(format);
+    try {
+      await downloadExport(format, {
+        ...exportRange,
+        status: status === 'ALL' ? undefined : status,
+      });
+      setExportOpen(false);
+    } catch (e: any) {
+      // `SHARING_UNAVAILABLE` : l'appareil n'offre pas de feuille de partage (rare, le fichier
+      // est bien produit) — on le dit, plutôt que d'échouer en silence.
+      notify(
+        t('stats.exportFailedTitle'),
+        e?.message === 'SHARING_UNAVAILABLE'
+          ? t('stats.exportNoSharing')
+          : e?.response?.data?.message ?? t('stats.exportFailedBody'),
+      );
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const months = useMemo(() => {
     if (!active) return [];
@@ -129,11 +180,17 @@ export default function StatsScreen() {
   return (
     <ScreenShell>
       <View style={styles.headerRow}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
+        <Pressable onPress={() => goBack()} hitSlop={10}>
           <Ionicons name="chevron-back" size={22} color={colors.ink2} />
         </Pressable>
         <Text style={styles.headerTitle}>{t('stats.headerTitle')}</Text>
-        <View style={{ width: 22 }} />
+        <Pressable
+          onPress={() => setExportOpen(true)}
+          hitSlop={10}
+          accessibilityLabel={t('stats.export')}
+        >
+          <Ionicons name="download-outline" size={21} color={colors.mossDeep} />
+        </Pressable>
       </View>
 
       <Text style={styles.title}>{t('stats.title')}</Text>
@@ -245,6 +302,46 @@ export default function StatsScreen() {
           </Card>
         </>
       )}
+
+      {/* Choix du format. Les trois que sert `DonationExportController` — un format inconnu y
+          vaut 400, on ne propose donc que ceux-là. La période et le statut ne sont PAS
+          redemandés : ce sont ceux de l'écran, affichés en rappel sous le titre. */}
+      <Modal
+        visible={exportOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setExportOpen(false)}
+      >
+        <Pressable style={styles.exportBackdrop} onPress={() => setExportOpen(false)}>
+          <Pressable style={styles.exportSheet} onPress={() => {}}>
+            <Text style={styles.exportTitle}>{t('stats.exportTitle')}</Text>
+            <Text style={styles.exportHint}>
+              {t('stats.exportScope', {
+                period: periodLabel(period),
+                status: t(`treasury.filter.${status}`),
+              })}
+            </Text>
+            {(['xlsx', 'pdf', 'csv'] as ExportFormat[]).map((f) => (
+              <Button
+                key={f}
+                label={t(`stats.exportFormat.${f}`)}
+                variant={f === 'xlsx' ? 'primary' : 'soft'}
+                fullWidth
+                loading={exporting === f}
+                disabled={exporting !== null}
+                style={{ marginTop: 10 }}
+                onPress={() => runExport(f)}
+              />
+            ))}
+            <Pressable
+              onPress={() => setExportOpen(false)}
+              style={{ marginTop: 14, alignItems: 'center' }}
+            >
+              <Text style={styles.exportCancel}>{t('common.cancel')}</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScreenShell>
   );
 }
@@ -368,6 +465,22 @@ function Donut({ segments, size = 120 }: { segments: { key: string; pct: number 
 }
 
 const styles = StyleSheet.create({
+  exportBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(20,18,14,0.55)',
+    justifyContent: 'flex-end',
+  },
+  exportSheet: {
+    backgroundColor: colors.paper,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 30,
+  },
+  exportTitle: { fontFamily: fonts.serif, fontSize: 21, color: colors.ink, letterSpacing: -0.3 },
+  exportHint: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 6 },
+  exportCancel: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink3 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   headerTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink2 },
   title: {

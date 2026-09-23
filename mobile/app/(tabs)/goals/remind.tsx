@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
-import { router } from 'expo-router';
+
+import { goBack } from '../../../utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '../../../components/ScreenShell';
 import Card from '../../../components/Card';
@@ -169,7 +170,7 @@ export default function RemindScreen() {
 
         <Button
           label={t('goals.remind.backCta')}
-          onPress={() => router.back()}
+          onPress={() => goBack()}
           fullWidth
           style={{ marginTop: 24 }}
         />
@@ -188,7 +189,7 @@ export default function RemindScreen() {
       }
     >
       <View style={styles.headerRow}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
+        <Pressable onPress={() => goBack()} hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={colors.ink2} />
         </Pressable>
       </View>

@@ -8,7 +8,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { goBack } from '../../../utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenShell from '../../../components/ScreenShell';
@@ -94,11 +95,8 @@ export default function EditDeclarationScreen() {
       notify(t('common.appName'), t('declare.invalidAmount'));
       return;
     }
-    if (problem === 'NO_CATEGORY') {
-      notify(t('common.appName'), t('declare.lineNeedsCategory'));
-      return;
-    }
-    if (problem === 'NO_LINES') {
+    // Plus de 'NO_CATEGORY' : chaque ligne EST une rubrique du référentiel (grille fixe, 15/09).
+    if (problem === 'NO_AMOUNT') {
       notify(t('common.appName'), t('declare.needsOneLine'));
       return;
     }
@@ -110,7 +108,7 @@ export default function EditDeclarationScreen() {
         declaredTotal: round2(draftTotal(lines)),
         lines: draftLinesToRequest(lines),
       });
-      router.back();
+      goBack();
     } catch (e: any) {
       notify(t('common.appName'), declarationErrorMessage(e, t, t('errors.updateFailed')));
     } finally {
@@ -152,7 +150,7 @@ export default function EditDeclarationScreen() {
           variant="ghost"
           fullWidth
           style={{ marginTop: 18 }}
-          onPress={() => router.back()}
+          onPress={() => goBack()}
         />
       </ScreenShell>
     );
@@ -165,7 +163,7 @@ export default function EditDeclarationScreen() {
     >
       <ScreenShell withTabBar={false} paddingTop={insets.top ? 4 : 16}>
         <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()} hitSlop={10}>
+          <Pressable onPress={() => goBack()} hitSlop={10}>
             <Ionicons name="close" size={26} color={colors.ink2} />
           </Pressable>
           <Text style={styles.headerTitle}>{t('declarations.editTitle')}</Text>
@@ -200,7 +198,7 @@ export default function EditDeclarationScreen() {
 function Header({ title }: { title: string }) {
   return (
     <View style={styles.headerRow}>
-      <Pressable onPress={() => router.back()} hitSlop={10}>
+      <Pressable onPress={() => goBack()} hitSlop={10}>
         <Ionicons name="chevron-back" size={22} color={colors.ink2} />
       </Pressable>
       <Text style={styles.headerTitle}>{title}</Text>

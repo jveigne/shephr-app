@@ -11,6 +11,7 @@ import {
   TextInput,
 } from 'react-native';
 import { router } from 'expo-router';
+import { goBack } from '../../utils/navigation';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -163,7 +164,7 @@ export default function SignupScreen() {
         >
           <View style={styles.headerRow}>
             <Pressable
-              onPress={() => (mode === 'existing' ? setMode('form') : router.back())}
+              onPress={() => (mode === 'existing' ? setMode('form') : goBack())}
               style={styles.iconBtn}
               hitSlop={10}
             >
@@ -212,11 +213,11 @@ export default function SignupScreen() {
               </View>
 
               <View>
-                <Label style={{ marginBottom: 6 }}>{t('activate.phoneLabel')}</Label>
+                <Label style={{ marginBottom: 6 }}>{t('signup.phoneLabel')}</Label>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <Pressable onPress={() => setCountryOpen(true)} style={styles.countryButton}>
                     <Text style={styles.countryButtonText}>
-                      {country ? `${flagEmoji(country.iso)} ${country.dial}` : t('activate.countryPlaceholder')}
+                      {country ? `${flagEmoji(country.iso)} ${country.dial}` : t('signup.countryPlaceholder')}
                     </Text>
                     <Ionicons name="chevron-down" size={14} color={colors.ink3} />
                   </Pressable>
@@ -227,7 +228,7 @@ export default function SignupScreen() {
                         setPhone(v);
                         setPhoneTaken(false);
                       }}
-                      placeholder={t('activate.phonePlaceholder')}
+                      placeholder={t('signup.phonePlaceholder')}
                       keyboardType="phone-pad"
                     />
                   </View>
@@ -238,7 +239,7 @@ export default function SignupScreen() {
                     {i18n.language?.startsWith('en') ? country.nameEn : country.name} · {country.dial}
                   </Text>
                 )}
-                {countryMissing && <Text style={styles.errText}>{t('activate.countryRequired')}</Text>}
+                {countryMissing && <Text style={styles.errText}>{t('signup.countryRequired')}</Text>}
                 {phoneTooShort && <Text style={styles.errText}>{t('signup.phoneInvalid')}</Text>}
                 {phoneTaken && <Text style={styles.errText}>{t('signup.phoneTaken')}</Text>}
               </View>
@@ -254,15 +255,15 @@ export default function SignupScreen() {
               </View>
 
               <View>
-                <Label style={{ marginBottom: 6 }}>{t('activate.confirmPassword')}</Label>
+                <Label style={{ marginBottom: 6 }}>{t('signup.confirmPassword')}</Label>
                 <Field
                   value={confirm}
                   onChangeText={setConfirm}
                   secureTextEntry
-                  placeholder={t('activate.confirmPasswordPlaceholder')}
+                  placeholder={t('signup.confirmPasswordPlaceholder')}
                 />
                 {confirm.length > 0 && confirm !== password && (
-                  <Text style={styles.errText}>{t('activate.passwordsMismatch')}</Text>
+                  <Text style={styles.errText}>{t('signup.passwordsMismatch')}</Text>
                 )}
               </View>
 
@@ -360,14 +361,14 @@ function CountryPickerModal({
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.pickerBackdrop}>
         <Card style={styles.pickerCard}>
-          <Label style={{ marginBottom: 8 }}>{t('activate.countryLabel')}</Label>
+          <Label style={{ marginBottom: 8 }}>{t('signup.countryLabel')}</Label>
           <View style={styles.pickerSearch}>
             <Ionicons name="search" size={15} color={colors.ink3} />
             <TextInput
               value={query}
               onChangeText={setQuery}
               style={styles.pickerSearchInput}
-              placeholder={t('activate.countrySearchPlaceholder')}
+              placeholder={t('signup.countrySearchPlaceholder')}
               placeholderTextColor={colors.ink3}
               autoCapitalize="none"
             />

@@ -7,7 +7,8 @@ import {
   ActivityIndicator,
   Linking,
 } from 'react-native';
-import { router } from 'expo-router';
+
+import { goBack } from '../../../utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenShell from '../../../components/ScreenShell';
@@ -131,7 +132,7 @@ export default function ChangeAssemblyScreen() {
       // `goalUnitId` ET `donationUnitId` changent côté serveur : on resynchronise le profil.
       await refreshMe();
       notify(t('assembly.doneTitle'), t('assembly.doneBody', { name: unit.name }));
-      router.back();
+      goBack();
     } catch (e: any) {
       const status = e?.response?.status;
       const code = e?.response?.data?.error;
@@ -151,7 +152,7 @@ export default function ChangeAssemblyScreen() {
   return (
     <ScreenShell withTabBar={false} paddingTop={insets.top ? 4 : 16}>
       <View style={styles.headerRow}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
+        <Pressable onPress={() => goBack()} hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={colors.ink2} />
         </Pressable>
         <Text style={styles.title}>{t('assembly.title')}</Text>

@@ -9,7 +9,8 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
-import { router } from 'expo-router';
+
+import { goBack } from '../utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenShell from '../components/ScreenShell';
@@ -19,7 +20,7 @@ import { colors, fonts } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { goalName } from '../utils/goalName';
-import { canManageUsers, isSecretariat, MODULE_ROLE_LABELS, type ModuleRole } from '../services/authApi';
+import { isSecretariat, MODULE_ROLE_LABELS, type ModuleRole } from '../services/authApi';
 import {
   fetchGoalSubmissionSummary, listUsers, listUnits,
   type AdminUserResponse, type GoalSubmissionSummary, type UnitResponse,
@@ -65,7 +66,6 @@ export default function MembresScreen() {
   const [page, setPage] = useState(0);
   const [last, setLast] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [pickingUnit, setPickingUnit] = useState(false);
   // JP 31/07 — cliquer sur une personne ouvre SES engagements du But Quinquennal.
   const [openedMember, setOpenedMember] = useState<AdminUserResponse | null>(null);
   // JP 14/08 — « X / Y ont soumis », sur tout le périmètre filtré (pas sur les lignes chargées).
@@ -73,8 +73,6 @@ export default function MembresScreen() {
 
   // La recherche par noms approchés ignore le filtre géographique (décision JP).
   const placeNodeId = search ? undefined : (city ?? region ?? nation)?.id;
-
-  const canInvite = canManageUsers(me);
 
   const PAGE_SIZE = 30;
 
@@ -149,7 +147,7 @@ export default function MembresScreen() {
       refreshControl={<RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={styles.headerRow}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
+        <Pressable onPress={() => goBack()} hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={colors.ink2} />
         </Pressable>
         <Text style={styles.title}>{t('membres.title')}</Text>
@@ -214,18 +212,11 @@ export default function MembresScreen() {
         )}
       </View>
 
-      {/* JP 31/07 — invitation MASQUÉE : tout se joue désormais à la création du compte
-          (inscription libre + rattachement immédiat). Le flux reste en place derrière
-          (`app/invite.tsx`, endpoints `admin/users/invite`) pour être rouvert sans travail. */}
-      {false && canInvite && (
-        <Button
-          label={t('membres.invite')}
-          variant="soft"
-          onPress={() => setPickingUnit(true)}
-          style={{ marginTop: 12 }}
-          iconLeft={<Ionicons name="person-add-outline" size={17} color={colors.mossDeep} />}
-        />
-      )}
+      {/* JP 15/09 — L'INVITATION EST SUPPRIMÉE, pas masquée. Elle était neutralisée depuis le
+          31/07 (`{false && …}`) « pour être rouverte sans travail » ; la décision est désormais
+          arrêtée : on crée un compte et on se rattache directement à une assemblée (inscription
+          libre + demande de rattachement ou code d'adhésion). L'écran `app/invite.tsx` et
+          l'activation par code `(auth)/activate.tsx` ont été supprimés avec ce bouton. */}
 
       <View style={styles.countRow}>
         <Text style={styles.count}>{t('membres.count', { count: rows.length })}</Text>
@@ -290,15 +281,6 @@ export default function MembresScreen() {
         onClose={() => setOpenedMember(null)}
       />
 
-      <UnitPickerModal
-        open={pickingUnit}
-        units={units}
-        onClose={() => setPickingUnit(false)}
-        onPick={(u) => {
-          setPickingUnit(false);
-          router.push({ pathname: '/invite', params: { unitId: u.id, unitName: u.name } });
-        }}
-      />
     </ScreenShell>
   );
 }
@@ -470,43 +452,6 @@ function MemberGoalsModal({
 
           <Pressable onPress={onClose} style={{ marginTop: 18, alignItems: 'center' }}>
             <Text style={styles.cancelLink}>{t('common.ok')}</Text>
-          </Pressable>
-        </Card>
-      </View>
-    </Modal>
-  );
-}
-
-/** L'invitation rattache le membre à une assemblée : on la choisit avant d'ouvrir le formulaire. */
-function UnitPickerModal({
-  open, units, onClose, onPick,
-}: {
-  open: boolean;
-  units: UnitResponse[];
-  onClose: () => void;
-  onPick: (u: UnitResponse) => void;
-}) {
-  const { t } = useLanguage();
-  return (
-    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <Card style={styles.modalCard}>
-          <Text style={styles.modalTitle}>{t('membres.pickUnitTitle')}</Text>
-          <Text style={styles.subtitle}>{t('membres.pickUnitSub')}</Text>
-          <View style={{ gap: 8, marginTop: 14 }}>
-            {units.map((u) => (
-              <Card key={u.id} style={styles.itemCard} onPress={() => onPick(u)}>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.itemName}>{u.name}</Text>
-                  {u.localityName != null && <Text style={styles.itemMeta}>{u.localityName}</Text>}
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
-              </Card>
-            ))}
-            {units.length === 0 && <Text style={styles.empty}>{t('membres.pickUnitEmpty')}</Text>}
-          </View>
-          <Pressable onPress={onClose} style={{ marginTop: 14, alignItems: 'center' }}>
-            <Text style={styles.cancelLink}>{t('common.cancel')}</Text>
           </Pressable>
         </Card>
       </View>

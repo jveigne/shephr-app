@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { goBack } from '../../../../utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '../../../../components/ScreenShell';
 import Card from '../../../../components/Card';
@@ -93,7 +94,7 @@ export default function UnitDetailScreen() {
     return (
       <ScreenShell>
         <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()} hitSlop={10}>
+          <Pressable onPress={() => goBack()} hitSlop={10}>
             <Ionicons name="chevron-back" size={22} color={colors.ink2} />
           </Pressable>
         </View>
@@ -115,23 +116,15 @@ export default function UnitDetailScreen() {
 
   return (
     <ScreenShell>
+      {/* JP 15/09 — le raccourci « Inviter » a été retiré : depuis la décision « pas
+          d'invitation » (14/09), on rejoint une assemblée par demande de rattachement ou par
+          code d'adhésion, jamais sur invitation. Le cahier de recette l'exige d'ailleurs
+          explicitement (test 2.5 : aucun parcours d'invitation proposé sur mobile). */}
       <View style={styles.headerRow}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
+        <Pressable onPress={() => goBack()} hitSlop={10}>
           <Ionicons name="chevron-back" size={22} color={colors.ink2} />
         </Pressable>
         <View style={{ flex: 1 }} />
-        <Pressable
-          style={styles.inviteBtn}
-          onPress={() =>
-            router.push({
-              pathname: '/invite',
-              params: { unitId: unit.unitId, unitName: unit.unitName },
-            })
-          }
-        >
-          <Ionicons name="add" size={14} color={colors.white} />
-          <Text style={styles.inviteText}>{t('unit.invite')}</Text>
-        </Pressable>
       </View>
 
       {/* Chantier B : le type CENTER n'existe plus — toute unité est une assemblée de maison. */}
@@ -254,16 +247,6 @@ export default function UnitDetailScreen() {
 
 const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  inviteBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.moss,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 99,
-  },
-  inviteText: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: colors.white },
   iconChip: {
     backgroundColor: 'rgba(42,38,32,0.05)',
     paddingHorizontal: 10,

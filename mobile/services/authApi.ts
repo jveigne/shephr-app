@@ -376,38 +376,12 @@ export async function register(payload: RegisterRequest): Promise<AuthResponse> 
   return data;
 }
 
-// --- Activation par CODE COURT (Lot 3.4, UC-TRV-10) — endpoints publics ---------------
-export interface InvitationPreview {
-  email: string | null;
-  /** A1 — identifiant de connexion (comptes créés sans email). */
-  username: string | null;
-  fullName: string;
-  ministryName: string | null;
-}
-
-/** Aperçu d'une invitation à partir du code court (404/erreur si code inconnu/expiré/utilisé). */
-export async function previewInvitationByCode(shortCode: string): Promise<InvitationPreview> {
-  const { data } = await apiClient.get<InvitationPreview>(
-    `/api/cmfipraise/auth/invitation/code/${encodeURIComponent(shortCode)}`,
-  );
-  return data;
-}
-
-/**
- * Active le compte par code court (A1 — RG-ID-04) : mot de passe + TÉLÉPHONE obligatoire
- * (avec indicatif) + email facultatif ; active et connecte (renvoie token+user).
- */
-export async function acceptInvitationByCode(
-  shortCode: string,
-  password: string,
-  contact: { phoneNumber: string; countryCode?: string; email?: string },
-): Promise<AuthResponse> {
-  const { data } = await apiClient.post<AuthResponse>(
-    '/api/cmfipraise/auth/invitation/code/accept',
-    { shortCode, password, ...contact },
-  );
-  return data;
-}
+// --- Activation par CODE COURT : SUPPRIMÉE le 15/09 (JP) ------------------------------
+// `previewInvitationByCode` / `acceptInvitationByCode` / `InvitationPreview` vivaient ici et
+// ne servaient qu'à `(auth)/activate.tsx`, retiré avec tout le parcours d'invitation : on crée
+// un compte et on se rattache directement à une assemblée. Les endpoints
+// `/api/cmfipraise/auth/invitation/**` existent toujours côté backend (le back-office peut
+// encore inviter) — c'est le MOBILE qui ne les appelle plus.
 
 export async function fetchMe(): Promise<MeResponse> {
   const { data } = await apiClient.get<MeResponse>('/api/church/auth/me');

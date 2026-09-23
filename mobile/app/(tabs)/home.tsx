@@ -9,12 +9,10 @@ import Button from '../../components/Button';
 import Label from '../../components/Label';
 import Amount from '../../components/Amount';
 import HandDivider from '../../components/HandDivider';
-import DonationRow from '../../components/DonationRow';
 import { colors, fonts, radii } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { hasMemberGoals } from '../../services/authApi';
 import { getSummary, type CurrencyTotal, type DonationSummary } from '../../services/statsApi';
-import { listDonations, type DonationResponse } from '../../services/donationApi';
 import { fmtAmount, monthLabel } from '../../utils/format';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -26,7 +24,6 @@ export default function HomeScreen() {
   const { t } = useLanguage();
   const [summary, setSummary] = useState<DonationSummary | null>(null);
   const [summaryFailed, setSummaryFailed] = useState(false);
-  const [recent, setRecent] = useState<DonationResponse[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [coming, setComing] = useState<ComingKind | null>(null);
 
@@ -35,17 +32,15 @@ export default function HomeScreen() {
   // et les données de dons ne se chargent jamais.
   const load = useCallback(async () => {
     if (!hasDonations) return; // module Dons non couvert par un abonnement : rien à charger
-    const [s, list] = await Promise.allSettled([
-      getSummary(),
-      listDonations({ size: 5 }),
-    ]);
+    // `listDonations` n'est plus appelé ici depuis le retrait de « Dons récents » (15/09) :
+    // l'accueil n'a plus besoin que du résumé du mois.
+    const [s] = await Promise.allSettled([getSummary()]);
     // Défaut B (14/09) : `/donations/stats/summary` était réservé aux dirigeants ; le 403 était
     // avalé ici et le bloc affichait « 0 » à un fidèle qui avait pourtant déclaré. Depuis le lot
     // T2 l'endpoint est ouvert à tout membre abonné, SCOPÉ SUR SES PROPRES DONS (périmètre de
     // trésorerie s'il est trésorier). Un échec résiduel se dit désormais à l'écran.
     if (s.status === 'fulfilled') setSummary(s.value);
     setSummaryFailed(s.status === 'rejected');
-    if (list.status === 'fulfilled') setRecent(list.value.content);
   }, [hasDonations]);
 
   useEffect(() => {
@@ -193,14 +188,30 @@ export default function HomeScreen() {
           onPress={() => router.push('/declare')}
         />
         )}
+        {/* JP 15/09 — la Trésorerie était une carte pleine largeur en BAS de l'accueil, sous les
+            dons récents : il fallait défiler tout l'écran pour la trouver. En tuile, à côté de
+            « Déclarer un don », elle se lit d'un coup d'œil. C'est aussi devenu son SEUL accès :
+            l'onglet de la barre du bas a été masqué le même jour (voir `(tabs)/_layout.tsx`).
+            Gaté sur `isTreasurer`, JAMAIS sur `isLeader` (lot T4, défaut C) : le rang pastoral
+            ne confère rien côté Dons, et un dirigeant Goals récoltait sinon des 403 silencieux. */}
+        {hasDonations && isTreasurer && (
+        <Tile
+          label={t('dashboard.tiles.treasury')}
+          hint={t('dashboard.tiles.treasuryHint')}
+          icon="wallet-outline"
+          tone={colors.earthDeep}
+          onPress={() => router.push('/(tabs)/leader')}
+        />
+        )}
 {/* Lot S1 (21/07) : briques visibles de TOUS — le contenu des écrans s'adapte au rôle
     (listes scopées côté backend ; lecture seule pour un membre simple).
-    RDG 25/07 : le simple fidèle ne voit QUE Structure et Cantiques (+ ses objectifs en haut) —
+    RDG 25/07 : le simple fidèle ne voit QUE « Créer une assemblée » (ex-Structure, recette
+    15/09) et Cantiques (+ ses objectifs en haut) —
     Membres et Hiérarchie sont des outils de dirigeant, sans objet pour lui. */}
         <Tile
           label={t('dashboard.tiles.structure')}
           hint={t('dashboard.tiles.structureHint')}
-          icon="business-outline"
+          icon="add"
           tone={colors.moss}
           onPress={() => router.push('/structure')}
         />
@@ -248,46 +259,10 @@ export default function HomeScreen() {
         />*/}
       </View>
 
-      {hasDonations && (
-      <>
-      <View style={styles.sectionRow}>
-        <Text style={styles.sectionTitle}>{t('dashboard.recent')}</Text>
-        <Pressable onPress={() => router.push('/(tabs)/donations')}>
-          <Text style={styles.sectionLink}>{t('dashboard.seeAll')}</Text>
-        </Pressable>
-      </View>
+      {/* JP 15/09 — « Dons récents » retiré de l'accueil : la même liste, complète et
+          filtrable, est l'objet de l'onglet « Déclarations ». La répéter ici allongeait l'écran
+          sans rien apprendre, et reléguait les tuiles d'action au-dessus d'un long défilement. */}
 
-      <View style={{ marginTop: 10, gap: 8 }}>
-        {recent.length === 0 ? (
-          <Text style={styles.empty}>{t('dashboard.empty')}</Text>
-        ) : (
-          recent.map((d) => (
-            <DonationRow
-              key={d.id}
-              donation={d}
-              onPress={() => router.push(`/donation/${d.id}`)}
-            />
-          ))
-        )}
-      </View>
-      </>
-      )}
-
-      {/* Lot T4, défaut C (14/09) : le raccourci suit l'onglet « Trésorerie » — gaté sur
-          `isTreasurer`, jamais sur `isLeader`, sinon il pointait vers un onglet masqué. */}
-      {hasDonations && isTreasurer && (
-        <Card
-          onPress={() => router.push('/(tabs)/leader')}
-          style={styles.scopeCta}
-        >
-          <Ionicons name="people" size={26} color={colors.white} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.scopeTitle}>{t('dashboard.scope')}</Text>
-            <Text style={styles.scopeSub}>{t('dashboard.scopeSub')}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.white} />
-        </Card>
-      )}
 
       <ComingSoonModal kind={coming} onClose={() => setComing(null)} />
     </ScreenShell>
@@ -520,7 +495,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.serif,
     fontSize: 18,
   },
-  hero: { paddingHorizontal: 22, paddingVertical: 22 },
+  // marginTop 18 = le rythme vertical de l'accueil (headerRow.marginBottom, scopeCta,
+  // tileGrid). Il manquait ici : tant que « Mes objectifs » disparaissait à l'activation
+  // des Dons (défaut A, corrigé le 14/09), les deux cartes ne pouvaient jamais être
+  // voisines et l'absence de marge ne se voyait pas. Recette 15/09.
+  hero: { marginTop: 18, paddingHorizontal: 22, paddingVertical: 22 },
   diffRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
   diffPct: { fontFamily: fonts.sans, fontWeight: '600', fontSize: 13 },
   diffNote: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
@@ -542,26 +521,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     fontSize: 16,
     color: colors.ink3,
-  },
-  sectionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginTop: 26,
-  },
-  sectionTitle: { fontFamily: fonts.serif, fontSize: 20, color: colors.ink, letterSpacing: -0.2 },
-  sectionLink: {
-    fontFamily: fonts.sans,
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.earthDeep,
-  },
-  empty: {
-    fontFamily: fonts.serif,
-    fontStyle: 'italic',
-    color: colors.ink3,
-    textAlign: 'center',
-    paddingVertical: 20,
   },
   scopeCta: {
     marginTop: 18,

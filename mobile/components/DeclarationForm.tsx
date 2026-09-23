@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, TextInput, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Card from './Card';
 import Label from './Label';
@@ -13,6 +13,17 @@ import type { DeclarationLineRequest } from '../services/donationApi';
 
 /**
  * Lot T7 (décision J-1, JP 14/09) — SAISIE D'UNE DÉCLARATION MULTI-RUBRIQUES.
+ *
+ * <p>RECETTE 15/09 (JP) — LA VENTILATION EST UNE GRILLE FIXE, PLUS UNE LISTE À CONSTRUIRE.
+ * Toutes les rubriques du référentiel sont affichées d'emblée, dans l'ordre du référentiel, et on
+ * saisit les montants en une seule passe. Une rubrique laissée vide VAUT ZÉRO : elle n'a plus à
+ * être ajoutée, choisie, ni retirée. Il n'y a donc plus de bouton « Ajouter une rubrique » ni de
+ * sélecteur de rubrique.
+ *
+ * <p>⚠ UNE RUBRIQUE À ZÉRO N'EST JAMAIS ENVOYÉE. `don_declaration_line.amount` porte
+ * `CHECK (amount > 0)` et `don_declaration.declared_total` aussi (13-don-declaration.sql) : une
+ * ligne à 0 ferait échouer l'insertion entière. Le zéro est un fait d'AFFICHAGE ; `draftLinesToRequest`
+ * filtre les lignes vides, et `firstDraftError` exige au moins un montant saisi.
  *
  * <p>Une date, UNE devise, N lignes « rubrique + montant », et un total CALCULÉ EN DIRECT à partir
  * des lignes : la personne ne saisit jamais le total elle-même. Le serveur exige malgré tout
@@ -74,17 +85,60 @@ export function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-export type DraftError = 'NO_LINES' | 'NO_CATEGORY' | 'INVALID_AMOUNT';
+/** Une rubrique qu'on n'a pas remplie. Vaut zéro, et ne part pas au serveur. */
+export function isBlankAmount(raw: string): boolean {
+  return raw.trim() === '';
+}
 
-/** Premier défaut bloquant de la ventilation, ou `null` si elle est envoyable. */
-export function firstDraftError(lines: DraftLine[]): DraftError | null {
-  if (lines.length === 0) return 'NO_LINES';
-  for (const line of lines) {
-    const value = parseDraftAmount(line.amount);
-    if (!Number.isFinite(value) || value <= 0) return 'INVALID_AMOUNT';
-    if (!line.category) return 'NO_CATEGORY';
+/**
+ * Aligne la ventilation sur le référentiel : UNE ligne par rubrique, dans l'ordre du référentiel.
+ *
+ * <p>Les lignes DÉJÀ saisies sont conservées telles quelles (montant, note, et surtout `id`, sans
+ * lequel une correction renumérote la ligne comptable). Une rubrique sans ligne reçoit une ligne
+ * vierge. Les lignes portant une rubrique ABSENTE du référentiel — désactivée depuis la
+ * déclaration — sont conservées à la fin : les faire disparaître effacerait un montant déjà déclaré.
+ *
+ * <p>Renvoie la référence D'ORIGINE quand rien ne change : l'effet appelant peut donc comparer par
+ * identité sans boucler.
+ */
+export function syncLinesToCategories(lines: DraftLine[], codes: string[]): DraftLine[] {
+  const kept = new Set<string>();
+  const next: DraftLine[] = [];
+  for (const code of codes) {
+    const existing = lines.filter((l) => l.category === code);
+    if (existing.length > 0) {
+      // Plusieurs lignes sur la même rubrique : donnée héritée de l'ancienne saisie libre. On les
+      // garde toutes plutôt que de les fusionner — fusionner détruirait des lignes comptables.
+      existing.forEach((l) => { next.push(l); kept.add(l.key); });
+    } else {
+      next.push(newDraftLine({ category: code }));
+    }
   }
-  return null;
+  for (const l of lines) {
+    if (!kept.has(l.key) && l.category !== null) next.push(l);
+  }
+  const unchanged = next.length === lines.length && next.every((l, i) => l === lines[i]);
+  return unchanged ? lines : next;
+}
+
+export type DraftError = 'NO_AMOUNT' | 'INVALID_AMOUNT';
+
+/**
+ * Premier défaut bloquant, ou `null` si la ventilation est envoyable.
+ *
+ * <p>Une rubrique vide est ignorée (elle vaut zéro). Ce qui est refusé : une saisie qui n'est pas
+ * un nombre exploitable, et une déclaration où RIEN n'a été saisi — le serveur exige
+ * `declared_total > 0`.
+ */
+export function firstDraftError(lines: DraftLine[]): DraftError | null {
+  let filled = 0;
+  for (const line of lines) {
+    if (isBlankAmount(line.amount)) continue;
+    const value = parseDraftAmount(line.amount);
+    if (!Number.isFinite(value) || value <= 0 || !line.category) return 'INVALID_AMOUNT';
+    filled += 1;
+  }
+  return filled === 0 ? 'NO_AMOUNT' : null;
 }
 
 /**
@@ -92,12 +146,15 @@ export function firstDraftError(lines: DraftLine[]): DraftError | null {
  * existante au lieu de la remplacer : le serveur renumérote sinon la ligne comptable associée.
  */
 export function draftLinesToRequest(lines: DraftLine[]): DeclarationLineRequest[] {
-  return lines.map((line) => ({
-    ...(line.id ? { id: line.id } : {}),
-    category: line.category ?? undefined,
-    amount: round2(parseDraftAmount(line.amount)),
-    ...(line.note.trim() ? { note: line.note.trim() } : {}),
-  }));
+  return lines
+    // Les rubriques laissées vides valent zéro et NE PARTENT PAS : `CHECK (amount > 0)` en base.
+    .filter((line) => !isBlankAmount(line.amount) && parseDraftAmount(line.amount) > 0)
+    .map((line) => ({
+      ...(line.id ? { id: line.id } : {}),
+      category: line.category ?? undefined,
+      amount: round2(parseDraftAmount(line.amount)),
+      ...(line.note.trim() ? { note: line.note.trim() } : {}),
+    }));
 }
 
 interface Props {
@@ -120,27 +177,20 @@ export default function DeclarationForm({
   const { t } = useLanguage();
   const { categories, loading: catsLoading, labelOf, metaOf } = useDonationCategories();
   const [pickingDate, setPickingDate] = useState(false);
-  const [pickingCategoryFor, setPickingCategoryFor] = useState<string | null>(null);
 
   const total = useMemo(() => draftTotal(lines), [lines]);
 
-  // Présélection de la première rubrique dès que le référentiel arrive — pour les lignes encore
-  // vierges seulement : une rubrique déjà choisie (y compris désactivée depuis) n'est pas écrasée.
+  // La ventilation SUIT le référentiel : une ligne par rubrique, créée dès qu'il arrive. C'est ce
+  // qui remplace l'ancienne construction ligne à ligne. `syncLinesToCategories` rend la référence
+  // d'origine quand rien ne change — la comparaison par identité suffit donc à ne pas boucler.
   useEffect(() => {
     if (categories.length === 0) return;
-    if (!lines.some((l) => l.category === null)) return;
-    onLinesChange(
-      lines.map((l) => (l.category === null ? { ...l, category: categories[0].code } : l)),
-    );
+    const next = syncLinesToCategories(lines, categories.map((c) => c.code));
+    if (next !== lines) onLinesChange(next);
   }, [categories, lines, onLinesChange]);
 
   const patchLine = (key: string, patch: Partial<DraftLine>) =>
     onLinesChange(lines.map((l) => (l.key === key ? { ...l, ...patch } : l)));
-
-  const addLine = () =>
-    onLinesChange([...lines, newDraftLine({ category: categories[0]?.code ?? null })]);
-
-  const removeLine = (key: string) => onLinesChange(lines.filter((l) => l.key !== key));
 
   return (
     <>
@@ -181,82 +231,56 @@ export default function DeclarationForm({
       <View style={{ marginTop: 18 }}>
         <Label style={{ marginBottom: 8 }}>{t('declare.breakdown')}</Label>
 
-        {catsLoading && categories.length === 0 ? (
+        {catsLoading && categories.length === 0 && (
           <Text style={styles.hint}>{t('common.loading')}</Text>
-        ) : categories.length === 0 ? (
-          <Text style={styles.hint}>{t('declare.noCategories')}</Text>
-        ) : null}
+        )}
 
-        <View style={{ gap: 10 }}>
-          {lines.map((line, index) => {
+        {/* Toutes les rubriques tiennent sur UNE ligne chacune : la grille complète est longue,
+            et empiler intitulé + montant + note ferait défiler six fois pour un versement qui,
+            le plus souvent, n'en concerne qu'une ou deux. La note ne s'ouvre donc qu'une fois un
+            montant saisi — sans montant, elle n'a rien à annoter. Recette 15/09. */}
+        <View style={{ gap: 8 }}>
+          {lines.map((line) => {
             const meta = metaOf(line.category);
+            const filled = !isBlankAmount(line.amount);
             return (
               <Card key={line.key} style={styles.lineCard}>
-                <View style={styles.lineHead}>
-                  <Pressable
-                    style={styles.linePick}
-                    onPress={() => setPickingCategoryFor(line.key)}
-                  >
-                    <View style={[styles.lineIcon, { backgroundColor: meta.tone + '22' }]}>
-                      <Ionicons name={meta.icon} size={17} color={meta.tone} />
-                    </View>
-                    <Text style={styles.lineCategory} numberOfLines={1}>
-                      {line.category ? labelOf(line.category) : t('declare.pickCategory')}
-                    </Text>
-                    <Ionicons name="chevron-down" size={15} color={colors.ink3} />
-                  </Pressable>
-
-                  {/* Une déclaration a toujours au moins une ligne : retirer la dernière n'est
-                      pas proposé — pour renoncer, on ne déclare pas (ou on supprime). */}
-                  {lines.length > 1 && (
-                    <Pressable
-                      onPress={() => removeLine(line.key)}
-                      hitSlop={10}
-                      accessibilityLabel={t('declare.removeLine')}
-                      style={styles.lineRemove}
-                    >
-                      <Ionicons name="close" size={17} color={colors.clay} />
-                    </Pressable>
-                  )}
-                </View>
-
-                <View style={styles.lineAmountRow}>
-                  <Text style={styles.lineCurrency}>{symbolOf(currency)}</Text>
+                <View style={styles.lineRow}>
+                  <View style={[styles.lineIcon, { backgroundColor: meta.tone + '22' }]}>
+                    <Ionicons name={meta.icon} size={15} color={meta.tone} />
+                  </View>
+                  {/* La rubrique n'est plus un choix : c'est l'INTITULÉ de la ligne. */}
+                  <Text style={styles.lineCategory} numberOfLines={1}>
+                    {line.category ? labelOf(line.category) : ''}
+                  </Text>
+                  <Text style={[styles.lineCurrency, filled && styles.lineCurrencyOn]}>
+                    {symbolOf(currency)}
+                  </Text>
                   <TextInput
                     value={line.amount}
                     onChangeText={(v) => patchLine(line.key, { amount: v.replace(/[^0-9.,]/g, '') })}
                     keyboardType="decimal-pad"
-                    style={styles.lineAmount}
+                    style={[styles.lineAmount, filled && styles.lineAmountOn]}
                     maxLength={9}
                     placeholder="0"
                     placeholderTextColor={colors.ink3}
-                    accessibilityLabel={t('declare.amount')}
+                    accessibilityLabel={`${line.category ? labelOf(line.category) : ''} — ${t('declare.amount')}`}
                   />
-                  <Text style={styles.lineIndex}>
-                    {t('declare.lineIndex', { index: index + 1 })}
-                  </Text>
                 </View>
 
-                <Field
-                  value={line.note}
-                  onChangeText={(v) => patchLine(line.key, { note: v })}
-                  placeholder={t('declare.notePlaceholder')}
-                  style={styles.lineNote}
-                />
+                {filled && (
+                  <Field
+                    value={line.note}
+                    onChangeText={(v) => patchLine(line.key, { note: v })}
+                    placeholder={t('declare.notePlaceholder')}
+                    style={styles.lineNote}
+                  />
+                )}
               </Card>
             );
           })}
         </View>
 
-        <Button
-          label={t('declare.addLine')}
-          variant="ghost"
-          height={46}
-          fullWidth
-          style={{ marginTop: 10 }}
-          onPress={addLine}
-          iconLeft={<Ionicons name="add" size={18} color={colors.moss} />}
-        />
       </View>
 
       <DatePickerModal
@@ -269,15 +293,6 @@ export default function DeclarationForm({
         }}
       />
 
-      <CategoryPickerModal
-        visible={pickingCategoryFor !== null}
-        selected={lines.find((l) => l.key === pickingCategoryFor)?.category ?? null}
-        onClose={() => setPickingCategoryFor(null)}
-        onChange={(code) => {
-          if (pickingCategoryFor) patchLine(pickingCategoryFor, { category: code });
-          setPickingCategoryFor(null);
-        }}
-      />
     </>
   );
 }
@@ -297,56 +312,6 @@ function startOfMonth(d: Date): Date {
 
 function isToday(d: Date): boolean {
   return startOfDay(d).getTime() === startOfDay(new Date()).getTime();
-}
-
-/** Choix de la rubrique d'une ligne. En liste, et non en grille figée : le référentiel est
- *  servi par le ministère (lot T5) et peut compter bien plus que six entrées. */
-function CategoryPickerModal({
-  visible,
-  selected,
-  onClose,
-  onChange,
-}: {
-  visible: boolean;
-  selected: string | null;
-  onClose: () => void;
-  onChange: (code: string) => void;
-}) {
-  const { t } = useLanguage();
-  const { categories, labelOf, metaOf } = useDonationCategories();
-
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.pickerBackdrop} onPress={onClose}>
-        <Pressable style={styles.pickerCard} onPress={() => {}}>
-          <Text style={styles.pickerTitle}>{t('declare.pickCategory')}</Text>
-          <ScrollView style={{ maxHeight: 340 }} contentContainerStyle={{ paddingVertical: 8 }}>
-            {categories.map((rubric) => {
-              const meta = metaOf(rubric.code);
-              const on = rubric.code === selected;
-              return (
-                <Pressable
-                  key={rubric.id}
-                  onPress={() => onChange(rubric.code)}
-                  style={[
-                    styles.catRow,
-                    { borderColor: on ? meta.tone : colors.hair, backgroundColor: on ? meta.tone + '14' : colors.paper2 },
-                  ]}
-                >
-                  <View style={[styles.lineIcon, { backgroundColor: meta.tone + '22' }]}>
-                    <Ionicons name={meta.icon} size={17} color={meta.tone} />
-                  </View>
-                  <Text style={styles.catRowLabel}>{labelOf(rubric.code)}</Text>
-                  {on && <Ionicons name="checkmark" size={17} color={meta.tone} />}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-          <Button label={t('common.cancel')} variant="ghost" onPress={onClose} fullWidth height={46} />
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
 }
 
 /**
@@ -510,44 +475,45 @@ const styles = StyleSheet.create({
   dateText: { flex: 1, fontFamily: fonts.sans, fontSize: 15, fontWeight: '500', color: colors.ink },
   dateChip: { fontFamily: fonts.sans, fontSize: 12, color: colors.earthDeep, fontWeight: '700' },
   hint: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, paddingVertical: 10 },
-  lineCard: { paddingHorizontal: 14, paddingVertical: 14 },
-  lineHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  linePick: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  lineCard: { paddingHorizontal: 12, paddingVertical: 9 },
+  lineRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   lineIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
+    width: 26,
+    height: 26,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   lineCategory: {
     flex: 1,
+    // `minWidth: 0` est INDISPENSABLE : sans lui, un enfant flex garde sa largeur intrinsèque
+    // (`min-width: auto`) et, sur React Native Web, le <input> du montant refuse de rétrécir —
+    // c'est alors l'intitulé qui se fait tronquer (« Offrande » coupé, recette 15/09).
+    minWidth: 0,
     fontFamily: fonts.sans,
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '600',
     color: colors.ink,
   },
-  lineRemove: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(184,106,74,0.10)',
-  },
-  lineAmountRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 10, gap: 6 },
-  lineCurrency: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink3 },
+  // Montant en retrait tant qu'il vaut zéro : la grille se lit d'un coup d'œil et les
+  // rubriques effectivement servies ressortent seules.
+  lineCurrency: { fontFamily: fonts.serif, fontSize: 15, color: colors.ink3 },
+  lineCurrencyOn: { color: colors.ink2 },
   lineAmount: {
-    flex: 1,
+    // Largeur FIXE, pas un `minWidth` : le montant occupe une colonne constante (les chiffres
+    // s'alignent d'une rubrique à l'autre) et ne réclame plus d'espace à l'intitulé.
+    width: 86,
+    minWidth: 0,
+    textAlign: 'right',
     fontFamily: fonts.serif,
-    fontSize: 30,
+    fontSize: 19,
     fontWeight: '500',
-    color: colors.ink,
+    color: colors.ink3,
     paddingVertical: 0,
-    letterSpacing: -0.6,
+    letterSpacing: -0.3,
   },
-  lineIndex: { fontFamily: fonts.mono, fontSize: 10.5, color: colors.ink3 },
-  lineNote: { marginTop: 10, paddingVertical: 10, fontSize: 13.5 },
+  lineAmountOn: { color: colors.ink, fontSize: 21 },
+  lineNote: { marginTop: 8, paddingVertical: 8, fontSize: 13 },
   pickerBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(20,18,14,0.55)',

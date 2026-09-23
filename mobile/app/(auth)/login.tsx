@@ -116,9 +116,6 @@ export default function LoginScreen() {
 
             <View style={styles.linksRow}>
               <Text style={styles.linkSub}>{t('auth.forgotPassword')}</Text>
-              <Text style={styles.linkAccent} onPress={() => router.push('/(auth)/activate')}>
-                {t('auth.haveActivationCode')}
-              </Text>
             </View>
 
             <View style={styles.divider} />
