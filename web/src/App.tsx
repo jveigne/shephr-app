@@ -15,6 +15,7 @@ import { DashboardPage } from './pages/Dashboard';
 import { DonationsPage } from './pages/Donations';
 import { GoalsPage } from './pages/Goals';
 import { MemberCarePage } from './pages/MemberCare';
+import { AssemblyPage } from './pages/Assembly';
 import { UsersPage } from './pages/Users';
 import { MonMinisterePage } from './pages/MonMinistere';
 import { PaysPage } from './pages/Pays';
@@ -68,6 +69,8 @@ export function App() {
               {/* Feature A — espace membre minimal (MEMBRE Goals rattaché), gaté par MemberShell. */}
               <Route element={<MemberShell />}>
                 <Route path="/my-goals" element={<MemberGoalsPage />} />
+                {/* D-ASM-17 (JP 25/09) — CR et avancement de son assemblée, en lecture seule. */}
+                {FEATURES.assembly && <Route path="/my-assembly" element={<AssemblyPage />} />}
                 <Route path="/member-settings" element={<SettingsPage />} />
                 <Route path="/member-contact" element={<ContactPage />} />
               </Route>
@@ -87,6 +90,13 @@ export function App() {
                   <Route path="/goals" element={<GoalsPage />} />
                 ) : (
                   <Route path="/goals" element={<Navigate to={HOME} replace />} />
+                )}
+                {/* Vie d'assemblée (D-ASM-12, JP 23/09) : flag de livraison ; la page gère en plus
+                    l'absence d'abonnement ASSEMBLY (RG-06). */}
+                {FEATURES.assembly ? (
+                  <Route path="/assembly" element={<AssemblyPage />} />
+                ) : (
+                  <Route path="/assembly" element={<Navigate to={HOME} replace />} />
                 )}
                 <Route path="/member-care" element={<MemberCarePage />} />
                 <Route path="/users" element={<UsersPage />} />

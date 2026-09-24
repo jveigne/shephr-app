@@ -141,7 +141,7 @@ construit sur le même modèle** — mêmes règles, mêmes retours, un seul com
 | 3 | Trésorier informé d'une déclaration (résumé groupé) | ✅ **fait** (N1/T10) : job quotidien 7 h 10 Paris, verrou consultatif PostgreSQL, coupe-circuit `donations.digest.enabled`, `source = DONATION_DIGEST`, un résumé **par nœud** adressé à **tous** ses trésoriers, montants **par devise** | la modale **n'ouvre aucun écran** (voir ci-dessous) |
 | 4 | Trésorier relance les non-déclarants | ✅ **fait** (N2/T11) : `POST /api/church/donations/reminders/bulk` + `GET .../reminders/scopes`, anti-spam 24 h par personne, retour `{envoyes, dejaRelances, dejaDeclares, scopeName, from, to, envoyesA}` · déclencheur mobile `components/RelanceNonDeclarants.tsx`, **branché dans l'écran Trésorerie au lot de consolidation** | période figée au mois courant, non exposée à l'écran |
 | 5 | Dirigeant Goals relance son périmètre (groupé) | ✅ **fait** (N3/G3) : `POST /api/church/goals/reminders/bulk` + écran `goals/remind.tsx` | Q3 (`LEADER`/`SECRETARIAT`) tranchée **par le refus**, à confirmer |
-| 6 | Push Expo sur Shephr | ⚠️ **écrit, non éprouvable** (N4a·N4b·N4c) | **démarches Apple / Google** — sans elles, aucune bannière ne part |
+| 6 | Push Expo sur Shephr | ⚠️ **écrit, non encore éprouvé** (N4a·N4b·N4c) — **raccordement de N4c corrigé le 16/09**, voir §4 | identifiants Apple et Firebase **posés le 16/09** (clé APNs `JX3AB67N9W` réutilisée de CMFIPraise, projet Firebase `shephr-5072d`) ; reste le **build de développement** et l'épreuve sur téléphone réel |
 
 ### Ce qui reste ouvert
 
@@ -183,7 +183,41 @@ construit sur le même modèle** — mêmes règles, mêmes retours, un seul com
 | **N3** (= G3) | Relance groupée Goals par périmètre géographique **ou** discipulat | ✅ **fait** | Q3 à confirmer (`goals-hierarchie-et-rappels.md` §4) |
 | **N4a** | Backend : `List<UUID> utilisateurs` dans `DiffusionPush` + clause dans `PushSendServiceImpl.cibles` (requêtes par lots de 500) + catégorie `RAPPELS` (colonne `pref_rappels`, canal Android, interrupteur, champ DTO) | ✅ **fait** | `LOT_UTILISATEURS = 500` est un garde-fou, jamais exercé sur une vraie base |
 | **N4b** | Mobile : `expo-notifications`, enregistrement au login (`targetApp: "Shephr"`), **3** canaux Android (`rappels`, `infos`, `mises-a-jour`), écran de réglages, modale d'activation, deep link au tap | ⚠️ **fait, non éprouvable** | **bloqué par les démarches Apple / Google** ; Expo Go ne délivre plus le push distant sur Android (SDK 53) : build de développement obligatoire |
-| **N4c** | Brancher N1/N2/N3 sur le push : `RelaiPushNotification` (envoi différé à `afterCommit`, garde-fou liste vide) + routage du tap par `source` | ⚠️ **fait, non éprouvable** | la destination du tap est déduite de la `source` (`DONATION_DIGEST` / `DONATION_REMINDER` / `GOAL_REMINDER`) : une source nommée autrement ouvrirait la modale mais aucun écran |
+| **N4c** | Brancher N1/N2/N3 sur le push : `RelaiPushNotification` (envoi différé à `afterCommit`, garde-fou liste vide) + routage du tap par `source` | ✅ **fait le 16/09** — ⚠️ **était annoncé fait à tort le 14/09** | voir l'encadré ci-dessous. La destination du tap est déduite de la `source` (`DONATION_DIGEST` / `DONATION_REMINDER` / `GOAL_REMINDER`) : une source nommée autrement ouvrirait la modale mais aucun écran |
+
+> ### ⚠️ N4c — le relais était écrit, mais n'était appelé nulle part (corrigé le 16/09/2026)
+>
+> Le lot N4c a été classé « fait » le 14/09 sur la foi de l'existence de `RelaiPushNotification`
+> et de son implémentation. Or **aucun service ne l'appelait** : `0` occurrence de `.relayer(` dans
+> `src/main`, `0` dans les tests. `DonationDigestServiceImpl`, `DonationReminderServiceImpl`,
+> `GoalBulkReminderServiceImpl` et `GoalReminderServiceImpl` écrivaient bien leurs
+> `UserNotification`, mais aucune bannière n'en serait jamais partie.
+>
+> Conséquence, si on ne l'avait pas vu : une fois les clés Apple et Firebase posées, **seules les
+> notifications envoyées depuis le back-office** (`POST /admin/notifications/{id}/push`, le seul
+> chemin réellement câblé) auraient fait sonner un téléphone. La relance du trésorier et le rappel
+> du dirigeant seraient restées muettes — et le diagnostic aurait naturellement porté sur les
+> identifiants, qui n'y étaient pour rien.
+>
+> **Les quatre appels ajoutés**, tous en `TargetApp.Shephr` / `CategoriePush.RAPPELS` :
+>
+> | Service | Chemin | Forme |
+> |---|---|---|
+> | `DonationDigestServiceImpl` | résumé quotidien au trésorier | relais **individuel** (id de la notification) |
+> | `DonationReminderServiceImpl` | relance des non-déclarants | **groupé, une diffusion par texte distinct** |
+> | `GoalBulkReminderServiceImpl` | rappel groupé du dirigeant | groupé, une seule diffusion |
+> | `GoalReminderServiceImpl` | rappel nominatif | relais **individuel** (id de la notification) |
+>
+> Deux formes et non une : le résumé et le rappel nominatif ont un contenu **propre à chaque
+> destinataire**, et le tap doit rouvrir *cette* notification-là. La relance Dons, elle, groupe
+> **par texte et non par personne** — le relais groupé ne porte qu'un titre et un message, or ils
+> dépendent de la langue du destinataire (et le message par défaut nomme le nœud, traduit lui
+> aussi). D'où une diffusion par langue présente dans le périmètre, émise **après** la boucle :
+> dedans, ce serait un aller-retour Expo par personne.
+>
+> **Réserve** : aucun test ne vérifie encore que le relais *est appelé*. Le branchement est acquis
+> par la compilation et la non-régression, pas par une assertion — c'est exactement ce qui a permis
+> à N4c de passer pour fait pendant deux jours.
 
 **Divergence assumée avec CMFIPraise** : la **déconnexion supprime l'appareil** côté serveur au lieu
 de le repasser en `userId = null`. Shephr n'a pas de mode visiteur — un appareil déconnecté n'est
@@ -192,13 +226,31 @@ si l'appel échoue (réseau coupé), la ligne survit jusqu'à la prochaine conne
 
 ### Actions hors code — à faire par Jean Philippe
 
-Le push suppose des démarches Apple et Google qui ne peuvent pas être automatisées :
+Le push suppose des démarches Apple et Google qui ne peuvent pas être automatisées.
+**Les trois premières ont été faites le 16/09/2026** :
 
-1. **Clé APNs** pour le bundle iOS `org.cmfi.shephr`.
-2. **Compte de service Firebase** et **`google-services.json`** pour le package Android `com.cmfi.shephr`.
-3. Une fois le fichier en place, renseigner `app.json` › `android.googleServicesFile`
-   (laissé vide **volontairement** : pointer un fichier absent fait échouer `expo prebuild` et EAS).
-4. Produire un **build de développement** et l'installer sur un téléphone réel.
+1. ✅ **Clé APNs** pour le bundle iOS `org.cmfi.shephr` — la clé `JX3AB67N9W` de l'équipe
+   `Q9QK5S76RP` a été **réutilisée** plutôt que dupliquée : une clé APNs vaut pour toutes les apps
+   d'une équipe, et Apple en limite le nombre à deux par compte. Elle sert donc à CMFIPraise et à
+   Shephr. Gérée et chiffrée par EAS, rien à conserver en local.
+2. ✅ **Compte de service Firebase** et **`google-services.json`** pour le package Android
+   `com.cmfi.shephr` — projet Firebase `shephr-5072d`, API FCM V1 active, clé de compte de service
+   téléversée sur EAS et assignée à `com.cmfi.shephr`.
+   ⚠️ **Le piège des identifiants** : iOS est en `org.cmfi.shephr`, Android en `com.cmfi.shephr`.
+   L'asymétrie est volontaire et constante depuis le premier commit ; saisir `org.` côté Firebase
+   donnerait un `MismatchSenderId` difficile à diagnostiquer.
+3. ✅ `app.json` › `android.googleServicesFile` renseigné, maintenant que le fichier existe.
+   Le fichier lui-même reste **hors du dépôt** (`.gitignore` racine et `mobile/`, avec `*.p8`,
+   `*.keystore` et `GoogleService-Info.plist`), et la clé de compte de service vit dans
+   `~/.config/shephr/`, jamais dans le code.
+4. ⬜ Produire un **build de développement** et l'installer sur un téléphone réel. **Seul point
+   restant** — Expo Go ne délivre plus le push distant depuis le SDK 53.
+
+> **`EXPO_ACCESS_TOKEN` n'est pas requis** — contrairement à ce qu'on pourrait croire en lisant
+> `application.properties:29`. `ExpoPushClient` n'ajoute l'en-tête `Authorization` que si le jeton
+> existe, et son absence est un mode de fonctionnement normal (l'API Expo Push est ouverte). Le
+> jeton ne sert qu'à lever la limitation de débit appliquée aux envois non authentifiés, ou si
+> l'option « Enhanced Security for Push Notifications » est activée côté Expo.
 
 `cmfipraise-app/docs/push-notifications-plan.md` §2 en donne la liste exacte, déjà parcourue pour
 CMFIPraise — **à refaire pour l'app Shephr**, qui est un identifiant applicatif distinct.

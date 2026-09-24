@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '../../../components/ScreenShell';
 import Card from '../../../components/Card';
@@ -10,15 +10,18 @@ import { colors, fonts } from '../../../theme';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import {
   getOverview,
+  listCareUnits,
   listRecords,
   listStatuses,
   sendReminder,
   type MemberCareOverviewRow,
   type MemberCareStatus,
+  type MemberCareUnit,
   type MemberRecord,
 } from '../../../services/memberCareApi';
 import { confirmDialog, notify } from '../../../utils/dialogs';
 import { fmtDate } from '../../../utils/format';
+import { fmtIsoDay } from '../../../utils/meetingReport';
 
 type Tab = 'records' | 'accountability';
 
@@ -31,10 +34,17 @@ function lastUpdated(iso: string | null, t: (k: string) => string): string {
   return fmtDate(new Date(iso));
 }
 
+/**
+ * Suivi pastoral — refonte D-ASM-01/02 (JP 23/09) : la liste = les comptes MEMBRE de l'assemblée
+ * choisie (sélecteur alimenté par GET /member-care/units), fiche existante ou non. Plus de
+ * « Nouvelle fiche » ni de suppression (RG-MCR-02 v2). L'onglet Redevabilité est gelé (D-ASM-09).
+ */
 export default function CareIndexScreen() {
   const { t } = useLanguage();
   const [tab, setTab] = useState<Tab>('records');
 
+  const [units, setUnits] = useState<MemberCareUnit[]>([]);
+  const [unitId, setUnitId] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<MemberCareStatus[]>([]);
   const [records, setRecords] = useState<MemberRecord[]>([]);
   const [overview, setOverview] = useState<MemberCareOverviewRow[]>([]);
@@ -43,16 +53,31 @@ export default function CareIndexScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const unit = units.find((u) => u.id === unitId) ?? null;
+
   const loadRecords = useCallback(async () => {
+    // Sans assemblée visible, rien à lister (GET /records sans unitId = toutes les assemblées
+    // lisibles, mais on reste sur une vue par assemblée, §6.3).
+    if (!unitId) {
+      setRecords([]);
+      return;
+    }
     const data = await listRecords({
+      unitId,
       statusId: statusFilter ?? undefined,
       search: search.trim() || undefined,
     });
     setRecords(data);
-  }, [statusFilter, search]);
+  }, [unitId, statusFilter, search]);
 
   const loadAll = useCallback(async () => {
-    const [st, ov] = await Promise.allSettled([listStatuses(), getOverview()]);
+    const [un, st, ov] = await Promise.allSettled([listCareUnits(), listStatuses(), getOverview()]);
+    if (un.status === 'fulfilled') {
+      const list = un.value;
+      setUnits(list);
+      // Assemblée conservée si toujours visible, sinon la première (canEdit d'abord côté serveur).
+      setUnitId((cur) => (cur && list.some((u) => u.id === cur) ? cur : list[0]?.id ?? null));
+    }
     if (st.status === 'fulfilled') setStatuses(st.value);
     if (ov.status === 'fulfilled') setOverview(ov.value);
     await loadRecords();
@@ -134,6 +159,9 @@ export default function CareIndexScreen() {
         </View>
       ) : tab === 'records' ? (
         <RecordsView
+          units={units}
+          unit={unit}
+          setUnitId={setUnitId}
           records={records}
           statuses={statuses}
           statusFilter={statusFilter}
@@ -150,6 +178,9 @@ export default function CareIndexScreen() {
 }
 
 function RecordsView({
+  units,
+  unit,
+  setUnitId,
   records,
   statuses,
   statusFilter,
@@ -158,6 +189,9 @@ function RecordsView({
   setSearch,
   t,
 }: {
+  units: MemberCareUnit[];
+  unit: MemberCareUnit | null;
+  setUnitId: (id: string) => void;
   records: MemberRecord[];
   statuses: MemberCareStatus[];
   statusFilter: string | null;
@@ -166,8 +200,43 @@ function RecordsView({
   setSearch: (v: string) => void;
   t: (k: string, o?: any) => string;
 }) {
+  if (units.length === 0) {
+    return (
+      <Card style={styles.emptyCard}>
+        <Ionicons name="home-outline" size={26} color={colors.ink3} />
+        <Text style={styles.emptyText}>{t('care.noUnits')}</Text>
+      </Card>
+    );
+  }
   return (
     <>
+      {units.length > 1 && (
+        <View style={[styles.filterRow, { marginTop: 16 }]}>
+          {units.map((u) => (
+            <Chip
+              key={u.id}
+              label={u.cityName ? `${u.name} · ${u.cityName}` : u.name}
+              selected={u.id === unit?.id}
+              accent={u.canEdit}
+              onPress={() => setUnitId(u.id)}
+            />
+          ))}
+        </View>
+      )}
+      {units.length === 1 && unit && (
+        <Text style={styles.unitName}>
+          {unit.name}
+          {unit.cityName ? <Text style={styles.unitCity}> · {unit.cityName}</Text> : null}
+        </Text>
+      )}
+      {/* D-ASM-05 (JP 23/09) : le superviseur lit, seul le dirigeant d'assemblée écrit. */}
+      {unit && !unit.canEdit && (
+        <View style={styles.readOnly}>
+          <Ionicons name="eye-outline" size={15} color={colors.ink3} />
+          <Text style={styles.readOnlyText}>{t('care.readOnly')}</Text>
+        </View>
+      )}
+
       <View style={styles.searchRow}>
         <Ionicons name="search" size={17} color={colors.ink3} />
         <Field
@@ -193,11 +262,6 @@ function RecordsView({
           ))}
       </View>
 
-      <Pressable style={styles.newBtn} onPress={() => router.push('/(tabs)/care/new')}>
-        <Ionicons name="add" size={18} color={colors.white} />
-        <Text style={styles.newBtnText}>{t('care.newRecord')}</Text>
-      </Pressable>
-
       {records.length === 0 ? (
         <Card style={styles.emptyCard}>
           <Ionicons name="people-outline" size={26} color={colors.ink3} />
@@ -207,18 +271,20 @@ function RecordsView({
         <Card style={{ marginTop: 14, paddingVertical: 0 }}>
           {records.map((r, i) => (
             <Pressable
-              key={r.id}
-              onPress={() => router.push(`/(tabs)/care/record/${r.id}`)}
+              key={r.userId}
+              onPress={() => router.push(`/(tabs)/care/record/${r.userId}` as Href)}
               style={[styles.recRow, i < records.length - 1 && styles.recRowBorder]}
             >
               <StatusDot color={r.currentStatusColor} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={styles.recName} numberOfLines={1}>
-                  {r.firstName} {r.lastName}
+                  {r.fullName}
                 </Text>
                 <Text style={styles.recSub} numberOfLines={1}>
                   {r.currentStatusLabel ?? t('care.noStatus')}
-                  {r.contactPhone ? ` · ${r.contactPhone}` : ''}
+                  {r.lastAttendanceDate
+                    ? ` · ${t('care.lastAttendanceShort', { date: fmtIsoDay(r.lastAttendanceDate, t) })}`
+                    : ''}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.ink3} />
@@ -321,17 +387,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
-  newBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: colors.moss,
-    paddingVertical: 13,
-    borderRadius: 14,
-    marginTop: 16,
-  },
-  newBtnText: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: colors.white },
+  unitName: { fontFamily: fonts.serif, fontSize: 19, color: colors.ink, marginTop: 16 },
+  unitCity: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
+  readOnly: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
+  readOnlyText: { flex: 1, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, lineHeight: 17 },
   emptyCard: { marginTop: 16, paddingVertical: 30, alignItems: 'center', gap: 10 },
   emptyText: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, textAlign: 'center', maxWidth: 260, lineHeight: 19 },
   recRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14 },

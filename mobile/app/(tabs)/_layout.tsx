@@ -11,7 +11,7 @@ import NotificationGate from '../../components/NotificationGate';
 export default function TabLayout() {
   const { t, applyAccountLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { isLeader, hasGoals, hasMemberCare, hasDonations, me } = useAuth();
+  const { isLeader, hasGoals, hasMemberCare, hasAssembly, hasDonations, me } = useAuth();
 
   // Initialise la langue depuis le compte (me.language) tant que l'utilisateur
   // n'a pas choisi explicitement une langue dans l'app (cf. LanguageContext).
@@ -107,6 +107,19 @@ export default function TabLayout() {
           ),
         }}
       />*/}
+      <Tabs.Screen
+        name="assembly"
+        options={{
+          // Vie d'assemblée (§6.3 plan 23/09, lot L5) : dirigeants + abonnement ASSEMBLY (D-ASM-12).
+          // D-ASM-17 (JP 25/09) : aussi le MEMBRE rattaché à une assemblée, en lecture seule.
+          // L'écriture des CR reste décidée par le serveur (`canWrite`, D-ASM-03).
+          href: (isLeader || hasMemberGoals(me)) && hasAssembly ? '/(tabs)/assembly' : null,
+          title: t('tabs.assembly'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="book-outline" size={size} color={color} />
+          ),
+        }}
+      />
       <Tabs.Screen
         name="care"
         options={{

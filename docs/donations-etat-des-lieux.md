@@ -68,7 +68,7 @@ Ces décisions **remplacent** les décisions correspondantes du plan du 10/08 (D
 | — | « Mes objectifs » ne disparaît pas | ✅ **écrit** (T1) : la tuile ne dépend plus que des droits Goals | recette §7 — **le point le plus important** |
 | — | Déclaration multi-rubriques + validation (J-1) | ✅ **écrit** (T6·T7·T8) : `don_declaration` / `don_declaration_line`, 7 endpoints, 2 statuts, reprise de tout l'historique en mono-ligne, écrans mobile de déclaration et file « À vérifier » | recette §8 bis · **la reprise d'historique n'est pas exercée par les tests** (H2) : à valider sur PostgreSQL |
 | — | Notifications au trésorier / relance (J-2) | ✅ **écrit** (T10·T11) : résumé quotidien par nœud à **tous** les trésoriers, relance groupée des non-déclarants | recette §11.a et §11.b · la modale in-app **n'ouvre aucun écran** (pas d'action dans `NotificationGate`) |
-| — | Push Expo (J-3) | ⚠️ **écrit, non éprouvable** (N4a·N4b·N4c) : ciblage par utilisateur, catégorie `RAPPELS`, mobile complet, routage du tap | **bloqué par les démarches Apple / Google** (clé APNs, compte Firebase, `google-services.json`) — §0 ter de la recette |
+| — | Push Expo (J-3) | ⚠️ **écrit, non encore éprouvé** (N4a·N4b·N4c) : ciblage par utilisateur, catégorie `RAPPELS`, mobile complet, routage du tap. **N4c était annoncé fait à tort** — le relais n'était appelé nulle part, corrigé le 16/09 | identifiants Apple et Firebase **posés le 16/09** (APNs `JX3AB67N9W`, projet `shephr-5072d`) ; reste le **build de développement** sur téléphone réel |
 
 **Lecture d'ensemble** : le socle *abonnement → visibilité* était déjà solide ; tout ce qui fait la
 valeur métier du module — trésorier, rubriques, déclaration réelle, validation, exports,
