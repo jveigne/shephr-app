@@ -1,13 +1,17 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './components/Icon';
+import { FEATURES } from './config/features';
+import { getAccessibleModules } from './services/authApi';
 import { useAuth } from './hooks/useAuth';
 import { setLanguage } from './i18n';
 
 /**
  * Feature A — shell MINIMAL de l'espace membre (MEMBRE Goals rattaché à une assemblée).
- * N'expose QUE « Mes objectifs », « Réglages » et la déconnexion — aucun élargissement :
+ * N'expose QUE « Mes objectifs », « Mon assemblée » (D-ASM-17, lecture seule, si l'abonnement
+ * ASSEMBLY couvre le membre), « Réglages » et la déconnexion — aucun élargissement :
  * la garde d'AppShell (canAccessWeb / hasMinistryAccess) n'est pas touchée.
  */
 export function MemberShell() {
@@ -16,6 +20,12 @@ export function MemberShell() {
   const { ready, isAuthenticated, canAccessMemberSpace, me, logout } = useAuth();
   const { t, i18n } = useTranslation();
   const [navOpen, setNavOpen] = useState(false);
+  const modulesQ = useQuery({
+    queryKey: ['accessible-modules'],
+    queryFn: getAccessibleModules,
+    enabled: ready && isAuthenticated && canAccessMemberSpace,
+  });
+  const hasAssembly = FEATURES.assembly && (modulesQ.data ?? []).includes('ASSEMBLY');
   const lang = i18n.language.startsWith('en') ? 'en' : 'fr';
 
   useEffect(() => {
@@ -82,6 +92,15 @@ export function MemberShell() {
                 <Icon name="sparkle" size={18} />
                 <span>{t('memberGoals.title')}</span>
               </NavLink>
+              {hasAssembly && (
+                <NavLink
+                  to="/my-assembly"
+                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                >
+                  <Icon name="calendar" size={18} />
+                  <span>{t('assembly.memberNav')}</span>
+                </NavLink>
+              )}
               <NavLink
                 to="/member-settings"
                 className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}

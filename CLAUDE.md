@@ -65,7 +65,7 @@ Le niveau `TEAM` est supprimé, le type d'unité `CENTER` aussi.
 ### Deux gating orthogonaux
 
 1. **Rôle** (`ModuleRole` + périmètre géographique) — qui voit/écrit quoi.
-2. **Abonnement au module** — `GET /api/me/accessible-modules` renvoie les codes accessibles (`DONATIONS`, `GOALS`, `MEMBER_CARE`…). Un module non couvert est **invisible** (RG-06), pas juste désactivé. Côté backend, l'accès est aussi refusé par `@RequiresModule` (403 `MODULE_ACCESS_DENIED`).
+2. **Abonnement au module** — `GET /api/me/accessible-modules` renvoie les codes accessibles (`DONATIONS`, `GOALS`, `MEMBER_CARE`, `ASSEMBLY`…). Un module non couvert est **invisible** (RG-06), pas juste désactivé. Côté backend, l'accès est aussi refusé par `@RequiresModule` (403 `MODULE_ACCESS_DENIED`).
 
 Un utilisateur peut donc avoir le rôle requis **et** se voir refuser l'accès faute d'abonnement.
 
@@ -102,7 +102,7 @@ web/src/
 ├── App.tsx              Routes + QueryClient (staleTime 30 s, retry 1, pas de refetch on focus)
 ├── AppShell.tsx         Espace dirigeant — garde `canAccessWeb` (= hasMinistryAccess)
 ├── MemberShell.tsx      Espace membre minimal — garde `canAccessMemberSpace`
-├── config/features.ts   Flags de livraison { donations: false, goals: true }
+├── config/features.ts   Flags de livraison { donations: false, goals: true, assembly: true }
 ├── components/          ui.tsx (Button…TopBar, Picker, Table, Modal, Drawer), charts.tsx,
 │                        NationsMap, GoalTimeline, YearPicker, GeoPicker, CountryDialPicker,
 │                        SupervisorCard, Sidebar, Toast, Icon/icons, LangSwitch
@@ -110,7 +110,7 @@ web/src/
 ├── i18n/                index.ts + locales/{fr,en}.json (37 sections)
 ├── pages/               voir routes ci-dessous
 ├── services/            apiClient (axios + interceptors) + 1 module par domaine
-└── utils/               format, download, isoNumeric
+└── utils/               format, download, isoNumeric, meetingReport (texte du CR, §5.4)
 ```
 
 ### Routes et gardes
@@ -120,14 +120,14 @@ web/src/
 | **Publique** | `/` (landing), `/login`, `/signup`, `/activate`, `/invitation/:token`, `/delete-account` (+`/supprimer-compte`), `/privacy` (+`/confidentialite`) | aucune |
 | **Onboarding** | `/join` | authentifié, **hors shell** (compte sans rattachement) |
 | **`MemberShell`** | `/my-goals`, `/member-settings`, `/member-contact` | `goalRole === 'MEMBRE'` **et** `goalUnitId` |
-| **`AppShell`** | `/dashboard`, `/donations`, `/goals`, `/member-care`, `/users`, `/structure/{ministeres,pays,zones,localites,unites}`, `/hierarchy`, `/requests`, `/exports`, `/settings`, `/contact` | `hasMinistryAccess` = `superAdmin` ou tout rôle module > `MEMBRE` |
+| **`AppShell`** | `/dashboard`, `/donations`, `/goals`, `/assembly`, `/member-care`, `/users`, `/structure/{ministeres,pays,zones,localites,unites}`, `/hierarchy`, `/requests`, `/exports`, `/settings`, `/contact` | `hasMinistryAccess` = `superAdmin` ou tout rôle module > `MEMBRE` |
 
 `/delete-account` et `/privacy` sont **exigées par Google Play** — ne pas les supprimer ni les mettre derrière une garde.
 
 ### Feature flags (`config/features.ts`)
 
 ```ts
-export const FEATURES = { donations: false, goals: true } as const;
+export const FEATURES = { donations: false, goals: true, assembly: true } as const;
 ```
 
 Flags de **livraison client**, pas de configuration produit — leur historique est documenté en tête du fichier (« Member Care only » JP 2026-06-27, puis mise en avant des Goals JP 2026-07-10). Ils pilotent : les routes (`App.tsx`), les entrées de menu (`Sidebar.tsx`) et la page d'accueil `HOME`. Réactiver un pan = repasser le flag à `true` (rien d'autre à toucher).
@@ -140,7 +140,8 @@ Flags de **livraison client**, pas de configuration produit — leur historique 
 | `authApi.ts` | auth, invitations, helpers de rôles, `getAccessibleModules` |
 | `adminApi.ts` | utilisateurs (`/api/church/admin/users`) + structure org (`/countries`, `/zones`, `/localities`, `/units`, `/continents`, `/ministries`) |
 | `goalsApi.ts` | module Goals (584 lignes) — pledges, progress, faith, agrégats, timeline, drill, deadlines, rappels |
-| `memberCareApi.ts` | suivi pastoral (`/api/church/member-care`) |
+| `memberCareApi.ts` | suivi pastoral (`/api/church/member-care`) — fiches adressées par **`userId`** du membre (refonte 23/09) |
+| `assemblyApi.ts` | Vie d'assemblée (`/api/church/assembly`, module `ASSEMBLY`) — assemblées, roster, réunions/CR, modules d'enseignement, avancement |
 | `donationApi.ts`, `statsApi.ts` | dons + statistiques (masqués par `FEATURES.donations`) |
 | `joinRequestsApi.ts`, `structureRequestsApi.ts` | demandes de rattachement / de création de structure |
 | `leadersApi.ts` | organigramme, superviseur, discipulat |
@@ -165,17 +166,17 @@ mobile/
 │   ├── _layout.tsx             Stack racine + providers (Language, Auth) + fonts + splash
 │   ├── index.tsx               Redirection /(tabs)/home ↔ /(auth)/login
 │   ├── (auth)/                 login · signup · activate (code court) · join (rattachement)
-│   ├── (tabs)/                 home · donations · goals/ · leader/ · care/ · profile
+│   ├── (tabs)/                 home · donations · goals/ · leader/ · assembly/ · care/ · profile
 │   ├── declare.tsx             modale de déclaration de don
 │   ├── donation/[id].tsx, donation/edit/[id].tsx
 │   ├── structure.tsx, membres.tsx, hierarchie.tsx, superviseur.tsx, invite.tsx
 ├── components/                 UI atomiques + NotificationGate + GoalAggregates…
-├── contexts/                   AuthContext (token, me, modules) · LanguageContext
+├── contexts/                   AuthContext (token, me, modules, hasMemberCare, hasAssembly) · LanguageContext
 ├── constants/                  categories, goalCategories, dialCodes, contact, features(⚠ inutilisé)
 ├── hooks/useGoalsData.ts       agrégat pledges + progress par catégorie (`GoalLine`)
 ├── services/                   apiClient + 16 modules API
 ├── theme/                      colors.ts (moss/parchment/earth/ink) + typography.ts + radii
-├── utils/                      format, dialogs, demandes, i18n/ (fr + en, 32 sections)
+├── utils/                      format, dialogs, demandes, meetingReport (texte du CR), i18n/ (fr + en)
 └── docs/architecture.md        ⚠ partiellement obsolète (voir Points d'attention n°6)
 ```
 
@@ -186,7 +187,8 @@ mobile/
 | `home`, `profile` | toujours |
 | `donations` | `hasDonations` (abonnement `DONATIONS` — RG-06) |
 | `goals` | `hasGoals` (dirigeant+ Goals) **ou** `hasMemberGoals(me)` (membre rattaché) |
-| `leader` (« Périmètre ») | `hasDonations && isLeader` |
+| `leader` (« Trésorerie ») | `hasDonations && isTreasurer` (jamais `isLeader`) |
+| `assembly` (Vie d'assemblée) | `isLeader && hasAssembly` (abonnement `ASSEMBLY`) |
 | `care` (suivi pastoral) | `isLeader && hasMemberCare` |
 | `demandes` | **commenté** dans le code |
 
@@ -275,3 +277,7 @@ Variables : `VITE_API_BASE_URL` pour `web/` (⚠ nom différent de `VITE_API_URL
 9. **Lectures ouvertes, écritures gardées** : les endpoints de structure sont lisibles par tout membre du ministère ; seules les écritures sont contrôlées (le backend renvoie 403). Le gating front sert à ne pas afficher de boutons inutiles — il ne remplace pas la garde serveur, et ne doit pas être « assoupli » pour contourner un 403.
 
 10. **`web/src/services/authApi.ts` conserve un type legacy `UserRole = 'MEMBER'|'LEADER'|'ADMIN'`** (et `LeaderLevel`) hérité de l'ancien modèle. Son commentaire dit « still used by adminApi/Users page » — c'est faux aujourd'hui : plus aucune référence dans `web/src`. Code mort, à ne pas réutiliser.
+
+11. **Vie d'assemblée (module `ASSEMBLY`, plan `cmfipraise-backend/docs/shephr/23_09_2026`)** : réunions et comptes rendus (CR), modules d'enseignement (créés par SUPER_ADMIN dans `shephr-webapp`, `/admin/teaching-modules`), avancement. **Lecture** = périmètre visible (`getAllVisibleUnitIds`, RG-ASM-05 : chaîne, géographie, LEADER/SECRETARIAT) ; **écriture** = `DIRIGEANT_UNITE` de l'assemblée uniquement (`canWrite`, D-ASM-03). Le texte copiable du CR est généré côté client par **deux copies** de `utils/meetingReport.ts` (web : clés `assembly.report.*`, mobile : `assemblyLife.report.*`), qui doivent produire le même texte au caractère près (modèle §5.4 du plan) : toute modification se porte des deux côtés.
+
+12. **Member Care = accès par chaîne de superviseurs, jamais par la géographie (D-ASM-04/05, 23/09).** Une fiche = un compte `MEMBRE` rattaché (`goalUnitId`), automatique, adressée par `userId` ; plus de création, suppression, liaison ni export. **Lecture** : `DIRIGEANT_UNITE` de l'assemblée courante du membre + ses superviseurs (`supervisor_id`, récursif) + `superAdmin` (lecture seule). LEADER, SECRETARIAT et la géographie (ville/région/nation) ne voient **aucune** fiche. **Écriture** (statut, note) : `DIRIGEANT_UNITE` de l'assemblée uniquement (`canEdit`). Les présences viennent des CR si `ASSEMBLY` est actif (`attendanceEnabled`). Redevabilité (`/overview`, relances) : gelée (D-ASM-09).

@@ -37,6 +37,11 @@ interface AuthContextValue extends AuthState {
   /** Modules accessibles (codes) ; alimente le gating de navigation. */
   modules: string[];
   hasMemberCare: boolean;
+  /**
+   * Vie d'assemblée (réunions, CR, avancement) : abonnement ASSEMBLY actif — D-ASM-12 (JP 23/09),
+   * module distinct de MEMBER_CARE.
+   */
+  hasAssembly: boolean;
   /** Module Dons accessible : abonnement DONATIONS actif couvrant l'utilisateur (RG-06). */
   hasDonations: boolean;
   /** Renvoie le profil chargé (null si /me a échoué) — permet le routage post-login (Feature B). */
@@ -154,6 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     hasUnit: !!state.me?.donationUnitId,
     modules,
     hasMemberCare: modules.includes('MEMBER_CARE'),
+    hasAssembly: modules.includes('ASSEMBLY'),
     hasDonations: modules.includes('DONATIONS'),
     login,
     register,

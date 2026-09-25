@@ -4,3 +4,13 @@
 
 expo-env.d.ts
 # @end expo-cli
+# Identifiants push — ne doivent JAMAIS entrer dans le dépôt (mise en service du 16/09/2026).
+# google-services.json porte la configuration Firebase du package com.cmfi.shephr ;
+# le .p8 est la clé APNs, qu'Apple ne laisse télécharger qu'une seule fois.
+google-services.json
+GoogleService-Info.plist
+*.p8
+*.mobileprovision
+*.keystore
+.env
+.env.local

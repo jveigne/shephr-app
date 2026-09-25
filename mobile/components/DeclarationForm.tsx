@@ -328,11 +328,16 @@ export function DatePickerModal({
   value,
   onClose,
   onChange,
+  title,
+  hint,
 }: {
   visible: boolean;
   value: Date;
   onClose: () => void;
   onChange: (d: Date) => void;
+  /** Lot L5 (Vie d'assemblée, 23/09) : libellés surchargeables — défaut = date du don. */
+  title?: string;
+  hint?: string;
 }) {
   const { t } = useLanguage();
   const [cursor, setCursor] = useState(() => startOfMonth(value));
@@ -361,7 +366,7 @@ export function DatePickerModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.pickerBackdrop} onPress={onClose}>
         <Pressable style={styles.pickerCard} onPress={() => {}}>
-          <Text style={styles.pickerTitle}>{t('declare.pickDate')}</Text>
+          <Text style={styles.pickerTitle}>{title ?? t('declare.pickDate')}</Text>
 
           <View style={styles.pickerHead}>
             <Pressable
@@ -415,7 +420,7 @@ export function DatePickerModal({
             })}
           </View>
 
-          <Text style={styles.pickerHint}>{t('declare.pickDateHint')}</Text>
+          <Text style={styles.pickerHint}>{hint ?? t('declare.pickDateHint')}</Text>
 
           <View style={styles.pickerActions}>
             <Button

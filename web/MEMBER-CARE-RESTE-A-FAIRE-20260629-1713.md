@@ -1,5 +1,29 @@
 # Member Care (web ministère) — reste à faire
 
+> ⚠ **Document historique — remplacé par le plan du 23/09/2026**
+> `cmfipraise-backend/docs/shephr/23_09_2026/01_Plan_Vie_Assemblee_Member_Care.md`
+> (décisions D-ASM-01 à D-ASM-15, règles RG-MCR-* v2). La refonte web a été faite au **Lot L7** (23/09).
+>
+> Ce qui change par rapport à ce document :
+> - **D-ASM-01 / D-ASM-02 (JP 23/09)** : une fiche = un compte `MEMBRE` de l'assemblée, **automatique**.
+>   Plus de création, d'édition d'identité (prénom/nom/contact viennent du compte) ni de suppression :
+>   `createRecord`, `updateRecord` (identité) et `deleteRecord` ont été **retirés** de `memberCareApi.ts`,
+>   ainsi que les endpoints backend `POST /records`, `DELETE /records/{id}`, `POST /records/{id}/link`,
+>   `GET /export`. Les §1 (suppression) et §3 (lier une fiche à un compte) ci-dessous sont donc **caducs**.
+> - Les fiches sont adressées par le **userId** du membre : `GET /records/{userId}`,
+>   `PATCH /records/{userId}` (`{ note }`), `PATCH /records/{userId}/status`.
+> - **D-ASM-04 / D-ASM-05 (JP 23/09)** : lecture = dirigeant(s) de l'assemblée + chaîne de leurs superviseurs
+>   (pas la géographie) ; écriture = `DIRIGEANT_UNITE` de l'assemblée uniquement (`canEdit` serveur).
+>   Le sélecteur d'assemblée est alimenté par `GET /member-care/units`.
+> - **D-ASM-08 / RG-MCR-10** : la fiche affiche les présences aux réunions si le module `ASSEMBLY` est actif.
+> - **D-ASM-09 (JP 23/09)** : Redevabilité / relances (`/overview`, `/reminders`, `/config`) **gelées**.
+> - Restent valables : §2 (gestion du référentiel de statuts, toujours hors UI — plan §8) et le
+>   hors-périmètre « config fréquence » / « export CSV ».
+>
+> Le contenu ci-dessous est conservé pour mémoire (état au 29/06/2026).
+
+---
+
 > Horodatage : 2026-06-29 17:13
 > Contexte : la livraison « Member Care only » (décision JP 2026-06-27) cible le web ministère (`shephr-app/web`).
 > Le backend (`cmfipraise-backend`, package `com.excellence.back.membercare`) expose déjà toutes les capacités ci-dessous.

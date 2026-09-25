@@ -94,20 +94,30 @@ vérifier tous ses appelants.
 
 ---
 
-## 6. Hors code — action Jean Philippe
+## 6. Hors code — action Jean Philippe ✅ **fait le 16/09/2026**
 
-Le push Expo est écrit (backend et mobile) mais **non éprouvable** sans les identifiants applicatifs
-Shephr, distincts de ceux de CMFIPraise :
+Les identifiants applicatifs Shephr sont en place :
 
-- clé APNs (Apple Developer),
-- compte de service Firebase + `google-services.json` (Google Play),
-- renseigner `android.googleServicesFile` dans `mobile/app.json`,
-- produire un build de développement (le push ne fonctionne pas dans Expo Go).
+- ✅ **clé APNs** — `JX3AB67N9W` (équipe `Q9QK5S76RP`), **réutilisée** de CMFIPraise plutôt que
+  dupliquée : une clé vaut pour toutes les apps d'une équipe et Apple en limite le nombre à deux.
+- ✅ **compte de service Firebase** + `google-services.json` — projet `shephr-5072d`, FCM V1 actif,
+  clé téléversée sur EAS et assignée au package `com.cmfi.shephr`.
+- ✅ `android.googleServicesFile` renseigné dans `mobile/app.json`.
+- ⬜ **build de développement** sur un téléphone réel — le seul point restant.
 
-`cmfipraise-app/docs/push-notifications-plan.md` §2 donne la liste exacte, déjà parcourue une fois.
-**C'est le plus long en délai calendaire.** Sans ces clés, le résumé et la relance fonctionnent
-parfaitement en modale à l'ouverture de l'app — donc ne pas annoncer le push, mais la fonction est
-démontrable.
+> **Deux correctifs faits au passage le 16/09 :**
+>
+> 1. `mobile/app.json` › `extra.API_URL` était commité sur `http://localhost:8080` (commit
+>    `574cd10`, qui avait écrasé l'URL Railway). **Tout build produit depuis `HEAD` aurait pointé
+>    localhost.** Remis sur `https://cmfipraise-prod-production.up.railway.app`.
+> 2. Le `.gitignore` ne protégeait **ni** `google-services.json`, **ni** `*.p8`, **ni**
+>    `*.keystore` — à la racine comme dans `mobile/`. Corrigé avant de déposer le moindre fichier.
+>    La clé de compte de service vit dans `~/.config/shephr/`, hors du dépôt.
+
+⚠️ **Et un manque de fond, découvert en auditant les chemins d'envoi** : le lot N4c
+(« brancher les notifications sur le push ») était annoncé fait, mais `RelaiPushNotification`
+n'était **appelé nulle part**. Sans ce raccordement, les clés ci-dessus n'auraient fait sonner que
+les notifications parties du back-office. Corrigé — détail dans `docs/notifications.md` §4.
 
 ---
 
