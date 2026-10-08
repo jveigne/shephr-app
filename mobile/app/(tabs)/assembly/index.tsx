@@ -6,6 +6,7 @@ import ScreenShell from '../../../components/ScreenShell';
 import Card from '../../../components/Card';
 import Chip from '../../../components/Chip';
 import Label from '../../../components/Label';
+import SelectField from '../../../components/SelectField';
 import ErrorBanner from '../../../components/ErrorBanner';
 import { colors, fonts } from '../../../theme';
 import { useLanguage } from '../../../contexts/LanguageContext';
@@ -60,6 +61,10 @@ export default function AssemblyIndexScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const unit = units.find((u) => u.id === unitId) ?? null;
+  const unitOptions = units.map((u) => ({
+    id: u.id,
+    name: u.cityName ? `${u.name} · ${u.cityName}` : u.name,
+  }));
   // Vue d'ensemble réservée à qui voit plusieurs assemblées (dirigeants au-dessus, §6.2/§6.3).
   const showOverview = units.length > 1;
   const isMember = !!unit?.member;
@@ -174,6 +179,16 @@ export default function AssemblyIndexScreen() {
     } as unknown as Href);
   };
 
+  // Journal PDF (JP 08/10) : lecture seule, réservé aux dirigeants — un MEMBRE garde sa vue de
+  // ses propres présences (D-ASM-17), sans compilation de l'assemblée.
+  const openJournal = () => {
+    if (!unit) return;
+    router.push({
+      pathname: '/(tabs)/assembly/journal',
+      params: { unitId: unit.id, unitName: unit.name, cityName: unit.cityName ?? '' },
+    } as unknown as Href);
+  };
+
   return (
     <ScreenShell
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.moss} />}
@@ -194,18 +209,16 @@ export default function AssemblyIndexScreen() {
         </Card>
       ) : (
         <>
+          {/* Liste déroulante plutôt que des pastilles : un dirigeant de ville/région peut voir
+              des dizaines d'assemblées (retour JP 08/10). Le serveur trie déjà les assemblées
+              où l'on écrit en tête. */}
           {units.length > 1 && (
-            <View style={styles.chipWrap}>
-              {units.map((u) => (
-                <Chip
-                  key={u.id}
-                  label={u.cityName ? `${u.name} · ${u.cityName}` : u.name}
-                  selected={u.id === unitId}
-                  accent={u.canWrite}
-                  onPress={() => setUnitId(u.id)}
-                />
-              ))}
-            </View>
+            <SelectField
+              label={t('assemblyLife.unitPicker')}
+              options={unitOptions}
+              pick={unitOptions.find((o) => o.id === unitId) ?? null}
+              onChange={(o) => setUnitId(o.id)}
+            />
           )}
           {units.length === 1 && unit && (
             <Text style={styles.unitName}>
@@ -242,6 +255,7 @@ export default function AssemblyIndexScreen() {
                 canWrite={!!unit?.canWrite}
                 isMember={isMember}
                 onNew={openNew}
+                onJournal={openJournal}
                 t={t}
               />
               {/* D-ASM-17 : CR des réunions suivies dans une assemblée quittée depuis. */}
@@ -283,6 +297,7 @@ function MeetingsView({
   canWrite,
   isMember,
   onNew,
+  onJournal,
   t,
 }: {
   meetings: MeetingSummary[];
@@ -291,6 +306,7 @@ function MeetingsView({
   canWrite: boolean;
   isMember: boolean;
   onNew: () => void;
+  onJournal: () => void;
   t: T;
 }) {
   const thisYear = new Date().getFullYear();
@@ -318,6 +334,13 @@ function MeetingsView({
         </Pressable>
       ) : (
         <Text style={styles.readOnly}>{t(isMember ? 'assemblyLife.memberHint' : 'assemblyLife.readOnly')}</Text>
+      )}
+
+      {!isMember && (
+        <Pressable style={styles.journalBtn} onPress={onJournal}>
+          <Ionicons name="document-text-outline" size={17} color={colors.moss} />
+          <Text style={styles.journalBtnText}>{t('assemblyLife.journal.open')}</Text>
+        </Pressable>
       )}
 
       {meetings.length === 0 ? (
@@ -559,6 +582,19 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   newBtnText: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: colors.white },
+  journalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.hairStrong,
+    backgroundColor: colors.paper2,
+    paddingVertical: 12,
+    borderRadius: 14,
+    marginTop: 10,
+  },
+  journalBtnText: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: colors.moss },
   readOnly: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 14, lineHeight: 18 },
   emptyCard: { marginTop: 16, paddingVertical: 30, alignItems: 'center', gap: 10 },
   emptyText: {

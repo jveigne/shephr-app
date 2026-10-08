@@ -156,7 +156,7 @@ Flags de **livraison client**, pas de configuration produit — leur historique 
 ## `mobile/` — application Expo
 
 ### Stack
-Expo SDK 54 · React Native 0.81 · React 19 · **expo-router** (routing par fichiers, `typedRoutes`) · axios · AsyncStorage · react-i18next · react-native-svg · reanimated. Fonts Google : **Fraunces** (serif, titres/montants), **Inter** (corps), **JetBrains Mono** (codes/références).
+Expo SDK 57 · React Native 0.86 · React 19.2 · **expo-router** (routing par fichiers, `typedRoutes`) · axios · AsyncStorage · react-i18next · react-native-svg · reanimated. Fonts Google : **Fraunces** (serif, titres/montants), **Inter** (corps), **JetBrains Mono** (codes/références).
 
 ### Structure
 

@@ -8,6 +8,7 @@ export default function AssemblyLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="form" />
       <Stack.Screen name="meeting/[id]" />
+      <Stack.Screen name="journal" />
     </Stack>
   );
 }

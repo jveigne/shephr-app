@@ -411,7 +411,7 @@ function Hills() {
     <Svg
       viewBox="0 0 402 240"
       preserveAspectRatio="none"
-      style={[StyleSheet.absoluteFillObject, { opacity: 0.65 }] as any}
+      style={[StyleSheet.absoluteFill, { opacity: 0.65 }] as any}
     >
       <Path
         d="M-10,130 C 80,80 160,180 240,130 S 380,80 420,120 L 420,250 L -10,250 Z"

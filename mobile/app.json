@@ -2,10 +2,10 @@
   "expo": {
     "name": "shephr",
     "slug": "shephr",
-    "version": "0.1.7",
-    "sdkVersion": "54.0.0",
+    "version": "0.1.8",
+    "sdkVersion": "57.0.0",
     "extra": {
-      "API_URL": "http://localhost:8080",
+      "API_URL": "https://cmfipraise-prod-production.up.railway.app",
       "router": {
         "origin": false
       },
@@ -16,12 +16,6 @@
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/logo.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "platforms": [
       "ios",
       "android",
@@ -67,7 +61,13 @@
           "defaultChannel": "default",
           "mode": "production"
         }
-      ]
+      ],
+      "expo-asset",
+      "expo-font",
+      "expo-image",
+      "expo-sharing",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

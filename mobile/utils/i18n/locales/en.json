@@ -998,6 +998,7 @@
   },
   "assemblyLife": {
     "title": "Assembly life",
+    "unitPicker": "Assembly",
     "subtitle": "Meetings, reports and progress through the teaching modules.",
     "tabMeetings": "Meetings",
     "tabProgress": "Progress",
@@ -1088,6 +1089,39 @@
     "memberHint": "Your assembly's meeting reports, read-only.",
     "present": "Present",
     "absent": "Absent",
-    "otherMeetingsTitle": "My meetings in other assemblies"
+    "otherMeetingsTitle": "My meetings in other assemblies",
+    "journal": {
+      "open": "PDF journal",
+      "title": "Assembly journal",
+      "periodicity": "Period",
+      "kind": {
+        "month": "Month",
+        "quarter": "Quarter",
+        "semester": "Half-year",
+        "year": "Year"
+      },
+      "quarters": "Q1,Q2,Q3,Q4",
+      "semesters": "H1,H2",
+      "reportCount_zero": "No report for this period.",
+      "reportCount_one": "{{count}} report for this period",
+      "reportCount_other": "{{count}} reports for this period",
+      "contentHint": "The journal opens with a summary of the period (meetings, average attendance, bread breaking, readings), followed by each report in chronological order.",
+      "generate": "Generate PDF",
+      "failed": "Could not generate the journal.",
+      "shareUnavailable": "File sharing is not available on this device.",
+      "docTitle": "Assembly journal",
+      "generatedOn": "Issued on {{date}}",
+      "summary": "Period summary",
+      "statMeetings": "Meetings",
+      "statAverage": "Average attendance",
+      "statBread": "Bread breaking",
+      "readings": "Readings",
+      "noReadings": "No reading during this period.",
+      "reports": "Reports",
+      "attendees": "Present",
+      "breadBreaking": "Bread breaking",
+      "reading": "Reading",
+      "noReading": "No reading"
+    }
   }
 }

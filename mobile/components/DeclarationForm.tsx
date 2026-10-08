@@ -359,6 +359,8 @@ export function DatePickerModal({
     ...Array.from({ length: firstWeekday }, () => null),
     ...Array.from({ length: dayCount }, (_, i) => i + 1),
   ];
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks = Array.from({ length: cells.length / 7 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
   const canGoNext = startOfMonth(today).getTime() > cursor.getTime();
   const selected = startOfDay(value);
 
@@ -397,27 +399,34 @@ export function DatePickerModal({
             ))}
           </View>
 
+          {/* Semaines découpées par lignes de 7 en flex:1 : avec `width: 100/7 %`, l'arrondi iOS
+              faisait passer la 7e case (dimanche) à la ligne — dimanche impossible à choisir
+              (retour JP 08/10). */}
           <View style={styles.dayGrid}>
-            {cells.map((day, i) => {
-              if (day === null) return <View key={`e${i}`} style={styles.dayCell} />;
-              const d = new Date(year, month, day);
-              const future = d.getTime() > today.getTime();
-              const on = d.getTime() === selected.getTime();
-              return (
-                <Pressable
-                  key={day}
-                  disabled={future}
-                  onPress={() => onChange(d)}
-                  style={styles.dayCell}
-                >
-                  <Text
-                    style={[styles.dayText, on && styles.dayTextOn, future && styles.dayTextOff]}
-                  >
-                    {day}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            {weeks.map((week, w) => (
+              <View key={w} style={styles.dayRow}>
+                {week.map((day, i) => {
+                  if (day === null) return <View key={`e${i}`} style={styles.dayCell} />;
+                  const d = new Date(year, month, day);
+                  const future = d.getTime() > today.getTime();
+                  const on = d.getTime() === selected.getTime();
+                  return (
+                    <Pressable
+                      key={day}
+                      disabled={future}
+                      onPress={() => onChange(d)}
+                      style={styles.dayCell}
+                    >
+                      <Text
+                        style={[styles.dayText, on && styles.dayTextOn, future && styles.dayTextOff]}
+                      >
+                        {day}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ))}
           </View>
 
           <Text style={styles.pickerHint}>{hint ?? t('declare.pickDateHint')}</Text>
@@ -578,15 +587,16 @@ const styles = StyleSheet.create({
   navBtnOff: { opacity: 0.35 },
   weekRow: { flexDirection: 'row', marginTop: 12 },
   weekCell: {
-    width: `${100 / 7}%`,
+    flex: 1,
     textAlign: 'center',
     fontFamily: fonts.mono,
     fontSize: 10.5,
     color: colors.ink3,
     textTransform: 'uppercase',
   },
-  dayGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 },
-  dayCell: { width: `${100 / 7}%`, height: 40, alignItems: 'center', justifyContent: 'center' },
+  dayGrid: { marginTop: 6 },
+  dayRow: { flexDirection: 'row' },
+  dayCell: { flex: 1, height: 40, alignItems: 'center', justifyContent: 'center' },
   dayText: {
     width: 34,
     height: 34,

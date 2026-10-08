@@ -998,6 +998,7 @@
   },
   "assemblyLife": {
     "title": "Vie d'assemblée",
+    "unitPicker": "Assemblée",
     "subtitle": "Réunions, comptes rendus et avancement des modules d'enseignement.",
     "tabMeetings": "Réunions",
     "tabProgress": "Avancement",
@@ -1088,6 +1089,39 @@
     "memberHint": "Comptes rendus de votre assemblée, en lecture seule.",
     "present": "Présent",
     "absent": "Absent",
-    "otherMeetingsTitle": "Mes réunions dans d'autres assemblées"
+    "otherMeetingsTitle": "Mes réunions dans d'autres assemblées",
+    "journal": {
+      "open": "Journal PDF",
+      "title": "Journal de l'assemblée",
+      "periodicity": "Périodicité",
+      "kind": {
+        "month": "Mois",
+        "quarter": "Trimestre",
+        "semester": "Semestre",
+        "year": "Année"
+      },
+      "quarters": "1er trimestre,2e trimestre,3e trimestre,4e trimestre",
+      "semesters": "1er semestre,2nd semestre",
+      "reportCount_zero": "Aucun compte rendu sur cette période.",
+      "reportCount_one": "{{count}} compte rendu sur cette période",
+      "reportCount_other": "{{count}} comptes rendus sur cette période",
+      "contentHint": "Le journal contient une synthèse de la période (réunions, présence moyenne, fractions de pain, lectures) puis chaque compte rendu dans l'ordre chronologique.",
+      "generate": "Générer le PDF",
+      "failed": "Impossible de générer le journal.",
+      "shareUnavailable": "Le partage de fichiers n'est pas disponible sur cet appareil.",
+      "docTitle": "Journal de l'assemblée",
+      "generatedOn": "Édité le {{date}}",
+      "summary": "Synthèse de la période",
+      "statMeetings": "Réunions",
+      "statAverage": "Présence moyenne",
+      "statBread": "Fractions de pain",
+      "readings": "Lectures",
+      "noReadings": "Aucune lecture sur la période.",
+      "reports": "Comptes rendus",
+      "attendees": "Présents",
+      "breadBreaking": "Fraction de pain",
+      "reading": "Lecture",
+      "noReading": "Aucune lecture"
+    }
   }
 }
