@@ -223,3 +223,54 @@ export async function getProgressOverview(moduleId?: string): Promise<UnitProgre
   });
   return data;
 }
+
+/**
+ * Mirrors com.excellence.back.assembly.AssemblyDtos.UnitMeetingStats — D-ASM-18 (JP 08/10) :
+ * statistiques de Vie d'assemblée affichées dans la Hiérarchie. Une ligne par assemblée VISIBLE
+ * (même ensemble que `/units`), y compris sans réunion (compteurs à 0). Les compteurs portent sur
+ * les réunions non supprimées de [from, to] ; `lastMeetingDate` est la dernière réunion TOUTES
+ * PÉRIODES confondues (alerte « sans CR depuis 3 semaines »), null si aucune. Que des nombres :
+ * aucun nom de personne (D-ASM-18).
+ */
+export interface UnitMeetingStats {
+  unitId: string;
+  unitName: string;
+  cityName: string | null;
+  meetingCount: number;
+  /** Σ des présents de chaque réunion de la plage. */
+  attendanceTotal: number;
+  /** userId distincts présents sur la plage, dans CETTE assemblée. */
+  distinctAttendees: number;
+  breadBreakingCount: number;
+  lastMeetingDate: string | null;
+}
+
+/** D-ASM-18 — `from`/`to` 'yyyy-MM-dd' inclus, au plus 366 jours (400 sinon). */
+export async function getAssemblyStats(from: string, to: string): Promise<UnitMeetingStats[]> {
+  const { data } = await apiClient.get<UnitMeetingStats[]>(`${BASE}/stats`, { params: { from, to } });
+  return data;
+}
+
+/** Le backend refuse plus de 200 assemblées par appel ; on découpe par 100 (D-ASM-18). */
+const MEETINGS_RANGE_CHUNK = 100;
+
+/**
+ * D-ASM-18 — réunions (détail, présents et chapitres compris) de plusieurs assemblées sur une
+ * plage, pour le journal consolidé. Un appel par paquet de 100 assemblées, en séquence ; l'ordre
+ * global n'est pas garanti d'un paquet à l'autre (le journal regroupe et trie lui-même).
+ */
+export async function listMeetingsInRange(
+  unitIds: string[],
+  from: string,
+  to: string,
+): Promise<MeetingDetail[]> {
+  const out: MeetingDetail[] = [];
+  for (let i = 0; i < unitIds.length; i += MEETINGS_RANGE_CHUNK) {
+    const chunk = unitIds.slice(i, i + MEETINGS_RANGE_CHUNK);
+    const { data } = await apiClient.get<MeetingDetail[]>(`${BASE}/meetings`, {
+      params: { from, to, unitIds: chunk.join(',') },
+    });
+    out.push(...data);
+  }
+  return out;
+}

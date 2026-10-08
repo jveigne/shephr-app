@@ -13,9 +13,12 @@
  *   fraction de pain) sans le recopier tel quel : le format WhatsApp n'a pas de sens sur papier.
  * - D-ASM-14 appliqué au journal : la liste nominative des présents est optionnelle, le nombre
  *   reste toujours.
+ * - D-ASM-18 (JP 08/10) : journal CONSOLIDÉ de plusieurs assemblées (`buildConsolidatedJournalHtml`),
+ *   généré depuis la Hiérarchie — que des nombres, JAMAIS la liste des présents.
  */
-import type { MeetingDetail } from '../services/assemblyApi';
+import type { MeetingDetail, UnitMeetingStats } from '../services/assemblyApi';
 import { colors } from '../theme/colors';
+import { aggregate, averageAttendance, isAlert } from './assemblyHierarchyStats';
 import { fmtIsoDay, formatChapters, formatReportDate, type Translate } from './meetingReport';
 
 export type Periodicity = 'month' | 'quarter' | 'semester' | 'year';
@@ -97,6 +100,35 @@ const esc = (s: string) =>
 
 const byName = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' });
 
+/** Feuille de style commune aux deux journaux (mono-assemblée et consolidé, D-ASM-18). */
+const JOURNAL_CSS = `
+  @page { size: A4; margin: 16mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: ${colors.ink}; font-size: 11pt; margin: 0; }
+  h1, h2, h3 { font-family: Georgia, 'Times New Roman', serif; font-weight: normal; margin: 0; }
+  header { border-bottom: 2px solid ${colors.moss}; padding-bottom: 10px; margin-bottom: 16px; }
+  h1 { font-size: 24pt; color: ${colors.moss}; }
+  .sub { font-size: 12pt; color: ${colors.ink2}; margin-top: 4px; }
+  .meta { font-size: 9pt; color: ${colors.ink3}; margin-top: 6px; }
+  h2 { font-size: 15pt; color: ${colors.moss}; margin: 18px 0 8px; }
+  .stats { display: flex; gap: 10px; }
+  .stat { flex: 1; background: ${colors.paper2}; border: 1px solid ${colors.parchmentDeep}; border-radius: 8px; padding: 10px; }
+  .stat-value { font-family: Georgia, serif; font-size: 18pt; color: ${colors.moss}; }
+  .stat-label { font-size: 8.5pt; color: ${colors.ink3}; text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
+  .readings { margin: 6px 0 0; padding-left: 18px; }
+  .readings li { margin: 3px 0; }
+  .muted { color: ${colors.ink3}; }
+  .meeting { page-break-inside: avoid; border-top: 1px solid ${colors.parchmentDeep}; padding: 10px 0 6px; }
+  h3 { font-size: 13pt; margin-bottom: 6px; }
+  table { border-collapse: collapse; width: 100%; }
+  th { text-align: left; vertical-align: top; width: 32%; font-weight: 600; color: ${colors.ink2}; padding: 3px 8px 3px 0; font-size: 10pt; }
+  td { vertical-align: top; padding: 3px 0; }
+  .names { font-size: 9.5pt; color: ${colors.ink2}; margin-top: 2px; line-height: 1.45; }
+`;
+
+const stat = (value: string | number, label: string) =>
+  `<div class="stat"><div class="stat-value">${esc(String(value))}</div><div class="stat-label">${esc(label)}</div></div>`;
+
 export interface JournalInput {
   unitName: string;
   cityName: string | null;
@@ -130,9 +162,6 @@ export function buildJournalHtml(input: JournalInput, t: Translate): string {
     if (!book || m.chapters.length === 0) continue;
     readings.set(book, [...(readings.get(book) ?? []), ...m.chapters]);
   }
-
-  const stat = (value: string | number, label: string) =>
-    `<div class="stat"><div class="stat-value">${esc(String(value))}</div><div class="stat-label">${esc(label)}</div></div>`;
 
   const readingRows =
     readings.size === 0
@@ -171,30 +200,7 @@ export function buildJournalHtml(input: JournalInput, t: Translate): string {
 
   return `<!doctype html>
 <html><head><meta charset="utf-8" />
-<style>
-  @page { size: A4; margin: 16mm 14mm; }
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: ${colors.ink}; font-size: 11pt; margin: 0; }
-  h1, h2, h3 { font-family: Georgia, 'Times New Roman', serif; font-weight: normal; margin: 0; }
-  header { border-bottom: 2px solid ${colors.moss}; padding-bottom: 10px; margin-bottom: 16px; }
-  h1 { font-size: 24pt; color: ${colors.moss}; }
-  .sub { font-size: 12pt; color: ${colors.ink2}; margin-top: 4px; }
-  .meta { font-size: 9pt; color: ${colors.ink3}; margin-top: 6px; }
-  h2 { font-size: 15pt; color: ${colors.moss}; margin: 18px 0 8px; }
-  .stats { display: flex; gap: 10px; }
-  .stat { flex: 1; background: ${colors.paper2}; border: 1px solid ${colors.parchmentDeep}; border-radius: 8px; padding: 10px; }
-  .stat-value { font-family: Georgia, serif; font-size: 18pt; color: ${colors.moss}; }
-  .stat-label { font-size: 8.5pt; color: ${colors.ink3}; text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
-  .readings { margin: 6px 0 0; padding-left: 18px; }
-  .readings li { margin: 3px 0; }
-  .muted { color: ${colors.ink3}; }
-  .meeting { page-break-inside: avoid; border-top: 1px solid ${colors.parchmentDeep}; padding: 10px 0 6px; }
-  h3 { font-size: 13pt; margin-bottom: 6px; }
-  table { border-collapse: collapse; width: 100%; }
-  th { text-align: left; vertical-align: top; width: 32%; font-weight: 600; color: ${colors.ink2}; padding: 3px 8px 3px 0; font-size: 10pt; }
-  td { vertical-align: top; padding: 3px 0; }
-  .names { font-size: 9.5pt; color: ${colors.ink2}; margin-top: 2px; line-height: 1.45; }
-</style></head>
+<style>${JOURNAL_CSS}</style></head>
 <body>
   <header>
     <h1>${esc(tj('docTitle'))}</h1>
@@ -213,5 +219,148 @@ export function buildJournalHtml(input: JournalInput, t: Translate): string {
 
   <h2>${esc(tj('reports'))}</h2>
   ${meetingBlocks}
+</body></html>`;
+}
+
+export interface ConsolidatedJournalInput {
+  /** Périmètre affiché : « Toute ma hiérarchie » ou « Équipe d'un dirigeant » — jamais un nom de personne (D-ASM-18). */
+  scopeLabel: string;
+  period: Period;
+  /** Lignes `GET /assembly/stats` des assemblées du périmètre (dédoublonnées par l'agrégat). */
+  stats: UnitMeetingStats[];
+  /** Détails `GET /assembly/meetings` de la période, dans n'importe quel ordre. */
+  meetings: MeetingDetail[];
+  /** Date d'édition, 'yyyy-MM-dd' — sert aussi de « aujourd'hui » pour l'alerte des 21 jours. */
+  generatedOn: string;
+  locale?: string;
+}
+
+/** Compléments de style du journal consolidé (tableau multi-colonnes, alerte terre). */
+const CONSOLIDATED_CSS = `
+  .stats.wrap { flex-wrap: wrap; }
+  .stats.wrap .stat { flex: 1 1 30%; }
+  .alert { color: ${colors.clay}; }
+  .alert-list { margin: 10px 0 0; font-size: 10pt; }
+  .note { font-size: 8.5pt; color: ${colors.ink3}; margin-top: 6px; }
+  table.grid { font-size: 9.5pt; }
+  table.grid th { width: auto; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .3px; color: ${colors.ink3};
+    border-bottom: 1px solid ${colors.parchmentDeep}; padding: 4px 6px 4px 0; }
+  table.grid td { border-bottom: 1px solid ${colors.parchment}; padding: 4px 6px 4px 0; }
+  table.grid .num { text-align: right; white-space: nowrap; }
+  table.grid tr { page-break-inside: avoid; }
+  .unit { margin-top: 14px; }
+  .unit h3 { font-size: 14pt; color: ${colors.moss}; margin-bottom: 2px; page-break-after: avoid; }
+  .unit h3 .city { font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 10pt; color: ${colors.ink3}; }
+  .unit .meeting h4 { font-family: Georgia, 'Times New Roman', serif; font-weight: normal; font-size: 11.5pt; margin: 0 0 4px; }
+`;
+
+/**
+ * Journal PDF CONSOLIDÉ — D-ASM-18 (JP 08/10) : plusieurs assemblées sur une période, généré depuis
+ * la Hiérarchie. En-tête, synthèse (mêmes indicateurs que le bloc de la Hiérarchie), tableau par
+ * assemblée, puis les CR de chaque assemblée qui en a, dans l'ordre chronologique.
+ * AUCUN NOM de personne : le nombre de présents seulement (jamais `attendees[].displayName`).
+ */
+export function buildConsolidatedJournalHtml(input: ConsolidatedJournalInput, t: Translate): string {
+  const tj = (k: string, o?: Record<string, unknown>) => t(`assemblyLife.journal.${k}`, o);
+  const th = (k: string, o?: Record<string, unknown>) => t(`assemblyLife.hierarchy.${k}`, o);
+  const today = input.generatedOn;
+  const agg = aggregate(input.stats.map((r) => r.unitId), new Map(input.stats.map((r) => [r.unitId, r])), today);
+  const fmtAvg = (v: number | null) => (v == null ? '—' : v.toLocaleString(input.locale));
+
+  const byUnit = new Map<string, MeetingDetail[]>();
+  for (const m of input.meetings) byUnit.set(m.unitId, [...(byUnit.get(m.unitId) ?? []), m]);
+
+  const alertList =
+    agg.alertRows.length === 0
+      ? ''
+      : `<p class="alert-list"><span class="alert">⚠ ${esc(th('alertTitle'))}</span> — ${agg.alertRows
+          .map((r) => esc(r.unitName))
+          .join(' · ')}</p>`;
+
+  const tableRows = agg.rows
+    .map((r) => {
+      const alert = isAlert(r, today);
+      return `<tr>
+        <td>${esc(r.unitName)}</td>
+        <td>${esc(r.cityName ?? '—')}</td>
+        <td class="num">${r.meetingCount}</td>
+        <td class="num">${esc(fmtAvg(averageAttendance(r.attendanceTotal, r.meetingCount)))}</td>
+        <td class="num">${r.breadBreakingCount}</td>
+        <td class="num">${r.lastMeetingDate ? esc(formatReportDate(r.lastMeetingDate)) : '—'}</td>
+        <td class="num alert">${alert ? '⚠' : ''}</td>
+      </tr>`;
+    })
+    .join('');
+
+  const unitSections = agg.rows
+    .filter((r) => (byUnit.get(r.unitId)?.length ?? 0) > 0)
+    .map((r) => {
+      const meetings = [...byUnit.get(r.unitId)!].sort((a, b) => a.meetingDate.localeCompare(b.meetingDate));
+      const blocks = meetings
+        .map((m) => {
+          const book = m.bookTitle || m.moduleName;
+          const reading =
+            book && m.chapters.length > 0
+              ? `${esc(book)} — ${esc(formatChapters([...m.chapters].sort((a, b) => a.orderIndex - b.orderIndex), t))}`
+              : esc(tj('noReading'));
+          return `
+        <section class="meeting">
+          <h4>${esc(fmtIsoDay(m.meetingDate, t))}</h4>
+          <table>
+            <tr><th>${esc(tj('attendees'))}</th><td>${m.attendees.length}</td></tr>
+            <tr><th>${esc(tj('breadBreaking'))}</th><td>${esc(
+              t(m.breadBreaking ? 'assemblyLife.report.yes' : 'assemblyLife.report.no'),
+            )}</td></tr>
+            <tr><th>${esc(tj('reading'))}</th><td>${reading}</td></tr>
+          </table>
+        </section>`;
+        })
+        .join('');
+      return `
+    <div class="unit">
+      <h3>${esc(r.unitName)}${r.cityName ? ` <span class="city">· ${esc(r.cityName)}</span>` : ''}</h3>
+      ${blocks}
+    </div>`;
+    })
+    .join('');
+
+  return `<!doctype html>
+<html><head><meta charset="utf-8" />
+<style>${JOURNAL_CSS}${CONSOLIDATED_CSS}</style></head>
+<body>
+  <header>
+    <h1>${esc(th('docTitle'))}</h1>
+    <div class="sub">${esc(input.scopeLabel)} — ${esc(periodLabel(input.period, t))}</div>
+    <div class="meta">${esc(tj('generatedOn', { date: formatReportDate(input.generatedOn) }))}</div>
+  </header>
+
+  <h2>${esc(tj('summary'))}</h2>
+  <div class="stats wrap">
+    ${stat(agg.meetingCount, th('statMeetings'))}
+    ${stat(`${agg.activeCount} / ${agg.unitCount}`, th('statActive'))}
+    ${stat(agg.alertRows.length, th('statAlert'))}
+    ${stat(fmtAvg(agg.average), th('statAverage'))}
+    ${stat(agg.distinctAttendees, th('statDistinct'))}
+    ${stat(agg.breadBreakingCount, th('statBread'))}
+  </div>
+  ${alertList}
+  <p class="note">${esc(th('distinctNote'))}</p>
+
+  <h2>${esc(th('unitsTitle'))}</h2>
+  <table class="grid">
+    <tr>
+      <th>${esc(th('colUnit'))}</th>
+      <th>${esc(th('colCity'))}</th>
+      <th class="num">${esc(th('colMeetings'))}</th>
+      <th class="num">${esc(th('colAverage'))}</th>
+      <th class="num">${esc(th('colBread'))}</th>
+      <th class="num">${esc(th('colLast'))}</th>
+      <th class="num">⚠</th>
+    </tr>
+    ${tableRows}
+  </table>
+
+  <h2>${esc(tj('reports'))}</h2>
+  ${unitSections || `<p class="muted">${esc(th('noMeetings'))}</p>`}
 </body></html>`;
 }

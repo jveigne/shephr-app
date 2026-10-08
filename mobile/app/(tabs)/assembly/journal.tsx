@@ -1,10 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform, Switch } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Switch } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
-import { File, Paths } from 'expo-file-system';
 import ScreenShell from '../../../components/ScreenShell';
 import Card from '../../../components/Card';
 import Chip from '../../../components/Chip';
@@ -16,6 +13,7 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import { getMeeting, listMeetings, type MeetingDetail, type MeetingSummary } from '../../../services/assemblyApi';
 import { toLocalDate } from '../../../utils/format';
 import { notify } from '../../../utils/dialogs';
+import { printAndSharePdf } from '../../../utils/pdfShare';
 import {
   PERIODICITIES,
   buildJournalHtml,
@@ -120,28 +118,15 @@ export default function AssemblyJournalScreen() {
         t,
       );
 
-      if (Platform.OS === 'web') {
-        await Print.printAsync({ html });
-        return;
-      }
-
-      // A4 en points ; renommé avant le partage pour que le destinataire reçoive un nom lisible.
-      const { uri } = await Print.printToFileAsync({ html, width: 595, height: 842 });
-      // ⚠ SDK 57 : `File.move` est ASYNCHRONE (l'ancien comportement s'appelle `moveSync`). Sans
-      // `await`, le partage partait pendant le déplacement et livrait un PDF illisible (JP 08/10).
-      // On partage la destination elle-même plutôt que de compter sur la mise à jour de `uri`.
-      const target = new File(Paths.cache, journalFileName(unitName || 'assemblee', period));
-      await new File(uri).move(target, { overwrite: true });
-      if (!target.exists || target.size === 0) throw new Error('JOURNAL_FILE_MISSING');
-      if (!(await Sharing.isAvailableAsync())) {
-        notify(t('common.appName'), t('assemblyLife.journal.shareUnavailable'));
-        return;
-      }
-      await Sharing.shareAsync(target.uri, {
-        mimeType: 'application/pdf',
-        UTI: 'com.adobe.pdf',
+      // Impression / renommage / partage : `utils/pdfShare.ts` (correctif SDK 57 `File.move` inclus).
+      const outcome = await printAndSharePdf({
+        html,
+        fileName: journalFileName(unitName || 'assemblee', period),
         dialogTitle: t('assemblyLife.journal.title'),
       });
+      if (outcome === 'unavailable') {
+        notify(t('common.appName'), t('assemblyLife.journal.shareUnavailable'));
+      }
     } catch (e: any) {
       notify(t('common.appName'), e?.response?.data?.message ?? t('assemblyLife.journal.failed'));
     } finally {

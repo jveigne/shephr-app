@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Badge,
@@ -89,7 +90,10 @@ function ProgressBar({ percent, height = 8 }: { percent: number; height?: number
 export function AssemblyPage() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<'meetings' | 'progress'>('meetings');
-  const [unitId, setUnitId] = useState('');
+  // D-ASM-18 (JP 08/10) : `?unit=<id>` (lien depuis la Hiérarchie) présélectionne l'assemblée ;
+  // un id hors de la liste visible retombe sur la sélection par défaut ci-dessous.
+  const [searchParams] = useSearchParams();
+  const [unitId, setUnitId] = useState(() => searchParams.get('unit') ?? '');
   /** `null` = fermé ; `'new'` = nouveau CR ; sinon id de la réunion ouverte. */
   const [editing, setEditing] = useState<string | null>(null);
 

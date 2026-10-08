@@ -224,3 +224,44 @@ export async function listProgress(moduleId?: string) {
   });
   return data;
 }
+
+// ---------------------------------------------------------------------------------------------
+//  Statistiques de la Hiérarchie + journal consolidé (D-ASM-18, JP 08/10). Mêmes gardes de lecture
+//  que le reste du module (RG-ASM-05) : aucune nouvelle règle d'accès. Le front n'affiche AUCUN
+//  nom de personne à partir de ces données (que des nombres et des noms d'assemblée).
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Mirrors com.excellence.back.assembly.AssemblyDtos.UnitMeetingStats — une ligne par assemblée
+ * visible (même ensemble que `/units`), y compris sans réunion (compteurs à 0). Compteurs bornés
+ * à [from, to] ; `lastMeetingDate` toutes périodes confondues (alerte « sans CR depuis 3 semaines »).
+ */
+export interface UnitMeetingStats {
+  unitId: string;
+  unitName: string;
+  cityName: string | null;
+  meetingCount: number;
+  /** Σ des présents de chaque réunion de la période. */
+  attendanceTotal: number;
+  /** Personnes (userId) distinctes présentes sur la période, dans CETTE assemblée. */
+  distinctAttendees: number;
+  breadBreakingCount: number;
+  lastMeetingDate: string | null;
+}
+
+/** `from`/`to` : 'yyyy-MM-dd' inclus, au plus 366 jours d'écart (400 sinon). */
+export async function getAssemblyStats(from: string, to: string) {
+  const { data } = await apiClient.get<UnitMeetingStats[]>(`${BASE}/stats`, { params: { from, to } });
+  return data;
+}
+
+/**
+ * Réunions de la plage pour au plus 200 assemblées lisibles (403 sinon), triées par assemblée
+ * puis date croissante. L'appelant découpe en paquets (cf. Hiérarchie : paquets de 100).
+ */
+export async function listMeetingsInRange(unitIds: string[], from: string, to: string) {
+  const { data } = await apiClient.get<MeetingDetail[]>(`${BASE}/meetings`, {
+    params: { from, to, unitIds: unitIds.join(',') },
+  });
+  return data;
+}

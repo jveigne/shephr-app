@@ -31,6 +31,13 @@ import {
   type LeaderHierarchyNode,
   type LeaderHierarchyResponse,
 } from '../services/leadersApi';
+import {
+  AssemblyStatsBlock,
+  LeaderAssemblySummary,
+  UnitAssemblyLine,
+  useAssemblyHierarchyStats,
+  type AssemblyStatsState,
+} from '../components/AssemblyHierarchyStats';
 
 /**
  * Hiérarchie des dirigeants (Lot H3 — 21/07) : arbre du leadership renvoyé par le backend,
@@ -71,13 +78,19 @@ function flattenUnits(nodes: LeaderHierarchyNode[]): UnitEntry[] {
 
 export default function HierarchieScreen() {
   const insets = useSafeAreaInsets();
-  const { me } = useAuth();
+  const { me, isLeader, hasAssembly } = useAuth();
   const { t } = useLanguage();
   const [data, setData] = useState<LeaderHierarchyResponse | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [view, setView] = useState<ViewMode>('leaders');
+  // D-ASM-18 (JP 08/10) : stats de Vie d'assemblée — abonnement ASSEMBLY + rôle au-dessus de MEMBRE
+  // (RG-06 : masqué sinon). `statsRefresh` suit le tirer-pour-rafraîchir de l'écran.
+  const [statsRefresh, setStatsRefresh] = useState(0);
+  const assemblyEnabled = hasAssembly && isLeader;
+  const assemblyStats = useAssemblyHierarchyStats(assemblyEnabled, statsRefresh);
+  const asm = assemblyEnabled ? assemblyStats : null;
 
   const load = useCallback(async () => {
     try {
@@ -93,6 +106,7 @@ export default function HierarchieScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setStatsRefresh((k) => k + 1);
     try { await load(); } finally { setRefreshing(false); }
   };
 
@@ -183,6 +197,9 @@ export default function HierarchieScreen() {
         </Card>
       )}
 
+      {/* D-ASM-18 (JP 08/10) : Vie d'assemblée des assemblées de l'arbre — que des nombres. */}
+      {asm && roots.length > 0 && <AssemblyStatsBlock asm={asm} roots={roots} />}
+
       <View style={styles.segmentRow}>
         {(['leaders', 'units'] as ViewMode[]).map((v) => (
           <Pressable key={v} onPress={() => setView(v)} style={[styles.segment, view === v && styles.segmentActive]}>
@@ -198,7 +215,7 @@ export default function HierarchieScreen() {
         {!error && roots.length === 0 && <Text style={styles.empty}>{t('hierarchy.empty')}</Text>}
         {view === 'leaders'
           ? roots.map((root) => (
-              <LeaderNodeRow key={root.id} node={root} depth={0} meId={me?.id ?? null} />
+              <LeaderNodeRow key={root.id} node={root} depth={0} meId={me?.id ?? null} asm={asm} />
             ))
           : (() => {
               const units = flattenUnits(roots);
@@ -227,7 +244,7 @@ export default function HierarchieScreen() {
                   prevCity = city;
                 }
                 rows.push(
-                  <UnitRow key={unit.id} unit={unit} depth={1} leaderName={leaderName} hideLocality />,
+                  <UnitRow key={unit.id} unit={unit} depth={1} leaderName={leaderName} hideLocality asm={asm} />,
                 );
               });
               return rows;
@@ -337,7 +354,9 @@ function GoalPill({
   );
 }
 
-function LeaderNodeRow({ node, depth, meId }: { node: LeaderHierarchyNode; depth: number; meId: string | null }) {
+function LeaderNodeRow({ node, depth, meId, asm }: {
+  node: LeaderHierarchyNode; depth: number; meId: string | null; asm: AssemblyStatsState | null;
+}) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(depth < 2);
   const hasContent = node.children.length > 0 || node.units.length > 0;
@@ -368,16 +387,17 @@ function LeaderNodeRow({ node, depth, meId }: { node: LeaderHierarchyNode; depth
             {role ? MODULE_ROLE_LABELS[role] : '—'}
             {node.units.length > 0 ? ` · ${t('hierarchy.unitsCount', { count: node.units.length })}` : ''}
           </Text>
+          {asm && <LeaderAssemblySummary asm={asm} node={node} />}
         </View>
       </Card>
 
       {open && (
         <View style={{ gap: 8, marginTop: 8 }}>
           {node.units.map((unit) => (
-            <UnitRow key={unit.id} unit={unit} depth={depth + 1} />
+            <UnitRow key={unit.id} unit={unit} depth={depth + 1} asm={asm} />
           ))}
           {node.children.map((child) => (
-            <LeaderNodeRow key={child.id} node={child} depth={depth + 1} meId={meId} />
+            <LeaderNodeRow key={child.id} node={child} depth={depth + 1} meId={meId} asm={asm} />
           ))}
         </View>
       )}
@@ -385,8 +405,9 @@ function LeaderNodeRow({ node, depth, meId }: { node: LeaderHierarchyNode; depth
   );
 }
 
-function UnitRow({ unit, depth, leaderName, hideLocality }: {
+function UnitRow({ unit, depth, leaderName, hideLocality, asm }: {
   unit: HierarchyUnitView; depth: number; leaderName?: string; hideLocality?: boolean;
+  asm: AssemblyStatsState | null;
 }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
@@ -414,6 +435,7 @@ function UnitRow({ unit, depth, leaderName, hideLocality }: {
               ? t('hierarchy.membersCount', { count: unit.members.length })
               : t('hierarchy.unitNoMembers')}
           </Text>
+          {asm && <UnitAssemblyLine asm={asm} unitId={unit.id} />}
         </View>
         {hasMembers && (
           <Ionicons name={open ? 'chevron-down' : 'chevron-forward'} size={14} color={colors.ink3} />

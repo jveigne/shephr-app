@@ -1,6 +1,6 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
-import { router, useFocusEffect, type Href } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '../../../components/ScreenShell';
 import Card from '../../../components/Card';
@@ -44,6 +44,12 @@ type Tab = 'meetings' | 'progress';
 export default function AssemblyIndexScreen() {
   const { t } = useLanguage();
   const [tab, setTab] = useState<Tab>('meetings');
+  // D-ASM-18 (JP 08/10) : ouverture depuis la Hiérarchie, présélectionnée sur une assemblée.
+  // `at` change à chaque appui : la présélection s'applique une fois par ouverture, puis l'on
+  // garde le choix fait dans la liste déroulante.
+  const params = useLocalSearchParams<{ unitId?: string; at?: string }>();
+  const requestedUnit = params.unitId ? `${params.unitId}|${params.at ?? ''}` : null;
+  const appliedRequest = useRef<string | null>(null);
 
   const [units, setUnits] = useState<AssemblyUnit[]>([]);
   const [unitId, setUnitId] = useState<string | null>(null);
@@ -72,9 +78,17 @@ export default function AssemblyIndexScreen() {
   const loadUnits = useCallback(async () => {
     const list = await listAssemblyUnits();
     setUnits(list);
-    setUnitId((cur) => (cur && list.some((u) => u.id === cur) ? cur : list[0]?.id ?? null));
+    const wanted =
+      requestedUnit && appliedRequest.current !== requestedUnit ? requestedUnit.split('|')[0] : null;
+    appliedRequest.current = requestedUnit;
+    if (wanted && list.some((u) => u.id === wanted)) {
+      setUnitId(wanted);
+      setTab('meetings');
+    } else {
+      setUnitId((cur) => (cur && list.some((u) => u.id === cur) ? cur : list[0]?.id ?? null));
+    }
     return list;
-  }, []);
+  }, [requestedUnit]);
 
   const loadUnitData = useCallback(async () => {
     if (!unitId) {
