@@ -16,6 +16,8 @@ import { DonationsPage } from './pages/Donations';
 import { GoalsPage } from './pages/Goals';
 import { MemberCarePage } from './pages/MemberCare';
 import { AssemblyPage } from './pages/Assembly';
+import { EventsPage } from './pages/Events';
+import { MyActionsPage } from './pages/MyActions';
 import { UsersPage } from './pages/Users';
 import { MonMinisterePage } from './pages/MonMinistere';
 import { PaysPage } from './pages/Pays';
@@ -71,6 +73,8 @@ export function App() {
                 <Route path="/my-goals" element={<MemberGoalsPage />} />
                 {/* D-ASM-17 (JP 25/09) — CR et avancement de son assemblée, en lecture seule. */}
                 {FEATURES.assembly && <Route path="/my-assembly" element={<AssemblyPage />} />}
+                {/* Lot E8 (§6.2 du plan du 14/10) — déclarer et retrouver ses actions d'évangélisation. */}
+                {FEATURES.events && <Route path="/my-actions" element={<MyActionsPage />} />}
                 <Route path="/member-settings" element={<SettingsPage />} />
                 <Route path="/member-contact" element={<ContactPage />} />
               </Route>
@@ -97,6 +101,13 @@ export function App() {
                   <Route path="/assembly" element={<AssemblyPage />} />
                 ) : (
                   <Route path="/assembly" element={<Navigate to={HOME} replace />} />
+                )}
+                {/* Évènements (D-EVT-05, JP 14/10) : flag de livraison ; la page gère en plus
+                    l'absence d'abonnement EVENTS (RG-06). */}
+                {FEATURES.events ? (
+                  <Route path="/events" element={<EventsPage />} />
+                ) : (
+                  <Route path="/events" element={<Navigate to={HOME} replace />} />
                 )}
                 <Route path="/member-care" element={<MemberCarePage />} />
                 <Route path="/users" element={<UsersPage />} />

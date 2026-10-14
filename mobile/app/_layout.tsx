@@ -23,6 +23,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '../contexts/AuthContext';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import PushBridge from '../components/push/PushBridge';
+import EventQueueSync from '../components/EventQueueSync';
 import { loadContactSettings } from '../services/contactApi';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -78,6 +79,9 @@ export default function RootLayout() {
                 il ne bloque JAMAIS le démarrage — sans clé APNs ni `google-services.json`,
                 l'application s'ouvre et la file in-app fonctionne à l'identique. */}
             <PushBridge />
+            {/* Lot E6 (14/10) — vidage de la file hors-ligne des déclarations d'action
+                (RG-ACT-08) : démarrage, retour au premier plan, retour du réseau. Ne rend rien. */}
+            <EventQueueSync />
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#E8DCC4' } }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="(auth)" />
@@ -98,6 +102,20 @@ export default function RootLayout() {
               {/* Réglages des notifications — hors onglets : on y vient du Profil, et la
                   catégorie « Rappels » de N4a y a son interrupteur. */}
               <Stack.Screen name="notification-settings" options={{ animation: 'slide_from_right' }} />
+              {/* Évènements (plan 14/10, §6.3) : déclarer une action s'ouvre en modale, comme
+                  « Déclarer un don » ; « Mes actions » se pousse depuis la droite. */}
+              <Stack.Screen
+                name="events/declare"
+                options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+              />
+              <Stack.Screen name="events/mine" options={{ animation: 'slide_from_right' }} />
+              {/* Lot E7 : programmer s'ouvre en modale, comme déclarer ; le détail d'un
+                  évènement (agenda, « Mes actions ») se pousse depuis la droite. */}
+              <Stack.Screen
+                name="events/plan"
+                options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+              />
+              <Stack.Screen name="events/[id]" options={{ animation: 'slide_from_right' }} />
             </Stack>
           </AuthProvider>
         </LanguageProvider>

@@ -155,6 +155,9 @@ export const Icons = {
   Folder: (p: IconProps) => <I {...p}><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z" /></I>,
   Tree: (p: IconProps) => <I {...p}><circle cx="6" cy="6" r="2.5" /><circle cx="18" cy="6" r="2.5" /><circle cx="12" cy="18" r="2.5" /><path d="M8 7l3 9M16 7l-3 9" /></I>,
   Inbox: (p: IconProps) => <I {...p}><path d="M3 12l3-7h12l3 7" /><path d="M3 12v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6" /><path d="M3 12h5l1 2h6l1-2h5" /></I>,
+  // Lot E8 (JP 14/10) — Évènements / « Déclarer une action » (spec §4.1 : mégaphone), propre à
+  // l'espace ministère : absent du jeu porté de shephr-webapp.
+  Megaphone: (p: IconProps) => <I {...p}><path d="M4 10v4a1 1 0 0 0 1 1h3l8 4V5L8 9H5a1 1 0 0 0-1 1z" /><path d="M8 15l1.5 5h2.5L11 15.8" /><path d="M19.5 9.5a3.5 3.5 0 0 1 0 5" /></I>,
 };
 
 export type IconName = keyof typeof Icons;

@@ -11,7 +11,7 @@ import NotificationGate from '../../components/NotificationGate';
 export default function TabLayout() {
   const { t, applyAccountLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { isLeader, hasGoals, hasMemberCare, hasAssembly, hasDonations, me } = useAuth();
+  const { isLeader, hasGoals, hasMemberCare, hasAssembly, hasDonations, hasEvents, me } = useAuth();
 
   // Initialise la langue depuis le compte (me.language) tant que l'utilisateur
   // n'a pas choisi explicitement une langue dans l'app (cf. LanguageContext).
@@ -117,6 +117,21 @@ export default function TabLayout() {
           title: t('tabs.assembly'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="book-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="events"
+        options={{
+          // Évènements (plan 14/10, §6.3, lot E7) : agenda + statistiques, abonnement EVENTS
+          // (D-EVT-05, RG-06). Dirigeants et viewers ministère-large — D-EVT-09 : le SECRETARIAT
+          // est le destinataire des statistiques. `isLeader` couvre déjà LEADER et SECRETARIAT
+          // (tout rôle > MEMBRE, cf. `isLeaderRole`) : le plan l'écrit `isLeader || isSecretariat`.
+          // Le MEMBRE déclare par la tuile d'accueil et suit « Mes actions » (lot E6).
+          href: hasEvents && isLeader ? '/(tabs)/events' : null,
+          title: t('tabs.events'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="megaphone-outline" size={size} color={color} />
           ),
         }}
       />

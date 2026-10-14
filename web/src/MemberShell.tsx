@@ -11,7 +11,8 @@ import { setLanguage } from './i18n';
 /**
  * Feature A — shell MINIMAL de l'espace membre (MEMBRE Goals rattaché à une assemblée).
  * N'expose QUE « Mes objectifs », « Mon assemblée » (D-ASM-17, lecture seule, si l'abonnement
- * ASSEMBLY couvre le membre), « Réglages » et la déconnexion — aucun élargissement :
+ * ASSEMBLY couvre le membre), « Mes actions » (lot E8, déclarer ses actions d'évangélisation, si
+ * l'abonnement EVENTS le couvre — D-EVT-05), « Réglages » et la déconnexion — aucun élargissement :
  * la garde d'AppShell (canAccessWeb / hasMinistryAccess) n'est pas touchée.
  */
 export function MemberShell() {
@@ -26,6 +27,7 @@ export function MemberShell() {
     enabled: ready && isAuthenticated && canAccessMemberSpace,
   });
   const hasAssembly = FEATURES.assembly && (modulesQ.data ?? []).includes('ASSEMBLY');
+  const hasEvents = FEATURES.events && (modulesQ.data ?? []).includes('EVENTS');
   const lang = i18n.language.startsWith('en') ? 'en' : 'fr';
 
   useEffect(() => {
@@ -99,6 +101,15 @@ export function MemberShell() {
                 >
                   <Icon name="calendar" size={18} />
                   <span>{t('assembly.memberNav')}</span>
+                </NavLink>
+              )}
+              {hasEvents && (
+                <NavLink
+                  to="/my-actions"
+                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                >
+                  <Icon name="megaphone" size={18} />
+                  <span>{t('events.mine.pageTitle')}</span>
                 </NavLink>
               )}
               <NavLink

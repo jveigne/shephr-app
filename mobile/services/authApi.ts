@@ -202,6 +202,19 @@ export function isTreasurerRole(me: MeResponse | null): boolean {
   return !!me?.treasurer;
 }
 
+/**
+ * Plan 14/10 (§6.3, RG-ACT-01) — tuile « Déclarer une action » : compte RATTACHÉ, c'est-à-dire
+ * membre d'une assemblée (`goalUnitId`), dirigeant (son périmètre), viewer ministère-large
+ * (LEADER / SECRETARIAT déclarent sur tout le ministère, [HYPOTHÈSE] RG-EVT-02) ou superAdmin.
+ * Miroir de `EventPerimeters.declare` côté backend. Ce n'est qu'un filtre d'affichage : la vérité
+ * est `GET /api/church/events/me/scopes` (`canDeclare`), que l'écran de saisie lit et respecte —
+ * un dirigeant sans aucun nœud y voit un état vide explicite, jamais un formulaire voué au 403.
+ */
+export function canDeclareEvents(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return !!me.goalUnitId || isLeaderRole(me);
+}
+
 /** Goals tab access (Lot 4.1) : dirigeant+ du module Goals, ou superAdmin. */
 export function hasGoalsAccess(me: MeResponse | null): boolean {
   if (!me) return false;

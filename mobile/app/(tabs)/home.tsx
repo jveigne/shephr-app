@@ -11,7 +11,7 @@ import Amount from '../../components/Amount';
 import HandDivider from '../../components/HandDivider';
 import { colors, fonts, radii } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
-import { hasMemberGoals } from '../../services/authApi';
+import { canDeclareEvents, hasMemberGoals } from '../../services/authApi';
 import { getSummary, type CurrencyTotal, type DonationSummary } from '../../services/statsApi';
 import { fmtAmount, monthLabel } from '../../utils/format';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -20,7 +20,7 @@ type IoniconName = ComponentProps<typeof Ionicons>['name'];
 type ComingKind = 'cantique' | 'priere' | 'compte-rendu';
 
 export default function HomeScreen() {
-  const { me, isLeader, isTreasurer, hasGoals, hasDonations } = useAuth();
+  const { me, isLeader, isTreasurer, hasGoals, hasDonations, hasEvents } = useAuth();
   const { t } = useLanguage();
   const [summary, setSummary] = useState<DonationSummary | null>(null);
   const [summaryFailed, setSummaryFailed] = useState(false);
@@ -201,6 +201,18 @@ export default function HomeScreen() {
           icon="wallet-outline"
           tone={colors.earthDeep}
           onPress={() => router.push('/(tabs)/leader')}
+        />
+        )}
+        {/* Plan 14/10 (§6.3, spec Recensement §4.1) — « Déclarer une action · Évangélisation ».
+            RG-06 : invisible sans l'abonnement EVENTS (D-EVT-05). RG-ACT-01 : réservée aux comptes
+            rattachés (`canDeclareEvents`) ; l'écran relit `canDeclare` côté serveur. */}
+        {hasEvents && canDeclareEvents(me) && (
+        <Tile
+          label={t('dashboard.tiles.events')}
+          hint={t('dashboard.tiles.eventsHint')}
+          icon="megaphone-outline"
+          tone={colors.clay}
+          onPress={() => router.push('/events/declare')}
         />
         )}
 {/* Lot S1 (21/07) : briques visibles de TOUS — le contenu des écrans s'adapte au rôle

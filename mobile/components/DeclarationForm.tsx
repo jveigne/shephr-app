@@ -322,6 +322,10 @@ function isToday(d: Date): boolean {
  * est sélectionnable, en miroir du `@PastOrPresent` posé côté backend sur `donationDate` :
  * un jour futur est grisé et la navigation ne dépasse pas le mois courant. La garde serveur
  * reste la référence — celle-ci évite seulement un aller-retour en erreur.
+ *
+ * Lot E6 (14/10) : `allowFuture` lève cette borne pour la PROGRAMMATION d'un évènement
+ * (RG-EVT-03 : date future autorisée). Par défaut elle reste posée — un don, un compte rendu et une
+ * déclaration d'action (RG-EVT-05 : un DONE n'est jamais dans le futur) restent bornés à aujourd'hui.
  */
 export function DatePickerModal({
   visible,
@@ -330,6 +334,7 @@ export function DatePickerModal({
   onChange,
   title,
   hint,
+  allowFuture = false,
 }: {
   visible: boolean;
   value: Date;
@@ -338,6 +343,8 @@ export function DatePickerModal({
   /** Lot L5 (Vie d'assemblée, 23/09) : libellés surchargeables — défaut = date du don. */
   title?: string;
   hint?: string;
+  /** Lot E6 (14/10) : jours futurs sélectionnables (programmation). Défaut : passé uniquement. */
+  allowFuture?: boolean;
 }) {
   const { t } = useLanguage();
   const [cursor, setCursor] = useState(() => startOfMonth(value));
@@ -361,7 +368,7 @@ export function DatePickerModal({
   ];
   while (cells.length % 7 !== 0) cells.push(null);
   const weeks = Array.from({ length: cells.length / 7 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
-  const canGoNext = startOfMonth(today).getTime() > cursor.getTime();
+  const canGoNext = allowFuture || startOfMonth(today).getTime() > cursor.getTime();
   const selected = startOfDay(value);
 
   return (
@@ -408,7 +415,7 @@ export function DatePickerModal({
                 {week.map((day, i) => {
                   if (day === null) return <View key={`e${i}`} style={styles.dayCell} />;
                   const d = new Date(year, month, day);
-                  const future = d.getTime() > today.getTime();
+                  const future = !allowFuture && d.getTime() > today.getTime();
                   const on = d.getTime() === selected.getTime();
                   return (
                     <Pressable
