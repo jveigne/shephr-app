@@ -20,6 +20,7 @@ import Chip from '@/components/Chip';
 import Field from '@/components/Field';
 import ErrorBanner from '@/components/ErrorBanner';
 import SelectField from '@/components/SelectField';
+import EventCounterFields from '@/components/EventCounterFields';
 import { DatePickerModal } from '@/components/DeclarationForm';
 import { colors, fonts, radii } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,7 +43,7 @@ import {
 import { eventFailureMessage, toSendFailure } from '@/utils/eventErrors';
 import { fmtIsoDay } from '@/utils/meetingReport';
 import { toLocalDate } from '@/utils/format';
-import { digitsOnly } from '@/utils/events';
+import { counterDraft, filledCounters } from '@/utils/events';
 import { notify } from '@/utils/dialogs';
 import { goBack } from '@/utils/navigation';
 
@@ -55,6 +56,9 @@ import { goBack } from '@/utils/navigation';
  *       reste est facultatif et un champ vide n'est simplement pas envoyé. Seule exception, le
  *       type « Autre » (`requiresLabel`) exige son libellé libre — refusé à la saisie plutôt
  *       qu'au serveur (422 EVENT_LABEL_REQUIRED) ;</li>
+ *   <li>D-EVT-15 (JP 14/10) : conversions, restaurations et baptêmes ne s'affichent — et ne
+ *       partent — que pour un type évangélique. Le drapeau `evangelism` vient du catalogue mis
+ *       en cache (`useEventCatalog`) : la décision tient hors ligne ;</li>
  *   <li>RG-EVT-05 : une déclaration est créée RÉALISÉE (`DONE`, RG-ACT-04 : elle compte dès sa
  *       création) et ne peut donc pas être datée dans le futur — le calendrier s'arrête à
  *       aujourd'hui (défaut de `DatePickerModal`) ;</li>
@@ -124,8 +128,7 @@ export default function DeclareEventScreen() {
   const [date, setDate] = useState(() => new Date());
   const [dateOpen, setDateOpen] = useState(false);
   const [place, setPlace] = useState('');
-  const [participants, setParticipants] = useState('');
-  const [soulsWon, setSoulsWon] = useState('');
+  const [counters, setCounters] = useState(counterDraft);
   const [note, setNote] = useState('');
   /** Nœud choisi EXPLICITEMENT dans le sélecteur ; null = le nœud par défaut. */
   const [pickedScope, setPickedScope] = useState<string | null>(null);
@@ -164,8 +167,7 @@ export default function DeclareEventScreen() {
     setCustomLabel('');
     setDate(new Date());
     setPlace('');
-    setParticipants('');
-    setSoulsWon('');
+    setCounters(counterDraft());
     setNote('');
     setPickedScope(null);
     setDone(null);
@@ -186,8 +188,7 @@ export default function DeclareEventScreen() {
       ...(selectedType.requiresLabel ? { customLabel: customLabel.trim() } : {}),
       ...(sendScope ? { scopeLevel: target.level, scopeId: target.id } : {}),
       ...(place.trim() ? { place: place.trim() } : {}),
-      ...(participants !== '' ? { participants: Number(participants) } : {}),
-      ...(soulsWon !== '' ? { soulsWon: Number(soulsWon) } : {}),
+      ...filledCounters(counters, selectedType.evangelism),
       ...(note.trim() ? { note: note.trim() } : {}),
     };
   };
@@ -201,6 +202,7 @@ export default function DeclareEventScreen() {
       typeName: selectedType.name,
       typeNameEn: selectedType.nameEn,
       scopeName: target.name,
+      evangelism: selectedType.evangelism,
     };
     const scopeName = target.name;
     setSaving(true);
@@ -377,28 +379,11 @@ export default function DeclareEventScreen() {
           />
         </View>
 
-        <View style={[styles.section, styles.numbersRow]}>
-          <View style={{ flex: 1 }}>
-            <Label style={styles.sectionLabel}>{t('events.declare.participants')}</Label>
-            <Field
-              value={participants}
-              onChangeText={(v) => setParticipants(digitsOnly(v))}
-              keyboardType="number-pad"
-              maxLength={6}
-              placeholder="—"
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Label style={styles.sectionLabel}>{t('events.declare.soulsWon')}</Label>
-            <Field
-              value={soulsWon}
-              onChangeText={(v) => setSoulsWon(digitsOnly(v))}
-              keyboardType="number-pad"
-              maxLength={6}
-              placeholder="—"
-            />
-          </View>
-        </View>
+        <EventCounterFields
+          value={counters}
+          onChange={setCounters}
+          evangelism={!!selectedType?.evangelism}
+        />
 
         <View style={styles.section}>
           <View style={styles.noteHead}>
@@ -592,7 +577,6 @@ const styles = StyleSheet.create({
   },
   dateText: { flex: 1, fontFamily: fonts.sans, fontSize: 15, fontWeight: '500', color: colors.ink },
   dateChip: { fontFamily: fonts.sans, fontSize: 12, color: colors.earthDeep, fontWeight: '700' },
-  numbersRow: { flexDirection: 'row', gap: 12 },
   noteHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',

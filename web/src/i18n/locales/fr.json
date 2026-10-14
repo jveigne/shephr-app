@@ -1510,7 +1510,22 @@
     "tabStats": "Statistiques",
     "notCounted": "Non compté",
     "toVerify": "À vérifier",
-    "countsShort": "{{participants}} pers. · {{souls}} âmes",
+    "counters": {
+      "participants": "Participants",
+      "conversions": "Conversions",
+      "restorations": "Restaurations",
+      "baptisms": "Baptêmes"
+    },
+    "counts": {
+      "participants_one": "{{n}} participant",
+      "participants_other": "{{n}} participants",
+      "conversions_one": "{{n}} conversion",
+      "conversions_other": "{{n}} conversions",
+      "restorations_one": "{{n}} restauration",
+      "restorations_other": "{{n}} restaurations",
+      "baptisms_one": "{{n}} baptême",
+      "baptisms_other": "{{n}} baptêmes"
+    },
     "status": {
       "PLANNED": "Programmé",
       "DONE": "Réalisé",
@@ -1535,7 +1550,7 @@
       "event": "Évènement",
       "scope": "Rattachement",
       "place": "Lieu",
-      "counts": "Participants · âmes",
+      "counts": "Bilan",
       "status": "Statut"
     },
     "form": {
@@ -1553,8 +1568,6 @@
       "endBeforeStart": "La date de fin précède la date de début.",
       "place": "Lieu",
       "placePlaceholder": "Ville, quartier, lieu-dit…",
-      "participants": "Participants",
-      "soulsWon": "Âmes gagnées",
       "countInvalid": "Saisissez un nombre entier positif.",
       "note": "Note",
       "noteHint": "Facultatif — {{n}} caractères restants",
@@ -1590,6 +1603,7 @@
       "counterSub": "Actions d'évangélisation de votre assemblée, comptées dès leur déclaration.",
       "thisMonth": "Ce mois · {{month}}",
       "thisYear": "Cette année · {{year}}",
+      "yearCounters": "En {{year}} : {{counts}}",
       "mine": "Moi",
       "planned": "Programmés",
       "plannedSub": "Évènements à venir de votre assemblée, le plus proche en haut.",
@@ -1637,7 +1651,8 @@
       "updated": "Évènement modifié",
       "markDone": "Marquer comme réalisé",
       "countKept": "Laissé vide, la valeur actuelle ({{n}}) est conservée.",
-      "markDoneIntro": "Indiquez, si vous les connaissez, le nombre de participants et d'âmes gagnées.",
+      "markDoneIntro": "Indiquez, si vous le connaissez, le nombre de participants.",
+      "markDoneIntroEvangelism": "Indiquez, si vous les connaissez, le nombre de participants, de conversions, de restaurations et de baptêmes.",
       "markedDone": "Évènement marqué comme réalisé",
       "notYetHeld": "Possible une fois la date de l'évènement arrivée.",
       "cancel": "Annuler l'évènement",
@@ -1673,8 +1688,6 @@
       "root": "Mon périmètre",
       "breadcrumb": "Niveau affiché",
       "kpiCount": "Actions comptées",
-      "kpiParticipants": "Participants",
-      "kpiSouls": "Âmes gagnées",
       "kpiAgenda": "Programmés à venir",
       "toClose_one": "{{count}} à clôturer",
       "toClose_other": "{{count}} à clôturer",
@@ -1695,8 +1708,6 @@
       "colType": "Type",
       "colMonth": "Mois",
       "colCount": "Actions",
-      "colParticipants": "Participants",
-      "colSouls": "Âmes",
       "noType": "Aucun type évangélique n'est configuré.",
       "noPerimeter": "Les statistiques portent sur votre périmètre : il faut être rattaché à une assemblée, ou responsable d'une ville, d'une région ou d'une nation.",
       "nodeGone": "Ce niveau n'est plus accessible"

@@ -5,7 +5,7 @@ import Card from '@/components/Card';
 import { colors, fonts, radii } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { EventResponse } from '@/services/eventsApi';
-import { eventLabel, fmtEventDates, isEnglishLang, isToClose } from '@/utils/events';
+import { COUNTER_KEYS, eventLabel, fmtEventDates, isEnglishLang, isToClose, type CounterKey } from '@/utils/events';
 import type { Translate } from '@/utils/meetingReport';
 
 /**
@@ -24,19 +24,16 @@ export function eventMetaLine(
   return [dates, place, scopeName].filter(Boolean).join(' · ');
 }
 
-/** « 40 participants · 3 âmes gagnées » — seulement ce qui a été saisi. */
-export function EventFigures({
-  participants,
-  soulsWon,
-}: {
-  participants: number | null | undefined;
-  soulsWon: number | null | undefined;
-}) {
+/**
+ * « 40 participants · 3 conversions · 1 baptême » — seulement ce qui a été saisi. Les compteurs
+ * évangéliques (D-EVT-15, JP 14/10) sont toujours null pour un type qui ne l'est pas.
+ */
+export function EventFigures({ counters }: { counters: Partial<Record<CounterKey, number | null>> }) {
   const { t } = useLanguage();
-  const parts = [
-    participants != null ? t('events.mine.participants', { count: participants }) : null,
-    soulsWon != null ? t('events.mine.soulsWon', { count: soulsWon }) : null,
-  ].filter(Boolean);
+  const parts = COUNTER_KEYS.flatMap((key) => {
+    const count = counters[key];
+    return count != null ? [t(`events.mine.${key}`, { count })] : [];
+  });
   if (parts.length === 0) return null;
   return <Text style={styles.rowFigures}>{parts.join(' · ')}</Text>;
 }
@@ -105,7 +102,7 @@ export function EventRow({
       <Text style={styles.rowMeta}>
         {eventMetaLine(fmtEventDates(event, t), event.place, event.scopeName)}
       </Text>
-      <EventFigures participants={event.participants} soulsWon={event.soulsWon} />
+      <EventFigures counters={event} />
       {event.status === 'DONE' && !event.evangelism && (
         <Text style={styles.rowNote}>{t('events.mine.notCounted')}</Text>
       )}

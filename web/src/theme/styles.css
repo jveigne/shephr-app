@@ -1064,6 +1064,11 @@ a:hover { text-decoration: underline; }
 @media (max-width: 640px) {
   .kpi-grid { grid-template-columns: 1fr; }
 }
+/* Statistiques d'évènements (D-EVT-15) : deux rangées de trois — activité, puis fruits. */
+.kpi-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 640px) {
+  .kpi-grid.cols-3 { grid-template-columns: 1fr; }
+}
 
 /* Responsive — grilles restantes (login, dashboard, exports) */
 @media (max-width: 900px) {

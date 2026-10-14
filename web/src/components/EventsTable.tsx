@@ -4,12 +4,22 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Badge, Pagination, Table, type Column } from './ui';
 import { Icon } from './Icon';
 import { listEvents, type EventListParams, type EventResponse, type Page } from '../services/eventsApi';
-import { EVENT_KEYS, eventErrorMessage, eventTypeLabel, fmtEventDates, isToClose, lastPageIfPast } from '../utils/events';
+import {
+  EVENT_KEYS,
+  countKeysFor,
+  eventErrorMessage,
+  eventTypeLabel,
+  fmtCounts,
+  fmtEventDates,
+  isToClose,
+  lastPageIfPast,
+} from '../utils/events';
 
 // ---------------------------------------------------------------------------------------------
 //  Liste d'évènements — partagée par l'agenda des dirigeants (/events), « Mes actions » d'un
 //  dirigeant (onglet Déclarer) et la vue du membre (/my-actions, D-EVT-14 — spec §6.1 : type,
-//  date, lieu, participants / âmes si saisis). Pagination serveur (Page Spring, base 0).
+//  date, lieu, compteurs si saisis — participants, + conversions / restaurations / baptêmes d'un type
+//  évangélique, D-EVT-15). Pagination serveur (Page Spring, base 0).
 // ---------------------------------------------------------------------------------------------
 
 /** Pastilles de statut d'un évènement : programmé / à clôturer / réalisé / annulé, + marqueurs. */
@@ -84,15 +94,8 @@ export function EventsTable({
     { label: t('events.col.place'), render: (e) => (e.place ? <span>{e.place}</span> : dash) },
     {
       label: t('events.col.counts'),
-      style: { whiteSpace: 'nowrap' },
-      render: (e) =>
-        e.participants == null && e.soulsWon == null ? (
-          dash
-        ) : (
-          <span style={{ whiteSpace: 'nowrap' }}>
-            {t('events.countsShort', { participants: e.participants ?? '—', souls: e.soulsWon ?? '—' })}
-          </span>
-        ),
+      // Seuls les compteurs renseignés : « 40 participants · 3 conversions · 1 baptême ».
+      render: (e) => fmtCounts(e, countKeysFor(e.evangelism), t, lang) || dash,
     },
     { label: t('events.col.status'), render: (e) => <EventStatusBadges event={e} /> },
     { label: '', style: { width: 40 }, render: () => <Icon name="chevRight" size={14} /> },

@@ -108,7 +108,8 @@ function PendingRow({ item, label }: { item: QueuedEvent; label: string }) {
         <EventPill tone={colors.earthDeep} icon="cloud-upload-outline" text={t('events.mine.pending')} />
       </View>
       <Text style={styles.rowMeta}>{eventMetaLine(fmtIsoDay(r.eventDate, t), r.place, item.scopeName)}</Text>
-      <EventFigures participants={r.participants} soulsWon={r.soulsWon} />
+      {/* D-EVT-15 (JP 14/10) : compteurs évangéliques seulement si le type l'était à la saisie. */}
+      <EventFigures counters={item.evangelism ? r : { participants: r.participants }} />
       {reasonKey && <Text style={styles.pendingReason}>{t(reasonKey)}</Text>}
     </Card>
   );

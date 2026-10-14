@@ -13,13 +13,16 @@ import {
 } from '../services/eventsApi';
 import {
   EVENT_NOTE_MAX,
+  countKeysFor,
   eventErrorMessage,
+  initialCountValues,
   invalidateEvents,
   newClientId,
   parseCount,
   scopeOptions,
   todayLocal,
   typeLabel,
+  type EventCountKey,
 } from '../utils/events';
 
 // ---------------------------------------------------------------------------------------------
@@ -28,8 +31,11 @@ import {
 //     remplir en < 20 s : type en chips, date = aujourd'hui, bandeau du nœud de rattachement
 //     (RG-EVT-02) — sélecteur seulement s'il y a plusieurs nœuds possibles (spec §4.3) ;
 //   - `plan`    : programmation d'un évènement PLANNED (RG-EVT-03) — D-EVT-13 (JP 14/10) : par
-//     tout compte qui déclare, membre compris, aux mêmes nœuds (`canPlan`) ; date future autorisée, participants / âmes saisis à la clôture (D-EVT-02) ;
+//     tout compte qui déclare, membre compris, aux mêmes nœuds (`canPlan`) ; date future autorisée, compteurs saisis à la clôture (D-EVT-02) ;
 //   - `edit`    : PATCH = remplacement complet (contrat §3.7) — tous les champs sont renvoyés.
+//  Compteurs (D-EVT-15, JP 14/10) : « Participants » pour tout type ; conversions / restaurations /
+//  baptêmes seulement pour un type évangélique — ils disparaissent si l'on choisit un type non
+//  évangélique et sont alors envoyés à null (le serveur les ignorerait de toute façon).
 //  Le serveur revalide tout (nœud, type, dates) : les contrôles d'ici évitent un aller-retour,
 //  ils ne remplacent pas les siens.
 // ---------------------------------------------------------------------------------------------
@@ -119,8 +125,7 @@ export function EventForm({
   const [endDate, setEndDate] = useState(isEdit ? event.endDate ?? '' : '');
   const [scopeId, setScopeId] = useState(initialScopeId);
   const [place, setPlace] = useState(isEdit ? event.place ?? '' : '');
-  const [participants, setParticipants] = useState(isEdit && event.participants != null ? String(event.participants) : '');
-  const [soulsWon, setSoulsWon] = useState(isEdit && event.soulsWon != null ? String(event.soulsWon) : '');
+  const [counts, setCounts] = useState(() => initialCountValues(isEdit ? event : undefined));
   const [note, setNote] = useState(isEdit ? event.note ?? '' : '');
   const [submitted, setSubmitted] = useState(false);
 
@@ -129,13 +134,13 @@ export function EventForm({
   const showTitle = !isDone || (isEdit && event.title != null);
   const showEndDate = mode !== 'declare';
   const showCounts = isDone;
-
-  const parsedParticipants = parseCount(participants);
-  const parsedSouls = parseCount(soulsWon);
+  const evangelism = type?.evangelism === true;
+  const countKeys = showCounts ? countKeysFor(evangelism) : [];
+  const parsed = (k: EventCountKey) => parseCount(counts[k]);
 
   // Contrôles locaux, affichés après la première tentative d'envoi (spec §4.2 : le bouton reste
   // actif dès que type + date sont remplis, rien ne bloque la saisie elle-même).
-  const errors: Partial<Record<'label' | 'date' | 'endDate' | 'scope' | 'participants' | 'soulsWon', string>> = {};
+  const errors: Partial<Record<'label' | 'date' | 'endDate' | 'scope' | EventCountKey, string>> = {};
   if (type?.requiresLabel && customLabel.trim() === '') errors.label = t('events.form.labelRequired');
   // Le formulaire est en noValidate : la date obligatoire est contrôlée ici, pas par `required`.
   if (eventDate === '') errors.date = t('events.form.dateRequired');
@@ -143,16 +148,23 @@ export function EventForm({
   else if (isDone && eventDate > today) errors.date = t('events.form.dateInFuture');
   if (showEndDate && endDate && eventDate && endDate < eventDate) errors.endDate = t('events.form.endBeforeStart');
   if (!scope) errors.scope = t('events.form.scopeRequired');
-  if (showCounts && parsedParticipants === undefined) errors.participants = t('events.form.countInvalid');
-  if (showCounts && parsedSouls === undefined) errors.soulsWon = t('events.form.countInvalid');
+  for (const k of countKeys) if (parsed(k) === undefined) errors[k] = t('events.form.countInvalid');
   const valid = Object.keys(errors).length === 0;
 
   const saveM = useMutation({
     mutationFn: () => {
       const label = type?.requiresLabel ? trimOrNull(customLabel) : null;
-      const counts = showCounts
-        ? { participants: parsedParticipants ?? null, soulsWon: parsedSouls ?? null }
-        : { participants: isEdit ? event.participants : null, soulsWon: isEdit ? event.soulsWon : null };
+      // Saisis pour un réalisé ; pour un programmé (saisie à la clôture), on renvoie l'existant
+      // (PATCH = remplacement complet). D-EVT-15 : rien d'évangélique pour un type qui ne l'est pas.
+      const value = (k: EventCountKey): number | null =>
+        showCounts ? parsed(k) ?? null : isEdit ? event[k] : null;
+      const fruit = (k: EventCountKey) => (evangelism ? value(k) : null);
+      const countsBody = {
+        participants: value('participants'),
+        conversions: fruit('conversions'),
+        restorations: fruit('restorations'),
+        baptisms: fruit('baptisms'),
+      };
       if (isEdit) {
         // Nœud inchangé = champs absents (contrat §3.7) : un nœud qui n'est plus dans ma liste
         // n'est donc jamais « redéplacé » sur lui-même au risque d'un 403.
@@ -166,7 +178,7 @@ export function EventForm({
           title: trimOrNull(title),
           place: trimOrNull(place),
           note: trimOrNull(note),
-          ...counts,
+          ...countsBody,
         });
       }
       return createEvent({
@@ -181,7 +193,7 @@ export function EventForm({
         title: showTitle ? trimOrNull(title) : null,
         place: trimOrNull(place),
         note: trimOrNull(note),
-        ...counts,
+        ...countsBody,
       });
     },
     onSuccess: (saved) => {
@@ -283,30 +295,15 @@ export function EventForm({
         />
       </Field>
 
-      {/* 4–5. Participants / âmes gagnées (à la clôture pour un évènement programmé, D-EVT-02). */}
+      {/* 4–5. Compteurs, facultatifs (à la clôture pour un évènement programmé, D-EVT-02) :
+          participants, + conversions / restaurations / baptêmes pour un type évangélique (D-EVT-15). */}
       {showCounts && (
-        <div style={twoCols}>
-          <Field label={t('events.form.participants')} hint={showErr('participants') ?? t('common.optional')}>
-            <Input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              step={1}
-              value={participants}
-              onChange={(e) => setParticipants(e.target.value)}
-            />
-          </Field>
-          <Field label={t('events.form.soulsWon')} hint={showErr('soulsWon') ?? t('common.optional')}>
-            <Input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              step={1}
-              value={soulsWon}
-              onChange={(e) => setSoulsWon(e.target.value)}
-            />
-          </Field>
-        </div>
+        <EventCountFields
+          keys={countKeys}
+          values={counts}
+          onChange={(k, v) => setCounts((c) => ({ ...c, [k]: v }))}
+          hint={(k) => showErr(k) ?? t('common.optional')}
+        />
       )}
 
       {/* 6. Note (≤ 280). */}
@@ -357,6 +354,44 @@ export function EventForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+/**
+ * Champs de compteurs (formulaire et « Marquer comme réalisé ») : un champ par clé de `keys`, dans
+ * l'ordre — participants puis, pour un type évangélique, conversions / restaurations / baptêmes
+ * (D-EVT-15). Entiers ≥ 0, tous facultatifs (RG-ACT-03) ; la validation est celle de l'appelant.
+ */
+export function EventCountFields({
+  keys,
+  values,
+  onChange,
+  hint,
+  autoFocus,
+}: {
+  keys: readonly EventCountKey[];
+  values: Record<EventCountKey, string>;
+  onChange: (key: EventCountKey, value: string) => void;
+  hint: (key: EventCountKey) => ReactNode;
+  autoFocus?: boolean;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 12 }}>
+      {keys.map((k, i) => (
+        <Field key={k} label={t(`events.counters.${k}`)} hint={hint(k)}>
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            value={values[k]}
+            autoFocus={autoFocus && i === 0}
+            onChange={(e) => onChange(k, e.target.value)}
+          />
+        </Field>
+      ))}
+    </div>
   );
 }
 

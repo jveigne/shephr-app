@@ -1,4 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query';
+import type { TFunction } from 'i18next';
 import type { EventResponse, EventType, OrgLevel, Page, ScopeNode, StatsLevel } from '../services/eventsApi';
 import { toLocalDate } from './format';
 
@@ -41,7 +42,8 @@ export function newClientId(): string {
 }
 
 /**
- * Nombre saisi (participants, âmes gagnées) : entier ≥ 0 tenant dans un `Integer` Java.
+ * Nombre saisi (participants, conversions, restaurations, baptêmes) : entier ≥ 0 tenant dans un
+ * `Integer` Java.
  * `null` si le champ est vide, `undefined` s'il est invalide.
  */
 export function parseCount(raw: string): number | null | undefined {
@@ -50,6 +52,49 @@ export function parseCount(raw: string): number | null | undefined {
   if (!/^\d+$/.test(s)) return undefined;
   const n = Number(s);
   return n <= 2_147_483_647 ? n : undefined;
+}
+
+// ---------------- Compteurs (D-EVT-15) ----------------
+
+/**
+ * D-EVT-15 (JP 14/10, retour de l'évangéliste) : compteurs d'un évènement d'un type ÉVANGÉLIQUE,
+ * dans l'ordre d'affichage — `conversions` (ex-« âmes gagnées », `soulsWon`), `restorations`,
+ * `baptisms`. Tous facultatifs (RG-ACT-03). Pour un type non évangélique, le serveur les ignore
+ * (enregistrés `null`) : on ne les affiche ni ne les envoie. `participants` vaut pour tous les types.
+ */
+export const EVANGELISM_COUNTERS = ['conversions', 'restorations', 'baptisms'] as const;
+export type EvangelismCounter = (typeof EVANGELISM_COUNTERS)[number];
+export type EventCountKey = 'participants' | EvangelismCounter;
+
+/** Compteurs proposés pour un type : participants toujours, les trois évangéliques s'il l'est. */
+export const countKeysFor = (evangelism: boolean): EventCountKey[] =>
+  evangelism ? ['participants', ...EVANGELISM_COUNTERS] : ['participants'];
+
+/**
+ * « 12 participants · 5 conversions · 1 baptême » : les compteurs RENSEIGNÉS parmi `keys`, dans
+ * l'ordre ; chaîne vide si aucun ne l'est (un compteur vide n'est pas un zéro).
+ */
+export function fmtCounts(
+  values: Partial<Record<EventCountKey, number | null>>,
+  keys: readonly EventCountKey[],
+  t: TFunction,
+  lang: string,
+): string {
+  return keys
+    .filter((k) => values[k] != null)
+    .map((k) => t(`events.counts.${k}`, { count: values[k]!, n: fmtCount(values[k]!, lang) }))
+    .join(' · ');
+}
+
+/** Valeurs saisies des compteurs, préremplies depuis l'évènement modifié ou clôturé. */
+export function initialCountValues(event?: EventResponse): Record<EventCountKey, string> {
+  const v = (n: number | null | undefined) => (n != null ? String(n) : '');
+  return {
+    participants: v(event?.participants),
+    conversions: v(event?.conversions),
+    restorations: v(event?.restorations),
+    baptisms: v(event?.baptisms),
+  };
 }
 
 /** Note libre d'un évènement : 280 caractères au plus (contrat §3.3, « 1-2 lignes » de la spec §3). */

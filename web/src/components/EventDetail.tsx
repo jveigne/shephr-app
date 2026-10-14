@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Field, Input, Modal } from './ui';
+import { Button, Field, Modal } from './ui';
 import { Icon } from './Icon';
 import { useToast } from './Toast';
-import { EventForm } from './EventForm';
+import { EventCountFields, EventForm } from './EventForm';
 import { EventStatusBadges } from './EventsTable';
 import {
   cancelEvent,
@@ -18,16 +18,19 @@ import {
 } from '../services/eventsApi';
 import {
   EVENT_KEYS,
+  countKeysFor,
   errCode,
   eventErrorMessage,
   eventTypeLabel,
   fmtEventDates,
+  initialCountValues,
   EVENT_NOTE_MAX,
   invalidateEvents,
   levelKey,
   parseCount,
   todayLocal,
   typeLabel,
+  type EventCountKey,
 } from '../utils/events';
 
 // ---------------------------------------------------------------------------------------------
@@ -296,8 +299,10 @@ function EventDetailBody({ event }: { event: EventResponse }) {
         <span style={{ color: 'var(--ink-500)' }}> · {t(levelKey(event.scopeLevel))}</span>
       </Row>
       <Row label={t('events.form.place')}>{event.place ?? dash}</Row>
-      <Row label={t('events.form.participants')}>{event.participants ?? dash}</Row>
-      <Row label={t('events.form.soulsWon')}>{event.soulsWon ?? dash}</Row>
+      {/* D-EVT-15 : conversions / restaurations / baptêmes n'existent que pour un type évangélique. */}
+      {countKeysFor(event.evangelism).map((k) => (
+        <Row key={k} label={t(`events.counters.${k}`)}>{event[k] ?? dash}</Row>
+      ))}
       <Row label={t('events.form.note')}>
         {event.note ? <span style={{ whiteSpace: 'pre-wrap' }}>{event.note}</span> : dash}
       </Row>
@@ -319,9 +324,11 @@ function EventDetailBody({ event }: { event: EventResponse }) {
 }
 
 /**
- * « Marquer comme réalisé » (D-EVT-02, RG-EVT-06) : participants / âmes gagnées / note saisis à ce
- * moment. Contrat §3.8 : un champ ABSENT garde sa valeur — participants et âmes vides ne sont donc
- * pas envoyés ; la note est préremplie et toujours renvoyée ("" l'efface).
+ * « Marquer comme réalisé » (D-EVT-02, RG-EVT-06) : compteurs et note saisis à ce moment —
+ * participants, + conversions / restaurations / baptêmes pour un type évangélique (D-EVT-15 ; le
+ * type ne change pas à la clôture, seuls ceux-là sont proposés et envoyés). Contrat §3.8 : un champ
+ * ABSENT garde sa valeur — un compteur vide n'est donc pas envoyé ; la note est préremplie et
+ * toujours renvoyée ("" l'efface).
  * Un compte prérempli puis vidé n'est donc PAS effacé par /done : l'aide le dit explicitement
  * (sinon l'ancienne valeur resterait dans les statistiques à l'insu du dirigeant) ; l'effacer passe
  * par « Modifier » (PATCH = remplacement complet, §3.7).
@@ -336,28 +343,25 @@ function DoneForm({
   onDone: (saved: EventResponse) => void;
 }) {
   const { t } = useTranslation();
-  const [participants, setParticipants] = useState(event.participants != null ? String(event.participants) : '');
-  const [soulsWon, setSoulsWon] = useState(event.soulsWon != null ? String(event.soulsWon) : '');
+  const [counts, setCounts] = useState(() => initialCountValues(event));
   const [note, setNote] = useState(event.note ?? '');
 
-  const parsedParticipants = parseCount(participants);
-  const parsedSouls = parseCount(soulsWon);
-  const valid = (s: string) => parseCount(s) !== undefined;
-  const countHint = (s: string, current: number | null | undefined) =>
-    !valid(s) ? (
+  const countKeys = countKeysFor(event.evangelism);
+  const parsed = (k: EventCountKey) => parseCount(counts[k]);
+  const countHint = (k: EventCountKey) =>
+    parsed(k) === undefined ? (
       <span style={{ color: 'var(--err)' }}>{t('events.form.countInvalid')}</span>
-    ) : s.trim() === '' && current != null ? (
-      <span style={{ color: 'var(--warn)' }}>{t('events.detail.countKept', { n: current })}</span>
+    ) : counts[k].trim() === '' && event[k] != null ? (
+      <span style={{ color: 'var(--warn)' }}>{t('events.detail.countKept', { n: event[k] })}</span>
     ) : (
       t('common.optional')
     );
-  const ok = parsedParticipants !== undefined && parsedSouls !== undefined;
+  const ok = countKeys.every((k) => parsed(k) !== undefined);
 
   const doneM = useMutation({
     mutationFn: () =>
       markEventDone(event.id, {
-        ...(parsedParticipants != null ? { participants: parsedParticipants } : {}),
-        ...(parsedSouls != null ? { soulsWon: parsedSouls } : {}),
+        ...Object.fromEntries(countKeys.flatMap((k) => (parsed(k) != null ? [[k, parsed(k)]] : []))),
         note: note.trim(),
       }),
     onSuccess: onDone,
@@ -373,21 +377,16 @@ function DoneForm({
       }}
       style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
     >
-      <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ink-700)' }}>{t('events.detail.markDoneIntro')}</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
-        <Field
-          label={t('events.form.participants')}
-          hint={countHint(participants, event.participants)}
-        >
-          <Input type="number" inputMode="numeric" min={0} step={1} value={participants} autoFocus onChange={(e) => setParticipants(e.target.value)} />
-        </Field>
-        <Field
-          label={t('events.form.soulsWon')}
-          hint={countHint(soulsWon, event.soulsWon)}
-        >
-          <Input type="number" inputMode="numeric" min={0} step={1} value={soulsWon} onChange={(e) => setSoulsWon(e.target.value)} />
-        </Field>
-      </div>
+      <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ink-700)' }}>
+        {event.evangelism ? t('events.detail.markDoneIntroEvangelism') : t('events.detail.markDoneIntro')}
+      </p>
+      <EventCountFields
+        keys={countKeys}
+        values={counts}
+        onChange={(k, v) => setCounts((c) => ({ ...c, [k]: v }))}
+        hint={countHint}
+        autoFocus
+      />
       <Field label={t('events.form.note')} hint={t('events.form.noteHint', { n: EVENT_NOTE_MAX - note.length })}>
         <textarea
           className="input"

@@ -1510,7 +1510,22 @@
     "tabStats": "Statistics",
     "notCounted": "Not counted",
     "toVerify": "To verify",
-    "countsShort": "{{participants}} people · {{souls}} souls",
+    "counters": {
+      "participants": "Participants",
+      "conversions": "Conversions",
+      "restorations": "Restorations",
+      "baptisms": "Baptisms"
+    },
+    "counts": {
+      "participants_one": "{{n}} participant",
+      "participants_other": "{{n}} participants",
+      "conversions_one": "{{n}} conversion",
+      "conversions_other": "{{n}} conversions",
+      "restorations_one": "{{n}} restoration",
+      "restorations_other": "{{n}} restorations",
+      "baptisms_one": "{{n}} baptism",
+      "baptisms_other": "{{n}} baptisms"
+    },
     "status": {
       "PLANNED": "Planned",
       "DONE": "Done",
@@ -1535,7 +1550,7 @@
       "event": "Event",
       "scope": "Recorded for",
       "place": "Place",
-      "counts": "Participants · souls",
+      "counts": "Outcome",
       "status": "Status"
     },
     "form": {
@@ -1553,8 +1568,6 @@
       "endBeforeStart": "The end date is before the start date.",
       "place": "Place",
       "placePlaceholder": "City, neighbourhood, place…",
-      "participants": "Participants",
-      "soulsWon": "Souls won",
       "countInvalid": "Enter a whole number, zero or more.",
       "note": "Note",
       "noteHint": "Optional — {{n}} characters left",
@@ -1590,6 +1603,7 @@
       "counterSub": "Evangelism actions of your assembly, counted as soon as they are reported.",
       "thisMonth": "This month · {{month}}",
       "thisYear": "This year · {{year}}",
+      "yearCounters": "In {{year}}: {{counts}}",
       "mine": "Me",
       "planned": "Planned",
       "plannedSub": "Upcoming events of your assembly, soonest first.",
@@ -1637,7 +1651,8 @@
       "updated": "Event updated",
       "markDone": "Mark as done",
       "countKept": "Left empty, the current value ({{n}}) is kept.",
-      "markDoneIntro": "If you know them, enter the number of participants and souls won.",
+      "markDoneIntro": "If you know it, enter the number of participants.",
+      "markDoneIntroEvangelism": "If you know them, enter the number of participants, conversions, restorations and baptisms.",
       "markedDone": "Event marked as done",
       "notYetHeld": "Available once the event date has arrived.",
       "cancel": "Cancel event",
@@ -1673,8 +1688,6 @@
       "root": "My perimeter",
       "breadcrumb": "Displayed level",
       "kpiCount": "Counted actions",
-      "kpiParticipants": "Participants",
-      "kpiSouls": "Souls won",
       "kpiAgenda": "Upcoming planned",
       "toClose_one": "{{count}} to close",
       "toClose_other": "{{count}} to close",
@@ -1695,8 +1708,6 @@
       "colType": "Type",
       "colMonth": "Month",
       "colCount": "Actions",
-      "colParticipants": "Participants",
-      "colSouls": "Souls",
       "noType": "No evangelistic type is configured.",
       "noPerimeter": "Statistics cover your perimeter: you must belong to an assembly, or lead a city, a region or a nation.",
       "nodeGone": "This level is no longer accessible"

@@ -17,7 +17,7 @@ import {
   type StatsTotals,
 } from '@/services/eventsApi';
 import { eventActionMessage, eventErrorCode } from '@/utils/eventErrors';
-import { fmtMonth, isEnglishLang, typeLabel } from '@/utils/events';
+import { COUNTER_KEYS, fmtMonth, isEnglishLang, typeLabel } from '@/utils/events';
 import { notify } from '@/utils/dialogs';
 import type { Translate } from '@/utils/meetingReport';
 
@@ -60,9 +60,12 @@ function scopeName(s: StatsScope, t: Translate): string {
   return s.level === 'MINISTRY' ? t('events.stats.ministry') : s.name ?? t(`events.levels.${s.level}`);
 }
 
-/** « 40 participants · 3 âmes gagnées » — les zéros se disent aussi : ce sont des totaux. */
+/**
+ * « 40 participants · 6 conversions · 3 restaurations · 4 baptêmes » (D-EVT-15, JP 14/10) — les
+ * zéros se disent aussi : ce sont des totaux.
+ */
 function figures(x: StatsTotals, t: Translate): string {
-  return `${t('events.mine.participants', { count: x.participants })} · ${t('events.mine.soulsWon', { count: x.soulsWon })}`;
+  return COUNTER_KEYS.map((key) => t(`events.mine.${key}`, { count: x[key] })).join(' · ');
 }
 
 export default function EventStatsDrill({
@@ -229,7 +232,10 @@ function StatsBody({
       <View style={styles.kpiGrid}>
         <Kpi label={t('events.stats.kpiCount')} value={stats.total.count} strong />
         <Kpi label={t('events.stats.kpiParticipants')} value={stats.total.participants} />
-        <Kpi label={t('events.stats.kpiSouls')} value={stats.total.soulsWon} />
+        {/* D-EVT-15 (JP 14/10) : sommes des compteurs évangéliques, non renseignés = 0. */}
+        <Kpi label={t('events.stats.kpiConversions')} value={stats.total.conversions} />
+        <Kpi label={t('events.stats.kpiRestorations')} value={stats.total.restorations} />
+        <Kpi label={t('events.stats.kpiBaptisms')} value={stats.total.baptisms} />
         {/* Agenda du sous-arbre : tous types, indépendamment de la période (contrat §6). */}
         <Kpi
           label={t('events.stats.kpiAgenda')}

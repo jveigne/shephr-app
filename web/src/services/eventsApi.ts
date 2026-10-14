@@ -80,7 +80,10 @@ export interface EventCreateRequest {
   title?: string | null;
   place?: string | null;
   participants?: number | null;
-  soulsWon?: number | null;
+  /** D-EVT-15 (JP 14/10) : type évangélique seulement — ignorés (enregistrés null) sinon. */
+  conversions?: number | null;
+  restorations?: number | null;
+  baptisms?: number | null;
   note?: string | null;
 }
 
@@ -98,14 +101,20 @@ export interface EventUpdateRequest {
   title: string | null;
   place: string | null;
   participants: number | null;
-  soulsWon: number | null;
+  /** D-EVT-15 : suivent le `typeId` ENVOYÉ — remis à null par le serveur vers un type non évangélique. */
+  conversions: number | null;
+  restorations: number | null;
+  baptisms: number | null;
   note: string | null;
 }
 
 /** Mirrors com.excellence.back.events.EventDtos.EventDoneRequest — un champ absent GARDE sa valeur ; note "" l'efface. */
 export interface EventDoneRequest {
   participants?: number;
-  soulsWon?: number;
+  /** D-EVT-15 : ignorés pour un type non évangélique. */
+  conversions?: number;
+  restorations?: number;
+  baptisms?: number;
   note?: string;
 }
 
@@ -129,7 +138,10 @@ export interface EventResponse {
   scopeName: string | null;
   place: string | null;
   participants: number | null;
-  soulsWon: number | null;
+  /** D-EVT-15 (JP 14/10) : toujours null pour un type non évangélique. */
+  conversions: number | null;
+  restorations: number | null;
+  baptisms: number | null;
   note: string | null;
   /** RG-ACT-07 : informatif, ne retire jamais du total. */
   toVerify: boolean;
@@ -180,11 +192,13 @@ export interface StatsScope {
   name: string | null;
 }
 
-/** Mirrors com.excellence.back.events.EventDtos.StatsTotals */
+/** Mirrors com.excellence.back.events.EventDtos.StatsTotals — sommes des évènements comptés, vides = 0 (D-EVT-15). */
 export interface StatsTotals {
   count: number;
   participants: number;
-  soulsWon: number;
+  conversions: number;
+  restorations: number;
+  baptisms: number;
 }
 
 /** Mirrors com.excellence.back.events.EventDtos.TypeStats */

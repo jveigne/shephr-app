@@ -18,6 +18,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
  * anti-rafale, cache disque). Le but est le même que la file hors-ligne : RG-ACT-08, la saisie
  * fonctionne SANS RÉSEAU. Les nœuds sont mis en cache au même titre que les types — sans eux, le
  * formulaire ne saurait ni dire « Cette action sera enregistrée pour … », ni proposer le sélecteur.
+ * Les types sont gardés ENTIERS (`EventTypeDto`), drapeau `evangelism` compris : hors ligne, c'est
+ * lui qui décide d'afficher conversions / restaurations / baptêmes (D-EVT-15, JP 14/10) — il figure
+ * dans le DTO depuis le lot E6, un cache écrit avant D-EVT-15 le porte donc déjà.
  *
  * <p>Une différence voulue avec les rubriques de don : le cache disque porte l'id du COMPTE qui l'a
  * rempli, et n'est relu que par ce compte. Il survit donc à un redémarrage de l'application — ce

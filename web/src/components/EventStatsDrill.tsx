@@ -1,7 +1,8 @@
 import { useEffect, useState, type CSSProperties } from 'react';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Table } from './ui';
+import { Table, type Column } from './ui';
 import { Icon } from './Icon';
 import { useToast } from './Toast';
 import {
@@ -11,9 +12,20 @@ import {
   type MonthStats,
   type OrgLevel,
   type StatsScope,
+  type StatsTotals,
   type TypeStats,
 } from '../services/eventsApi';
-import { EVENT_KEYS, errCode, eventErrorMessage, fmtCount, fmtMonth, levelKey, typeLabel } from '../utils/events';
+import {
+  EVANGELISM_COUNTERS,
+  EVENT_KEYS,
+  countKeysFor,
+  errCode,
+  eventErrorMessage,
+  fmtCount,
+  fmtMonth,
+  levelKey,
+  typeLabel,
+} from '../utils/events';
 
 // ---------------------------------------------------------------------------------------------
 //  Statistiques d'évangélisation avec descente Nation → Région → Ville → Assemblée (§6.2 du plan,
@@ -28,6 +40,9 @@ import { EVENT_KEYS, errCode, eventErrorMessage, fmtCount, fmtMonth, levelKey, t
 //  - D-EVT-03 : seuls les évènements DONE d'un type évangélique comptent ; « à vérifier » ne
 //    retire rien (RG-ACT-07). D-EVT-04 : un évènement compte une fois, au nœud où il est rattaché
 //    (`ownLevelCount`). D-EVT-06 : aucune cible, aucune barre de progression.
+//  - D-EVT-15 (JP 14/10) : chaque niveau somme participants, conversions, restaurations et
+//    baptêmes (vides = 0) — deux rangées d'indicateurs (activité, puis fruits) et les mêmes
+//    colonnes dans les trois tableaux.
 // ---------------------------------------------------------------------------------------------
 
 interface DrillStep {
@@ -155,7 +170,8 @@ function StatsBody({ stats, onOpen }: { stats: EventStats; onOpen: (c: ChildStat
 
       {stats.children.length > 0 && <ChildrenBlock stats={stats} here={here} onOpen={onOpen} />}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginTop: 16 }}>
+      {/* Six colonnes par tableau (D-EVT-15) : côte à côte seulement s'il y a la place. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 480px), 1fr))', gap: 16, marginTop: 16 }}>
         <TypesBlock rows={stats.byType} lang={lang} />
         <MonthsBlock rows={stats.byMonth} lang={lang} />
       </div>
@@ -167,20 +183,16 @@ function StatsKpis({ stats }: { stats: EventStats }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   return (
-    <div className="kpi-grid">
+    // Deux rangées de trois : l'activité (actions, participants, agenda), puis les fruits (D-EVT-15).
+    <div className="kpi-grid cols-3">
       <div className="kpi">
         <div className="lbl">{t('events.stats.kpiCount')}</div>
         <div className="val">{fmtCount(stats.total.count, lang)}</div>
         <span className="deco" />
       </div>
       <div className="kpi">
-        <div className="lbl">{t('events.stats.kpiParticipants')}</div>
+        <div className="lbl">{t('events.counters.participants')}</div>
         <div className="val">{fmtCount(stats.total.participants, lang)}</div>
-        <span className="deco" />
-      </div>
-      <div className="kpi">
-        <div className="lbl">{t('events.stats.kpiSouls')}</div>
-        <div className="val">{fmtCount(stats.total.soulsWon, lang)}</div>
         <span className="deco" />
       </div>
       {/* Agenda du sous-arbre : tous types, indépendamment de la période (contrat §6). */}
@@ -192,11 +204,28 @@ function StatsKpis({ stats }: { stats: EventStats }) {
         </div>
         <span className="deco" />
       </div>
+      {EVANGELISM_COUNTERS.map((k) => (
+        <div key={k} className="kpi">
+          <div className="lbl">{t(`events.counters.${k}`)}</div>
+          <div className="val">{fmtCount(stats.total[k], lang)}</div>
+          <span className="deco" />
+        </div>
+      ))}
     </div>
   );
 }
 
 type ChildRow = ChildStats & { id: string };
+
+/** Colonnes chiffrées communes aux trois tableaux : actions, participants, puis les fruits (D-EVT-15). */
+function totalsColumns<T extends StatsTotals & { id: string }>(t: TFunction, lang: string): Column<T>[] {
+  return [
+    { label: t('events.stats.colCount'), cellClass: 'num', render: (r) => <strong>{fmtCount(r.count, lang)}</strong> },
+    ...countKeysFor(true).map(
+      (k): Column<T> => ({ label: t(`events.counters.${k}`), cellClass: 'num', render: (r) => fmtCount(r[k], lang) }),
+    ),
+  ];
+}
 
 function ChildrenBlock({ stats, here, onOpen }: { stats: EventStats; here: string; onOpen: (c: ChildStats) => void }) {
   const { t, i18n } = useTranslation();
@@ -224,9 +253,7 @@ function ChildrenBlock({ stats, here, onOpen }: { stats: EventStats; here: strin
               </div>
             ),
           },
-          { label: t('events.stats.colCount'), cellClass: 'num', render: (c) => <strong>{fmtCount(c.count, lang)}</strong> },
-          { label: t('events.stats.colParticipants'), cellClass: 'num', render: (c) => fmtCount(c.participants, lang) },
-          { label: t('events.stats.colSouls'), cellClass: 'num', render: (c) => fmtCount(c.soulsWon, lang) },
+          ...totalsColumns<ChildRow>(t, lang),
           { label: '', style: { width: 40 }, render: () => <Icon name="chevRight" size={14} /> },
         ]}
         rows={stats.children}
@@ -253,9 +280,7 @@ function TypesBlock({ rows, lang }: { rows: TypeStats[]; lang: string }) {
       <Table<TypeStats & { id: string }>
         columns={[
           { label: t('events.stats.colType'), render: (r) => <span style={{ fontWeight: 500 }}>{typeLabel(r, lang)}</span> },
-          { label: t('events.stats.colCount'), cellClass: 'num', render: (r) => <strong>{fmtCount(r.count, lang)}</strong> },
-          { label: t('events.stats.colParticipants'), cellClass: 'num', render: (r) => fmtCount(r.participants, lang) },
-          { label: t('events.stats.colSouls'), cellClass: 'num', render: (r) => fmtCount(r.soulsWon, lang) },
+          ...totalsColumns<TypeStats & { id: string }>(t, lang),
         ]}
         rows={rows.map((r) => ({ ...r, id: r.typeId }))}
         zebra
@@ -277,9 +302,7 @@ function MonthsBlock({ rows, lang }: { rows: MonthStats[]; lang: string }) {
         <Table<MonthStats & { id: string }>
           columns={[
             { label: t('events.stats.colMonth'), render: (r) => <span style={{ textTransform: 'capitalize' }}>{fmtMonth(r.month, lang)}</span> },
-            { label: t('events.stats.colCount'), cellClass: 'num', render: (r) => <strong>{fmtCount(r.count, lang)}</strong> },
-            { label: t('events.stats.colParticipants'), cellClass: 'num', render: (r) => fmtCount(r.participants, lang) },
-            { label: t('events.stats.colSouls'), cellClass: 'num', render: (r) => fmtCount(r.soulsWon, lang) },
+            ...totalsColumns<MonthStats & { id: string }>(t, lang),
           ]}
           rows={rows.map((r) => ({ ...r, id: r.month }))}
           zebra

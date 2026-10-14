@@ -8,6 +8,7 @@ import Chip from '@/components/Chip';
 import Field from '@/components/Field';
 import ErrorBanner from '@/components/ErrorBanner';
 import SelectField from '@/components/SelectField';
+import EventCounterFields from '@/components/EventCounterFields';
 import { DatePickerModal } from '@/components/DeclarationForm';
 import { colors, fonts, radii } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -21,7 +22,7 @@ import {
 } from '@/services/eventsApi';
 import { newEventClientId } from '@/services/eventQueue';
 import { eventActionMessage } from '@/utils/eventErrors';
-import { countOrUndefined, digitsOnly, isEnglishLang, todayLocal, typeLabel } from '@/utils/events';
+import { counterDraft, isEnglishLang, replacedCounters, todayLocal, typeLabel } from '@/utils/events';
 import { fmtIsoDay } from '@/utils/meetingReport';
 import { parseLocalDate, toLocalDate } from '@/utils/format';
 
@@ -31,11 +32,13 @@ import { parseLocalDate, toLocalDate } from '@/utils/format';
  *   <li>`plan` : programmer un évènement `PLANNED` (D-EVT-13, RG-EVT-03) — là où l'on déclare :
  *       membre dans son assemblée, dirigeant à son niveau ou en dessous, SECRETARIAT et LEADER
  *       partout. Seuls les nœuds `canPlan` sont proposés, sans sélecteur s'il n'y en a qu'un.
- *       Date future autorisée ; participants / âmes gagnées se saisissent à la
+ *       Date future autorisée ; participants et compteurs évangéliques se saisissent à la
  *       clôture (D-EVT-02), pas ici ;</li>
  *   <li>`edit` : `PATCH` = REMPLACEMENT COMPLET (contrat §3.7) — tous les champs sont renvoyés,
  *       un champ vidé est effacé. Un DONE reste modifiable (RG-ACT-06) mais jamais re-daté dans le
- *       futur (RG-EVT-05) ; un PLANNED garde ses éventuels chiffres sans les montrer.</li>
+ *       futur (RG-EVT-05) ; un PLANNED garde ses éventuels chiffres sans les montrer. D-EVT-15
+ *       (JP 14/10) : conversions / restaurations / baptêmes ne s'affichent que pour un type
+ *       évangélique ; passer à un type qui ne l'est pas les efface (le serveur les remet à null).</li>
  * </ul>
  * La déclaration terrain (DONE, file hors-ligne) a son propre écran : `app/events/declare`.
  * Programmer et modifier exigent le réseau (plan §6.3 : seules les déclarations passent par la
@@ -133,8 +136,7 @@ export default function EventForm({
     return nodes.length === 1 ? scopeKey(nodes[0]) : null;
   });
   const [place, setPlace] = useState(editing?.place ?? '');
-  const [participants, setParticipants] = useState(editing?.participants != null ? String(editing.participants) : '');
-  const [soulsWon, setSoulsWon] = useState(editing?.soulsWon != null ? String(editing.soulsWon) : '');
+  const [counters, setCounters] = useState(() => counterDraft(editing));
   const [note, setNote] = useState(editing?.note ?? '');
   const [saving, setSaving] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -169,9 +171,16 @@ export default function EventForm({
           ...(moved ? { scopeLevel: target.level, scopeId: target.id } : {}),
           title: trimOrNull(title),
           place: trimOrNull(place),
-          // Remplacement complet : un PLANNED renvoie ses chiffres tels quels (saisis à la clôture).
-          participants: isDone ? countOrUndefined(participants) ?? null : editing.participants,
-          soulsWon: isDone ? countOrUndefined(soulsWon) ?? null : editing.soulsWon,
+          // Remplacement complet : un PLANNED renvoie ses chiffres tels quels (saisis à la clôture) ;
+          // vers un type non évangélique, le serveur remet ses compteurs à null (D-EVT-15).
+          ...(isDone
+            ? replacedCounters(counters, type.evangelism)
+            : {
+                participants: editing.participants,
+                conversions: editing.conversions,
+                restorations: editing.restorations,
+                baptisms: editing.baptisms,
+              }),
           note: trimOrNull(note),
         });
       } else {
@@ -304,28 +313,7 @@ export default function EventForm({
 
       {/* Chiffres : seulement pour un réalisé — un programmé les reçoit à sa clôture (D-EVT-02) */}
       {isDone && (
-        <View style={[styles.section, styles.datesRow]}>
-          <View style={{ flex: 1 }}>
-            <Label style={styles.sectionLabel}>{t('events.declare.participants')}</Label>
-            <Field
-              value={participants}
-              onChangeText={(v) => setParticipants(digitsOnly(v))}
-              keyboardType="number-pad"
-              maxLength={6}
-              placeholder="—"
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Label style={styles.sectionLabel}>{t('events.declare.soulsWon')}</Label>
-            <Field
-              value={soulsWon}
-              onChangeText={(v) => setSoulsWon(digitsOnly(v))}
-              keyboardType="number-pad"
-              maxLength={6}
-              placeholder="—"
-            />
-          </View>
-        </View>
+        <EventCounterFields value={counters} onChange={setCounters} evangelism={type?.evangelism ?? false} />
       )}
 
       <View style={styles.section}>

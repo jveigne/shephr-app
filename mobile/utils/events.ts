@@ -25,8 +25,62 @@ export const eventLabel = (
 /** Saisie numérique facultative : chiffres seuls, vide = non renseigné (jamais un 0 implicite). */
 export const digitsOnly = (raw: string): string => raw.replace(/[^0-9]/g, '');
 
-/** '' → undefined, sinon le nombre (la saisie est déjà réduite aux chiffres, 6 au plus). */
-export const countOrUndefined = (raw: string): number | undefined => (raw === '' ? undefined : Number(raw));
+// ---------------- Compteurs d'un évènement (D-EVT-15, JP 14/10) ----------------
+
+/**
+ * D-EVT-15 (JP 14/10, retour de l'évangéliste) : un évènement évangélique porte trois compteurs —
+ * conversions (ex-« âmes gagnées », `soulsWon`, renommé sans perte de données), restaurations,
+ * baptêmes. Ils n'existent QUE pour un type `evangelism = true` : affichés et envoyés dans ce seul
+ * cas (le serveur les ignorerait sinon). « Participants » reste proposé pour tous les types. Tous
+ * facultatifs : vide = non renseigné, jamais bloquant (RG-ACT-03).
+ */
+export const EVANGELISM_COUNTERS = ['conversions', 'restorations', 'baptisms'] as const;
+export type EvangelismCounter = (typeof EVANGELISM_COUNTERS)[number];
+export type CounterKey = 'participants' | EvangelismCounter;
+export const COUNTER_KEYS: readonly CounterKey[] = ['participants', ...EVANGELISM_COUNTERS];
+
+/** Saisie en cours des compteurs : chiffres seuls, '' = non renseigné. */
+export type CounterDraft = Record<CounterKey, string>;
+
+/** Saisie initiale : vide, ou préremplie des valeurs d'un évènement. */
+export function counterDraft(source?: Partial<Record<CounterKey, number | null>> | null): CounterDraft {
+  const draft = {} as CounterDraft;
+  for (const key of COUNTER_KEYS) {
+    const value = source?.[key];
+    draft[key] = value != null ? String(value) : '';
+  }
+  return draft;
+}
+
+/** Compteurs que la saisie peut porter pour ce type : les évangéliques seulement s'il l'est. */
+export const counterKeysFor = (evangelism: boolean): readonly CounterKey[] =>
+  evangelism ? COUNTER_KEYS : ['participants'];
+
+/**
+ * Création et clôture (contrat §3.3 / §3.8) : seuls les compteurs RENSEIGNÉS partent — à la
+ * clôture, un champ absent garde sa valeur.
+ */
+export function filledCounters(draft: CounterDraft, evangelism: boolean): Partial<Record<CounterKey, number>> {
+  const out: Partial<Record<CounterKey, number>> = {};
+  for (const key of counterKeysFor(evangelism)) {
+    if (draft[key] !== '') out[key] = Number(draft[key]);
+  }
+  return out;
+}
+
+/**
+ * Modification (`PATCH`, remplacement complet, contrat §3.7) : chaque compteur part, vide = null.
+ * Pour un type non évangélique, les trois compteurs partent à null — c'est ce que le serveur en
+ * ferait de toute façon (D-EVT-15).
+ */
+export function replacedCounters(draft: CounterDraft, evangelism: boolean): Record<CounterKey, number | null> {
+  const keys = counterKeysFor(evangelism);
+  const out = {} as Record<CounterKey, number | null>;
+  for (const key of COUNTER_KEYS) {
+    out[key] = keys.includes(key) && draft[key] !== '' ? Number(draft[key]) : null;
+  }
+  return out;
+}
 
 // ---------------- Dates (toujours LOCALES : contrat §1.4) ----------------
 

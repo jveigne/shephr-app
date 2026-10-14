@@ -20,10 +20,12 @@ import {
   type EventResponse,
 } from '../services/eventsApi';
 import {
+  EVANGELISM_COUNTERS,
   EVENT_KEYS,
   currentMonthLocal,
   eventErrorMessage,
   fmtCount,
+  fmtCounts,
   fmtMonth,
   lastPageIfPast,
   todayLocal,
@@ -35,7 +37,8 @@ import {
 //  actions de son assemblée ». Vue DÉDIÉE, spec §6.1 « Mes actions (niveau assemblée) », composée
 //  des routes existantes (contrat §3.12) :
 //   - en tête, le compteur ce mois / cette année des actions d'évangélisation de SON ASSEMBLÉE :
-//     UN `/stats` sur l'année locale (année = `total.count`, mois = `byMonth` du mois local) ;
+//     UN `/stats` sur l'année locale (année = `total.count`, mois = `byMonth` du mois local), et
+//     sous le titre les conversions / restaurations / baptêmes de l'année (D-EVT-15, JP 14/10) ;
 //   - les évènements à venir de son assemblée, séparés en tête (tous types, à partir d'aujourd'hui
 //     local, le plus proche en haut) ;
 //   - les actions d'évangélisation réalisées de son assemblée, récent en haut ;
@@ -189,7 +192,8 @@ export function MyActionsPage() {
 
 /**
  * Compteur de l'assemblée (spec §6.1, contrat §3.12) : UN `/stats` sur l'année LOCALE en cours —
- * `total.count` pour l'année, l'élément `byMonth` du mois local pour le mois. Comptage D-EVT-03
+ * `total.count` pour l'année, l'élément `byMonth` du mois local pour le mois ; D-EVT-15 (JP 14/10) :
+ * une ligne discrète reprend les conversions / restaurations / baptêmes de l'année. Comptage D-EVT-03
  * (DONE, type évangélique, non supprimé ; « à vérifier » ne retire rien, RG-ACT-07). D-EVT-06 :
  * aucun objectif affiché.
  */
@@ -211,6 +215,11 @@ function AssemblyCounter({ unitId }: { unitId: string }) {
       <div>
         <h2 className="section-title">{stats?.scope.name ?? t('events.member.assembly')}</h2>
         <div className="section-sub" style={{ margin: 0 }}>{t('events.member.counterSub')}</div>
+        {stats && (
+          <div style={{ marginTop: 4, fontSize: 13, color: 'var(--green-800)' }}>
+            {t('events.member.yearCounters', { year, counts: fmtCounts(stats.total, EVANGELISM_COUNTERS, t, lang) })}
+          </div>
+        )}
       </div>
       <div style={{ marginLeft: 'auto', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         {statsQ.isLoading ? (

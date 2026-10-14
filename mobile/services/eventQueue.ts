@@ -113,6 +113,13 @@ export interface QueuedEvent {
   typeNameEn: string | null;
   scopeName: string | null;
   /**
+   * D-EVT-15 (JP 14/10) : le type était-il évangélique à la saisie ? Seul ce cas montre
+   * conversions / restaurations / baptêmes sur la ligne « en attente ». ABSENT sur un élément mis
+   * en file avant D-EVT-15 : le type n'est alors pas connu pour évangélique, ces compteurs ne
+   * sont pas affichés (le serveur, lui, tranche à l'envoi — voir `migrateLegacyCounters`).
+   */
+  evangelism?: boolean;
+  /**
    * Dernier échec À REJOUER (envoi direct ou vidage), absent tant qu'aucun envoi n'a été tenté
    * ou si le dernier a manqué faute de réseau. Il dit à « Mes actions » POURQUOI l'élément attend
    * encore — une session expirée (401) demande une reconnexion, pas de la patience.
@@ -189,7 +196,33 @@ async function persist() {
   }
 }
 
-async function readStored(): Promise<StoredQueue | null> {
+/**
+ * D-EVT-15 (JP 14/10) : « âmes gagnées » (`soulsWon`) est devenu `conversions`. Une déclaration
+ * saisie avant la mise à jour et restée en file porte encore `soulsWon`, que le serveur IGNORERAIT
+ * désormais (champ inconnu) : la saisie serait perdue sans un mot. Elle est donc migrée à la
+ * lecture (`soulsWon` → `conversions`, sans écraser un `conversions` déjà présent), avant tout
+ * envoi. Rejouer le même `clientId` avec ce corps migré reste idempotent (RG-EVT-07) : si la
+ * création avait déjà abouti, le serveur renvoie l'existant, dont la colonne a été renommée sans
+ * perte. Les refusées sont migrées aussi : la file stockée ne garde ainsi aucune trace de `soulsWon`.
+ *
+ * <p>L'ancien formulaire proposait « âmes gagnées » pour TOUS les types : un élément hérité peut
+ * donc porter `conversions` sur un type non évangélique. Le chiffre est tout de même reporté dans
+ * le corps, sans tri ici — la file ne connaît pas le type : c'est le serveur qui tranche à l'envoi
+ * (gardé pour un type évangélique, ignoré et stocké null sinon, D-EVT-15). L'élément hérité n'a
+ * pas d'instantané `evangelism` : la ligne « en attente » ne montre donc pas ces compteurs.
+ *
+ * @returns l'élément tel quel s'il n'y avait rien à migrer (même référence).
+ */
+function migrateLegacyCounters<T extends QueuedEvent>(item: T): T {
+  const legacy = item.request as EventCreateRequest & { soulsWon?: unknown };
+  if (!('soulsWon' in legacy)) return item;
+  const { soulsWon, ...request } = legacy;
+  const carried = request.conversions == null && typeof soulsWon === 'number' ? { conversions: soulsWon } : {};
+  return { ...item, request: { ...request, ...carried } };
+}
+
+/** File stockée, migrée ; `migrated` : au moins un élément a changé, à réécrire. */
+async function readStored(): Promise<{ stored: StoredQueue; migrated: boolean } | null> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
@@ -200,7 +233,12 @@ async function readStored(): Promise<StoredQueue | null> {
       Array.isArray(parsed.pending) &&
       Array.isArray(parsed.rejected)
     ) {
-      return parsed as StoredQueue;
+      const queue = parsed as StoredQueue;
+      const pending = queue.pending.map(migrateLegacyCounters);
+      const rejected = queue.rejected.map(migrateLegacyCounters);
+      const migrated =
+        pending.some((p, i) => p !== queue.pending[i]) || rejected.some((r, i) => r !== queue.rejected[i]);
+      return { stored: { ownerId: queue.ownerId, pending, rejected }, migrated };
     }
   } catch {
     // Illisible (format changé, stockage corrompu) : traité comme une file vide.
@@ -244,12 +282,15 @@ export function claimEventQueue(userId: string, token: string): Promise<void> {
       ownerToken = token;
       return;
     }
-    const stored = await readStored();
+    const read = await readStored();
+    const stored = read?.stored ?? null;
     // Libérée pendant la lecture (déconnexion) : cette session n'est plus celle de personne.
     if (generation !== claimedAt) return;
     ownerToken = token;
     if (stored && stored.ownerId === userId) {
       publish({ ownerId: userId, pending: stored.pending, rejected: stored.rejected });
+      // D-EVT-15 : la migration est écrite tout de suite, pas au prochain changement de la file.
+      if (read?.migrated) await persist();
       return;
     }
     publish({ ownerId: userId, pending: [], rejected: [] });

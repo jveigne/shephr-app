@@ -18,6 +18,7 @@ import Button from '@/components/Button';
 import Field from '@/components/Field';
 import ErrorBanner from '@/components/ErrorBanner';
 import EventForm from '@/components/EventForm';
+import EventCounterFields from '@/components/EventCounterFields';
 import { EventPill, EventStatusPills } from '@/components/EventRow';
 import { colors, fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,7 +33,15 @@ import {
   type EventResponse,
 } from '@/services/eventsApi';
 import { eventActionMessage, eventErrorCode } from '@/utils/eventErrors';
-import { digitsOnly, eventLabel, fmtEventDates, isEnglishLang, todayLocal } from '@/utils/events';
+import {
+  counterDraft,
+  EVANGELISM_COUNTERS,
+  eventLabel,
+  filledCounters,
+  fmtEventDates,
+  isEnglishLang,
+  todayLocal,
+} from '@/utils/events';
 import { confirmDialog, notify } from '@/utils/dialogs';
 import { goBack } from '@/utils/navigation';
 
@@ -303,7 +312,11 @@ export default function EventDetailScreen() {
         />
         <Row label={t('events.declare.place')} value={event.place} />
         <Row label={t('events.declare.participants')} value={event.participants} />
-        <Row label={t('events.declare.soulsWon')} value={event.soulsWon} />
+        {/* D-EVT-15 (JP 14/10) : compteurs d'un type évangélique seulement (null sinon). */}
+        {event.evangelism &&
+          EVANGELISM_COUNTERS.map((key) => (
+            <Row key={key} label={t(`events.declare.${key}`)} value={event[key]} />
+          ))}
         <Row label={t('events.declare.note')} value={event.note} />
         <Row label={t('events.detail.author')} value={event.createdByName} last />
       </Card>
@@ -410,9 +423,10 @@ function Row({
 }
 
 /**
- * « Marquer comme réalisé » (D-EVT-02, RG-EVT-06) : participants / âmes gagnées / note saisis à
- * ce moment. Contrat §3.8 : un champ ABSENT garde sa valeur — participants et âmes vides ne sont
- * donc pas envoyés ; la note est préremplie et toujours renvoyée ('' l'efface).
+ * « Marquer comme réalisé » (D-EVT-02, RG-EVT-06) : participants, compteurs évangéliques et note
+ * saisis à ce moment — conversions / restaurations / baptêmes pour un type évangélique seulement
+ * (D-EVT-15, JP 14/10). Contrat §3.8 : un champ ABSENT garde sa valeur — un compteur vide n'est
+ * donc pas envoyé ; la note est préremplie et toujours renvoyée ('' l'efface).
  */
 function DoneForm({
   event,
@@ -424,8 +438,7 @@ function DoneForm({
   onDone: (saved: EventResponse) => void;
 }) {
   const { t } = useLanguage();
-  const [participants, setParticipants] = useState(event.participants != null ? String(event.participants) : '');
-  const [soulsWon, setSoulsWon] = useState(event.soulsWon != null ? String(event.soulsWon) : '');
+  const [counters, setCounters] = useState(() => counterDraft(event));
   const [note, setNote] = useState(event.note ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -437,8 +450,7 @@ function DoneForm({
     try {
       onDone(
         await markEventDone(event.id, {
-          ...(participants !== '' ? { participants: Number(participants) } : {}),
-          ...(soulsWon !== '' ? { soulsWon: Number(soulsWon) } : {}),
+          ...filledCounters(counters, event.evangelism),
           note: note.trim(),
         }),
       );
@@ -452,29 +464,7 @@ function DoneForm({
   return (
     <>
       <Text style={styles.intro}>{t('events.detail.markDoneIntro')}</Text>
-      <View style={[styles.section, styles.numbersRow]}>
-        <View style={{ flex: 1 }}>
-          <Label style={styles.sectionLabel}>{t('events.declare.participants')}</Label>
-          <Field
-            value={participants}
-            onChangeText={(v) => setParticipants(digitsOnly(v))}
-            keyboardType="number-pad"
-            maxLength={6}
-            placeholder="—"
-            autoFocus
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Label style={styles.sectionLabel}>{t('events.declare.soulsWon')}</Label>
-          <Field
-            value={soulsWon}
-            onChangeText={(v) => setSoulsWon(digitsOnly(v))}
-            keyboardType="number-pad"
-            maxLength={6}
-            placeholder="—"
-          />
-        </View>
-      </View>
+      <EventCounterFields value={counters} onChange={setCounters} evangelism={event.evangelism} autoFocus />
       <View style={styles.section}>
         <View style={styles.noteHead}>
           <Label>{t('events.declare.note')}</Label>
@@ -547,8 +537,6 @@ const styles = StyleSheet.create({
   actions: { marginTop: 20, gap: 10 },
   actionHint: { marginTop: -4, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, textAlign: 'center' },
   section: { marginTop: 18 },
-  sectionLabel: { marginBottom: 8 },
-  numbersRow: { flexDirection: 'row', gap: 12 },
   noteHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   counter: { fontFamily: fonts.mono, fontSize: 11, color: colors.ink3 },
   noteField: { minHeight: 72, textAlignVertical: 'top' },

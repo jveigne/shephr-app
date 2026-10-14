@@ -78,7 +78,12 @@ export interface EventCreateRequest {
   /** ≤ 200 */
   place?: string;
   participants?: number;
-  soulsWon?: number;
+  /** ≥ 0 — D-EVT-15 : type évangélique seulement, IGNORÉ (enregistré null) sinon. */
+  conversions?: number;
+  /** ≥ 0 — idem. */
+  restorations?: number;
+  /** ≥ 0 — idem. */
+  baptisms?: number;
   /** ≤ 280 */
   note?: string;
 }
@@ -104,7 +109,10 @@ export interface EventResponse {
   scopeName: string | null;
   place: string | null;
   participants: number | null;
-  soulsWon: number | null;
+  /** D-EVT-15 (JP 14/10) — toujours null pour un type non évangélique. */
+  conversions: number | null;
+  restorations: number | null;
+  baptisms: number | null;
   note: string | null;
   /** RG-ACT-07 : informatif, ne retire jamais du total. */
   toVerify: boolean;
@@ -166,7 +174,13 @@ export interface EventUpdateRequest {
   /** ≤ 200 */
   place: string | null;
   participants: number | null;
-  soulsWon: number | null;
+  /**
+   * D-EVT-15 : les compteurs suivent le `typeId` ENVOYÉ — vers un type non évangélique, le serveur
+   * les remet à null (ignorés, pas refusés) ; revenir à un type évangélique ne les restaure pas.
+   */
+  conversions: number | null;
+  restorations: number | null;
+  baptisms: number | null;
   /** ≤ 280 */
   note: string | null;
 }
@@ -177,7 +191,10 @@ export interface EventUpdateRequest {
  */
 export interface EventDoneRequest {
   participants?: number;
-  soulsWon?: number;
+  /** D-EVT-15 : type évangélique seulement, ignorés sinon. */
+  conversions?: number;
+  restorations?: number;
+  baptisms?: number;
   /** ≤ 280 */
   note?: string;
 }
@@ -192,11 +209,16 @@ export interface StatsScope {
   name: string | null;
 }
 
-/** Mirrors com.excellence.back.events.EventDtos.StatsTotals */
+/**
+ * Mirrors com.excellence.back.events.EventDtos.StatsTotals — sommes des évènements comptés ; un
+ * compteur non renseigné vaut 0 (D-EVT-15).
+ */
 export interface StatsTotals {
   count: number;
   participants: number;
-  soulsWon: number;
+  conversions: number;
+  restorations: number;
+  baptisms: number;
 }
 
 /** Mirrors com.excellence.back.events.EventDtos.TypeStats */
