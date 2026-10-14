@@ -17,10 +17,13 @@ import { EVENT_KEYS, errCode, eventErrorMessage, fmtCount, fmtMonth, levelKey, t
 
 // ---------------------------------------------------------------------------------------------
 //  Statistiques d'évangélisation avec descente Nation → Région → Ville → Assemblée (§6.2 du plan,
-//  D-EVT-09 : l'écran du SECRÉTARIAT). Même mécanique que le DrillView des Objectifs (pile
-//  d'étapes + fil d'Ariane tenu par le front), en composant neuf : Goals.tsx n'est pas touché.
-//  - Racine = `/stats` sans nœud : mon périmètre le plus large (nation, ou ministère entier) ;
-//    on ne remonte jamais au-dessus (ce serait hors périmètre, contrat §6).
+//  D-EVT-09 : l'écran du SECRÉTARIAT). Écran des dirigeants (/events) : D-EVT-14 (JP 14/10), le
+//  simple membre n'a pas de descente — son compteur d'assemblée est dans /my-actions.
+//  Même mécanique que le DrillView des Objectifs (pile d'étapes + fil d'Ariane tenu par le front),
+//  en composant neuf : Goals.tsx n'est pas touché.
+//  - Racine = `/stats` sans nœud : mon périmètre le plus large (nation, ou ministère entier ; au
+//    moins l'assemblée principale, D-EVT-13) ; on ne remonte jamais au-dessus (ce serait hors
+//    périmètre, contrat §6).
 //  - Descendre = rappeler `/stats` sur l'enfant cliqué, même période.
 //  - D-EVT-03 : seuls les évènements DONE d'un type évangélique comptent ; « à vérifier » ne
 //    retire rien (RG-ACT-07). D-EVT-04 : un évènement compte une fois, au nœud où il est rattaché
@@ -89,7 +92,7 @@ export function EventStatsDrill({ from, to }: { from: string; to: string }) {
   // Racine illisible : rien à descendre, pas de fil d'Ariane.
   if (!current && rootQ.isLoading) return <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>;
   if (!current && !rootQ.data) {
-    // Contrat §6 : aucun périmètre de lecture → 403 (compte sans responsabilité dans le module).
+    // Contrat §6 : aucun périmètre de lecture → 403 (compte sans assemblée ni responsabilité dans le module).
     const noPerimeter = errCode(rootQ.error) === 'UNAUTHORIZED_ACCESS';
     return (
       <p role="alert" style={{ color: noPerimeter ? 'var(--ink-500)' : 'var(--err)' }}>

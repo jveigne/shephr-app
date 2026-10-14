@@ -1,24 +1,24 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { goBack } from '../../../utils/navigation';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from '../../../components/ScreenShell';
-import Card from '../../../components/Card';
-import Chip from '../../../components/Chip';
-import Amount from '../../../components/Amount';
-import ErrorBanner from '../../../components/ErrorBanner';
-import DeclarationStatusPill from '../../../components/DeclarationStatusPill';
-import { colors, fonts } from '../../../theme';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useLanguage } from '../../../contexts/LanguageContext';
-import { useDonationCategories } from '../../../hooks/useDonationCategories';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Chip from '@/components/Chip';
+import Amount from '@/components/Amount';
+import ErrorBanner from '@/components/ErrorBanner';
+import DeclarationStatusPill from '@/components/DeclarationStatusPill';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useDonationCategories } from '@/hooks/useDonationCategories';
 import {
   listDeclarations,
   type DeclarationResponse,
   type DeclarationStatus,
-} from '../../../services/donationApi';
-import { fmtAmount, fmtDate, parseLocalDate } from '../../../utils/format';
+} from '@/services/donationApi';
+import { fmtAmount, fmtDate, parseLocalDate } from '@/utils/format';
 
 const PAGE_SIZE = 20;
 

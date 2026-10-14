@@ -47,7 +47,7 @@ export interface ScopeNode {
   id: string;
   name: string;
   parentId: string | null;
-  /** RG-EVT-03 : on peut aussi y programmer. */
+  /** RG-EVT-03 : on peut aussi y programmer — toujours vrai depuis D-EVT-13 (JP 14/10 : programmer = déclarer). */
   canPlan: boolean;
 }
 
@@ -55,7 +55,7 @@ export interface ScopeNode {
 export interface EventScopes {
   /** RG-ACT-01 : au moins un nœud de déclaration ; false → « Déclarer » masqué. */
   canDeclare: boolean;
-  /** RG-EVT-03 : au moins un nœud de programmation ; false → « Programmer » masqué. */
+  /** RG-EVT-03 : au moins un nœud de programmation ; false → « Programmer » masqué. D-EVT-13 : = canDeclare. */
   canPlan: boolean;
   /** RG-EVT-02 : nœud par défaut d'une déclaration ; null → choix obligatoire (LEADER / SECRETARIAT / superAdmin sans assemblée). */
   defaultScope: ScopeNode | null;

@@ -34,7 +34,7 @@ import {
   supprimerAppareil,
   type CategoriePush,
   type EnregistrementAppareil,
-} from '../../services/pushApi';
+} from '@/services/pushApi';
 import {
   TOUT_ACTIVE,
   aChangeDepuisDernierEnvoi,
@@ -42,7 +42,7 @@ import {
   lirePreferences,
   memoriserEnvoi,
   oublierEnvoi,
-} from './preferencesPush';
+} from '@/components/push/preferencesPush';
 
 /** Application ciblée (`TargetApp.Shephr`). Le backend est partagé : sans ce champ, on recevrait les push de CMFIPraise. */
 const APPLICATION = 'Shephr';

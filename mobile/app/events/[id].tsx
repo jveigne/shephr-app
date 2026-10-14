@@ -11,18 +11,18 @@ import {
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from '../../components/ScreenShell';
-import Card from '../../components/Card';
-import Label from '../../components/Label';
-import Button from '../../components/Button';
-import Field from '../../components/Field';
-import ErrorBanner from '../../components/ErrorBanner';
-import EventForm from '../../components/EventForm';
-import { EventPill, EventStatusPills } from '../../components/EventRow';
-import { colors, fonts } from '../../theme';
-import { useAuth } from '../../contexts/AuthContext';
-import { useLanguage } from '../../contexts/LanguageContext';
-import { useEventCatalog } from '../../hooks/useEventCatalog';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Button from '@/components/Button';
+import Field from '@/components/Field';
+import ErrorBanner from '@/components/ErrorBanner';
+import EventForm from '@/components/EventForm';
+import { EventPill, EventStatusPills } from '@/components/EventRow';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useEventCatalog } from '@/hooks/useEventCatalog';
 import {
   cancelEvent,
   deleteEvent,
@@ -30,11 +30,11 @@ import {
   markEventDone,
   setEventToVerify,
   type EventResponse,
-} from '../../services/eventsApi';
-import { eventActionMessage, eventErrorCode } from '../../utils/eventErrors';
-import { digitsOnly, eventLabel, fmtEventDates, isEnglishLang, todayLocal } from '../../utils/events';
-import { confirmDialog, notify } from '../../utils/dialogs';
-import { goBack } from '../../utils/navigation';
+} from '@/services/eventsApi';
+import { eventActionMessage, eventErrorCode } from '@/utils/eventErrors';
+import { digitsOnly, eventLabel, fmtEventDates, isEnglishLang, todayLocal } from '@/utils/events';
+import { confirmDialog, notify } from '@/utils/dialogs';
+import { goBack } from '@/utils/navigation';
 
 /**
  * Plan 14/10 (§6.3, lot E7) — DÉTAIL D'UN ÉVÈNEMENT et gestes permis par le serveur (contrat §4,

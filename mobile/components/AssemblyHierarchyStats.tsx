@@ -2,13 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { router, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Card from './Card';
-import Button from './Button';
-import ErrorBanner from './ErrorBanner';
-import { colors, fonts } from '../theme';
-import { useLanguage } from '../contexts/LanguageContext';
-import { getAssemblyStats, listMeetingsInRange, type UnitMeetingStats } from '../services/assemblyApi';
-import type { LeaderHierarchyNode } from '../services/leadersApi';
+import Card from '@/components/Card';
+import Button from '@/components/Button';
+import ErrorBanner from '@/components/ErrorBanner';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { getAssemblyStats, listMeetingsInRange, type UnitMeetingStats } from '@/services/assemblyApi';
+import type { LeaderHierarchyNode } from '@/services/leadersApi';
 import {
   PERIODICITIES,
   buildConsolidatedJournalHtml,
@@ -19,11 +19,11 @@ import {
   periodRange,
   shiftPeriod,
   type Period,
-} from '../utils/assemblyJournal';
-import { aggregate, averageAttendance, daysBetween, isAlert, subtreeUnitIds, treeUnitIds } from '../utils/assemblyHierarchyStats';
-import { printAndSharePdf } from '../utils/pdfShare';
-import { toLocalDate } from '../utils/format';
-import { notify } from '../utils/dialogs';
+} from '@/utils/assemblyJournal';
+import { aggregate, averageAttendance, daysBetween, isAlert, subtreeUnitIds, treeUnitIds } from '@/utils/assemblyHierarchyStats';
+import { printAndSharePdf } from '@/utils/pdfShare';
+import { toLocalDate } from '@/utils/format';
+import { notify } from '@/utils/dialogs';
 
 /**
  * Vie d'assemblée dans la Hiérarchie — D-ASM-18 (JP 08/10).

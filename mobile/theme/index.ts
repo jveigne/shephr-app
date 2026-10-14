@@ -1,2 +1,2 @@
-export * from './colors';
-export * from './typography';
+export * from '@/theme/colors';
+export * from '@/theme/typography';

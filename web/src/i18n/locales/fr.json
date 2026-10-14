@@ -1577,13 +1577,31 @@
       "noScopeHint": "Vous devez être rattaché à une assemblée pour déclarer une action."
     },
     "mine": {
-      "pageTitle": "Mes actions",
       "title": "Mes actions",
       "sub": "Ce que vous avez déclaré ou programmé, le plus récent en haut.",
       "thisMonth": "Comptées · {{month}}",
       "thisYear": "Comptées · {{year}}",
       "empty": "Aucune action pour l'instant",
-      "emptyHint": "Vos déclarations apparaîtront ici dès leur enregistrement."
+      "emptyHint": "Vos déclarations et vos évènements programmés apparaîtront ici dès leur enregistrement."
+    },
+    "member": {
+      "title": "Mes actions",
+      "assembly": "Mon assemblée",
+      "counterSub": "Actions d'évangélisation de votre assemblée, comptées dès leur déclaration.",
+      "thisMonth": "Ce mois · {{month}}",
+      "thisYear": "Cette année · {{year}}",
+      "mine": "Moi",
+      "planned": "Programmés",
+      "plannedSub": "Évènements à venir de votre assemblée, le plus proche en haut.",
+      "plannedEmpty": "Aucun évènement programmé dans votre assemblée.",
+      "plannedEmptyPlanner": "Aucun évènement programmé dans votre assemblée. Utilisez « Programmer » pour en ajouter un.",
+      "done": "Actions d'évangélisation",
+      "doneSub": "Réalisées dans votre assemblée, la plus récente en haut.",
+      "doneEmpty": "Aucune action d'évangélisation déclarée dans votre assemblée.",
+      "doneEmptyDeclarer": "Aucune action d'évangélisation déclarée dans votre assemblée. Utilisez « Déclarer » pour enregistrer la vôtre.",
+      "all": "Toutes mes actions",
+      "allSub": "Ce que vous avez déclaré ou programmé, tous statuts et types — y compris à clôturer et annulés.",
+      "allEmpty": "Vous n'avez encore rien déclaré ni programmé."
     },
     "agenda": {
       "node": "Niveau",
@@ -1680,7 +1698,7 @@
       "colParticipants": "Participants",
       "colSouls": "Âmes",
       "noType": "Aucun type évangélique n'est configuré.",
-      "noPerimeter": "Les statistiques sont réservées aux responsables d'un périmètre (assemblée, ville, région, nation) et au secrétariat.",
+      "noPerimeter": "Les statistiques portent sur votre périmètre : il faut être rattaché à une assemblée, ou responsable d'une ville, d'une région ou d'une nation.",
       "nodeGone": "Ce niveau n'est plus accessible"
     },
     "errors": {

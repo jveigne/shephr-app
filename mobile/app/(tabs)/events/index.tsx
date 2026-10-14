@@ -2,37 +2,50 @@ import React, { useCallback, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from '../../../components/ScreenShell';
-import Card from '../../../components/Card';
-import Button from '../../../components/Button';
-import ErrorBanner from '../../../components/ErrorBanner';
-import EventAgenda from '../../../components/EventAgenda';
-import EventStatsDrill from '../../../components/EventStatsDrill';
-import EventPeriodPicker from '../../../components/EventPeriodPicker';
-import { colors, fonts } from '../../../theme';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useLanguage } from '../../../contexts/LanguageContext';
-import { useEventCatalog } from '../../../hooks/useEventCatalog';
-import { isSecretariat } from '../../../services/authApi';
-import { defaultPeriod, periodBounds, type Period } from '../../../utils/events';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Button from '@/components/Button';
+import ErrorBanner from '@/components/ErrorBanner';
+import EventAgenda from '@/components/EventAgenda';
+import EventStatsDrill from '@/components/EventStatsDrill';
+import EventPeriodPicker from '@/components/EventPeriodPicker';
+import EventMemberView from '@/components/EventMemberView';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useEventCatalog } from '@/hooks/useEventCatalog';
+import { isSecretariat } from '@/services/authApi';
+import { defaultPeriod, periodBounds, type Period } from '@/utils/events';
 
 type Tab = 'agenda' | 'stats';
 
 /**
- * Onglet « Évènements » — plan 14/10, §6.3 (lot E7). Réservé aux dirigeants et aux viewers
- * ministère-large (gating dans `app/(tabs)/_layout.tsx`) ; le membre, lui, déclare depuis la
- * tuile d'accueil et retrouve ses actions dans « Mes actions ».
+ * Onglet « Évènements » — plan 14/10, §6.3 (lot E7). Gating dans `app/(tabs)/_layout.tsx`
+ * (abonnement EVENTS + compte rattaché, `canDeclareEvents`).
  *
+ * <p>D-EVT-14 (JP 14/10) : un simple membre n'a pas la vue des dirigeants — il voit sa vue
+ * d'assemblée (`EventMemberView`, spec §6.1), son « Mes actions », où la saisie le ramène.
+ * Simple membre = `!isLeader` (`isLeaderRole` : aucun rôle > MEMBRE dans aucun module, ni
+ * superAdmin), miroir de `EventPerimeters.of` (`readsAncestors`) côté serveur ; un dirigeant
+ * rattaché à une assemblée garde la vue dirigeant.
+ */
+export default function EventsTabScreen() {
+  const { isLeader } = useAuth();
+  return isLeader ? <LeaderEventsTab /> : <EventMemberView />;
+}
+
+/**
+ * Vue des dirigeants, LEADER, SECRETARIAT et superAdmin :
  * <ul>
  *   <li>Agenda : à clôturer / à venir / réalisés du périmètre (D-EVT-07), « Programmer » si le
- *       serveur dit `canPlan` (D-EVT-08, RG-EVT-03) ;</li>
+ *       serveur dit `canPlan` (D-EVT-13, RG-EVT-03 : on programme là où l'on déclare) ;</li>
  *   <li>Statistiques : total, par type, par mois, descente Nation → Région → Ville → Assemblée.
  *       D-EVT-09 : c'est l'écran du SECRÉTARIAT — ouvert par défaut pour lui, comme sur le web.</li>
  * </ul>
  * Pas de react-query côté mobile : useState + useFocusEffect ; un retour sur l'onglet (après une
  * clôture dans le détail, par exemple) recharge le contenu affiché.
  */
-export default function EventsTabScreen() {
+function LeaderEventsTab() {
   const { t } = useLanguage();
   const { me, hasEvents } = useAuth();
   // RG-06 : sans l'abonnement EVENTS, aucune route du module n'est appelée.

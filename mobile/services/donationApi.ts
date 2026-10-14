@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 
 /**
  * Lot T6/T7 (décision J-1, JP 14/09) — DEUX statuts, pas davantage.

@@ -3,18 +3,18 @@ import { View, Text, StyleSheet, Pressable, RefreshControl, Modal, Linking, Plat
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
-import ScreenShell from '../../components/ScreenShell';
-import Card from '../../components/Card';
-import Button from '../../components/Button';
-import Label from '../../components/Label';
-import Amount from '../../components/Amount';
-import HandDivider from '../../components/HandDivider';
-import { colors, fonts, radii } from '../../theme';
-import { useAuth } from '../../contexts/AuthContext';
-import { canDeclareEvents, hasMemberGoals } from '../../services/authApi';
-import { getSummary, type CurrencyTotal, type DonationSummary } from '../../services/statsApi';
-import { fmtAmount, monthLabel } from '../../utils/format';
-import { useLanguage } from '../../contexts/LanguageContext';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Button from '@/components/Button';
+import Label from '@/components/Label';
+import Amount from '@/components/Amount';
+import HandDivider from '@/components/HandDivider';
+import { colors, fonts, radii } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { canDeclareEvents, hasMemberGoals } from '@/services/authApi';
+import { getSummary, type CurrencyTotal, type DonationSummary } from '@/services/statsApi';
+import { fmtAmount, monthLabel } from '@/utils/format';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 type ComingKind = 'cantique' | 'priere' | 'compte-rendu';
@@ -205,7 +205,10 @@ export default function HomeScreen() {
         )}
         {/* Plan 14/10 (§6.3, spec Recensement §4.1) — « Déclarer une action · Évangélisation ».
             RG-06 : invisible sans l'abonnement EVENTS (D-EVT-05). RG-ACT-01 : réservée aux comptes
-            rattachés (`canDeclareEvents`) ; l'écran relit `canDeclare` côté serveur. */}
+            rattachés (`canDeclareEvents`) ; l'écran relit `canDeclare` côté serveur.
+            D-EVT-13 (JP 14/10) : pas de seconde tuile « Agenda » — les mêmes comptes ont l'onglet
+            « Évènements » dans la barre du bas. D-EVT-14 : pour le simple membre, cet onglet est sa
+            vue d'assemblée, son « Mes actions » ; la saisie l'y ramène. */}
         {hasEvents && canDeclareEvents(me) && (
         <Tile
           label={t('dashboard.tiles.events')}

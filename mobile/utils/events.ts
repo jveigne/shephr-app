@@ -1,6 +1,6 @@
-import type { EventResponse, EventTypeDto } from '../services/eventsApi';
-import { fmtIsoDay, type Translate } from './meetingReport';
-import { toLocalDate } from './format';
+import type { EventResponse, EventTypeDto } from '@/services/eventsApi';
+import { fmtIsoDay, type Translate } from '@/utils/meetingReport';
+import { toLocalDate } from '@/utils/format';
 
 // ---------------------------------------------------------------------------------------------
 //  Évènements (lot E7, plan 14/10 §6.3) — fonctions pures partagées par l'onglet « Évènements »,
@@ -31,6 +31,9 @@ export const countOrUndefined = (raw: string): number | undefined => (raw === ''
 // ---------------- Dates (toujours LOCALES : contrat §1.4) ----------------
 
 export const todayLocal = (): string => toLocalDate(new Date());
+
+/** Mois LOCAL 'yyyy-MM' — le défaut serveur de `GET /me` serait le mois UTC (§1.4 du contrat). */
+export const monthLocal = (): string => todayLocal().slice(0, 7);
 
 export function addDaysLocal(iso: string, days: number): string {
   const [y, m, d] = iso.split('-').map(Number);

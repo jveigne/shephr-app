@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
-import { useAuth } from '../contexts/AuthContext';
-import { prefetchEventCatalog } from '../hooks/useEventCatalog';
-import { claimEventQueue, flushEventQueue, isOnline, useEventQueue } from '../services/eventQueue';
+import { useAuth } from '@/contexts/AuthContext';
+import { prefetchEventCatalog } from '@/hooks/useEventCatalog';
+import { claimEventQueue, flushEventQueue, isOnline, useEventQueue } from '@/services/eventQueue';
 
 /**
  * Lot E6 (plan 14/10, §6.3) — les déclencheurs du vidage de la file hors-ligne des déclarations

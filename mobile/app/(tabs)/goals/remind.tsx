@@ -1,24 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 
-import { goBack } from '../../../utils/navigation';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from '../../../components/ScreenShell';
-import Card from '../../../components/Card';
-import Button from '../../../components/Button';
-import Field from '../../../components/Field';
-import Label from '../../../components/Label';
-import ErrorBanner from '../../../components/ErrorBanner';
-import { colors, fonts, radii } from '../../../theme';
-import { useLanguage } from '../../../contexts/LanguageContext';
-import { confirmDialog, notify } from '../../../utils/dialogs';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Button from '@/components/Button';
+import Field from '@/components/Field';
+import Label from '@/components/Label';
+import ErrorBanner from '@/components/ErrorBanner';
+import { colors, fonts, radii } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { confirmDialog, notify } from '@/utils/dialogs';
 import {
   fetchReminderScopes,
   sendBulkReminder,
   type BulkReminderResponse,
   type ReminderScope,
   type ReminderScopeOption,
-} from '../../../services/goalsApi';
+} from '@/services/goalsApi';
 
 /**
  * « Relancer » — rappel GROUPÉ des personnes qui n'ont pas soumis (lot G3, cadrage JP 14/09,

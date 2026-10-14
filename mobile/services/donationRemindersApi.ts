@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 
 /**
  * Lot T11 (docs/notifications.md §2.3, décision J-2 du 14/09) — RELANCE GROUPÉE des

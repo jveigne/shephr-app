@@ -1,6 +1,6 @@
 import React from 'react';
 import { TextInput, TextInputProps, StyleSheet } from 'react-native';
-import { colors, fonts } from '../theme';
+import { colors, fonts } from '@/theme';
 
 export default function Field(props: TextInputProps) {
   return (

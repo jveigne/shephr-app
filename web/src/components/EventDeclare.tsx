@@ -10,9 +10,9 @@ import { getMyEvents, getMyEventScopes, listEventTypes, type EventResponse } fro
 import { EVENT_KEYS, currentMonthLocal, eventErrorMessage, fmtCount, fmtMonth, lastPageIfPast } from '../utils/events';
 
 // ---------------------------------------------------------------------------------------------
-//  « Déclarer » + « Mes actions » (spec §4.2 et §6.1) — servis tels quels par l'onglet Déclarer de
-//  /events (dirigeants) et par /my-actions (espace membre, [HYPOTHÈSE] §6.2 : le membre déclare
-//  aussi depuis le web).
+//  « Déclarer » + « Mes actions » (spec §4.2 et §6.1) — l'onglet Déclarer de /events (dirigeants).
+//  D-EVT-14 (JP 14/10) : le simple membre a sa vue dédiée, /my-actions (pages/MyActions.tsx), qui
+//  ne reprend d'ici que l'état vide et la tuile de compteur.
 // ---------------------------------------------------------------------------------------------
 
 export function EventEmptyState({ title, text, icon = 'inbox' }: { title: string; text?: ReactNode; icon?: string }) {
@@ -113,8 +113,8 @@ export function MyEventsList() {
         </div>
         {mine && (
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <Counter label={t('events.mine.thisMonth', { month: fmtMonth(mine.month, lang) })} value={fmtCount(mine.monthCount, lang)} />
-            <Counter label={t('events.mine.thisYear', { year: mine.month.slice(0, 4) })} value={fmtCount(mine.yearCount, lang)} />
+            <EventCounter label={t('events.mine.thisMonth', { month: fmtMonth(mine.month, lang) })} value={fmtCount(mine.monthCount, lang)} />
+            <EventCounter label={t('events.mine.thisYear', { year: mine.month.slice(0, 4) })} value={fmtCount(mine.yearCount, lang)} />
           </div>
         )}
       </div>
@@ -135,7 +135,7 @@ export function MyEventsList() {
   );
 }
 
-function Counter({ label, value }: { label: string; value: string }) {
+export function EventCounter({ label, value }: { label: string; value: string }) {
   return (
     <div className="kpi" style={{ padding: '10px 16px', minWidth: 150 }}>
       <div className="lbl">{label}</div>

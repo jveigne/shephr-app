@@ -20,11 +20,11 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { AuthProvider } from '../contexts/AuthContext';
-import { LanguageProvider } from '../contexts/LanguageContext';
-import PushBridge from '../components/push/PushBridge';
-import EventQueueSync from '../components/EventQueueSync';
-import { loadContactSettings } from '../services/contactApi';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { LanguageProvider } from '@/contexts/LanguageContext';
+import PushBridge from '@/components/push/PushBridge';
+import EventQueueSync from '@/components/EventQueueSync';
+import { loadContactSettings } from '@/services/contactApi';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -45,7 +45,7 @@ export default function RootLayout() {
   useEffect(() => {
     (async () => {
       try {
-        await import('../utils/i18n/i18n');
+        await import('@/utils/i18n/i18n');
       } catch (e) {
         console.error('i18n init failed', e);
       }

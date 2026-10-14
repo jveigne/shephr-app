@@ -2,11 +2,11 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLanguage } from '../../contexts/LanguageContext';
-import { useAuth } from '../../contexts/AuthContext';
-import { hasMemberGoals } from '../../services/authApi';
-import { colors, fonts } from '../../theme';
-import NotificationGate from '../../components/NotificationGate';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { canDeclareEvents, hasMemberGoals } from '@/services/authApi';
+import { colors, fonts } from '@/theme';
+import NotificationGate from '@/components/NotificationGate';
 
 export default function TabLayout() {
   const { t, applyAccountLanguage } = useLanguage();
@@ -124,11 +124,15 @@ export default function TabLayout() {
         name="events"
         options={{
           // Évènements (plan 14/10, §6.3, lot E7) : agenda + statistiques, abonnement EVENTS
-          // (D-EVT-05, RG-06). Dirigeants et viewers ministère-large — D-EVT-09 : le SECRETARIAT
-          // est le destinataire des statistiques. `isLeader` couvre déjà LEADER et SECRETARIAT
-          // (tout rôle > MEMBRE, cf. `isLeaderRole`) : le plan l'écrit `isLeader || isSecretariat`.
-          // Le MEMBRE déclare par la tuile d'accueil et suit « Mes actions » (lot E6).
-          href: hasEvents && isLeader ? '/(tabs)/events' : null,
+          // (D-EVT-05, RG-06). D-EVT-09 : le SECRETARIAT est le destinataire des statistiques.
+          // D-EVT-13 (JP 14/10) : comptes rattachés (`goalUnitId`), tout rôle > MEMBRE (LEADER /
+          // SECRETARIAT compris) ou superAdmin — `canDeclareEvents`, miroir de
+          // `EventPerimeters.declare` ; un compte sans nœud voit l'état vide du serveur.
+          // D-EVT-14 (JP 14/10) : le contenu dépend du rôle — agenda + statistiques pour les
+          // dirigeants / LEADER / SECRETARIAT, vue de son assemblée pour le simple membre
+          // (`!isLeader`, cf. `events/index.tsx`). Les boutons restent pilotés par le serveur
+          // (`canPlan` / `canDeclare` de `/me/scopes`).
+          href: hasEvents && canDeclareEvents(me) ? '/(tabs)/events' : null,
           title: t('tabs.events'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="megaphone-outline" size={size} color={color} />

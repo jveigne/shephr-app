@@ -9,12 +9,12 @@ import {
   Platform,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { goBack } from '../../../utils/navigation';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ScreenShell from '../../../components/ScreenShell';
-import Button from '../../../components/Button';
-import ErrorBanner from '../../../components/ErrorBanner';
+import ScreenShell from '@/components/ScreenShell';
+import Button from '@/components/Button';
+import ErrorBanner from '@/components/ErrorBanner';
 import DeclarationForm, {
   draftLinesToRequest,
   draftTotal,
@@ -22,17 +22,17 @@ import DeclarationForm, {
   newDraftLine,
   round2,
   type DraftLine,
-} from '../../../components/DeclarationForm';
-import { colors, fonts } from '../../../theme';
+} from '@/components/DeclarationForm';
+import { colors, fonts } from '@/theme';
 import {
   getDeclaration,
   updateDeclaration,
   type DeclarationResponse,
-} from '../../../services/donationApi';
-import { parseLocalDate, toLocalDate } from '../../../utils/format';
-import { notify } from '../../../utils/dialogs';
-import { declarationErrorMessage } from '../../../utils/donationErrors';
-import { useLanguage } from '../../../contexts/LanguageContext';
+} from '@/services/donationApi';
+import { parseLocalDate, toLocalDate } from '@/utils/format';
+import { notify } from '@/utils/dialogs';
+import { declarationErrorMessage } from '@/utils/donationErrors';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * Lot T7 (décision J-1, JP 14/09) — CORRIGER SA DÉCLARATION, TANT QU'ELLE EST « DÉCLARÉ ».

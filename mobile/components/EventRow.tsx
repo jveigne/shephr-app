@@ -1,16 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Card from './Card';
-import { colors, fonts, radii } from '../theme';
-import { useLanguage } from '../contexts/LanguageContext';
-import type { EventResponse } from '../services/eventsApi';
-import { eventLabel, fmtEventDates, isEnglishLang, isToClose } from '../utils/events';
-import type { Translate } from '../utils/meetingReport';
+import Card from '@/components/Card';
+import { colors, fonts, radii } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import type { EventResponse } from '@/services/eventsApi';
+import { eventLabel, fmtEventDates, isEnglishLang, isToClose } from '@/utils/events';
+import type { Translate } from '@/utils/meetingReport';
 
 /**
- * Plan 14/10 (§6.3) — ligne d'évènement partagée par « Mes actions » (lot E6) et l'agenda de
- * l'onglet « Évènements » (lot E7) : libellé (le libellé libre d'un type « Autre » prime), statut,
+ * Plan 14/10 (§6.3) — ligne d'évènement partagée par « Mes actions » (lot E6), l'agenda de
+ * l'onglet « Évènements » (lot E7) et la vue du simple membre (D-EVT-14) : libellé (le libellé libre d'un type « Autre » prime), statut,
  * « à vérifier », date(s) · lieu · nœud, chiffres saisis. Touchée, elle ouvre le détail
  * (`app/events/[id]`).
  */
@@ -80,7 +80,16 @@ export function EventStatusPills({ event, t }: { event: EventResponse; t: Transl
   );
 }
 
-export function EventRow({ event, onPress }: { event: EventResponse; onPress?: () => void }) {
+export function EventRow({
+  event,
+  mine = false,
+  onPress,
+}: {
+  event: EventResponse;
+  /** D-EVT-14 (JP 14/10) : vue du simple membre — ses propres actions parmi celles de l'assemblée. */
+  mine?: boolean;
+  onPress?: () => void;
+}) {
   const { t, language } = useLanguage();
   return (
     <Card style={styles.row} onPress={onPress}>
@@ -88,6 +97,7 @@ export function EventRow({ event, onPress }: { event: EventResponse; onPress?: (
         <Text style={styles.rowTitle} numberOfLines={2}>
           {eventLabel(event, isEnglishLang(language))}
         </Text>
+        {mine && <EventPill tone={colors.moss} icon="person-outline" text={t('events.mine.ownBadge')} />}
         <EventStatusPills event={event} t={t} />
         {onPress && <Ionicons name="chevron-forward" size={16} color={colors.ink3} style={styles.chevron} />}
       </View>

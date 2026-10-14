@@ -2,16 +2,16 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from '../../../../components/ScreenShell';
-import Card from '../../../../components/Card';
-import Label from '../../../../components/Label';
-import ErrorBanner from '../../../../components/ErrorBanner';
-import MeetingReportCard from '../../../../components/MeetingReportCard';
-import { colors, fonts } from '../../../../theme';
-import { useLanguage } from '../../../../contexts/LanguageContext';
-import { deleteMeeting, getMeeting, type MeetingDetail } from '../../../../services/assemblyApi';
-import { fmtIsoDay, formatChapters, type MeetingReportInput } from '../../../../utils/meetingReport';
-import { confirmDialog, notify } from '../../../../utils/dialogs';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import ErrorBanner from '@/components/ErrorBanner';
+import MeetingReportCard from '@/components/MeetingReportCard';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { deleteMeeting, getMeeting, type MeetingDetail } from '@/services/assemblyApi';
+import { fmtIsoDay, formatChapters, type MeetingReportInput } from '@/utils/meetingReport';
+import { confirmDialog, notify } from '@/utils/dialogs';
 
 /**
  * Détail d'un compte rendu — §6.3 plan 23/09 (lot L5).

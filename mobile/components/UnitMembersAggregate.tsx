@@ -1,18 +1,18 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Card from './Card';
-import Label from './Label';
-import { colors, fonts } from '../theme';
-import { useLanguage } from '../contexts/LanguageContext';
-import { fmtAmount } from '../utils/format';
-import { notify } from '../utils/dialogs';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { fmtAmount } from '@/utils/format';
+import { notify } from '@/utils/dialogs';
 import {
   fetchMembersAggregate,
   sendMemberReminder,
   type ActiveGoal,
   type MembersAggregateResponse,
-} from '../services/goalsApi';
+} from '@/services/goalsApi';
 
 /**
  * Détail NOMINATIF d'une assemblée (RG-BQ-05/06) — réservé aux dirigeants dont le périmètre Goals

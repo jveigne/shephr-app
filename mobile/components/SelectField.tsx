@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Card from './Card';
-import Field from './Field';
-import Label from './Label';
-import { colors, fonts } from '../theme';
-import { useLanguage } from '../contexts/LanguageContext';
+import Card from '@/components/Card';
+import Field from '@/components/Field';
+import Label from '@/components/Label';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 /** Option affichable : tout objet porteur d'un id et d'un nom. */
 export interface SelectOption {

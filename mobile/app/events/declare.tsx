@@ -12,24 +12,24 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import NetInfo from '@react-native-community/netinfo';
-import ScreenShell from '../../components/ScreenShell';
-import Card from '../../components/Card';
-import Label from '../../components/Label';
-import Button from '../../components/Button';
-import Chip from '../../components/Chip';
-import Field from '../../components/Field';
-import ErrorBanner from '../../components/ErrorBanner';
-import SelectField from '../../components/SelectField';
-import { DatePickerModal } from '../../components/DeclarationForm';
-import { colors, fonts, radii } from '../../theme';
-import { useAuth } from '../../contexts/AuthContext';
-import { useLanguage } from '../../contexts/LanguageContext';
-import { useEventCatalog } from '../../hooks/useEventCatalog';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Button from '@/components/Button';
+import Chip from '@/components/Chip';
+import Field from '@/components/Field';
+import ErrorBanner from '@/components/ErrorBanner';
+import SelectField from '@/components/SelectField';
+import { DatePickerModal } from '@/components/DeclarationForm';
+import { colors, fonts, radii } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useEventCatalog } from '@/hooks/useEventCatalog';
 import {
   createEvent,
   type EventCreateRequest,
   type ScopeNode,
-} from '../../services/eventsApi';
+} from '@/services/eventsApi';
 import {
   classifySendFailure,
   enqueueEvent,
@@ -38,13 +38,13 @@ import {
   newEventClientId,
   useEventQueue,
   type QueuedEvent,
-} from '../../services/eventQueue';
-import { eventFailureMessage, toSendFailure } from '../../utils/eventErrors';
-import { fmtIsoDay } from '../../utils/meetingReport';
-import { toLocalDate } from '../../utils/format';
-import { digitsOnly } from '../../utils/events';
-import { notify } from '../../utils/dialogs';
-import { goBack } from '../../utils/navigation';
+} from '@/services/eventQueue';
+import { eventFailureMessage, toSendFailure } from '@/utils/eventErrors';
+import { fmtIsoDay } from '@/utils/meetingReport';
+import { toLocalDate } from '@/utils/format';
+import { digitsOnly } from '@/utils/events';
+import { notify } from '@/utils/dialogs';
+import { goBack } from '@/utils/navigation';
 
 /**
  * Plan 14/10 (§6.3, lot E6) — DÉCLARER UNE ACTION D'ÉVANGÉLISATION (spec Recensement §4.2).
@@ -96,10 +96,22 @@ const QUEUED_HINT: Record<QueueReason, string> = {
   deferred: 'events.declare.successQueuedDeferred',
 };
 
+/**
+ * « Mes actions » depuis la saisie. D-EVT-14 (JP 14/10) : pour le simple membre, c'est son onglet
+ * « Évènements » (`EventMemberView`) — `dismissTo` y revient au lieu d'empiler une copie de
+ * l'onglet hors barre d'onglets (onglet → déclarer → mes actions → déclarer…). Pour les autres,
+ * l'écran `app/events/mine` : poussé depuis l'en-tête, substitué à la confirmation.
+ */
+function openMyActions(isLeader: boolean, from: 'header' | 'success') {
+  if (!isLeader) router.dismissTo('/(tabs)/events');
+  else if (from === 'success') router.replace('/events/mine');
+  else router.push('/events/mine');
+}
+
 export default function DeclareEventScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
-  const { me, hasEvents } = useAuth();
+  const { me, hasEvents, isLeader } = useAuth();
   const userId = me?.id ?? null;
   // RG-06 : sans l'abonnement EVENTS, aucune route du module n'est appelée.
   const catalog = useEventCatalog(hasEvents ? userId : null);
@@ -240,7 +252,7 @@ export default function DeclareEventScreen() {
   const header = (
     <View style={styles.headerRow}>
       {hasEvents ? (
-        <Pressable onPress={() => router.push('/events/mine')} hitSlop={10} style={styles.mineLink}>
+        <Pressable onPress={() => openMyActions(isLeader, 'header')} hitSlop={10} style={styles.mineLink}>
           <Ionicons name="list-outline" size={16} color={colors.moss} />
           <Text style={styles.mineLinkText}>{t('events.mine.title')}</Text>
           {/* En attente + refusées : un refus survenu en arrière-plan se signale ici, sur le
@@ -482,6 +494,7 @@ function SuccessScreen({
   onAnother: () => void;
 }) {
   const { t } = useLanguage();
+  const { isLeader } = useAuth();
   return (
     <ScreenShell withTabBar={false} paddingTop={40}>
       <View style={{ alignItems: 'center' }}>
@@ -508,7 +521,7 @@ function SuccessScreen({
         <Button
           label={t('events.mine.title')}
           variant="soft"
-          onPress={() => router.replace('/events/mine')}
+          onPress={() => openMyActions(isLeader, 'success')}
           style={{ flex: 1 }}
         />
         <Button label={t('events.declare.finish')} onPress={() => goBack()} style={{ flex: 1 }} />

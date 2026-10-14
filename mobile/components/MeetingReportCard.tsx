@@ -2,13 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Share, Switch } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
-import Card from './Card';
-import Label from './Label';
-import Button from './Button';
-import { colors, fonts, radii } from '../theme';
-import { useLanguage } from '../contexts/LanguageContext';
-import { buildMeetingReport, type MeetingReportInput } from '../utils/meetingReport';
-import { notify } from '../utils/dialogs';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Button from '@/components/Button';
+import { colors, fonts, radii } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { buildMeetingReport, type MeetingReportInput } from '@/utils/meetingReport';
+import { notify } from '@/utils/dialogs';
 
 /**
  * Aperçu du compte rendu + Copier / Partager — §6.3 plan 23/09 (lot L5).

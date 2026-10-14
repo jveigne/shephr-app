@@ -2,17 +2,17 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, Platform, Linking } from 'react-native';
 import { router, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from '../../components/ScreenShell';
-import Button from '../../components/Button';
-import Card from '../../components/Card';
-import Label from '../../components/Label';
-import HandDivider from '../../components/HandDivider';
-import { colors, fonts } from '../../theme';
-import { useAuth } from '../../contexts/AuthContext';
-import { canManageStructure, deleteMyAccount, roleLabel } from '../../services/authApi';
-import { useLanguage } from '../../contexts/LanguageContext';
-import { confirmDialog, notify } from '../../utils/dialogs';
-import { contactMailto, contactWhatsapp, useContactSettings } from '../../services/contactApi';
+import ScreenShell from '@/components/ScreenShell';
+import Button from '@/components/Button';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import HandDivider from '@/components/HandDivider';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { canManageStructure, deleteMyAccount, roleLabel } from '@/services/authApi';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { confirmDialog, notify } from '@/utils/dialogs';
+import { contactMailto, contactWhatsapp, useContactSettings } from '@/services/contactApi';
 
 export default function ProfileScreen() {
   const { me, isLeader, logout } = useAuth();

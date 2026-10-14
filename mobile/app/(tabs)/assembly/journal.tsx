@@ -2,18 +2,18 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Switch } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from '../../../components/ScreenShell';
-import Card from '../../../components/Card';
-import Chip from '../../../components/Chip';
-import Label from '../../../components/Label';
-import Button from '../../../components/Button';
-import ErrorBanner from '../../../components/ErrorBanner';
-import { colors, fonts } from '../../../theme';
-import { useLanguage } from '../../../contexts/LanguageContext';
-import { getMeeting, listMeetings, type MeetingDetail, type MeetingSummary } from '../../../services/assemblyApi';
-import { toLocalDate } from '../../../utils/format';
-import { notify } from '../../../utils/dialogs';
-import { printAndSharePdf } from '../../../utils/pdfShare';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Chip from '@/components/Chip';
+import Label from '@/components/Label';
+import Button from '@/components/Button';
+import ErrorBanner from '@/components/ErrorBanner';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { getMeeting, listMeetings, type MeetingDetail, type MeetingSummary } from '@/services/assemblyApi';
+import { toLocalDate } from '@/utils/format';
+import { notify } from '@/utils/dialogs';
+import { printAndSharePdf } from '@/utils/pdfShare';
 import {
   PERIODICITIES,
   buildJournalHtml,
@@ -25,7 +25,7 @@ import {
   shiftPeriod,
   type Period,
   type Periodicity,
-} from '../../../utils/assemblyJournal';
+} from '@/utils/assemblyJournal';
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 

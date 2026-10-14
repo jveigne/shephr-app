@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Chip from './Chip';
-import Card from './Card';
-import { DatePickerModal } from './DeclarationForm';
-import { colors, fonts } from '../theme';
-import { useLanguage } from '../contexts/LanguageContext';
-import { fmtIsoDay } from '../utils/meetingReport';
-import { parseLocalDate, toLocalDate } from '../utils/format';
+import Chip from '@/components/Chip';
+import Card from '@/components/Card';
+import { DatePickerModal } from '@/components/DeclarationForm';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { fmtIsoDay } from '@/utils/meetingReport';
+import { parseLocalDate, toLocalDate } from '@/utils/format';
 import {
   fmtMonth,
   isCurrentOrLater,
@@ -15,7 +15,7 @@ import {
   shiftPeriod,
   type Period,
   type PeriodMode,
-} from '../utils/events';
+} from '@/utils/events';
 
 /**
  * Lot E7 (plan 14/10, §6.3) — période des évènements RÉALISÉS de l'agenda et des statistiques.

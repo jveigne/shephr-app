@@ -2,8 +2,8 @@ import { useSyncExternalStore } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { requireOptionalNativeModule } from 'expo';
 import type { NetInfoState } from '@react-native-community/netinfo';
-import { createEvent, type EventCreateRequest } from './eventsApi';
-import { toSendFailure, type EventSendFailure } from '../utils/eventErrors';
+import { createEvent, type EventCreateRequest } from '@/services/eventsApi';
+import { toSendFailure, type EventSendFailure } from '@/utils/eventErrors';
 
 /**
  * Lot E6 (plan 14/10, §6.3) — FILE HORS-LIGNE DES DÉCLARATIONS D'ACTION (RG-ACT-08).

@@ -4,12 +4,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   listDonationCategories,
   type DonationCategoryResponse,
-} from '../services/donationCategoriesApi';
-import { useLanguage } from '../contexts/LanguageContext';
+} from '@/services/donationCategoriesApi';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   donationCategoryMeta,
   type DonationCategoryMeta,
-} from '../constants/categories';
+} from '@/constants/categories';
 
 /**
  * Lot T5 (JP 14/09) — RUBRIQUES DE DON : fetch + cache local.

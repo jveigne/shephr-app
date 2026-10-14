@@ -2,14 +2,14 @@ import React, { useCallback, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from '../../../components/ScreenShell';
-import Card from '../../../components/Card';
-import Chip from '../../../components/Chip';
-import Label from '../../../components/Label';
-import SelectField from '../../../components/SelectField';
-import ErrorBanner from '../../../components/ErrorBanner';
-import { colors, fonts } from '../../../theme';
-import { useLanguage } from '../../../contexts/LanguageContext';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Chip from '@/components/Chip';
+import Label from '@/components/Label';
+import SelectField from '@/components/SelectField';
+import ErrorBanner from '@/components/ErrorBanner';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getMyMeetings,
   getMyProgress,
@@ -24,8 +24,8 @@ import {
   type MyProgress,
   type TeachingModule,
   type UnitProgress,
-} from '../../../services/assemblyApi';
-import { fmtIsoDay, formatChapters } from '../../../utils/meetingReport';
+} from '@/services/assemblyApi';
+import { fmtIsoDay, formatChapters } from '@/utils/meetingReport';
 
 type Tab = 'meetings' | 'progress';
 

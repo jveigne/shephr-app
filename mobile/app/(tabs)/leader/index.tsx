@@ -2,28 +2,28 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, RefreshControl } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from '../../../components/ScreenShell';
-import Card from '../../../components/Card';
-import Label from '../../../components/Label';
-import Amount from '../../../components/Amount';
-import HandDivider from '../../../components/HandDivider';
-import ErrorBanner from '../../../components/ErrorBanner';
-import RelanceNonDeclarants from '../../../components/RelanceNonDeclarants';
-import { colors, fonts } from '../../../theme';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useLanguage } from '../../../contexts/LanguageContext';
-import { canManageStructure } from '../../../services/authApi';
-import { listMyUnits, type LeaderUnitView } from '../../../services/leaderApi';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Amount from '@/components/Amount';
+import HandDivider from '@/components/HandDivider';
+import ErrorBanner from '@/components/ErrorBanner';
+import RelanceNonDeclarants from '@/components/RelanceNonDeclarants';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { canManageStructure } from '@/services/authApi';
+import { listMyUnits, type LeaderUnitView } from '@/services/leaderApi';
 import {
   getByCategory,
   getByUnit,
   type DonationByCategoryStat,
   type DonationByUnitStat,
-} from '../../../services/statsApi';
-import { listDeclarations } from '../../../services/donationApi';
-import { useDonationCategories } from '../../../hooks/useDonationCategories';
-import { fmtAmount, monthLabel, toLocalDate } from '../../../utils/format';
-import { sumByCurrency, type CurrencyLine } from '../../../utils/currencyTotals';
+} from '@/services/statsApi';
+import { listDeclarations } from '@/services/donationApi';
+import { useDonationCategories } from '@/hooks/useDonationCategories';
+import { fmtAmount, monthLabel, toLocalDate } from '@/utils/format';
+import { sumByCurrency, type CurrencyLine } from '@/utils/currencyTotals';
 
 /**
  * Écran « Trésorerie » (ex-« Mon périmètre ») — Lot T4, 14/09.

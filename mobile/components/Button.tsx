@@ -8,7 +8,7 @@ import {
   ViewStyle,
   View,
 } from 'react-native';
-import { colors, fonts } from '../theme';
+import { colors, fonts } from '@/theme';
 
 type Variant = 'primary' | 'ghost' | 'soft' | 'danger';
 

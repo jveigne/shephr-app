@@ -3,23 +3,25 @@ import { View, Text, StyleSheet, Pressable, KeyboardAvoidingView, Platform, Acti
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ScreenShell from '../../components/ScreenShell';
-import Card from '../../components/Card';
-import ErrorBanner from '../../components/ErrorBanner';
-import EventForm from '../../components/EventForm';
-import { colors, fonts } from '../../theme';
-import { useAuth } from '../../contexts/AuthContext';
-import { useLanguage } from '../../contexts/LanguageContext';
-import { useEventCatalog } from '../../hooks/useEventCatalog';
-import { goBack } from '../../utils/navigation';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import ErrorBanner from '@/components/ErrorBanner';
+import EventForm from '@/components/EventForm';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useEventCatalog } from '@/hooks/useEventCatalog';
+import { goBack } from '@/utils/navigation';
 
 /**
  * Plan 14/10 (§6.3, lot E7) — PROGRAMMER UN ÉVÈNEMENT (`PLANNED`).
  *
- * <p>D-EVT-08 : un dirigeant (`DIRIGEANT_UNITE` → `DIRIGEANT_COORDINATEUR`) programme à son niveau
- * ou en dessous ; [HYPOTHÈSE] RG-EVT-03 : le SECRETARIAT aussi, à tous niveaux ; le LEADER non.
+ * <p>D-EVT-13 (JP 14/10, remplace D-EVT-08) : programmer n'est pas une prérogative du dirigeant —
+ * on programme là où l'on déclare. Le MEMBRE dans son assemblée, un dirigeant à son niveau ou en
+ * dessous, SECRETARIAT et LEADER sur tout le ministère (pour le LEADER, conséquence de la règle).
  * Rien n'est recalculé ici : l'écran suit `canPlan` de `GET /me/scopes` (contrat §3.2) et ne
- * propose que les nœuds `canPlan`. Un MEMBRE ne programme pas, il déclare (`app/events/declare`).
+ * propose que les nœuds `canPlan` — un seul pour le membre, donc pas de sélecteur, seulement le
+ * bandeau de rattachement (`EventForm`).
  *
  * <p>Enregistré, l'évènement s'ouvre en détail : c'est là qu'on le modifiera, le marquera comme
  * réalisé une fois sa date passée (RG-EVT-05) ou l'annulera.

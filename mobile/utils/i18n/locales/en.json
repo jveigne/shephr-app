@@ -1256,14 +1256,26 @@
       "pendingRetrying": "Not sent yet: it will be retried automatically.",
       "syncNow": "Send now",
       "savedTitle": "Recorded",
-      "empty": "You have not recorded any action yet.",
+      "empty": "You have not recorded or scheduled any action yet.",
+      "openAgenda": "Open the calendar",
       "loadMore": "Show more",
       "participants_one": "{{count}} participant",
       "participants_other": "{{count}} participants",
       "soulsWon_one": "{{count}} soul won",
       "soulsWon_other": "{{count}} souls won",
       "toVerify": "To verify",
-      "notCounted": "Non-evangelism type: not included in the statistics."
+      "notCounted": "Non-evangelism type: not included in the statistics.",
+      "ownBadge": "My action"
+    },
+    "member": {
+      "subtitle": "Your assembly’s actions: yours, those of the other members and of your leaders.",
+      "plannedSub": "Planned in your assembly, from today on, the nearest first.",
+      "doneTitle": "Evangelism actions",
+      "doneSub": "Carried out in your assembly, most recent first.",
+      "doneEmpty": "No evangelism action carried out in your assembly yet.",
+      "all": "All my actions",
+      "allSub": "What you have reported or planned, all statuses and types — including those to close and cancelled ones.",
+      "allEmpty": "You have not reported or planned anything yet."
     },
     "tab": {
       "kicker": "Events",
@@ -1346,7 +1358,7 @@
       "title": "Schedule an event",
       "intro": "It will appear in your perimeter’s calendar. Participants and souls won are entered once the event has taken place.",
       "submit": "Schedule",
-      "notAllowed": "Your account cannot schedule events anywhere: this is for leaders, at their level or below, and for the secretariat.",
+      "notAllowed": "Your account is not attached to any assembly: you cannot schedule an event yet.",
       "offline": "Offline: scheduling needs the network."
     },
     "detail": {

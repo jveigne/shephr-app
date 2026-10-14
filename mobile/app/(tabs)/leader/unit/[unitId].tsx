@@ -1,25 +1,25 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { goBack } from '../../../../utils/navigation';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from '../../../../components/ScreenShell';
-import Card from '../../../../components/Card';
-import Label from '../../../../components/Label';
-import Amount from '../../../../components/Amount';
-import Chip from '../../../../components/Chip';
-import ErrorBanner from '../../../../components/ErrorBanner';
-import { colors, fonts } from '../../../../theme';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Amount from '@/components/Amount';
+import Chip from '@/components/Chip';
+import ErrorBanner from '@/components/ErrorBanner';
+import { colors, fonts } from '@/theme';
 import {
   listMyMembers,
   listMyUnits,
   type LeaderMemberView,
   type LeaderUnitView,
-} from '../../../../services/leaderApi';
-import { getByUnit, type DonationByUnitStat } from '../../../../services/statsApi';
-import { useLanguage } from '../../../../contexts/LanguageContext';
-import { toLocalDate } from '../../../../utils/format';
-import { sumByCurrency, type CurrencyLine } from '../../../../utils/currencyTotals';
+} from '@/services/leaderApi';
+import { getByUnit, type DonationByUnitStat } from '@/services/statsApi';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { toLocalDate } from '@/utils/format';
+import { sumByCurrency, type CurrencyLine } from '@/utils/currencyTotals';
 
 type Period = 'month' | '3m' | '6m' | 'year';
 

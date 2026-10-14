@@ -8,25 +8,25 @@ import {
   Linking,
 } from 'react-native';
 
-import { goBack } from '../../../utils/navigation';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ScreenShell from '../../../components/ScreenShell';
-import Card from '../../../components/Card';
-import Label from '../../../components/Label';
-import Button from '../../../components/Button';
-import { colors, fonts } from '../../../theme';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useLanguage } from '../../../contexts/LanguageContext';
-import { confirmDialog, notify } from '../../../utils/dialogs';
-import { changeMyAssembly } from '../../../services/unitApi';
-import { listUnits, type UnitResponse } from '../../../services/adminApi';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Button from '@/components/Button';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { confirmDialog, notify } from '@/utils/dialogs';
+import { changeMyAssembly } from '@/services/unitApi';
+import { listUnits, type UnitResponse } from '@/services/adminApi';
 import {
   listCountries, listLocalities, listZones,
   type CountrySummary, type LocalitySummary, type ZoneSummary,
-} from '../../../services/orgApi';
-import { contactMailto, useContactSettings } from '../../../services/contactApi';
-import SelectField from '../../../components/SelectField';
+} from '@/services/orgApi';
+import { contactMailto, useContactSettings } from '@/services/contactApi';
+import SelectField from '@/components/SelectField';
 
 /** Région « fictive » pour les villes sans région — voir le `NO_ZONE` de `app/structure.tsx`. */
 const NO_ZONE = '__no_zone__';

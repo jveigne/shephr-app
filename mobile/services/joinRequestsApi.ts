@@ -1,5 +1,5 @@
-import { apiClient } from './apiClient';
-import { isSecretariat, type MeResponse } from './authApi';
+import { apiClient } from '@/services/apiClient';
+import { isSecretariat, type MeResponse } from '@/services/authApi';
 
 // Feature B — demandes de rattachement à une assemblée (parcours d'inscription).
 // Le fidèle (ou dirigeant) cherche son assemblée de maison, dépose une demande de rattachement

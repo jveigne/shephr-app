@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 
 // Vie d'assemblée (plan 23/09, §5.2 — lot L5) : réunions, comptes rendus, modules d'enseignement,
 // avancement. Tous les endpoints sont sous /api/church/assembly et gatés @RequiresModule("ASSEMBLY")

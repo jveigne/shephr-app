@@ -1,5 +1,5 @@
 import type { AxiosRequestConfig } from 'axios';
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 
 // Évènements & recensement des actions d'évangélisation (plan 14/10, §5.2 — lot E6). Tous les
 // endpoints sont sous /api/church/events et gatés @RequiresModule("EVENTS") (D-EVT-05) : sans
@@ -253,7 +253,10 @@ export interface EventListParams {
   to?: string;
   status?: EventStatus;
   evangelism?: boolean;
-  /** Défaut serveur true : + évènements des ancêtres, en lecture (recette §9.3 n°4). */
+  /**
+   * Défaut serveur true : + évènements des ancêtres, en lecture (recette §9.3 n°4). Sans effet pour
+   * un simple membre (D-EVT-14, JP 14/10) : toujours son assemblée seule.
+   */
   includeAncestors?: boolean;
   /** En majuscules (Sort.Direction). Défaut serveur DESC. */
   order?: 'ASC' | 'DESC';

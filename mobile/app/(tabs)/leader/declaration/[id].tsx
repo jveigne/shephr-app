@@ -1,28 +1,28 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { goBack } from '../../../../utils/navigation';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from '../../../../components/ScreenShell';
-import Card from '../../../../components/Card';
-import Label from '../../../../components/Label';
-import Amount from '../../../../components/Amount';
-import Button from '../../../../components/Button';
-import HandDivider from '../../../../components/HandDivider';
-import ErrorBanner from '../../../../components/ErrorBanner';
-import DeclarationStatusPill from '../../../../components/DeclarationStatusPill';
-import { colors, fonts, radii } from '../../../../theme';
-import { useAuth } from '../../../../contexts/AuthContext';
-import { useLanguage } from '../../../../contexts/LanguageContext';
-import { useDonationCategories } from '../../../../hooks/useDonationCategories';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Amount from '@/components/Amount';
+import Button from '@/components/Button';
+import HandDivider from '@/components/HandDivider';
+import ErrorBanner from '@/components/ErrorBanner';
+import DeclarationStatusPill from '@/components/DeclarationStatusPill';
+import { colors, fonts, radii } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useDonationCategories } from '@/hooks/useDonationCategories';
 import {
   getDeclaration,
   unverifyDeclaration,
   verifyDeclaration,
   type DeclarationResponse,
-} from '../../../../services/donationApi';
-import { confirmDialog, notify } from '../../../../utils/dialogs';
-import { fmtAmount, fmtDateLong, parseLocalDate } from '../../../../utils/format';
+} from '@/services/donationApi';
+import { confirmDialog, notify } from '@/utils/dialogs';
+import { fmtAmount, fmtDateLong, parseLocalDate } from '@/utils/format';
 
 /**
  * Détail d'une déclaration, côté TRÉSORIER — Lot T8 (décision J-1, JP 14/09).

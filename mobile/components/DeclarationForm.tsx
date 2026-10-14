@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, TextInput, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Card from './Card';
-import Label from './Label';
-import Field from './Field';
-import Button from './Button';
-import { colors, fonts, radii } from '../theme';
-import { useDonationCategories } from '../hooks/useDonationCategories';
-import { useLanguage } from '../contexts/LanguageContext';
-import { fmtAmount, fmtDateLong } from '../utils/format';
-import type { DeclarationLineRequest } from '../services/donationApi';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Field from '@/components/Field';
+import Button from '@/components/Button';
+import { colors, fonts, radii } from '@/theme';
+import { useDonationCategories } from '@/hooks/useDonationCategories';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { fmtAmount, fmtDateLong } from '@/utils/format';
+import type { DeclarationLineRequest } from '@/services/donationApi';
 
 /**
  * Lot T7 (décision J-1, JP 14/09) — SAISIE D'UNE DÉCLARATION MULTI-RUBRIQUES.

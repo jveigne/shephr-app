@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 
 /**
  * Lot T5 (JP 14/09) — référentiel des RUBRIQUES DE DON, servi par le ministère.

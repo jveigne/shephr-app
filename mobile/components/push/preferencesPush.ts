@@ -11,7 +11,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import type { EnregistrementAppareil, PreferencesPush } from '../../services/pushApi';
+import type { EnregistrementAppareil, PreferencesPush } from '@/services/pushApi';
 
 const CLE_PREFERENCES = 'shephr.push.preferences';
 

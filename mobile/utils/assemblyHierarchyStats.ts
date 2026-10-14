@@ -10,8 +10,8 @@
  * - AUCUN NOM de personne (D-ASM-18) : que des nombres, et des noms d'assemblée.
  * - Alerte « sans CR depuis 3 semaines » : AFFICHAGE SEUL, aucune relance (D-ASM-09 reste gelé).
  */
-import type { UnitMeetingStats } from '../services/assemblyApi';
-import type { LeaderHierarchyNode } from '../services/leadersApi';
+import type { UnitMeetingStats } from '@/services/assemblyApi';
+import type { LeaderHierarchyNode } from '@/services/leadersApi';
 
 /** D-ASM-18 (JP 08/10) : seuil d'alerte « sans CR » = 3 semaines. */
 export const ALERT_DAYS = 21;

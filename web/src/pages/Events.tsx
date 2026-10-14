@@ -1,11 +1,11 @@
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Badge, Button, Field, Modal, Picker, TopBar } from '../components/ui';
+import { useQuery } from '@tanstack/react-query';
+import { Button, Field, Modal, Picker, TopBar } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { useToast } from '../components/Toast';
 import { EventForm } from '../components/EventForm';
-import { EventsTable } from '../components/EventsTable';
+import { EventsBlock } from '../components/EventsTable';
 import { EventDetailModal } from '../components/EventDetail';
 import { DeclarePanel, EventEmptyState, MyEventsList } from '../components/EventDeclare';
 import { EventPeriodFilter } from '../components/EventPeriodFilter';
@@ -16,7 +16,6 @@ import { getAccessibleModules, isSecretariat } from '../services/authApi';
 import {
   getMyEventScopes,
   listEventTypes,
-  listEvents,
   type EventListParams,
   type EventResponse,
   type EventScopes,
@@ -26,7 +25,6 @@ import {
   addDaysLocal,
   defaultPeriod,
   eventErrorMessage,
-  lastPageIfPast,
   periodBounds,
   scopeOptions,
   todayLocal,
@@ -38,8 +36,11 @@ import {
 //  D-EVT-05 (JP 14/10) : module d'abonnement EVENTS — sans lui, menu masqué (RG-06) et une URL
 //  tapée à la main tombe sur un message plutôt que sur une cascade de 403.
 //  D-EVT-07 : chacun voit la géographie de son périmètre (LEADER / SECRETARIAT : tout le
-//  ministère). D-EVT-08 / RG-EVT-03 : « Programmer » seulement si `canPlan` (serveur).
+//  ministère). RG-EVT-03 : « Programmer » seulement si `canPlan` (serveur) ; D-EVT-13 (JP 14/10) :
+//  programmer n'est plus une prérogative du dirigeant (programmer = déclarer).
 //  D-EVT-09 : « Statistiques » est l'écran du secrétariat — onglet ouvert par défaut pour lui.
+//  D-EVT-14 (JP 14/10) : écran des DIRIGEANTS (AppShell) seulement — le simple membre a sa vue
+//  dédiée, /my-actions (pages/MyActions.tsx), sans agenda multi-niveaux ni descente statistique.
 // ---------------------------------------------------------------------------------------------
 
 type Tab = 'agenda' | 'declare' | 'stats';
@@ -200,7 +201,7 @@ function AgendaTab({ scopes }: { scopes: EventScopes }) {
         <EventPeriodFilter value={period} onChange={setPeriod} />
       </div>
 
-      <AgendaBlock
+      <EventsBlock
         title={t('events.agenda.toClose')}
         sub={t('events.agenda.toCloseSub')}
         tone="warn"
@@ -208,7 +209,7 @@ function AgendaTab({ scopes }: { scopes: EventScopes }) {
         empty={t('events.agenda.toCloseEmpty')}
         onOpen={setOpened}
       />
-      <AgendaBlock
+      <EventsBlock
         title={t('events.agenda.upcoming')}
         sub={t('events.agenda.upcomingSub')}
         tone="earth"
@@ -217,7 +218,7 @@ function AgendaTab({ scopes }: { scopes: EventScopes }) {
         onOpen={setOpened}
       />
       {bounds ? (
-        <AgendaBlock
+        <EventsBlock
           title={t('events.agenda.done')}
           sub={t('events.agenda.doneSub')}
           tone="ok"
@@ -231,66 +232,6 @@ function AgendaTab({ scopes }: { scopes: EventScopes }) {
 
       {opened && <EventDetailModal eventId={opened.id} initial={opened} onClose={() => setOpened(null)} />}
     </>
-  );
-}
-
-function AgendaBlock({
-  title,
-  sub,
-  tone,
-  params,
-  empty,
-  onOpen,
-}: {
-  title: string;
-  sub: string;
-  tone: 'warn' | 'earth' | 'ok';
-  params: EventListParams;
-  empty: string;
-  onOpen: (e: EventResponse) => void;
-}) {
-  const { t } = useTranslation();
-  const [page, setPage] = useState(0);
-  // Un autre filtre = une autre liste : on revient à sa première page.
-  const filterKey = JSON.stringify(params);
-  const [lastFilter, setLastFilter] = useState(filterKey);
-  if (filterKey !== lastFilter) {
-    setLastFilter(filterKey);
-    setPage(0);
-  }
-
-  const q = useQuery({
-    queryKey: [...EVENT_KEYS.data, 'list', params, page],
-    queryFn: () => listEvents({ ...params, page, size: 20 }),
-    placeholderData: keepPreviousData,
-  });
-  // Une écriture (clôture, suppression…) peut vider la dernière page : on se replie sur la nouvelle
-  // dernière page plutôt que de rester sur un état vide sans pagination.
-  const lastPage = lastPageIfPast(q.data, page);
-  if (lastPage != null) setPage(lastPage);
-
-  return (
-    <section style={{ marginTop: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
-        <h2 className="section-title" style={{ fontSize: 18, margin: 0 }}>{title}</h2>
-        {q.data && q.data.totalElements > 0 && <Badge tone={tone}>{q.data.totalElements}</Badge>}
-        <span className="muted" style={{ fontSize: 12.5 }}>{sub}</span>
-      </div>
-      {q.isLoading ? (
-        <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>
-      ) : !q.data ? (
-        <p role="alert" style={{ color: 'var(--err)' }}>{eventErrorMessage(q.error, t)}</p>
-      ) : (
-        <div className="card" style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>
-          <EventsTable
-            page={q.data}
-            onPage={setPage}
-            onOpen={onOpen}
-            empty={<p style={{ margin: 0, padding: '16px 22px', color: 'var(--ink-500)', fontSize: 13 }}>{empty}</p>}
-          />
-        </div>
-      )}
-    </section>
   );
 }
 

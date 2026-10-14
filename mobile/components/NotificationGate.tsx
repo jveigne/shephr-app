@@ -2,19 +2,19 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Modal, Image, Linking, Platform, AppState, type AppStateStatus } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Card from './Card';
-import Button from './Button';
-import { colors, fonts } from '../theme';
-import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
+import Card from '@/components/Card';
+import Button from '@/components/Button';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getUnreadNotifications,
   markNotificationRead,
   type UserNotification,
-} from '../services/notificationsApi';
-import { getCampaigns, type CampaignNotification } from '../services/appNotificationsApi';
-import { abonnerRechargement, declarerGateOuverte } from './push/fileNotifications';
-import { useConduireParSource } from './push/routagePush';
+} from '@/services/notificationsApi';
+import { getCampaigns, type CampaignNotification } from '@/services/appNotificationsApi';
+import { abonnerRechargement, declarerGateOuverte } from '@/components/push/fileNotifications';
+import { useConduireParSource } from '@/components/push/routagePush';
 
 /**
  * Porte d'entrée des messages à l'ouverture — UNE seule modale à la fois, dans l'ordre :

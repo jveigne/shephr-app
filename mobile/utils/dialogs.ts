@@ -1,5 +1,5 @@
 import { Alert, Platform } from 'react-native';
-import i18n from './i18n/i18n';
+import i18n from '@/utils/i18n/i18n';
 
 /**
  * Confirmation cross-platform : react-native-web ne supporte pas les boutons

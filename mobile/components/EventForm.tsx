@@ -1,16 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Card from './Card';
-import Label from './Label';
-import Button from './Button';
-import Chip from './Chip';
-import Field from './Field';
-import ErrorBanner from './ErrorBanner';
-import SelectField from './SelectField';
-import { DatePickerModal } from './DeclarationForm';
-import { colors, fonts, radii } from '../theme';
-import { useLanguage } from '../contexts/LanguageContext';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Button from '@/components/Button';
+import Chip from '@/components/Chip';
+import Field from '@/components/Field';
+import ErrorBanner from '@/components/ErrorBanner';
+import SelectField from '@/components/SelectField';
+import { DatePickerModal } from '@/components/DeclarationForm';
+import { colors, fonts, radii } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   createEvent,
   updateEvent,
@@ -18,19 +18,20 @@ import {
   type EventScopesResponse,
   type EventTypeDto,
   type ScopeNode,
-} from '../services/eventsApi';
-import { newEventClientId } from '../services/eventQueue';
-import { eventActionMessage } from '../utils/eventErrors';
-import { countOrUndefined, digitsOnly, isEnglishLang, todayLocal, typeLabel } from '../utils/events';
-import { fmtIsoDay } from '../utils/meetingReport';
-import { parseLocalDate, toLocalDate } from '../utils/format';
+} from '@/services/eventsApi';
+import { newEventClientId } from '@/services/eventQueue';
+import { eventActionMessage } from '@/utils/eventErrors';
+import { countOrUndefined, digitsOnly, isEnglishLang, todayLocal, typeLabel } from '@/utils/events';
+import { fmtIsoDay } from '@/utils/meetingReport';
+import { parseLocalDate, toLocalDate } from '@/utils/format';
 
 /**
  * Lot E7 (plan 14/10, §6.3) — formulaire d'évènement EN LIGNE, deux usages :
  * <ul>
- *   <li>`plan` : programmer un évènement `PLANNED` (D-EVT-08, RG-EVT-03) — dirigeant à son niveau
- *       ou en dessous, SECRETARIAT partout ([HYPOTHÈSE] RG-EVT-03) : seuls les nœuds `canPlan`
- *       sont proposés. Date future autorisée ; participants / âmes gagnées se saisissent à la
+ *   <li>`plan` : programmer un évènement `PLANNED` (D-EVT-13, RG-EVT-03) — là où l'on déclare :
+ *       membre dans son assemblée, dirigeant à son niveau ou en dessous, SECRETARIAT et LEADER
+ *       partout. Seuls les nœuds `canPlan` sont proposés, sans sélecteur s'il n'y en a qu'un.
+ *       Date future autorisée ; participants / âmes gagnées se saisissent à la
  *       clôture (D-EVT-02), pas ici ;</li>
  *   <li>`edit` : `PATCH` = REMPLACEMENT COMPLET (contrat §3.7) — tous les champs sont renvoyés,
  *       un champ vidé est effacé. Un DONE reste modifiable (RG-ACT-06) mais jamais re-daté dans le

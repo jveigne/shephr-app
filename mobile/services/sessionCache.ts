@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { MeResponse } from './authApi';
+import type { MeResponse } from '@/services/authApi';
 
 /**
  * Lot E6 (plan 14/10, §6.3) — DERNIER PROFIL CONNU de la session (`/me` et modules accessibles),

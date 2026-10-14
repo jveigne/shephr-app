@@ -1,28 +1,28 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { goBack } from '../../utils/navigation';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from '../../components/ScreenShell';
-import Card from '../../components/Card';
-import Label from '../../components/Label';
-import Amount from '../../components/Amount';
-import Button from '../../components/Button';
-import HandDivider from '../../components/HandDivider';
-import ErrorBanner from '../../components/ErrorBanner';
-import DeclarationStatusPill from '../../components/DeclarationStatusPill';
-import { colors, fonts } from '../../theme';
-import { useDonationCategories } from '../../hooks/useDonationCategories';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Amount from '@/components/Amount';
+import Button from '@/components/Button';
+import HandDivider from '@/components/HandDivider';
+import ErrorBanner from '@/components/ErrorBanner';
+import DeclarationStatusPill from '@/components/DeclarationStatusPill';
+import { colors, fonts } from '@/theme';
+import { useDonationCategories } from '@/hooks/useDonationCategories';
 import {
   deleteDeclaration,
   getDeclaration,
   getDonation,
   type DeclarationResponse,
-} from '../../services/donationApi';
-import { fmtAmount, fmtDateLong, parseLocalDate } from '../../utils/format';
-import { confirmDialog, notify } from '../../utils/dialogs';
-import { declarationErrorMessage } from '../../utils/donationErrors';
-import { useLanguage } from '../../contexts/LanguageContext';
+} from '@/services/donationApi';
+import { fmtAmount, fmtDateLong, parseLocalDate } from '@/utils/format';
+import { confirmDialog, notify } from '@/utils/dialogs';
+import { declarationErrorMessage } from '@/utils/donationErrors';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * Lot T7 (décision J-1, JP 14/09) — DÉTAIL D'UNE DÉCLARATION, avec sa ventilation par rubrique.

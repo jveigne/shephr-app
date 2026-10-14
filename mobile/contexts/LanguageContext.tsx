@@ -5,7 +5,7 @@ import {
   storeLanguage,
   mapBackendLanguage,
   type AppLanguage,
-} from '../utils/i18n/i18n';
+} from '@/utils/i18n/i18n';
 
 interface LanguageContextType {
   language: string;

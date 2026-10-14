@@ -2,22 +2,22 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Card from './Card';
-import Chip from './Chip';
-import Field from './Field';
-import Label from './Label';
-import Button from './Button';
-import ErrorBanner from './ErrorBanner';
-import { colors, fonts, radii } from '../theme';
-import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
-import { confirmDialog } from '../utils/dialogs';
+import Card from '@/components/Card';
+import Chip from '@/components/Chip';
+import Field from '@/components/Field';
+import Label from '@/components/Label';
+import Button from '@/components/Button';
+import ErrorBanner from '@/components/ErrorBanner';
+import { colors, fonts, radii } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { confirmDialog } from '@/utils/dialogs';
 import {
   listReminderScopes,
   sendBulkReminder,
   type BulkReminderResponse,
   type ReminderScopeResponse,
-} from '../services/donationRemindersApi';
+} from '@/services/donationRemindersApi';
 
 /**
  * Lot T11 (docs/notifications.md §2.3) — « RELANCER » : le trésorier écrit d'un coup aux personnes

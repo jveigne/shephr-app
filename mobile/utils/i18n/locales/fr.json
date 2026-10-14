@@ -1256,14 +1256,26 @@
       "pendingRetrying": "L'envoi n'a pas encore abouti : nouvel essai automatique.",
       "syncNow": "Envoyer maintenant",
       "savedTitle": "Enregistrées",
-      "empty": "Vous n'avez encore déclaré aucune action.",
+      "empty": "Vous n'avez encore déclaré ni programmé aucune action.",
+      "openAgenda": "Voir l'agenda",
       "loadMore": "Voir plus",
       "participants_one": "{{count}} participant",
       "participants_other": "{{count}} participants",
       "soulsWon_one": "{{count}} âme gagnée",
       "soulsWon_other": "{{count}} âmes gagnées",
       "toVerify": "À vérifier",
-      "notCounted": "Type non évangélique : n'entre pas dans les statistiques."
+      "notCounted": "Type non évangélique : n'entre pas dans les statistiques.",
+      "ownBadge": "Mon action"
+    },
+    "member": {
+      "subtitle": "Les actions de votre assemblée : les vôtres, celles des autres membres et de vos dirigeants.",
+      "plannedSub": "Programmés dans votre assemblée, à partir d’aujourd’hui, le plus proche en haut.",
+      "doneTitle": "Actions d’évangélisation",
+      "doneSub": "Réalisées dans votre assemblée, les plus récentes en haut.",
+      "doneEmpty": "Aucune action d’évangélisation réalisée dans votre assemblée pour l’instant.",
+      "all": "Toutes mes actions",
+      "allSub": "Ce que vous avez déclaré ou programmé, tous statuts et types — y compris à clôturer et annulés.",
+      "allEmpty": "Vous n’avez encore rien déclaré ni programmé."
     },
     "tab": {
       "kicker": "Évènements",
@@ -1346,7 +1358,7 @@
       "title": "Programmer un évènement",
       "intro": "Il apparaîtra dans l'agenda de votre périmètre. Participants et âmes gagnées se saisissent une fois l'évènement réalisé.",
       "submit": "Programmer",
-      "notAllowed": "Votre compte ne peut programmer d'évènement nulle part : c'est réservé aux dirigeants, à leur niveau ou en dessous, et au secrétariat.",
+      "notAllowed": "Votre compte n'est rattaché à aucune assemblée : vous ne pouvez pas encore programmer d'évènement.",
       "offline": "Hors ligne : la programmation demande le réseau."
     },
     "detail": {

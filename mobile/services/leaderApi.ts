@@ -1,6 +1,6 @@
-import { apiClient } from './apiClient';
-import type { UnitType } from './unitApi';
-import type { CurrencyTotal } from './statsApi';
+import { apiClient } from '@/services/apiClient';
+import type { UnitType } from '@/services/unitApi';
+import type { CurrencyTotal } from '@/services/statsApi';
 
 export interface LeaderUnitView {
   unitId: string;

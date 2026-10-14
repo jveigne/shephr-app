@@ -1,17 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Modal } from 'react-native';
 
-import { goBack } from '../../../utils/navigation';
+import { goBack } from '@/utils/navigation';
 import Svg, { Defs, LinearGradient, Rect, Stop, Text as SvgText, G, Line, Path, Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from '../../../components/ScreenShell';
-import Card from '../../../components/Card';
-import Label from '../../../components/Label';
-import Amount from '../../../components/Amount';
-import Chip from '../../../components/Chip';
-import ErrorBanner from '../../../components/ErrorBanner';
-import Button from '../../../components/Button';
-import { colors, fonts } from '../../../theme';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Amount from '@/components/Amount';
+import Chip from '@/components/Chip';
+import ErrorBanner from '@/components/ErrorBanner';
+import Button from '@/components/Button';
+import { colors, fonts } from '@/theme';
 import {
   downloadExport,
   getByCategory,
@@ -21,14 +21,14 @@ import {
   type DonationByMonthStat,
   type DonationByUnitStat,
   type ExportFormat,
-} from '../../../services/statsApi';
-import type { DeclarationStatus } from '../../../services/donationApi';
-import { donationCategoryMeta } from '../../../constants/categories';
-import { useDonationCategories } from '../../../hooks/useDonationCategories';
-import { useLanguage } from '../../../contexts/LanguageContext';
-import { notify } from '../../../utils/dialogs';
-import { currencySymbol, fmtAmount, monthLabel } from '../../../utils/format';
-import { sumByCurrency } from '../../../utils/currencyTotals';
+} from '@/services/statsApi';
+import type { DeclarationStatus } from '@/services/donationApi';
+import { donationCategoryMeta } from '@/constants/categories';
+import { useDonationCategories } from '@/hooks/useDonationCategories';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { notify } from '@/utils/dialogs';
+import { currencySymbol, fmtAmount, monthLabel } from '@/utils/format';
+import { sumByCurrency } from '@/utils/currencyTotals';
 
 // Recette 15/09 (JP) — « 1m » = LE MOIS EN COURS, ajouté en tête : la vue d'ensemble ne savait
 // regarder qu'à partir de trois mois, alors que la question quotidienne du trésorier est

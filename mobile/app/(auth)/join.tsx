@@ -15,23 +15,23 @@ import { router } from 'expo-router';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Card from '../../components/Card';
-import Field from '../../components/Field';
-import Label from '../../components/Label';
-import Button from '../../components/Button';
-import Wordmark from '../../components/Wordmark';
-import SelectField from '../../components/SelectField';
-import { colors, fonts } from '../../theme';
-import { useLanguage } from '../../contexts/LanguageContext';
-import { useAuth } from '../../contexts/AuthContext';
-import { confirmDialog, notify } from '../../utils/dialogs';
-import { joinUnit } from '../../services/unitApi';
-import { contactMailto, useContactSettings } from '../../services/contactApi';
+import Card from '@/components/Card';
+import Field from '@/components/Field';
+import Label from '@/components/Label';
+import Button from '@/components/Button';
+import Wordmark from '@/components/Wordmark';
+import SelectField from '@/components/SelectField';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { confirmDialog, notify } from '@/utils/dialogs';
+import { joinUnit } from '@/services/unitApi';
+import { contactMailto, useContactSettings } from '@/services/contactApi';
 import {
   fetchRequestContext,
   type RequestNodeOption,
   type StructureRequestContext,
-} from '../../services/structureRequestsApi';
+} from '@/services/structureRequestsApi';
 import {
   cancelJoinRequest,
   createJoinRequest,
@@ -40,7 +40,7 @@ import {
   type AssemblySearchResult,
   type JoinRequestResponse,
   type JoinRequestedRole,
-} from '../../services/joinRequestsApi';
+} from '@/services/joinRequestsApi';
 
 type Mode = 'search' | 'create' | 'code' | 'pending';
 

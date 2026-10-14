@@ -12,21 +12,21 @@ import {
   Linking,
 } from 'react-native';
 import { router } from 'expo-router';
-import { goBack } from '../utils/navigation';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ScreenShell from '../components/ScreenShell';
-import Card from '../components/Card';
-import Label from '../components/Label';
-import Button from '../components/Button';
-import SelectField from '../components/SelectField';
-import { colors, fonts } from '../theme';
-import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
-import { canManageStructure, isSecretariat } from '../services/authApi';
-import { contactMailto, useContactSettings } from '../services/contactApi';
-import { confirmDialog, notify } from '../utils/dialogs';
-import i18n from '../utils/i18n/i18n';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Button from '@/components/Button';
+import SelectField from '@/components/SelectField';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { canManageStructure, isSecretariat } from '@/services/authApi';
+import { contactMailto, useContactSettings } from '@/services/contactApi';
+import { confirmDialog, notify } from '@/utils/dialogs';
+import i18n from '@/utils/i18n/i18n';
 import {
   createLocality, createUnit, createZone, listUsers, type AdminUserResponse,
   deleteCountry, deleteLocality, deleteUnit, deleteZone,
@@ -35,9 +35,9 @@ import {
   updateLocality, updateUnit, updateZone,
   type CountryResponse, type LocalityResponse,
   type UnitResponse, type ZoneResponse,
-} from '../services/adminApi';
-import { fetchUnassignedUnits } from '../services/leadersApi';
-import { fmtDate } from '../utils/format';
+} from '@/services/adminApi';
+import { fetchUnassignedUnits } from '@/services/leadersApi';
+import { fmtDate } from '@/utils/format';
 
 type Level = 'countries' | 'zones' | 'localities' | 'units';
 

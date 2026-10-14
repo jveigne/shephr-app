@@ -16,10 +16,10 @@
  * - D-ASM-18 (JP 08/10) : journal CONSOLIDÉ de plusieurs assemblées (`buildConsolidatedJournalHtml`),
  *   généré depuis la Hiérarchie — que des nombres, JAMAIS la liste des présents.
  */
-import type { MeetingDetail, UnitMeetingStats } from '../services/assemblyApi';
-import { colors } from '../theme/colors';
-import { aggregate, averageAttendance, isAlert } from './assemblyHierarchyStats';
-import { fmtIsoDay, formatChapters, formatReportDate, type Translate } from './meetingReport';
+import type { MeetingDetail, UnitMeetingStats } from '@/services/assemblyApi';
+import { colors } from '@/theme/colors';
+import { aggregate, averageAttendance, isAlert } from '@/utils/assemblyHierarchyStats';
+import { fmtIsoDay, formatChapters, formatReportDate, type Translate } from '@/utils/meetingReport';
 
 export type Periodicity = 'month' | 'quarter' | 'semester' | 'year';
 

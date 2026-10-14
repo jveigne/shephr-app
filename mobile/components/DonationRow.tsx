@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useDonationCategories } from '../hooks/useDonationCategories';
-import { colors, fonts } from '../theme';
-import { fmtDate, parseLocalDate } from '../utils/format';
-import Amount from './Amount';
-import Card from './Card';
+import { useDonationCategories } from '@/hooks/useDonationCategories';
+import { colors, fonts } from '@/theme';
+import { fmtDate, parseLocalDate } from '@/utils/format';
+import Amount from '@/components/Amount';
+import Card from '@/components/Card';
 
 export interface DonationRowItem {
   id: string;

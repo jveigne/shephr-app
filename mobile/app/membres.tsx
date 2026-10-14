@@ -10,22 +10,22 @@ import {
   TextInput,
 } from 'react-native';
 
-import { goBack } from '../utils/navigation';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ScreenShell from '../components/ScreenShell';
-import Card from '../components/Card';
-import Button from '../components/Button';
-import { colors, fonts } from '../theme';
-import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
-import { goalName } from '../utils/goalName';
-import { isSecretariat, MODULE_ROLE_LABELS, type ModuleRole } from '../services/authApi';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Button from '@/components/Button';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { goalName } from '@/utils/goalName';
+import { isSecretariat, MODULE_ROLE_LABELS, type ModuleRole } from '@/services/authApi';
 import {
   fetchGoalSubmissionSummary, listUsers, listUnits,
   type AdminUserResponse, type GoalSubmissionSummary, type UnitResponse,
-} from '../services/adminApi';
-import SelectField from '../components/SelectField';
+} from '@/services/adminApi';
+import SelectField from '@/components/SelectField';
 import {
   fetchMemberGoals,
   getActiveGoal,
@@ -34,13 +34,13 @@ import {
   type ActiveGoal,
   type MemberGoalsResponse,
   type PledgeResponse,
-} from '../services/goalsApi';
-import { confirmDialog, notify } from '../utils/dialogs';
+} from '@/services/goalsApi';
+import { confirmDialog, notify } from '@/utils/dialogs';
 import {
   fetchRequestContext,
   type RequestNodeOption,
   type StructureRequestContext,
-} from '../services/structureRequestsApi';
+} from '@/services/structureRequestsApi';
 
 /**
  * Membres (Lot S1 — 21/07) : annuaire du périmètre de la personne connectée. La liste est SCOPÉE

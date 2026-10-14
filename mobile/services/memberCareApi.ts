@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 
 // Module Member Care (suivi pastoral) — calque com.excellence.back.membercare.MemberCareDtos.
 // Tous les endpoints sont sous /api/church/member-care et gatés @RequiresModule("MEMBER_CARE").

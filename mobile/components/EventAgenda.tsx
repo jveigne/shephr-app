@@ -2,23 +2,24 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Card from './Card';
-import Button from './Button';
-import ErrorBanner from './ErrorBanner';
-import SelectField from './SelectField';
-import EventPeriodPicker from './EventPeriodPicker';
-import { EventRow } from './EventRow';
-import { colors, fonts } from '../theme';
-import { useLanguage } from '../contexts/LanguageContext';
+import Card from '@/components/Card';
+import Button from '@/components/Button';
+import ErrorBanner from '@/components/ErrorBanner';
+import SelectField from '@/components/SelectField';
+import EventPeriodPicker from '@/components/EventPeriodPicker';
+import { EventRow } from '@/components/EventRow';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
+  getMyEvents,
   listEvents,
   type EventListParams,
   type EventResponse,
   type EventScopesResponse,
   type Page,
-} from '../services/eventsApi';
-import { eventActionMessage } from '../utils/eventErrors';
-import { addDaysLocal, defaultPeriod, periodBounds, todayLocal, type Period } from '../utils/events';
+} from '@/services/eventsApi';
+import { eventActionMessage } from '@/utils/eventErrors';
+import { addDaysLocal, defaultPeriod, monthLocal, periodBounds, todayLocal, type Period } from '@/utils/events';
 
 /**
  * Lot E7 (plan 14/10, §6.3) — AGENDA de l'onglet « Évènements » : trois blocs sur le nœud choisi
@@ -31,8 +32,11 @@ import { addDaysLocal, defaultPeriod, periodBounds, todayLocal, type Period } fr
  *   <li>« Réalisés » : DONE de la période choisie (D-EVT-06 : mois / année / plage).</li>
  * </ul>
  * La période ne filtre que les réalisés : à venir et à clôturer sont des listes d'ACTION, comme
- * `plannedUpcoming` / `toCloseCount` des statistiques. Lecture = géographie du périmètre (D-EVT-07) ;
- * une ligne ouvre le détail, où le serveur dit ce qu'on peut y faire (`canEdit`, `canFlag`).
+ * `plannedUpcoming` / `toCloseCount` des statistiques. Lecture = géographie du périmètre (D-EVT-07)
+ * plus l'assemblée principale du compte (D-EVT-13) ; une ligne ouvre le détail, où le serveur dit
+ * ce qu'on peut y faire (`canEdit`, `canFlag`). Vue des dirigeants, LEADER et SECRETARIAT
+ * seulement : D-EVT-14 (JP 14/10), le simple membre a sa propre vue (`EventMemberView`), qui
+ * reprend `AgendaBlock`.
  */
 
 const ALL = 'all';
@@ -114,23 +118,45 @@ export default function EventAgenda({
 }
 
 /**
- * Un bloc paginé (« Voir plus »). Sans `title`, l'en-tête est porté par l'appelant (bloc
- * « Réalisés », dont le sélecteur de période s'intercale entre le titre et la liste).
+ * Source d'un bloc : la liste d'un nœud (`GET /`, contrat §3.5) ou, avec `'mine'`, MES évènements
+ * (`GET /me`, §3.4 — tous statuts et types, récent en haut ; ses compteurs ne servent pas ici, d'où
+ * le seul mois LOCAL envoyé, §1.4).
  */
-function AgendaBlock({
+type AgendaSource = EventListParams | 'mine';
+
+function fetchAgendaPage(source: AgendaSource, page: number): Promise<Page<EventResponse>> {
+  return source === 'mine'
+    ? getMyEvents(monthLocal(), page, PAGE_SIZE).then((res) => res.events)
+    : listEvents({ ...source, page, size: PAGE_SIZE });
+}
+
+/**
+ * Un bloc paginé (« Voir plus »). Sans `title`, l'en-tête est porté par l'appelant (bloc
+ * « Réalisés », dont le sélecteur de période s'intercale entre le titre et la liste). Partagé avec
+ * la vue du simple membre (`EventMemberView`, D-EVT-14), qui marque ses propres lignes (`meId`),
+ * liste « Toutes mes actions » (`params="mine"`) et relève les `clientId` reçus (`onLoaded`) pour
+ * ne pas doubler une déclaration encore en file.
+ */
+export function AgendaBlock({
   title,
   sub,
   tone,
   params,
   empty,
   refreshKey,
+  meId,
+  onLoaded,
 }: {
   title?: string;
   sub?: string;
   tone: string;
-  params: EventListParams;
+  params: AgendaSource;
   empty: string;
   refreshKey: number;
+  /** Compte connecté : ses évènements (`createdById`) portent la pastille « Mon action ». */
+  meId?: string;
+  /** Doit être STABLE (`useCallback`) : il entre dans les dépendances du chargement. */
+  onLoaded?: (events: EventResponse[]) => void;
 }) {
   const { t } = useLanguage();
   const [page, setPage] = useState<Page<EventResponse> | null>(null);
@@ -158,7 +184,7 @@ function AgendaBlock({
     (key: string) => {
       const request = ++lastRequest.current;
       const current = () => request === lastRequest.current;
-      return listEvents({ ...(JSON.parse(paramsKey) as EventListParams), page: 0, size: PAGE_SIZE })
+      return fetchAgendaPage(JSON.parse(paramsKey) as AgendaSource, 0)
         .then(
           (res) => {
             if (!current()) return;
@@ -167,6 +193,7 @@ function AgendaBlock({
             setEvents(res.content);
             setError(null);
             setMoreError(null);
+            onLoaded?.(res.content);
           },
           (e) => {
             if (!current()) return;
@@ -183,7 +210,7 @@ function AgendaBlock({
           setRetrying(false);
         });
     },
-    [paramsKey, t],
+    [paramsKey, t, onLoaded],
   );
 
   useEffect(() => {
@@ -200,7 +227,7 @@ function AgendaBlock({
     const request = lastRequest.current;
     setLoadingMore(true);
     try {
-      const res = await listEvents({ ...params, page: page.number + 1, size: PAGE_SIZE });
+      const res = await fetchAgendaPage(params, page.number + 1);
       if (request !== lastRequest.current) return;
       setPage(res);
       // Dédoublonnage par id : un évènement programmé entre deux pages décale le découpage.
@@ -209,6 +236,7 @@ function AgendaBlock({
         return [...prev, ...res.content.filter((e) => !seen.has(e.id))];
       });
       setMoreError(null);
+      onLoaded?.(res.content);
     } catch (e) {
       if (request === lastRequest.current) setMoreError(eventActionMessage(e, t));
     } finally {
@@ -244,7 +272,12 @@ function AgendaBlock({
             </Card>
           ) : (
             events.map((e) => (
-              <EventRow key={e.id} event={e} onPress={() => router.push(`/events/${e.id}`)} />
+              <EventRow
+                key={e.id}
+                event={e}
+                mine={!!meId && e.createdById === meId}
+                onPress={() => router.push(`/events/${e.id}`)}
+              />
             ))
           )}
           {!!page && !page.last && (

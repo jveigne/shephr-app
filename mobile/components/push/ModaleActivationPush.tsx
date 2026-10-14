@@ -25,14 +25,14 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import Button from '../Button';
-import Card from '../Card';
-import { colors, fonts } from '../../theme';
-import { useAuth } from '../../contexts/AuthContext';
-import { useLanguage } from '../../contexts/LanguageContext';
-import { abonnerGate, gateEstOuverte } from './fileNotifications';
-import { invitationDejaVue, marquerInvitationVue } from './preferencesPush';
-import { activerNotifications, estSupporte, lireEtatPermission } from './usePushNotifications';
+import Button from '@/components/Button';
+import Card from '@/components/Card';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { abonnerGate, gateEstOuverte } from '@/components/push/fileNotifications';
+import { invitationDejaVue, marquerInvitationVue } from '@/components/push/preferencesPush';
+import { activerNotifications, estSupporte, lireEtatPermission } from '@/components/push/usePushNotifications';
 
 export default function ModaleActivationPush() {
   const { t, language } = useLanguage();

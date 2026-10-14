@@ -2,24 +2,24 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, RefreshControl, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import ScreenShell from '../../../components/ScreenShell';
-import Button from '../../../components/Button';
-import Card from '../../../components/Card';
-import Label from '../../../components/Label';
-import { YearSelector, GoalLineCard, GoalEmptyState } from '../../../components/GoalCards';
-import UnitMembersAggregate from '../../../components/UnitMembersAggregate';
-import { colors, fonts } from '../../../theme';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useLanguage } from '../../../contexts/LanguageContext';
-import { goalName } from '../../../utils/goalName';
-import { hasGoalsAccess, hasPerimeterView, isSubCoordinatorLeader } from '../../../services/authApi';
-import { useGoalsData } from '../../../hooks/useGoalsData';
+import ScreenShell from '@/components/ScreenShell';
+import Button from '@/components/Button';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import { YearSelector, GoalLineCard, GoalEmptyState } from '@/components/GoalCards';
+import UnitMembersAggregate from '@/components/UnitMembersAggregate';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { goalName } from '@/utils/goalName';
+import { hasGoalsAccess, hasPerimeterView, isSubCoordinatorLeader } from '@/services/authApi';
+import { useGoalsData } from '@/hooks/useGoalsData';
 import {
   getMyAssemblyGoal,
   type ActiveGoal,
   type MyAssemblyGoalResponse,
-} from '../../../services/goalsApi';
-import { fmtDate, fmtAmount } from '../../../utils/format';
+} from '@/services/goalsApi';
+import { fmtDate, fmtAmount } from '@/utils/format';
 
 /**
  * « Mes objectifs » — l'écran de TOUT LE MONDE depuis le chantier du 16/08.

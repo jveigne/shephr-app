@@ -14,7 +14,7 @@
  * qui tourne sans `useAuth()`. Une seule source de vérité pour le jeton, pas un second
  * mécanisme d'authentification.
  */
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 
 /**
  * Les catégories réglables par l'utilisateur de Shephr, chacune avec son interrupteur.

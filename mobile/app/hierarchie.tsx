@@ -8,36 +8,36 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { goBack } from '../utils/navigation';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ScreenShell from '../components/ScreenShell';
-import Card from '../components/Card';
-import { colors, fonts } from '../theme';
-import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
-import { canManageUsers, isSubCoordinatorLeader, MODULE_ROLE_LABELS } from '../services/authApi';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { canManageUsers, isSubCoordinatorLeader, MODULE_ROLE_LABELS } from '@/services/authApi';
 import {
   getActiveGoal,
   getMyPerimeterAggregate,
   type ActiveGoal,
   type AggregateLine,
-} from '../services/goalsApi';
-import { goalName } from '../utils/goalName';
-import { fmtAmount } from '../utils/format';
+} from '@/services/goalsApi';
+import { goalName } from '@/utils/goalName';
+import { fmtAmount } from '@/utils/format';
 import {
   fetchLeaderHierarchy,
   type HierarchyUnitView,
   type LeaderHierarchyNode,
   type LeaderHierarchyResponse,
-} from '../services/leadersApi';
+} from '@/services/leadersApi';
 import {
   AssemblyStatsBlock,
   LeaderAssemblySummary,
   UnitAssemblyLine,
   useAssemblyHierarchyStats,
   type AssemblyStatsState,
-} from '../components/AssemblyHierarchyStats';
+} from '@/components/AssemblyHierarchyStats';
 
 /**
  * Hiérarchie des dirigeants (Lot H3 — 21/07) : arbre du leadership renvoyé par le backend,

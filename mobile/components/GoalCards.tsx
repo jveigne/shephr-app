@@ -1,19 +1,19 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { router } from 'expo-router';
-import { goBack } from '../utils/navigation';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from './ScreenShell';
-import Card from './Card';
-import Label from './Label';
-import Button from './Button';
-import HandDivider from './HandDivider';
-import { colors, fonts } from '../theme';
-import { useLanguage } from '../contexts/LanguageContext';
-import { goalName } from '../utils/goalName';
-import { goalCategoryMeta } from '../constants/goalCategories';
-import { fmtAmount } from '../utils/format';
-import type { GoalLine } from '../hooks/useGoalsData';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Button from '@/components/Button';
+import HandDivider from '@/components/HandDivider';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { goalName } from '@/utils/goalName';
+import { goalCategoryMeta } from '@/constants/goalCategories';
+import { fmtAmount } from '@/utils/format';
+import type { GoalLine } from '@/hooks/useGoalsData';
 
 /**
  * Primitives partagées des écrans Objectifs.

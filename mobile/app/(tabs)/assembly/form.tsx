@@ -2,16 +2,16 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Switch } from 'react-native';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from '../../../components/ScreenShell';
-import Card from '../../../components/Card';
-import Label from '../../../components/Label';
-import Button from '../../../components/Button';
-import Chip from '../../../components/Chip';
-import ErrorBanner from '../../../components/ErrorBanner';
-import MeetingReportCard from '../../../components/MeetingReportCard';
-import { DatePickerModal } from '../../../components/DeclarationForm';
-import { colors, fonts, radii } from '../../../theme';
-import { useLanguage } from '../../../contexts/LanguageContext';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Button from '@/components/Button';
+import Chip from '@/components/Chip';
+import ErrorBanner from '@/components/ErrorBanner';
+import MeetingReportCard from '@/components/MeetingReportCard';
+import { DatePickerModal } from '@/components/DeclarationForm';
+import { colors, fonts, radii } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   ASSEMBLY_ERROR_CODES,
   createMeeting,
@@ -25,8 +25,8 @@ import {
   type TeachingChapter,
   type TeachingModule,
   type TeachingPart,
-} from '../../../services/assemblyApi';
-import { fmtIsoDay, type MeetingReportInput } from '../../../utils/meetingReport';
+} from '@/services/assemblyApi';
+import { fmtIsoDay, type MeetingReportInput } from '@/utils/meetingReport';
 
 /** Parties portées par des chapitres (module désactivé reconstitué à partir d'un CR), dans l'ordre. */
 function partsOf(chapters: TeachingChapter[]): TeachingPart[] {
@@ -38,8 +38,8 @@ function partsOf(chapters: TeachingChapter[]): TeachingPart[] {
   }
   return Array.from(byId.values());
 }
-import { parseLocalDate, toLocalDate } from '../../../utils/format';
-import { notify } from '../../../utils/dialogs';
+import { parseLocalDate, toLocalDate } from '@/utils/format';
+import { notify } from '@/utils/dialogs';
 
 interface Person {
   userId: string;

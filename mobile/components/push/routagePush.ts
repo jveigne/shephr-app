@@ -19,11 +19,11 @@
 import { useCallback } from 'react';
 import { router, type Href } from 'expo-router';
 
-import { useAuth } from '../../contexts/AuthContext';
-import { hasMemberGoals } from '../../services/authApi';
-import { getUnreadNotifications } from '../../services/notificationsApi';
-import type { DonneesPush } from '../../services/pushApi';
-import { rechargerFileNotifications } from './fileNotifications';
+import { useAuth } from '@/contexts/AuthContext';
+import { hasMemberGoals } from '@/services/authApi';
+import { getUnreadNotifications } from '@/services/notificationsApi';
+import type { DonneesPush } from '@/services/pushApi';
+import { rechargerFileNotifications } from '@/components/push/fileNotifications';
 
 /**
  * Sources de `UserNotification` qui méritent une destination.

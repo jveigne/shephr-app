@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Card from './Card';
-import Label from './Label';
-import HandDivider from './HandDivider';
-import ErrorBanner from './ErrorBanner';
-import { colors, fonts } from '../theme';
-import { useLanguage } from '../contexts/LanguageContext';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import HandDivider from '@/components/HandDivider';
+import ErrorBanner from '@/components/ErrorBanner';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getEventStats,
   type ChildStats,
@@ -15,16 +15,18 @@ import {
   type StatsLevel,
   type StatsScope,
   type StatsTotals,
-} from '../services/eventsApi';
-import { eventActionMessage, eventErrorCode } from '../utils/eventErrors';
-import { fmtMonth, isEnglishLang, typeLabel } from '../utils/events';
-import { notify } from '../utils/dialogs';
-import type { Translate } from '../utils/meetingReport';
+} from '@/services/eventsApi';
+import { eventActionMessage, eventErrorCode } from '@/utils/eventErrors';
+import { fmtMonth, isEnglishLang, typeLabel } from '@/utils/events';
+import { notify } from '@/utils/dialogs';
+import type { Translate } from '@/utils/meetingReport';
 
 /**
  * Lot E7 (plan 14/10, §6.3) — STATISTIQUES D'ÉVANGÉLISATION avec descente Nation → Région →
  * Ville → Assemblée, en cartes par sous-niveau (pattern `GoalAggregates`). D-EVT-09 : c'est
- * l'écran du secrétariat ; il sert aussi chaque dirigeant sur son périmètre (D-EVT-07).
+ * l'écran du secrétariat ; il sert aussi chaque dirigeant sur son périmètre (D-EVT-07). Jamais le
+ * simple membre (D-EVT-14, JP 14/10 : pas de descente) — sa vue (`EventMemberView`) ne lit que le
+ * compteur de son assemblée.
  *
  * <ul>
  *   <li>Racine = `/stats` sans nœud : mon périmètre le plus large (sa nation, sa ville… ou le

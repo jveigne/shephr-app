@@ -10,25 +10,25 @@ import {
   Platform,
 } from 'react-native';
 
-import { goBack } from '../utils/navigation';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ScreenShell from '../components/ScreenShell';
-import Card from '../components/Card';
-import Label from '../components/Label';
-import Field from '../components/Field';
-import Button from '../components/Button';
-import { colors, fonts } from '../theme';
-import { useLanguage } from '../contexts/LanguageContext';
-import { notify } from '../utils/dialogs';
-import { MODULE_ROLE_LABELS } from '../services/authApi';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Field from '@/components/Field';
+import Button from '@/components/Button';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { notify } from '@/utils/dialogs';
+import { MODULE_ROLE_LABELS } from '@/services/authApi';
 import {
   declareMySupervisor,
   fetchMyDiscipleship,
   searchSupervisorCandidates,
   type DiscipleshipPerson,
   type MyDiscipleshipResponse,
-} from '../services/leadersApi';
+} from '@/services/leadersApi';
 
 /**
  * Faiseur de disciple (28/07) : chacun — du simple fidèle au coordinateur — déclare QUI

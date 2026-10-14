@@ -27,8 +27,8 @@ import {
 //   - `declare` : déclaration terrain (spec §4.2), créée directement en DONE (RG-ACT-04). Doit se
 //     remplir en < 20 s : type en chips, date = aujourd'hui, bandeau du nœud de rattachement
 //     (RG-EVT-02) — sélecteur seulement s'il y a plusieurs nœuds possibles (spec §4.3) ;
-//   - `plan`    : programmation d'un évènement PLANNED par un dirigeant (D-EVT-08, RG-EVT-03),
-//     date future autorisée, participants / âmes saisis à la clôture (D-EVT-02) ;
+//   - `plan`    : programmation d'un évènement PLANNED (RG-EVT-03) — D-EVT-13 (JP 14/10) : par
+//     tout compte qui déclare, membre compris, aux mêmes nœuds (`canPlan`) ; date future autorisée, participants / âmes saisis à la clôture (D-EVT-02) ;
 //   - `edit`    : PATCH = remplacement complet (contrat §3.7) — tous les champs sont renvoyés.
 //  Le serveur revalide tout (nœud, type, dates) : les contrôles d'ici évitent un aller-retour,
 //  ils ne remplacent pas les siens.

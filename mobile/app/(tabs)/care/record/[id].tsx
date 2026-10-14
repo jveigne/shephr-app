@@ -1,16 +1,16 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { goBack } from '../../../../utils/navigation';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from '../../../../components/ScreenShell';
-import Card from '../../../../components/Card';
-import Label from '../../../../components/Label';
-import Field from '../../../../components/Field';
-import Button from '../../../../components/Button';
-import Chip from '../../../../components/Chip';
-import { colors, fonts } from '../../../../theme';
-import { useLanguage } from '../../../../contexts/LanguageContext';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Field from '@/components/Field';
+import Button from '@/components/Button';
+import Chip from '@/components/Chip';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   changeStatus,
   getRecord,
@@ -18,10 +18,10 @@ import {
   updateNote,
   type MemberCareStatus,
   type MemberRecordDetail,
-} from '../../../../services/memberCareApi';
-import { notify } from '../../../../utils/dialogs';
-import { fmtDateLong } from '../../../../utils/format';
-import { fmtIsoDay } from '../../../../utils/meetingReport';
+} from '@/services/memberCareApi';
+import { notify } from '@/utils/dialogs';
+import { fmtDateLong } from '@/utils/format';
+import { fmtIsoDay } from '@/utils/meetingReport';
 
 /** Nombre de présences affichées avant « Tout afficher ». */
 const ATTENDANCE_PREVIEW = 8;

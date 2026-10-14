@@ -14,8 +14,8 @@ import {
   type MeResponse,
   type RegisterRequest,
   type UserDTO,
-} from '../services/authApi';
-import { getAuthToken, setAuthToken } from '../services/apiClient';
+} from '@/services/authApi';
+import { getAuthToken, setAuthToken } from '@/services/apiClient';
 import {
   cacheMe,
   cacheModules,
@@ -23,10 +23,10 @@ import {
   isAuthRefusal,
   isTransientFailure,
   readCachedSession,
-} from '../services/sessionCache';
-import { resetDonationCategoriesCache } from '../hooks/useDonationCategories';
-import { claimEventCatalog } from '../hooks/useEventCatalog';
-import { claimEventQueue, isOnline, releaseEventQueue } from '../services/eventQueue';
+} from '@/services/sessionCache';
+import { resetDonationCategoriesCache } from '@/hooks/useDonationCategories';
+import { claimEventCatalog } from '@/hooks/useEventCatalog';
+import { claimEventQueue, isOnline, releaseEventQueue } from '@/services/eventQueue';
 
 interface AuthState {
   ready: boolean;

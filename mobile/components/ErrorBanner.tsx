@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts, radii } from '../theme';
-import { useLanguage } from '../contexts/LanguageContext';
+import { colors, fonts, radii } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * Bandeau d'échec explicite — Lot T4 (14/09).

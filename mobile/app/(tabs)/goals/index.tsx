@@ -1,7 +1,7 @@
 import React from 'react';
 import { Redirect } from 'expo-router';
-import { useAuth } from '../../../contexts/AuthContext';
-import PerimeterScreen from './perimeter';
+import { useAuth } from '@/contexts/AuthContext';
+import PerimeterScreen from '@/app/(tabs)/goals/perimeter';
 
 /**
  * Aiguillage de l'onglet Objectifs.

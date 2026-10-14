@@ -73,7 +73,8 @@ export function App() {
                 <Route path="/my-goals" element={<MemberGoalsPage />} />
                 {/* D-ASM-17 (JP 25/09) — CR et avancement de son assemblée, en lecture seule. */}
                 {FEATURES.assembly && <Route path="/my-assembly" element={<AssemblyPage />} />}
-                {/* Lot E8 (§6.2 du plan du 14/10) — déclarer et retrouver ses actions d'évangélisation. */}
+                {/* Lot E8 (§6.2 du plan du 14/10) — D-EVT-14 (JP 14/10) : vue dédiée du membre, les actions
+                    de SON assemblée seulement (compteur, programmés, réalisés, Déclarer / Programmer). */}
                 {FEATURES.events && <Route path="/my-actions" element={<MyActionsPage />} />}
                 <Route path="/member-settings" element={<SettingsPage />} />
                 <Route path="/member-contact" element={<ContactPage />} />

@@ -34,16 +34,16 @@ import {
   type AppStateStatus,
 } from 'react-native';
 
-import { goBack } from '../utils/navigation';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 
-import ScreenShell from '../components/ScreenShell';
-import Card from '../components/Card';
-import Button from '../components/Button';
-import { colors, fonts } from '../theme';
-import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
-import { TOUT_ACTIVE, ecrirePreferences, lirePreferences } from '../components/push/preferencesPush';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Button from '@/components/Button';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { TOUT_ACTIVE, ecrirePreferences, lirePreferences } from '@/components/push/preferencesPush';
 import {
   activerNotifications,
   estSupporte,
@@ -51,8 +51,8 @@ import {
   synchroniserAppareil,
   type EtatPermissionPush,
   type EtatPush,
-} from '../components/push/usePushNotifications';
-import type { CategoriePush, PreferencesPush } from '../services/pushApi';
+} from '@/components/push/usePushNotifications';
+import type { CategoriePush, PreferencesPush } from '@/services/pushApi';
 
 /**
  * Ordre d'affichage. « Rappels » d'abord : c'est la catégorie pour laquelle Shephr envoie

@@ -8,7 +8,7 @@ import {
   type GoalCategory,
   type PledgeResponse,
   type ProgressResponse,
-} from '../services/goalsApi';
+} from '@/services/goalsApi';
 
 export type GoalsError = 'NO_GOAL' | 'NO_UNIT' | 'OTHER' | null;
 

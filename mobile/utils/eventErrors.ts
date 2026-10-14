@@ -1,4 +1,4 @@
-import { EVENT_ERROR_CODES } from '../services/eventsApi';
+import { EVENT_ERROR_CODES } from '@/services/eventsApi';
 
 /**
  * Lot E6 (plan 14/10) — refus d'une déclaration d'action, sous une forme qui SE CONSERVE.

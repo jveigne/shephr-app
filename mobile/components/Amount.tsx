@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, View, StyleProp, TextStyle } from 'react-native';
-import { colors, fonts } from '../theme';
-import { currencySymbol } from '../utils/format';
+import { colors, fonts } from '@/theme';
+import { currencySymbol } from '@/utils/format';
 
 interface Props {
   value: number;

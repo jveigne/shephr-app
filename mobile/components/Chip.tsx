@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import { Pressable, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
-import { colors, fonts } from '../theme';
+import { colors, fonts } from '@/theme';
 
 interface Props {
   label: string;

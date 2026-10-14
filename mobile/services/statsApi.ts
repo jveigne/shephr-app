@@ -1,8 +1,8 @@
 import { Platform } from 'react-native';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { apiClient } from './apiClient';
-import type { DeclarationStatus } from './donationApi';
+import { apiClient } from '@/services/apiClient';
+import type { DeclarationStatus } from '@/services/donationApi';
 
 export interface CurrencyTotal {
   currency: string;

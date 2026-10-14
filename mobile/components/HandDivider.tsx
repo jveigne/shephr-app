@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleProp, ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors } from '../theme';
+import { colors } from '@/theme';
 
 interface Props {
   width?: number | `${number}%`;

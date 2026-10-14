@@ -1,5 +1,5 @@
-import { apiClient } from './apiClient';
-import type { ModuleRole } from './authApi';
+import { apiClient } from '@/services/apiClient';
+import type { ModuleRole } from '@/services/authApi';
 
 // Hiérarchie des dirigeants (Lot H3 — 21/07) : GET /api/church/leaders/hierarchy.
 // Contenu adapté au rôle côté serveur : SUBTREE (dirigeant : son sous-arbre), CHAIN (membre :

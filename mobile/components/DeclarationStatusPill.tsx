@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts } from '../theme';
-import { useLanguage } from '../contexts/LanguageContext';
-import type { DeclarationStatus } from '../services/donationApi';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import type { DeclarationStatus } from '@/services/donationApi';
 
 /**
  * Lot T7 (décision J-1, JP 14/09) — pastille de statut d'une déclaration.

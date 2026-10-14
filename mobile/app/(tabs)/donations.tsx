@@ -2,22 +2,22 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from '../../components/ScreenShell';
-import Card from '../../components/Card';
-import Chip from '../../components/Chip';
-import Label from '../../components/Label';
-import Amount from '../../components/Amount';
-import ErrorBanner from '../../components/ErrorBanner';
-import DeclarationStatusPill from '../../components/DeclarationStatusPill';
-import { colors, fonts } from '../../theme';
-import { useDonationCategories } from '../../hooks/useDonationCategories';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Chip from '@/components/Chip';
+import Label from '@/components/Label';
+import Amount from '@/components/Amount';
+import ErrorBanner from '@/components/ErrorBanner';
+import DeclarationStatusPill from '@/components/DeclarationStatusPill';
+import { colors, fonts } from '@/theme';
+import { useDonationCategories } from '@/hooks/useDonationCategories';
 import {
   listDeclarations,
   type DeclarationResponse,
   type DeclarationStatus,
-} from '../../services/donationApi';
-import { fmtAmount, fmtDate, monthLabel, parseLocalDate, toLocalDate } from '../../utils/format';
-import { useLanguage } from '../../contexts/LanguageContext';
+} from '@/services/donationApi';
+import { fmtAmount, fmtDate, monthLabel, parseLocalDate, toLocalDate } from '@/utils/format';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * Lot T7 (décision J-1, JP 14/09) — « MES DÉCLARATIONS ».

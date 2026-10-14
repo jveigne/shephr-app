@@ -11,22 +11,22 @@ import {
   TextInput,
 } from 'react-native';
 import { router } from 'expo-router';
-import { goBack } from '../../utils/navigation';
+import { goBack } from '@/utils/navigation';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Card from '../../components/Card';
-import Field from '../../components/Field';
-import Label from '../../components/Label';
-import Button from '../../components/Button';
-import Wordmark from '../../components/Wordmark';
-import { colors, fonts } from '../../theme';
-import { useAuth } from '../../contexts/AuthContext';
-import { useLanguage } from '../../contexts/LanguageContext';
-import { notify } from '../../utils/dialogs';
-import i18n from '../../utils/i18n/i18n';
-import { flagEmoji, sortedDialCountries, type DialCountry } from '../../constants/dialCodes';
-import type { MeResponse } from '../../services/authApi';
+import Card from '@/components/Card';
+import Field from '@/components/Field';
+import Label from '@/components/Label';
+import Button from '@/components/Button';
+import Wordmark from '@/components/Wordmark';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { notify } from '@/utils/dialogs';
+import i18n from '@/utils/i18n/i18n';
+import { flagEmoji, sortedDialCountries, type DialCountry } from '@/constants/dialCodes';
+import type { MeResponse } from '@/services/authApi';
 
 /**
  * Inscription — écran unique : identité, email, téléphone (RG-ID-04/05), mot de passe confirmé.

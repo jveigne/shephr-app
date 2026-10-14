@@ -11,16 +11,16 @@ import { router } from 'expo-router';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Wordmark from '../../components/Wordmark';
-import LangSwitch from '../../components/LangSwitch';
-import Card from '../../components/Card';
-import Field from '../../components/Field';
-import Label from '../../components/Label';
-import Button from '../../components/Button';
-import { colors, fonts } from '../../theme';
-import { notify } from '../../utils/dialogs';
-import { useAuth } from '../../contexts/AuthContext';
-import { useLanguage } from '../../contexts/LanguageContext';
+import Wordmark from '@/components/Wordmark';
+import LangSwitch from '@/components/LangSwitch';
+import Card from '@/components/Card';
+import Field from '@/components/Field';
+import Label from '@/components/Label';
+import Button from '@/components/Button';
+import { colors, fonts } from '@/theme';
+import { notify } from '@/utils/dialogs';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();

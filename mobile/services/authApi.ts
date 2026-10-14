@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 
 // Real role model exposed by the backend (ModuleRole + superAdmin).
 // Lot 3.5 : DIRIGEANT_LEADER renommé DIRIGEANT_SENIOR + nouveau DIRIGEANT_UNITE (aligné backend/web).
@@ -206,7 +206,10 @@ export function isTreasurerRole(me: MeResponse | null): boolean {
  * Plan 14/10 (§6.3, RG-ACT-01) — tuile « Déclarer une action » : compte RATTACHÉ, c'est-à-dire
  * membre d'une assemblée (`goalUnitId`), dirigeant (son périmètre), viewer ministère-large
  * (LEADER / SECRETARIAT déclarent sur tout le ministère, [HYPOTHÈSE] RG-EVT-02) ou superAdmin.
- * Miroir de `EventPerimeters.declare` côté backend. Ce n'est qu'un filtre d'affichage : la vérité
+ * Miroir de `EventPerimeters.declare` côté backend. D-EVT-13 (JP 14/10) : programmer = déclarer, et
+ * l'assemblée principale rejoint la lecture — ce sont donc aussi les comptes qui voient l'onglet
+ * « Évènements » (D-EVT-14 : agenda et statistiques si `isLeaderRole`, sinon la vue de son
+ * assemblée). Ce n'est qu'un filtre d'affichage : la vérité
  * est `GET /api/church/events/me/scopes` (`canDeclare`), que l'écran de saisie lit et respecte —
  * un dirigeant sans aucun nœud y voit un état vide explicite, jamais un formulaire voué au 403.
  */

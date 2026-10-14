@@ -23,11 +23,11 @@
  */
 import React, { useEffect, useRef } from 'react';
 
-import { useAuth } from '../../contexts/AuthContext';
-import { useLanguage } from '../../contexts/LanguageContext';
-import ModaleActivationPush from './ModaleActivationPush';
-import { useRouteurPush } from './routagePush';
-import { oublierAppareil, usePushNotifications } from './usePushNotifications';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import ModaleActivationPush from '@/components/push/ModaleActivationPush';
+import { useRouteurPush } from '@/components/push/routagePush';
+import { oublierAppareil, usePushNotifications } from '@/components/push/usePushNotifications';
 
 export default function PushBridge() {
   const { ready, token, me } = useAuth();

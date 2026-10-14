@@ -1577,13 +1577,31 @@
       "noScopeHint": "You must belong to an assembly to report an action."
     },
     "mine": {
-      "pageTitle": "My actions",
       "title": "My actions",
       "sub": "What you have reported or planned, most recent first.",
       "thisMonth": "Counted · {{month}}",
       "thisYear": "Counted · {{year}}",
       "empty": "No action yet",
-      "emptyHint": "Your reports will appear here as soon as they are recorded."
+      "emptyHint": "Your reports and planned events will appear here as soon as they are recorded."
+    },
+    "member": {
+      "title": "My actions",
+      "assembly": "My assembly",
+      "counterSub": "Evangelism actions of your assembly, counted as soon as they are reported.",
+      "thisMonth": "This month · {{month}}",
+      "thisYear": "This year · {{year}}",
+      "mine": "Me",
+      "planned": "Planned",
+      "plannedSub": "Upcoming events of your assembly, soonest first.",
+      "plannedEmpty": "No event planned in your assembly.",
+      "plannedEmptyPlanner": "No event planned in your assembly. Use “Plan” to add one.",
+      "done": "Evangelism actions",
+      "doneSub": "Carried out in your assembly, most recent first.",
+      "doneEmpty": "No evangelism action reported in your assembly yet.",
+      "doneEmptyDeclarer": "No evangelism action reported in your assembly yet. Use “Report” to record yours.",
+      "all": "All my actions",
+      "allSub": "What you have reported or planned, all statuses and types — including those to close and cancelled ones.",
+      "allEmpty": "You have not reported or planned anything yet."
     },
     "agenda": {
       "node": "Level",
@@ -1680,7 +1698,7 @@
       "colParticipants": "Participants",
       "colSouls": "Souls",
       "noType": "No evangelistic type is configured.",
-      "noPerimeter": "Statistics are reserved for leaders of a perimeter (assembly, city, region, nation) and for the secretariat.",
+      "noPerimeter": "Statistics cover your perimeter: you must belong to an assembly, or lead a city, a region or a nation.",
       "nodeGone": "This level is no longer accessible"
     },
     "errors": {

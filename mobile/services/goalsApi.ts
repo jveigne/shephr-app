@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 
 // Mirrors com.excellence.back.goals.* DTOs.
 //

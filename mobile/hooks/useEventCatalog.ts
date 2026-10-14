@@ -6,8 +6,8 @@ import {
   listEventTypes,
   type EventScopesResponse,
   type EventTypeDto,
-} from '../services/eventsApi';
-import { useLanguage } from '../contexts/LanguageContext';
+} from '@/services/eventsApi';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * Lot E6 (plan 14/10, §6.3) — CATALOGUE DE SAISIE D'UNE ACTION : types (`GET /types`) et nœuds
