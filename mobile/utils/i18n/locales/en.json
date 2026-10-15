@@ -87,7 +87,20 @@
     "footer": "shephr · The management platform for your ministry",
     "invalidCredentials": "Check your credentials.",
     "checkEmailPassword": "Check your email address and password.",
-    "loginFailedTitle": "Sign-in failed"
+    "loginFailedTitle": "Sign-in failed",
+    "social": {
+      "continueWithGoogle": "Continue with Google",
+      "or": "or",
+      "errors": {
+        "INVALID_TOKEN": "The sign-in could not be verified. Please try again.",
+        "EMAIL_NOT_VERIFIED": "The email address of this Google account is not verified. Verify it with Google, or sign in with your password.",
+        "PRIVILEGED_ACCOUNT_REQUIRES_PASSWORD": "This account has management rights: for security, sign in with your username and password.",
+        "ACCOUNT_DISABLED": "This account is disabled or being deleted.",
+        "PROVIDER_NOT_CONFIGURED": "This sign-in method is not available yet. Use your username and password.",
+        "PLAY_SERVICES_NOT_AVAILABLE": "Google Play services are unavailable or need updating on this device.",
+        "generic": "Sign-in failed. Please try again."
+      }
+    }
   },
   "signup": {
     "title1": "Create your account",

@@ -21,6 +21,21 @@ import { colors, fonts } from '@/theme';
 import { notify } from '@/utils/dialogs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import SocialSignInButtons from '@/components/auth/SocialSignInButtons';
+import type { MeResponse } from '@/services/authApi';
+
+/** Après toute connexion (mot de passe, Google, Apple) : même routage. */
+function goAfterLogin(me: MeResponse | null) {
+  // Feature B : sans AUCUN rattachement ni rôle → parcours de rattachement.
+  const unattached =
+    !!me &&
+    !me.superAdmin &&
+    !me.goalRole &&
+    !me.donationRole &&
+    !me.goalUnitId &&
+    !me.donationUnitId;
+  router.replace(unattached ? '/(auth)/join' : '/(tabs)/home');
+}
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -38,15 +53,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const me = await login({ identifier: email.trim(), password });
-      // Feature B : sans AUCUN rattachement ni rôle → parcours de rattachement.
-      const unattached =
-        !!me &&
-        !me.superAdmin &&
-        !me.goalRole &&
-        !me.donationRole &&
-        !me.goalUnitId &&
-        !me.donationUnitId;
-      router.replace(unattached ? '/(auth)/join' : '/(tabs)/home');
+      goAfterLogin(me);
     } catch (e: any) {
       // Sans e.response, la requête n'a pas atteint le backend (URL/réseau), ce n'est pas un 401.
       const msg = e?.response
@@ -82,6 +89,9 @@ export default function LoginScreen() {
           <Card style={styles.card}>
             <Label style={{ marginBottom: 6 }}>{t('auth.welcome')}</Label>
             <Text style={styles.heading}>{t('auth.loginTitle')}</Text>
+
+            {/* Apple (iOS) puis Google, au-dessus du formulaire ; rien sur web. */}
+            <SocialSignInButtons onSignedIn={goAfterLogin} disabled={loading} />
 
             <View style={{ gap: 12 }}>
               <View>

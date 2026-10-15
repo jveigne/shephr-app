@@ -25,6 +25,7 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import PushBridge from '@/components/push/PushBridge';
 import EventQueueSync from '@/components/EventQueueSync';
 import { loadContactSettings } from '@/services/contactApi';
+import { configureGoogleSignIn } from '@/services/socialSignIn';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -56,6 +57,10 @@ export default function RootLayout() {
   // Coordonnées de support pilotées depuis le back-office : on les récupère au démarrage.
   // L'appel ne bloque PAS l'ouverture de l'app — en cas d'échec, le repli codé en dur sert.
   useEffect(() => { void loadContactSettings(); }, []);
+
+  // Connexion Google : le SDK se configure une fois au démarrage (rien sur web, ni tant que les
+  // client IDs de `app.json` sont les valeurs factices REMPLACER_...).
+  useEffect(() => { configureGoogleSignIn(); }, []);
 
   useEffect(() => {
     if (appReady && fontsLoaded) {

@@ -27,6 +27,16 @@ import {
 import { resetDonationCategoriesCache } from '@/hooks/useDonationCategories';
 import { claimEventCatalog } from '@/hooks/useEventCatalog';
 import { claimEventQueue, isOnline, releaseEventQueue } from '@/services/eventQueue';
+import { loginWithAppleToken, loginWithGoogleToken } from '@/services/socialAuthApi';
+import { getAppleCredential, getGoogleIdToken, googleSignOut } from '@/services/socialSignIn';
+
+/**
+ * Issue d'une connexion Google / Apple : `cancelled` quand la personne a fermé la feuille du
+ * fournisseur (aucune alerte à afficher), sinon le profil chargé comme pour `login`.
+ */
+export type SocialLoginResult =
+  | { status: 'cancelled' }
+  | { status: 'success'; me: MeResponse | null };
 
 interface AuthState {
   ready: boolean;
@@ -65,6 +75,10 @@ interface AuthContextValue extends AuthState {
   /** Renvoie le profil chargé (null si /me a échoué) — permet le routage post-login (Feature B). */
   login: (payload: LoginRequest) => Promise<MeResponse | null>;
   register: (payload: RegisterRequest) => Promise<void>;
+  /** Connexion simplifiée Google (iOS / Android) — `POST /api/auth/oauth/google`. */
+  loginWithGoogle: () => Promise<SocialLoginResult>;
+  /** Sign in with Apple (iOS) — `POST /api/auth/oauth/apple`. */
+  loginWithApple: () => Promise<SocialLoginResult>;
   /** Établit une session à partir d'une réponse d'auth (ex. activation par code — Lot 3.4). */
   establishSession: (res: AuthResponse) => Promise<void>;
   refreshMe: () => Promise<void>;
@@ -203,8 +217,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * Ouvre une session : la file des actions est détachée de la précédente et le cache de profil
    * vidé AVANT que le nouveau jeton ne soit posé — dès cet instant, `apiClient` envoie sous la
    * nouvelle identité (Lot E6, 14/10).
+   *
+   * Point d'entrée UNIQUE de toute connexion — mot de passe, inscription, Google, Apple : la
+   * réponse des endpoints OAuth est la même que celle de `/api/church/auth/login`, et tout ce qui
+   * suit une session (push via `PushBridge`, modules, file hors-ligne) réagit au jeton posé ici.
    */
-  const openSession = useCallback(async (res: AuthResponse): Promise<MeResponse | null> => {
+  const applySession = useCallback(async (res: AuthResponse): Promise<MeResponse | null> => {
     releaseEventQueue();
     await Promise.all([setAuthToken(res.token), clearCachedSession()]);
     let me: MeResponse | null = null;
@@ -222,22 +240,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(
-    async (payload: LoginRequest) => openSession(await loginRequest(payload)),
-    [openSession],
+    async (payload: LoginRequest) => applySession(await loginRequest(payload)),
+    [applySession],
   );
 
   const register = useCallback(
     async (payload: RegisterRequest) => {
-      await openSession(await registerRequest(payload));
+      await applySession(await registerRequest(payload));
     },
-    [openSession],
+    [applySession],
   );
+
+  const loginWithGoogle = useCallback(async (): Promise<SocialLoginResult> => {
+    const idToken = await getGoogleIdToken();
+    if (!idToken) return { status: 'cancelled' };
+    const me = await applySession(await loginWithGoogleToken(idToken));
+    return { status: 'success', me };
+  }, [applySession]);
+
+  const loginWithApple = useCallback(async (): Promise<SocialLoginResult> => {
+    const credential = await getAppleCredential();
+    if (!credential) return { status: 'cancelled' };
+    const me = await applySession(await loginWithAppleToken(credential));
+    return { status: 'success', me };
+  }, [applySession]);
 
   const establishSession = useCallback(
     async (res: AuthResponse) => {
-      await openSession(res);
+      await applySession(res);
     },
-    [openSession],
+    [applySession],
   );
 
   const logout = useCallback(async () => {
@@ -246,6 +278,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await Promise.all([setAuthToken(null), clearCachedSession()]);
     setMeStale(false);
     setState({ ready: true, token: null, user: null, me: null });
+    // Session Google du SDK : sans cela, l'appui suivant reprendrait le même compte sans
+    // proposer d'en choisir un autre. Jamais bloquant (try/catch interne, rien sur web).
+    void googleSignOut();
   }, []);
 
   // Revalidation d'une session servie par le cache : au retour du réseau, au retour au premier
@@ -305,6 +340,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     hasEvents: modules.includes('EVENTS'),
     login,
     register,
+    loginWithGoogle,
+    loginWithApple,
     establishSession,
     refreshMe,
     logout,

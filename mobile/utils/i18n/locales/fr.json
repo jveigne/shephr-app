@@ -87,7 +87,20 @@
     "footer": "shephr · La plateforme de gestion pour votre ministère",
     "invalidCredentials": "Vérifiez vos identifiants.",
     "checkEmailPassword": "Vérifiez votre adresse e-mail et votre mot de passe.",
-    "loginFailedTitle": "Connexion impossible"
+    "loginFailedTitle": "Connexion impossible",
+    "social": {
+      "continueWithGoogle": "Continuer avec Google",
+      "or": "ou",
+      "errors": {
+        "INVALID_TOKEN": "La connexion n'a pas pu être vérifiée. Veuillez réessayer.",
+        "EMAIL_NOT_VERIFIED": "L'adresse e-mail de ce compte Google n'est pas vérifiée. Vérifiez-la auprès de Google, ou connectez-vous avec votre mot de passe.",
+        "PRIVILEGED_ACCOUNT_REQUIRES_PASSWORD": "Ce compte a des droits de gestion : par sécurité, connectez-vous avec votre identifiant et votre mot de passe.",
+        "ACCOUNT_DISABLED": "Ce compte est désactivé ou en cours de suppression.",
+        "PROVIDER_NOT_CONFIGURED": "Cette méthode de connexion n'est pas encore disponible. Utilisez votre identifiant et votre mot de passe.",
+        "PLAY_SERVICES_NOT_AVAILABLE": "Les services Google Play sont indisponibles ou à mettre à jour sur cet appareil.",
+        "generic": "La connexion a échoué. Veuillez réessayer."
+      }
+    }
   },
   "signup": {
     "title1": "Créer votre compte",
