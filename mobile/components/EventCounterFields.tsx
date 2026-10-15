@@ -13,6 +13,10 @@ import { counterKeysFor, digitsOnly, type CounterDraft } from '@/utils/events';
  * restaurations et baptêmes pour un type ÉVANGÉLIQUE seulement. Tous facultatifs (RG-ACT-03) :
  * pavé numérique, chiffres seuls, vide = non renseigné — jamais un 0 implicite.
  *
+ * <p>D-EVT-17 (JP 14/10) : « Invités » suit « Participants », pour tout type, avec une aide courte
+ * (« dont personnes extérieures ») ; invités > participants s'annonce sous le champ
+ * (`guestsInvalid`, calculé par l'écran, qui bloque aussi son bouton d'enregistrement).
+ *
  * <p>Changer de type ne vide pas la saisie : elle réapparaît si l'on revient à un type
  * évangélique, et seuls les compteurs affichés sont envoyés (`filledCounters` / `replacedCounters`).
  */
@@ -20,12 +24,15 @@ export default function EventCounterFields({
   value,
   onChange,
   evangelism,
+  guestsInvalid = false,
   autoFocus = false,
 }: {
   value: CounterDraft;
   onChange: (next: CounterDraft) => void;
   /** Type évangélique : les trois compteurs D-EVT-15 s'ajoutent à « Participants ». */
   evangelism: boolean;
+  /** D-EVT-17 : invités > participants dans l'état résultant (`guestsExceedParticipants`). */
+  guestsInvalid?: boolean;
   /** Focus sur « Participants » à l'ouverture (clôture : c'est tout l'objet de l'écran). */
   autoFocus?: boolean;
 }) {
@@ -46,7 +53,14 @@ export default function EventCounterFields({
               selectTextOnFocus
               autoFocus={autoFocus && i === 0}
               accessibilityLabel={t(`events.declare.${key}`)}
+              style={key === 'guests' && guestsInvalid ? styles.invalid : undefined}
             />
+            {key === 'guests' &&
+              (guestsInvalid ? (
+                <Text style={styles.error}>{t('events.errors.EVENT_GUESTS_EXCEED_PARTICIPANTS')}</Text>
+              ) : (
+                <Text style={styles.fieldHint}>{t('events.declare.guestsHint')}</Text>
+              ))}
           </View>
         ))}
       </View>
@@ -58,8 +72,11 @@ export default function EventCounterFields({
 const styles = StyleSheet.create({
   section: { marginTop: 18 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 14 },
-  // Deux par ligne ; « Participants » seul (type non évangélique) garde la même largeur.
+  // Deux par ligne : « Participants » et « Invités » (D-EVT-17) ouvrent toujours la grille.
   cell: { width: '47%', flexGrow: 0 },
   label: { marginBottom: 8 },
+  invalid: { borderColor: colors.clay },
+  fieldHint: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3 },
+  error: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12, color: colors.clay },
   hint: { marginTop: 8, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, lineHeight: 17 },
 });

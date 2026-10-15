@@ -9,6 +9,7 @@ import Field from '@/components/Field';
 import ErrorBanner from '@/components/ErrorBanner';
 import SelectField from '@/components/SelectField';
 import EventCounterFields from '@/components/EventCounterFields';
+import EventPreacherField from '@/components/EventPreacherField';
 import { DatePickerModal } from '@/components/DeclarationForm';
 import { colors, fonts, radii } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -22,7 +23,16 @@ import {
 } from '@/services/eventsApi';
 import { newEventClientId } from '@/services/eventQueue';
 import { eventActionMessage } from '@/utils/eventErrors';
-import { counterDraft, isEnglishLang, replacedCounters, todayLocal, typeLabel } from '@/utils/events';
+import {
+  counterDraft,
+  filledPreacher,
+  guestsExceedParticipants,
+  isEnglishLang,
+  replacedCounters,
+  replacedPreacher,
+  todayLocal,
+  typeLabel,
+} from '@/utils/events';
 import { fmtIsoDay } from '@/utils/meetingReport';
 import { parseLocalDate, toLocalDate } from '@/utils/format';
 
@@ -40,6 +50,9 @@ import { parseLocalDate, toLocalDate } from '@/utils/format';
  *       (JP 14/10) : conversions / restaurations / baptêmes ne s'affichent que pour un type
  *       évangélique ; passer à un type qui ne l'est pas les efface (le serveur les remet à null).</li>
  * </ul>
+ * D-EVT-16 (JP 14/10) : le prédicateur suit la même règle — proposé pour un type évangélique
+ * seulement, dans les deux usages (on le connaît souvent dès la programmation), juste après le
+ * type et la date ; vers un type non évangélique, il est envoyé à null.
  * La déclaration terrain (DONE, file hors-ligne) a son propre écran : `app/events/declare`.
  * Programmer et modifier exigent le réseau (plan §6.3 : seules les déclarations passent par la
  * file). Le serveur revalide tout — nœud, type, dates : les contrôles d'ici évitent un aller-retour.
@@ -135,6 +148,7 @@ export default function EventForm({
     if (def && nodes.some((n) => scopeKey(n) === scopeKey(def))) return scopeKey(def);
     return nodes.length === 1 ? scopeKey(nodes[0]) : null;
   });
+  const [preacher, setPreacher] = useState(editing?.preacher ?? '');
   const [place, setPlace] = useState(editing?.place ?? '');
   const [counters, setCounters] = useState(() => counterDraft(editing));
   const [note, setNote] = useState(editing?.note ?? '');
@@ -150,7 +164,10 @@ export default function EventForm({
 
   const labelMissing = !!type?.requiresLabel && customLabel.trim() === '';
   const endBeforeStart = endDate != null && endDate < eventDate;
-  const canSubmit = !!type && !labelMissing && !endBeforeStart && !!target && !saving;
+  // D-EVT-17 (JP 14/10) : PATCH = remplacement complet, la saisie EST l'état résultant ; un
+  // programmé ne montre pas ses chiffres et renvoie ceux du serveur, déjà cohérents.
+  const guestsInvalid = isDone && guestsExceedParticipants(counters);
+  const canSubmit = !!type && !labelMissing && !endBeforeStart && !guestsInvalid && !!target && !saving;
 
   const submit = async () => {
     if (!canSubmit || !type || !target) return;
@@ -170,6 +187,7 @@ export default function EventForm({
           endDate,
           ...(moved ? { scopeLevel: target.level, scopeId: target.id } : {}),
           title: trimOrNull(title),
+          preacher: replacedPreacher(preacher, type.evangelism),
           place: trimOrNull(place),
           // Remplacement complet : un PLANNED renvoie ses chiffres tels quels (saisis à la clôture) ;
           // vers un type non évangélique, le serveur remet ses compteurs à null (D-EVT-15).
@@ -177,6 +195,7 @@ export default function EventForm({
             ? replacedCounters(counters, type.evangelism)
             : {
                 participants: editing.participants,
+                guests: editing.guests,
                 conversions: editing.conversions,
                 restorations: editing.restorations,
                 baptisms: editing.baptisms,
@@ -196,6 +215,7 @@ export default function EventForm({
           ...(label ? { customLabel: label } : {}),
           ...(endDate ? { endDate } : {}),
           ...(title.trim() ? { title: title.trim() } : {}),
+          ...filledPreacher(preacher, type.evangelism),
           ...(place.trim() ? { place: place.trim() } : {}),
           ...(note.trim() ? { note: note.trim() } : {}),
         });
@@ -281,6 +301,9 @@ export default function EventForm({
       )}
       {endBeforeStart && <Text style={styles.fieldHint}>{t('events.errors.EVENT_END_BEFORE_START')}</Text>}
 
+      {/* D-EVT-16 (JP 14/10) : prédicateur, juste après le type et la date (type évangélique) */}
+      <EventPreacherField value={preacher} onChange={setPreacher} evangelism={type?.evangelism ?? false} />
+
       {/* Rattachement : sélecteur seulement s'il y a un choix */}
       {scopeOptions.length > 1 && (
         <SelectField
@@ -313,7 +336,12 @@ export default function EventForm({
 
       {/* Chiffres : seulement pour un réalisé — un programmé les reçoit à sa clôture (D-EVT-02) */}
       {isDone && (
-        <EventCounterFields value={counters} onChange={setCounters} evangelism={type?.evangelism ?? false} />
+        <EventCounterFields
+          value={counters}
+          onChange={setCounters}
+          evangelism={type?.evangelism ?? false}
+          guestsInvalid={guestsInvalid}
+        />
       )}
 
       <View style={styles.section}>

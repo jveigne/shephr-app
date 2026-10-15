@@ -78,12 +78,22 @@ export interface EventCreateRequest {
   /** ≤ 200 */
   place?: string;
   participants?: number;
+  /**
+   * ≥ 0 — D-EVT-17 (JP 14/10) : invités, INCLUS dans les participants ; tout type. Si les deux
+   * sont renseignés, guests ≤ participants (422 EVENT_GUESTS_EXCEED_PARTICIPANTS sinon).
+   */
+  guests?: number;
   /** ≥ 0 — D-EVT-15 : type évangélique seulement, IGNORÉ (enregistré null) sinon. */
   conversions?: number;
   /** ≥ 0 — idem. */
   restorations?: number;
   /** ≥ 0 — idem. */
   baptisms?: number;
+  /**
+   * ≤ 120 (EventDtos.PREACHER_MAX) — D-EVT-16 (JP 14/10) : nom du prédicateur, texte libre
+   * facultatif ; type évangélique seulement, IGNORÉ (enregistré null) sinon.
+   */
+  preacher?: string;
   /** ≤ 280 */
   note?: string;
 }
@@ -109,10 +119,14 @@ export interface EventResponse {
   scopeName: string | null;
   place: string | null;
   participants: number | null;
+  /** D-EVT-17 (JP 14/10) — invités, inclus dans `participants` ; tout type. */
+  guests: number | null;
   /** D-EVT-15 (JP 14/10) — toujours null pour un type non évangélique. */
   conversions: number | null;
   restorations: number | null;
   baptisms: number | null;
+  /** D-EVT-16 (JP 14/10) — nom du prédicateur ; toujours null pour un type non évangélique. */
+  preacher: string | null;
   note: string | null;
   /** RG-ACT-07 : informatif, ne retire jamais du total. */
   toVerify: boolean;
@@ -174,6 +188,8 @@ export interface EventUpdateRequest {
   /** ≤ 200 */
   place: string | null;
   participants: number | null;
+  /** D-EVT-17 (JP 14/10) : tout type ; état résultant guests ≤ participants si les deux sont renseignés. */
+  guests: number | null;
   /**
    * D-EVT-15 : les compteurs suivent le `typeId` ENVOYÉ — vers un type non évangélique, le serveur
    * les remet à null (ignorés, pas refusés) ; revenir à un type évangélique ne les restaure pas.
@@ -181,6 +197,8 @@ export interface EventUpdateRequest {
   conversions: number | null;
   restorations: number | null;
   baptisms: number | null;
+  /** ≤ 120 — D-EVT-16 (JP 14/10) : suit le `typeId` envoyé, comme les compteurs (null hors évangélique). */
+  preacher: string | null;
   /** ≤ 280 */
   note: string | null;
 }
@@ -191,10 +209,17 @@ export interface EventUpdateRequest {
  */
 export interface EventDoneRequest {
   participants?: number;
+  /**
+   * D-EVT-17 (JP 14/10) : tout type. La règle guests ≤ participants porte sur l'état RÉSULTANT :
+   * un champ absent garde sa valeur stockée, c'est à elle que l'autre se compare.
+   */
+  guests?: number;
   /** D-EVT-15 : type évangélique seulement, ignorés sinon. */
   conversions?: number;
   restorations?: number;
   baptisms?: number;
+  /** ≤ 120 — D-EVT-16 (JP 14/10) : saisissable après coup ; '' l'efface. Type évangélique seulement. */
+  preacher?: string;
   /** ≤ 280 */
   note?: string;
 }
@@ -216,6 +241,8 @@ export interface StatsScope {
 export interface StatsTotals {
   count: number;
   participants: number;
+  /** D-EVT-17 (JP 14/10) : somme des invités (inclus dans `participants`). */
+  guests: number;
   conversions: number;
   restorations: number;
   baptisms: number;
@@ -293,6 +320,7 @@ export interface EventListParams {
  * Lot E7 : + EVENT_NOT_YET_HELD (« Marquer comme réalisé » avant la date, RG-EVT-05).
  * Revue E9 : + les 400 qualifiés INVALID_PERIOD / INVALID_SCOPE, comme le web — un refus
  * définitif de la file hors-ligne (§3.3) ou une période de statistiques refusée se lit traduit.
+ * D-EVT-17 (JP 14/10) : + EVENT_GUESTS_EXCEED_PARTICIPANTS (invités > participants).
  */
 export const EVENT_ERROR_CODES = [
   'EVENT_DATE_IN_FUTURE',
@@ -300,6 +328,7 @@ export const EVENT_ERROR_CODES = [
   'EVENT_LABEL_REQUIRED',
   'EVENT_TYPE_INACTIVE',
   'EVENT_END_BEFORE_START',
+  'EVENT_GUESTS_EXCEED_PARTICIPANTS',
   'EVENT_SCOPE_REQUIRED',
   'EVENT_INVALID_TRANSITION',
   'INVALID_PERIOD',

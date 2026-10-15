@@ -79,7 +79,17 @@ export interface EventCreateRequest {
   scopeId?: string | null;
   title?: string | null;
   place?: string | null;
+  /**
+   * D-EVT-16 (JP 14/10) : nom du prédicateur, texte libre ≤ 120 (`EventDtos.PREACHER_MAX`) ; trim,
+   * vide → null ; type évangélique seulement — ignoré (enregistré null) sinon.
+   */
+  preacher?: string | null;
   participants?: number | null;
+  /**
+   * D-EVT-17 (JP 14/10) : invités = part EXTÉRIEURE des participants (inclus dans `participants`),
+   * tout type ; ≤ `participants` quand les deux sont renseignés, sinon 422 EVENT_GUESTS_EXCEED_PARTICIPANTS.
+   */
+  guests?: number | null;
   /** D-EVT-15 (JP 14/10) : type évangélique seulement — ignorés (enregistrés null) sinon. */
   conversions?: number | null;
   restorations?: number | null;
@@ -100,7 +110,11 @@ export interface EventUpdateRequest {
   scopeId?: string | null;
   title: string | null;
   place: string | null;
+  /** D-EVT-16 (JP 14/10) : suit le `typeId` ENVOYÉ — remis à null vers un type non évangélique. */
+  preacher: string | null;
   participants: number | null;
+  /** D-EVT-17 (JP 14/10) : tout type ; contrôlé contre `participants` envoyé (422 EVENT_GUESTS_EXCEED_PARTICIPANTS). */
+  guests: number | null;
   /** D-EVT-15 : suivent le `typeId` ENVOYÉ — remis à null par le serveur vers un type non évangélique. */
   conversions: number | null;
   restorations: number | null;
@@ -110,7 +124,14 @@ export interface EventUpdateRequest {
 
 /** Mirrors com.excellence.back.events.EventDtos.EventDoneRequest — un champ absent GARDE sa valeur ; note "" l'efface. */
 export interface EventDoneRequest {
+  /** D-EVT-16 (JP 14/10) : saisissable après coup ; "" l'efface ; ignoré pour un type non évangélique. */
+  preacher?: string;
   participants?: number;
+  /**
+   * D-EVT-17 (JP 14/10) : tout type ; contrôlé sur l'état RÉSULTANT (valeur envoyée, sinon celle
+   * stockée) — 422 EVENT_GUESTS_EXCEED_PARTICIPANTS si invités > participants.
+   */
+  guests?: number;
   /** D-EVT-15 : ignorés pour un type non évangélique. */
   conversions?: number;
   restorations?: number;
@@ -137,7 +158,11 @@ export interface EventResponse {
   scopeId: string;
   scopeName: string | null;
   place: string | null;
+  /** D-EVT-16 (JP 14/10) : nom du prédicateur — toujours null pour un type non évangélique. */
+  preacher: string | null;
   participants: number | null;
+  /** D-EVT-17 (JP 14/10) : invités, inclus dans `participants` ; tout type. */
+  guests: number | null;
   /** D-EVT-15 (JP 14/10) : toujours null pour un type non évangélique. */
   conversions: number | null;
   restorations: number | null;
@@ -196,6 +221,8 @@ export interface StatsScope {
 export interface StatsTotals {
   count: number;
   participants: number;
+  /** D-EVT-17 (JP 14/10) : somme des invités, comme `participants`. */
+  guests: number;
   conversions: number;
   restorations: number;
   baptisms: number;

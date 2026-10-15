@@ -21,6 +21,7 @@ import Field from '@/components/Field';
 import ErrorBanner from '@/components/ErrorBanner';
 import SelectField from '@/components/SelectField';
 import EventCounterFields from '@/components/EventCounterFields';
+import EventPreacherField from '@/components/EventPreacherField';
 import { DatePickerModal } from '@/components/DeclarationForm';
 import { colors, fonts, radii } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -43,7 +44,7 @@ import {
 import { eventFailureMessage, toSendFailure } from '@/utils/eventErrors';
 import { fmtIsoDay } from '@/utils/meetingReport';
 import { toLocalDate } from '@/utils/format';
-import { counterDraft, filledCounters } from '@/utils/events';
+import { counterDraft, filledCounters, filledPreacher, guestsExceedParticipants } from '@/utils/events';
 import { notify } from '@/utils/dialogs';
 import { goBack } from '@/utils/navigation';
 
@@ -58,7 +59,8 @@ import { goBack } from '@/utils/navigation';
  *       qu'au serveur (422 EVENT_LABEL_REQUIRED) ;</li>
  *   <li>D-EVT-15 (JP 14/10) : conversions, restaurations et baptêmes ne s'affichent — et ne
  *       partent — que pour un type évangélique. Le drapeau `evangelism` vient du catalogue mis
- *       en cache (`useEventCatalog`) : la décision tient hors ligne ;</li>
+ *       en cache (`useEventCatalog`) : la décision tient hors ligne. D-EVT-16 (JP 14/10) : idem
+ *       pour le nom du prédicateur, facultatif mais placé juste après le type et la date ;</li>
  *   <li>RG-EVT-05 : une déclaration est créée RÉALISÉE (`DONE`, RG-ACT-04 : elle compte dès sa
  *       création) et ne peut donc pas être datée dans le futur — le calendrier s'arrête à
  *       aujourd'hui (défaut de `DatePickerModal`) ;</li>
@@ -127,6 +129,7 @@ export default function DeclareEventScreen() {
   const [customLabel, setCustomLabel] = useState('');
   const [date, setDate] = useState(() => new Date());
   const [dateOpen, setDateOpen] = useState(false);
+  const [preacher, setPreacher] = useState('');
   const [place, setPlace] = useState('');
   const [counters, setCounters] = useState(counterDraft);
   const [note, setNote] = useState('');
@@ -159,13 +162,17 @@ export default function DeclareEventScreen() {
   const pickedOption = target ? scopeOptions.find((o) => o.id === scopeKey(target)) ?? null : null;
 
   const labelMissing = !!selectedType?.requiresLabel && customLabel.trim() === '';
-  const canSubmit = !!selectedType && !labelMissing && !!target && !saving;
+  // D-EVT-17 (JP 14/10) : refusé avant envoi — une déclaration mise en file hors ligne ne doit
+  // jamais l'être plus tard par le serveur (422 EVENT_GUESTS_EXCEED_PARTICIPANTS).
+  const guestsInvalid = guestsExceedParticipants(counters);
+  const canSubmit = !!selectedType && !labelMissing && !guestsInvalid && !!target && !saving;
 
   const resetForm = () => {
     setClientId(newEventClientId());
     setTypeId(null);
     setCustomLabel('');
     setDate(new Date());
+    setPreacher('');
     setPlace('');
     setCounters(counterDraft());
     setNote('');
@@ -174,7 +181,7 @@ export default function DeclareEventScreen() {
   };
 
   const buildRequest = (): EventCreateRequest | null => {
-    if (!selectedType || !target) return null;
+    if (!selectedType || !target || guestsInvalid) return null;
     // Le nœud n'est envoyé que s'il a été CHOISI (ou s'il n'existe pas de défaut). Laisser le
     // serveur appliquer son défaut (RG-EVT-02) au moment de l'enregistrement évite qu'une
     // déclaration restée en file soit refusée en 403 — donc perdue — parce que son auteur a
@@ -187,6 +194,7 @@ export default function DeclareEventScreen() {
       status: 'DONE',
       ...(selectedType.requiresLabel ? { customLabel: customLabel.trim() } : {}),
       ...(sendScope ? { scopeLevel: target.level, scopeId: target.id } : {}),
+      ...filledPreacher(preacher, selectedType.evangelism),
       ...(place.trim() ? { place: place.trim() } : {}),
       ...filledCounters(counters, selectedType.evangelism),
       ...(note.trim() ? { note: note.trim() } : {}),
@@ -368,7 +376,9 @@ export default function DeclareEventScreen() {
           </Card>
         </View>
 
-        {/* 3 à 6. Facultatifs */}
+        {/* 3 à 7. Facultatifs — le prédicateur d'abord (D-EVT-16, JP 14/10) */}
+        <EventPreacherField value={preacher} onChange={setPreacher} evangelism={!!selectedType?.evangelism} />
+
         <View style={styles.section}>
           <Label style={styles.sectionLabel}>{t('events.declare.place')}</Label>
           <Field
@@ -383,6 +393,7 @@ export default function DeclareEventScreen() {
           value={counters}
           onChange={setCounters}
           evangelism={!!selectedType?.evangelism}
+          guestsInvalid={guestsInvalid}
         />
 
         <View style={styles.section}>
@@ -402,7 +413,7 @@ export default function DeclareEventScreen() {
           />
         </View>
 
-        {/* 7. Rattachement : sélecteur seulement s'il y a un choix (spec §4.3) */}
+        {/* 8. Rattachement : sélecteur seulement s'il y a un choix (spec §4.3) */}
         {scopeOptions.length > 1 && (
           <SelectField
             label={t('events.declare.scope')}

@@ -42,7 +42,8 @@ import {
 //    (`ownLevelCount`). D-EVT-06 : aucune cible, aucune barre de progression.
 //  - D-EVT-15 (JP 14/10) : chaque niveau somme participants, conversions, restaurations et
 //    baptêmes (vides = 0) — deux rangées d'indicateurs (activité, puis fruits) et les mêmes
-//    colonnes dans les trois tableaux.
+//    colonnes dans les trois tableaux. D-EVT-17 (JP 14/10) : les invités aussi, en indicateur et
+//    en colonne juste après les participants (dont ils sont la part extérieure).
 // ---------------------------------------------------------------------------------------------
 
 interface DrillStep {
@@ -170,7 +171,7 @@ function StatsBody({ stats, onOpen }: { stats: EventStats; onOpen: (c: ChildStat
 
       {stats.children.length > 0 && <ChildrenBlock stats={stats} here={here} onOpen={onOpen} />}
 
-      {/* Six colonnes par tableau (D-EVT-15) : côte à côte seulement s'il y a la place. */}
+      {/* Sept colonnes par tableau (D-EVT-15, D-EVT-17) : côte à côte seulement s'il y a la place. */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 480px), 1fr))', gap: 16, marginTop: 16 }}>
         <TypesBlock rows={stats.byType} lang={lang} />
         <MonthsBlock rows={stats.byMonth} lang={lang} />
@@ -183,8 +184,9 @@ function StatsKpis({ stats }: { stats: EventStats }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   return (
-    // Deux rangées de trois : l'activité (actions, participants, agenda), puis les fruits (D-EVT-15).
-    <div className="kpi-grid cols-3">
+    // Deux rangées : l'activité (actions, participants, invités — D-EVT-17 —, agenda), puis les
+    // fruits (D-EVT-15).
+    <div className="kpi-grid">
       <div className="kpi">
         <div className="lbl">{t('events.stats.kpiCount')}</div>
         <div className="val">{fmtCount(stats.total.count, lang)}</div>
@@ -193,6 +195,11 @@ function StatsKpis({ stats }: { stats: EventStats }) {
       <div className="kpi">
         <div className="lbl">{t('events.counters.participants')}</div>
         <div className="val">{fmtCount(stats.total.participants, lang)}</div>
+        <span className="deco" />
+      </div>
+      <div className="kpi">
+        <div className="lbl">{t('events.counters.guests')}</div>
+        <div className="val">{fmtCount(stats.total.guests, lang)}</div>
         <span className="deco" />
       </div>
       {/* Agenda du sous-arbre : tous types, indépendamment de la période (contrat §6). */}
@@ -217,7 +224,7 @@ function StatsKpis({ stats }: { stats: EventStats }) {
 
 type ChildRow = ChildStats & { id: string };
 
-/** Colonnes chiffrées communes aux trois tableaux : actions, participants, puis les fruits (D-EVT-15). */
+/** Colonnes chiffrées communes aux trois tableaux : actions, participants, invités (D-EVT-17), puis les fruits (D-EVT-15). */
 function totalsColumns<T extends StatsTotals & { id: string }>(t: TFunction, lang: string): Column<T>[] {
   return [
     { label: t('events.stats.colCount'), cellClass: 'num', render: (r) => <strong>{fmtCount(r.count, lang)}</strong> },

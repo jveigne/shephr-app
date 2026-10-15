@@ -42,7 +42,7 @@ export function newClientId(): string {
 }
 
 /**
- * Nombre saisi (participants, conversions, restaurations, baptêmes) : entier ≥ 0 tenant dans un
+ * Nombre saisi (participants, invités, conversions, restaurations, baptêmes) : entier ≥ 0 tenant dans un
  * `Integer` Java.
  * `null` si le champ est vide, `undefined` s'il est invalide.
  */
@@ -60,19 +60,35 @@ export function parseCount(raw: string): number | null | undefined {
  * D-EVT-15 (JP 14/10, retour de l'évangéliste) : compteurs d'un évènement d'un type ÉVANGÉLIQUE,
  * dans l'ordre d'affichage — `conversions` (ex-« âmes gagnées », `soulsWon`), `restorations`,
  * `baptisms`. Tous facultatifs (RG-ACT-03). Pour un type non évangélique, le serveur les ignore
- * (enregistrés `null`) : on ne les affiche ni ne les envoie. `participants` vaut pour tous les types.
+ * (enregistrés `null`) : on ne les affiche ni ne les envoie. `participants` vaut pour tous les types,
+ * comme `guests` (D-EVT-17).
  */
 export const EVANGELISM_COUNTERS = ['conversions', 'restorations', 'baptisms'] as const;
 export type EvangelismCounter = (typeof EVANGELISM_COUNTERS)[number];
-export type EventCountKey = 'participants' | EvangelismCounter;
-
-/** Compteurs proposés pour un type : participants toujours, les trois évangéliques s'il l'est. */
-export const countKeysFor = (evangelism: boolean): EventCountKey[] =>
-  evangelism ? ['participants', ...EVANGELISM_COUNTERS] : ['participants'];
+export type EventCountKey = 'participants' | 'guests' | EvangelismCounter;
 
 /**
- * « 12 participants · 5 conversions · 1 baptême » : les compteurs RENSEIGNÉS parmi `keys`, dans
- * l'ordre ; chaîne vide si aucun ne l'est (un compteur vide n'est pas un zéro).
+ * Compteurs proposés pour un type : participants et invités toujours (D-EVT-17), les trois
+ * évangéliques s'il l'est.
+ */
+export const countKeysFor = (evangelism: boolean): EventCountKey[] =>
+  evangelism ? ['participants', 'guests', ...EVANGELISM_COUNTERS] : ['participants', 'guests'];
+
+/**
+ * D-EVT-17 (JP 14/10, « il faut rajouter le nombre d'invités, différencier participants et
+ * invités ») : les invités sont la part EXTÉRIEURE des participants, donc inclus dedans. Quand les
+ * deux sont renseignés, invités ≤ participants (sinon 422 EVENT_GUESTS_EXCEED_PARTICIPANTS) ; un
+ * seul renseigné ne contraint rien. Contrôlé avant envoi : le bouton reste inactif tant que c'est faux.
+ */
+export const guestsExceedParticipants = (
+  participants: number | null | undefined,
+  guests: number | null | undefined,
+): boolean => participants != null && guests != null && guests > participants;
+
+/**
+ * « 40 participants dont 12 invités · 3 conversions » : les compteurs RENSEIGNÉS parmi `keys`, dans
+ * l'ordre ; chaîne vide si aucun ne l'est (un compteur vide n'est pas un zéro). D-EVT-17 : les
+ * invités se rattachent aux participants (« dont ») ; seuls, ils s'affichent « 12 invités ».
  */
 export function fmtCounts(
   values: Partial<Record<EventCountKey, number | null>>,
@@ -80,9 +96,14 @@ export function fmtCounts(
   t: TFunction,
   lang: string,
 ): string {
-  return keys
-    .filter((k) => values[k] != null)
-    .map((k) => t(`events.counts.${k}`, { count: values[k]!, n: fmtCount(values[k]!, lang) }))
+  const shown = keys.filter((k) => values[k] != null);
+  const label = (k: EventCountKey, key: string = k) =>
+    t(`events.counts.${key}`, { count: values[k]!, n: fmtCount(values[k]!, lang) });
+  return shown
+    .filter((k) => !(k === 'guests' && shown.includes('participants')))
+    .map((k) =>
+      k === 'participants' && shown.includes('guests') ? `${label(k)} ${label('guests', 'guestsOf')}` : label(k),
+    )
     .join(' · ');
 }
 
@@ -91,11 +112,20 @@ export function initialCountValues(event?: EventResponse): Record<EventCountKey,
   const v = (n: number | null | undefined) => (n != null ? String(n) : '');
   return {
     participants: v(event?.participants),
+    guests: v(event?.guests),
     conversions: v(event?.conversions),
     restorations: v(event?.restorations),
     baptisms: v(event?.baptisms),
   };
 }
+
+/**
+ * D-EVT-16 (JP 14/10, « pour un évènement évangélique, il faut rajouter le nom du prédicateur ») :
+ * texte libre de 120 caractères au plus (`EventDtos.PREACHER_MAX`), facultatif, comme les fruits de
+ * D-EVT-15 réservé à un type ÉVANGÉLIQUE : on ne le propose ni ne l'envoie pour un autre type (le
+ * serveur l'ignorerait), et il n'existe alors jamais dans `EventResponse`.
+ */
+export const EVENT_PREACHER_MAX = 120;
 
 /** Note libre d'un évènement : 280 caractères au plus (contrat §3.3, « 1-2 lignes » de la spec §3). */
 export const EVENT_NOTE_MAX = 280;
@@ -270,6 +300,7 @@ const KNOWN_CODES = new Set([
   'EVENT_INVALID_TRANSITION',
   'EVENT_END_BEFORE_START',
   'EVENT_SCOPE_REQUIRED',
+  'EVENT_GUESTS_EXCEED_PARTICIPANTS',
   'INVALID_PERIOD',
   'INVALID_SCOPE',
   'MODULE_ACCESS_DENIED',

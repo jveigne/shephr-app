@@ -5,14 +5,14 @@ import Card from '@/components/Card';
 import { colors, fonts, radii } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { EventResponse } from '@/services/eventsApi';
-import { COUNTER_KEYS, eventLabel, fmtEventDates, isEnglishLang, isToClose, type CounterKey } from '@/utils/events';
+import { counterParts, eventLabel, fmtEventDates, isEnglishLang, isToClose, type CounterKey } from '@/utils/events';
 import type { Translate } from '@/utils/meetingReport';
 
 /**
  * Plan 14/10 (§6.3) — ligne d'évènement partagée par « Mes actions » (lot E6), l'agenda de
  * l'onglet « Évènements » (lot E7) et la vue du simple membre (D-EVT-14) : libellé (le libellé libre d'un type « Autre » prime), statut,
- * « à vérifier », date(s) · lieu · nœud, chiffres saisis. Touchée, elle ouvre le détail
- * (`app/events/[id]`).
+ * « à vérifier », date(s) · lieu · nœud, prédicateur (D-EVT-16), chiffres saisis. Touchée, elle
+ * ouvre le détail (`app/events/[id]`).
  */
 
 /** « 12 octobre 2026 · Place de la Gare · Bruxelles Midi » — vides omis. */
@@ -25,17 +25,32 @@ export function eventMetaLine(
 }
 
 /**
- * « 40 participants · 3 conversions · 1 baptême » — seulement ce qui a été saisi. Les compteurs
- * évangéliques (D-EVT-15, JP 14/10) sont toujours null pour un type qui ne l'est pas.
+ * « 40 participants dont 12 invités · 3 conversions · 1 baptême » — seulement ce qui a été saisi
+ * (invités inclus dans les participants, D-EVT-17, JP 14/10). Les compteurs évangéliques
+ * (D-EVT-15, JP 14/10) sont toujours null pour un type qui ne l'est pas.
  */
 export function EventFigures({ counters }: { counters: Partial<Record<CounterKey, number | null>> }) {
   const { t } = useLanguage();
-  const parts = COUNTER_KEYS.flatMap((key) => {
-    const count = counters[key];
-    return count != null ? [t(`events.mine.${key}`, { count })] : [];
-  });
+  const parts = counterParts(counters, t);
   if (parts.length === 0) return null;
   return <Text style={styles.rowFigures}>{parts.join(' · ')}</Text>;
+}
+
+/**
+ * « Prédicateur : Jean Dupont » — D-EVT-16 (JP 14/10) : seulement s'il est renseigné ; toujours
+ * null pour un type non évangélique (serveur), jamais envoyé pour un tel type (saisie).
+ */
+export function EventPreacherLine({ preacher }: { preacher: string | null | undefined }) {
+  const { t } = useLanguage();
+  if (!preacher) return null;
+  return (
+    <View style={styles.preacherRow}>
+      <Ionicons name="mic-outline" size={13} color={colors.moss} />
+      <Text style={styles.preacher} numberOfLines={1}>
+        {t('events.mine.preacher', { name: preacher })}
+      </Text>
+    </View>
+  );
 }
 
 export function EventPill({
@@ -102,6 +117,7 @@ export function EventRow({
       <Text style={styles.rowMeta}>
         {eventMetaLine(fmtEventDates(event, t), event.place, event.scopeName)}
       </Text>
+      <EventPreacherLine preacher={event.preacher} />
       <EventFigures counters={event} />
       {event.status === 'DONE' && !event.evangelism && (
         <Text style={styles.rowNote}>{t('events.mine.notCounted')}</Text>
@@ -128,6 +144,8 @@ const styles = StyleSheet.create({
   ...eventRowStyles,
   chevron: { marginTop: 2 },
   rowSub: { marginTop: 2, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
+  preacherRow: { marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  preacher: { flex: 1, fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink2 },
   rowFigures: { marginTop: 4, fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: colors.mossSoft },
   rowNote: { marginTop: 4, fontFamily: fonts.sans, fontSize: 11.5, fontStyle: 'italic', color: colors.ink3 },
   pill: {

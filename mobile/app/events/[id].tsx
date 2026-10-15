@@ -19,6 +19,7 @@ import Field from '@/components/Field';
 import ErrorBanner from '@/components/ErrorBanner';
 import EventForm from '@/components/EventForm';
 import EventCounterFields from '@/components/EventCounterFields';
+import EventPreacherField from '@/components/EventPreacherField';
 import { EventPill, EventStatusPills } from '@/components/EventRow';
 import { colors, fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,11 +35,13 @@ import {
 } from '@/services/eventsApi';
 import { eventActionMessage, eventErrorCode } from '@/utils/eventErrors';
 import {
+  closingPreacher,
   counterDraft,
   EVANGELISM_COUNTERS,
   eventLabel,
   filledCounters,
   fmtEventDates,
+  guestsExceedParticipants,
   isEnglishLang,
   todayLocal,
 } from '@/utils/events';
@@ -56,6 +59,8 @@ import { goBack } from '@/utils/navigation';
  *   <li>« À vérifier » ⇔ `canFlag` (dirigeants du périmètre et SECRETARIAT) — RG-ACT-07 :
  *       informatif, l'évènement reste compté.</li>
  * </ul>
+ * D-EVT-16 (JP 14/10) : le prédicateur d'un évènement évangélique est mis en évidence sous le
+ * titre quand il est renseigné, et se saisit (ou se corrige) à la clôture.
  * Ouvert depuis l'agenda, « Mes actions » ou après une programmation. Ces gestes exigent le
  * réseau (plan §6.3) : un échec — y compris un 403, si le périmètre a changé entre-temps — se dit
  * à l'écran, avec sa raison.
@@ -291,6 +296,17 @@ export default function EventDetailScreen() {
         )}
       </View>
 
+      {/* D-EVT-16 (JP 14/10) : le prédicateur en évidence (toujours null hors type évangélique). */}
+      {!!event.preacher && (
+        <Card variant="tinted" style={styles.preacher}>
+          <Ionicons name="mic-outline" size={20} color={colors.moss} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.preacherLabel}>{t('events.declare.preacher')}</Text>
+            <Text style={styles.preacherName}>{event.preacher}</Text>
+          </View>
+        </Card>
+      )}
+
       {!!flash && (
         <Card variant="tinted" style={styles.flash}>
           <Ionicons name="checkmark-circle-outline" size={18} color={colors.moss} />
@@ -312,6 +328,8 @@ export default function EventDetailScreen() {
         />
         <Row label={t('events.declare.place')} value={event.place} />
         <Row label={t('events.declare.participants')} value={event.participants} />
+        {/* D-EVT-17 (JP 14/10) : invités, inclus dans les participants ; tout type. */}
+        <Row label={t('events.declare.guests')} value={event.guests} />
         {/* D-EVT-15 (JP 14/10) : compteurs d'un type évangélique seulement (null sinon). */}
         {event.evangelism &&
           EVANGELISM_COUNTERS.map((key) => (
@@ -426,7 +444,10 @@ function Row({
  * « Marquer comme réalisé » (D-EVT-02, RG-EVT-06) : participants, compteurs évangéliques et note
  * saisis à ce moment — conversions / restaurations / baptêmes pour un type évangélique seulement
  * (D-EVT-15, JP 14/10). Contrat §3.8 : un champ ABSENT garde sa valeur — un compteur vide n'est
- * donc pas envoyé ; la note est préremplie et toujours renvoyée ('' l'efface).
+ * donc pas envoyé ; la note est préremplie et toujours renvoyée ('' l'efface). D-EVT-16 (JP 14/10) :
+ * le prédicateur d'un type évangélique se saisit après coup, prérempli et toujours renvoyé lui
+ * aussi ('' l'efface). D-EVT-17 (JP 14/10) : invités ≤ participants s'apprécie sur l'état
+ * RÉSULTANT — un compteur vide garde sa valeur stockée, c'est à elle que l'autre se compare.
  */
 function DoneForm({
   event,
@@ -439,18 +460,21 @@ function DoneForm({
 }) {
   const { t } = useLanguage();
   const [counters, setCounters] = useState(() => counterDraft(event));
+  const [preacher, setPreacher] = useState(event.preacher ?? '');
   const [note, setNote] = useState(event.note ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const guestsInvalid = guestsExceedParticipants(counters, event);
 
   const submit = async () => {
-    if (saving) return;
+    if (saving || guestsInvalid) return;
     setSaving(true);
     setError(null);
     try {
       onDone(
         await markEventDone(event.id, {
           ...filledCounters(counters, event.evangelism),
+          ...closingPreacher(preacher, event.evangelism),
           note: note.trim(),
         }),
       );
@@ -464,7 +488,14 @@ function DoneForm({
   return (
     <>
       <Text style={styles.intro}>{t('events.detail.markDoneIntro')}</Text>
-      <EventCounterFields value={counters} onChange={setCounters} evangelism={event.evangelism} autoFocus />
+      <EventPreacherField value={preacher} onChange={setPreacher} evangelism={event.evangelism} />
+      <EventCounterFields
+        value={counters}
+        onChange={setCounters}
+        evangelism={event.evangelism}
+        guestsInvalid={guestsInvalid}
+        autoFocus
+      />
       <View style={styles.section}>
         <View style={styles.noteHead}>
           <Label>{t('events.declare.note')}</Label>
@@ -486,6 +517,7 @@ function DoneForm({
         label={t('events.detail.markDone')}
         onPress={submit}
         loading={saving}
+        disabled={guestsInvalid}
         fullWidth
         height={54}
         style={{ marginTop: 18 }}
@@ -526,6 +558,9 @@ const styles = StyleSheet.create({
   subtitle: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink2, marginTop: 4 },
   intro: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, marginTop: 8, lineHeight: 20 },
   pills: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 10 },
+  preacher: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  preacherLabel: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3 },
+  preacherName: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink, letterSpacing: -0.2, marginTop: 1 },
   flash: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
   flashText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
   detailCard: { marginTop: 16, paddingHorizontal: 16, paddingVertical: 4 },

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Field, Modal } from './ui';
 import { Icon } from './Icon';
 import { useToast } from './Toast';
-import { EventCountFields, EventForm } from './EventForm';
+import { EventCountFields, EventForm, EventPreacherField } from './EventForm';
 import { EventStatusBadges } from './EventsTable';
 import {
   cancelEvent,
@@ -23,6 +23,7 @@ import {
   eventErrorMessage,
   eventTypeLabel,
   fmtEventDates,
+  guestsExceedParticipants,
   initialCountValues,
   EVENT_NOTE_MAX,
   invalidateEvents,
@@ -294,12 +295,25 @@ function EventDetailBody({ event }: { event: EventResponse }) {
         <Row label={t('events.detail.type')}>{t('events.detail.otherType', { name: typeLabel({ name: event.typeName, nameEn: event.typeNameEn }, lang) })}</Row>
       )}
       <Row label={t('events.detail.date')}>{fmtEventDates(event, lang)}</Row>
+      {/* D-EVT-16 (JP 14/10) : le prédicateur, en évidence juste après la date — type évangélique seulement. */}
+      {event.evangelism && (
+        <Row label={t('events.form.preacher')}>
+          {event.preacher ? (
+            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 15.5, fontWeight: 600, color: 'var(--green-800)' }}>
+              {event.preacher}
+            </span>
+          ) : (
+            dash
+          )}
+        </Row>
+      )}
       <Row label={t('events.detail.scope')}>
         {event.scopeName ?? '—'}
         <span style={{ color: 'var(--ink-500)' }}> · {t(levelKey(event.scopeLevel))}</span>
       </Row>
       <Row label={t('events.form.place')}>{event.place ?? dash}</Row>
-      {/* D-EVT-15 : conversions / restaurations / baptêmes n'existent que pour un type évangélique. */}
+      {/* D-EVT-17 : participants puis invités, tout type ; D-EVT-15 : conversions / restaurations /
+          baptêmes n'existent que pour un type évangélique. */}
       {countKeysFor(event.evangelism).map((k) => (
         <Row key={k} label={t(`events.counters.${k}`)}>{event[k] ?? dash}</Row>
       ))}
@@ -328,7 +342,11 @@ function EventDetailBody({ event }: { event: EventResponse }) {
  * participants, + conversions / restaurations / baptêmes pour un type évangélique (D-EVT-15 ; le
  * type ne change pas à la clôture, seuls ceux-là sont proposés et envoyés). Contrat §3.8 : un champ
  * ABSENT garde sa valeur — un compteur vide n'est donc pas envoyé ; la note est préremplie et
- * toujours renvoyée ("" l'efface).
+ * toujours renvoyée ("" l'efface). D-EVT-16 (JP 14/10) : le prédicateur, saisissable après coup,
+ * suit la règle de la note (prérempli, renvoyé, "" l'efface) — type évangélique seulement.
+ * D-EVT-17 (JP 14/10) : les invités, tout type, juste après les participants ; invités ≤
+ * participants se contrôle sur l'état RÉSULTANT (un compteur vide garde la valeur stockée) — message
+ * en ligne et bouton inactif tant que c'est faux, comme le ferait le 422 du serveur.
  * Un compte prérempli puis vidé n'est donc PAS effacé par /done : l'aide le dit explicitement
  * (sinon l'ancienne valeur resterait dans les statistiques à l'insu du dirigeant) ; l'effacer passe
  * par « Modifier » (PATCH = remplacement complet, §3.7).
@@ -345,23 +363,32 @@ function DoneForm({
   const { t } = useTranslation();
   const [counts, setCounts] = useState(() => initialCountValues(event));
   const [note, setNote] = useState(event.note ?? '');
+  const [preacher, setPreacher] = useState(event.preacher ?? '');
 
   const countKeys = countKeysFor(event.evangelism);
   const parsed = (k: EventCountKey) => parseCount(counts[k]);
+  /** Valeur après /done : la saisie, sinon (vide) la valeur stockée — contrat §3.8. */
+  const resulting = (k: EventCountKey) => (parsed(k) === null ? event[k] : parsed(k));
+  const guestsExceed = guestsExceedParticipants(resulting('participants'), resulting('guests'));
   const countHint = (k: EventCountKey) =>
     parsed(k) === undefined ? (
       <span style={{ color: 'var(--err)' }}>{t('events.form.countInvalid')}</span>
+    ) : k === 'guests' && guestsExceed ? (
+      <span style={{ color: 'var(--err)' }}>{t('events.form.guestsExceed')}</span>
     ) : counts[k].trim() === '' && event[k] != null ? (
       <span style={{ color: 'var(--warn)' }}>{t('events.detail.countKept', { n: event[k] })}</span>
+    ) : k === 'guests' ? (
+      t('events.form.guestsHint')
     ) : (
       t('common.optional')
     );
-  const ok = countKeys.every((k) => parsed(k) !== undefined);
+  const ok = countKeys.every((k) => parsed(k) !== undefined) && !guestsExceed;
 
   const doneM = useMutation({
     mutationFn: () =>
       markEventDone(event.id, {
         ...Object.fromEntries(countKeys.flatMap((k) => (parsed(k) != null ? [[k, parsed(k)]] : []))),
+        ...(event.evangelism ? { preacher: preacher.trim() } : {}),
         note: note.trim(),
       }),
     onSuccess: onDone,
@@ -380,6 +407,7 @@ function DoneForm({
       <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ink-700)' }}>
         {event.evangelism ? t('events.detail.markDoneIntroEvangelism') : t('events.detail.markDoneIntro')}
       </p>
+      {event.evangelism && <EventPreacherField value={preacher} onChange={setPreacher} />}
       <EventCountFields
         keys={countKeys}
         values={counts}

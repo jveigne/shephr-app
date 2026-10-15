@@ -13,8 +13,10 @@ import {
 } from '../services/eventsApi';
 import {
   EVENT_NOTE_MAX,
+  EVENT_PREACHER_MAX,
   countKeysFor,
   eventErrorMessage,
+  guestsExceedParticipants,
   initialCountValues,
   invalidateEvents,
   newClientId,
@@ -36,6 +38,11 @@ import {
 //  Compteurs (D-EVT-15, JP 14/10) : « Participants » pour tout type ; conversions / restaurations /
 //  baptêmes seulement pour un type évangélique — ils disparaissent si l'on choisit un type non
 //  évangélique et sont alors envoyés à null (le serveur les ignorerait de toute façon).
+//  Prédicateur (D-EVT-16, JP 14/10) : même règle — proposé, juste après le type et la date, pour un
+//  type évangélique seulement (programmé compris), envoyé à null sinon. Facultatif.
+//  Invités (D-EVT-17, JP 14/10) : tout type, juste après « Participants », dont ils sont la part
+//  extérieure — invités ≤ participants quand les deux sont saisis : message en ligne dès la saisie
+//  et bouton inactif tant que c'est faux (le serveur répondrait 422 EVENT_GUESTS_EXCEED_PARTICIPANTS).
 //  Le serveur revalide tout (nœud, type, dates) : les contrôles d'ici évitent un aller-retour,
 //  ils ne remplacent pas les siens.
 // ---------------------------------------------------------------------------------------------
@@ -125,6 +132,7 @@ export function EventForm({
   const [endDate, setEndDate] = useState(isEdit ? event.endDate ?? '' : '');
   const [scopeId, setScopeId] = useState(initialScopeId);
   const [place, setPlace] = useState(isEdit ? event.place ?? '' : '');
+  const [preacher, setPreacher] = useState(isEdit ? event.preacher ?? '' : '');
   const [counts, setCounts] = useState(() => initialCountValues(isEdit ? event : undefined));
   const [note, setNote] = useState(isEdit ? event.note ?? '' : '');
   const [submitted, setSubmitted] = useState(false);
@@ -149,6 +157,9 @@ export function EventForm({
   if (showEndDate && endDate && eventDate && endDate < eventDate) errors.endDate = t('events.form.endBeforeStart');
   if (!scope) errors.scope = t('events.form.scopeRequired');
   for (const k of countKeys) if (parsed(k) === undefined) errors[k] = t('events.form.countInvalid');
+  // D-EVT-17 : pas plus d'invités que de participants (un seul des deux saisi : aucune contrainte).
+  const guestsExceed = showCounts && guestsExceedParticipants(parsed('participants'), parsed('guests'));
+  if (guestsExceed) errors.guests = t('events.form.guestsExceed');
   const valid = Object.keys(errors).length === 0;
 
   const saveM = useMutation({
@@ -161,10 +172,13 @@ export function EventForm({
       const fruit = (k: EventCountKey) => (evangelism ? value(k) : null);
       const countsBody = {
         participants: value('participants'),
+        guests: value('guests'),
         conversions: fruit('conversions'),
         restorations: fruit('restorations'),
         baptisms: fruit('baptisms'),
       };
+      // D-EVT-16 : comme les fruits, rien pour un type non évangélique.
+      const preacherBody = evangelism ? trimOrNull(preacher) : null;
       if (isEdit) {
         // Nœud inchangé = champs absents (contrat §3.7) : un nœud qui n'est plus dans ma liste
         // n'est donc jamais « redéplacé » sur lui-même au risque d'un 403.
@@ -177,6 +191,7 @@ export function EventForm({
           ...(moved ? { scopeLevel: scope.level, scopeId: scope.id } : {}),
           title: trimOrNull(title),
           place: trimOrNull(place),
+          preacher: preacherBody,
           note: trimOrNull(note),
           ...countsBody,
         });
@@ -192,6 +207,7 @@ export function EventForm({
         scopeId: scope?.id ?? null,
         title: showTitle ? trimOrNull(title) : null,
         place: trimOrNull(place),
+        preacher: preacherBody,
         note: trimOrNull(note),
         ...countsBody,
       });
@@ -285,6 +301,10 @@ export function EventForm({
         )}
       </div>
 
+      {/* D-EVT-16 (JP 14/10) : prédicateur, mis en valeur juste après le type et la date — type
+          évangélique seulement. */}
+      {evangelism && <EventPreacherField value={preacher} onChange={setPreacher} />}
+
       {/* 3. Lieu. */}
       <Field label={t('events.form.place')} hint={t('common.optional')}>
         <Input
@@ -296,13 +316,20 @@ export function EventForm({
       </Field>
 
       {/* 4–5. Compteurs, facultatifs (à la clôture pour un évènement programmé, D-EVT-02) :
-          participants, + conversions / restaurations / baptêmes pour un type évangélique (D-EVT-15). */}
+          participants, invités (D-EVT-17), + conversions / restaurations / baptêmes pour un type
+          évangélique (D-EVT-15). L'incohérence invités > participants s'affiche dès la saisie. */}
       {showCounts && (
         <EventCountFields
           keys={countKeys}
           values={counts}
           onChange={(k, v) => setCounts((c) => ({ ...c, [k]: v }))}
-          hint={(k) => showErr(k) ?? t('common.optional')}
+          hint={(k) =>
+            k === 'guests' && guestsExceed ? (
+              <span style={{ color: 'var(--err)' }}>{errors.guests}</span>
+            ) : (
+              showErr(k) ?? (k === 'guests' ? t('events.form.guestsHint') : t('common.optional'))
+            )
+          }
         />
       )}
 
@@ -349,7 +376,7 @@ export function EventForm({
             {t('common.cancel')}
           </Button>
         )}
-        <Button type="submit" variant="primary" disabled={!typeId || !eventDate || saveM.isPending}>
+        <Button type="submit" variant="primary" disabled={!typeId || !eventDate || guestsExceed || saveM.isPending}>
           {submitLabel}
         </Button>
       </div>
@@ -359,8 +386,8 @@ export function EventForm({
 
 /**
  * Champs de compteurs (formulaire et « Marquer comme réalisé ») : un champ par clé de `keys`, dans
- * l'ordre — participants puis, pour un type évangélique, conversions / restaurations / baptêmes
- * (D-EVT-15). Entiers ≥ 0, tous facultatifs (RG-ACT-03) ; la validation est celle de l'appelant.
+ * l'ordre — participants, invités (D-EVT-17) puis, pour un type évangélique, conversions /
+ * restaurations / baptêmes (D-EVT-15). Entiers ≥ 0, tous facultatifs (RG-ACT-03) ; la validation est celle de l'appelant.
  */
 export function EventCountFields({
   keys,
@@ -392,6 +419,32 @@ export function EventCountFields({
         </Field>
       ))}
     </div>
+  );
+}
+
+/**
+ * Champ « Prédicateur » (D-EVT-16, JP 14/10) — formulaire et « Marquer comme réalisé » : texte libre
+ * ≤ 120, facultatif, proposé pour un type évangélique seulement (la condition est celle de l'appelant).
+ */
+export function EventPreacherField({
+  value,
+  onChange,
+  hint,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  hint?: ReactNode;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Field label={t('events.form.preacher')} hint={hint ?? t('common.optional')}>
+      <Input
+        value={value}
+        maxLength={EVENT_PREACHER_MAX}
+        placeholder={t('events.form.preacherPlaceholder')}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </Field>
   );
 }
 

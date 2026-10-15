@@ -18,8 +18,9 @@ import {
 // ---------------------------------------------------------------------------------------------
 //  Liste d'évènements — partagée par l'agenda des dirigeants (/events), « Mes actions » d'un
 //  dirigeant (onglet Déclarer) et la vue du membre (/my-actions, D-EVT-14 — spec §6.1 : type,
-//  date, lieu, compteurs si saisis — participants, + conversions / restaurations / baptêmes d'un type
-//  évangélique, D-EVT-15). Pagination serveur (Page Spring, base 0).
+//  date, lieu, compteurs si saisis — participants dont invités (D-EVT-17), + conversions / restaurations / baptêmes d'un type
+//  évangélique, D-EVT-15 ; prédicateur sous le type s'il est renseigné, D-EVT-16). Pagination
+//  serveur (Page Spring, base 0).
 // ---------------------------------------------------------------------------------------------
 
 /** Pastilles de statut d'un évènement : programmé / à clôturer / réalisé / annulé, + marqueurs. */
@@ -84,6 +85,12 @@ export function EventsTable({
             )}
           </div>
           {e.title && <div style={{ color: 'var(--ink-500)', fontSize: 12 }}>{e.title}</div>}
+          {/* D-EVT-16 (JP 14/10) : le prédicateur, quand il est renseigné (type évangélique seulement). */}
+          {e.preacher && (
+            <div style={{ color: 'var(--green-800)', fontSize: 12, fontWeight: 500 }}>
+              {t('events.preacherLine', { name: e.preacher })}
+            </div>
+          )}
         </div>
       ),
     },
@@ -94,7 +101,7 @@ export function EventsTable({
     { label: t('events.col.place'), render: (e) => (e.place ? <span>{e.place}</span> : dash) },
     {
       label: t('events.col.counts'),
-      // Seuls les compteurs renseignés : « 40 participants · 3 conversions · 1 baptême ».
+      // Seuls les compteurs renseignés : « 40 participants dont 12 invités · 3 conversions » (D-EVT-17).
       render: (e) => fmtCounts(e, countKeysFor(e.evangelism), t, lang) || dash,
     },
     { label: t('events.col.status'), render: (e) => <EventStatusBadges event={e} /> },

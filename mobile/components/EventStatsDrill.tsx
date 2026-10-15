@@ -17,7 +17,7 @@ import {
   type StatsTotals,
 } from '@/services/eventsApi';
 import { eventActionMessage, eventErrorCode } from '@/utils/eventErrors';
-import { COUNTER_KEYS, fmtMonth, isEnglishLang, typeLabel } from '@/utils/events';
+import { counterParts, fmtMonth, isEnglishLang, typeLabel } from '@/utils/events';
 import { notify } from '@/utils/dialogs';
 import type { Translate } from '@/utils/meetingReport';
 
@@ -61,11 +61,11 @@ function scopeName(s: StatsScope, t: Translate): string {
 }
 
 /**
- * « 40 participants · 6 conversions · 3 restaurations · 4 baptêmes » (D-EVT-15, JP 14/10) — les
- * zéros se disent aussi : ce sont des totaux.
+ * « 40 participants dont 12 invités · 6 conversions · 3 restaurations · 4 baptêmes » (D-EVT-15,
+ * D-EVT-17, JP 14/10) — les zéros se disent aussi : ce sont des totaux.
  */
 function figures(x: StatsTotals, t: Translate): string {
-  return COUNTER_KEYS.map((key) => t(`events.mine.${key}`, { count: x[key] })).join(' · ');
+  return counterParts(x, t).join(' · ');
 }
 
 export default function EventStatsDrill({
@@ -232,6 +232,8 @@ function StatsBody({
       <View style={styles.kpiGrid}>
         <Kpi label={t('events.stats.kpiCount')} value={stats.total.count} strong />
         <Kpi label={t('events.stats.kpiParticipants')} value={stats.total.participants} />
+        {/* D-EVT-17 (JP 14/10) : somme des invités, déjà comptés dans les participants. */}
+        <Kpi label={t('events.stats.kpiGuests')} value={stats.total.guests} />
         {/* D-EVT-15 (JP 14/10) : sommes des compteurs évangéliques, non renseignés = 0. */}
         <Kpi label={t('events.stats.kpiConversions')} value={stats.total.conversions} />
         <Kpi label={t('events.stats.kpiRestorations')} value={stats.total.restorations} />

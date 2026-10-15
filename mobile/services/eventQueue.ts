@@ -364,7 +364,8 @@ export function dismissRejectedEvent(clientId: string): Promise<void> {
  * <ul>
  *   <li>`reject` (définitif, l'élément sort avec sa raison) : 400 de validation ou
  *       INVALID_SCOPE / INVALID_PERIOD / INVALID_PARAMETER ; 403 UNAUTHORIZED_ACCESS (hors
- *       périmètre) ; 404 (type ou nœud inconnu) ; tout 422 (règle métier) ;</li>
+ *       périmètre) ; 404 (type ou nœud inconnu) ; tout 422 (règle métier — dont
+ *       EVENT_GUESTS_EXCEED_PARTICIPANTS, D-EVT-17, que la saisie empêche pourtant en amont) ;</li>
  *   <li>`retry` (l'élément reste) : tout le reste — pas de réponse (réseau, délai), 401 (session
  *       expirée, rejoué après reconnexion du même compte), 403 MODULE_ACCESS_DENIED (abonnement
  *       peut-être suspendu temporairement), 400 « Bad Request » non qualifié, 5xx dont 503

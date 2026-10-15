@@ -36,8 +36,15 @@ export const digitsOnly = (raw: string): string => raw.replace(/[^0-9]/g, '');
  */
 export const EVANGELISM_COUNTERS = ['conversions', 'restorations', 'baptisms'] as const;
 export type EvangelismCounter = (typeof EVANGELISM_COUNTERS)[number];
-export type CounterKey = 'participants' | EvangelismCounter;
-export const COUNTER_KEYS: readonly CounterKey[] = ['participants', ...EVANGELISM_COUNTERS];
+
+/**
+ * D-EVT-17 (JP 14/10 : « il faut rajouter le nombre d'invités, différencier participants et
+ * invités ») : « Invités » (`guests`) = la part de personnes EXTÉRIEURES parmi les participants —
+ * ils y sont INCLUS. Comme « Participants », proposé pour TOUS les types ; facultatif.
+ */
+export const GENERAL_COUNTERS = ['participants', 'guests'] as const;
+export type CounterKey = (typeof GENERAL_COUNTERS)[number] | EvangelismCounter;
+export const COUNTER_KEYS: readonly CounterKey[] = [...GENERAL_COUNTERS, ...EVANGELISM_COUNTERS];
 
 /** Saisie en cours des compteurs : chiffres seuls, '' = non renseigné. */
 export type CounterDraft = Record<CounterKey, string>;
@@ -54,7 +61,46 @@ export function counterDraft(source?: Partial<Record<CounterKey, number | null>>
 
 /** Compteurs que la saisie peut porter pour ce type : les évangéliques seulement s'il l'est. */
 export const counterKeysFor = (evangelism: boolean): readonly CounterKey[] =>
-  evangelism ? COUNTER_KEYS : ['participants'];
+  evangelism ? COUNTER_KEYS : GENERAL_COUNTERS;
+
+/**
+ * D-EVT-17 (JP 14/10) : invités plus nombreux que les participants ? Le serveur le refuse (422
+ * EVENT_GUESTS_EXCEED_PARTICIPANTS) quand les DEUX sont renseignés dans l'état RÉSULTANT ; un seul
+ * renseigné ne contraint rien. `stored` = valeurs déjà enregistrées, pour la clôture (`/done`) où
+ * un champ vide garde sa valeur. Vérifié AVANT envoi : une déclaration mise en file hors ligne ne
+ * doit jamais être refusée plus tard pour cette raison.
+ */
+export function guestsExceedParticipants(
+  draft: CounterDraft,
+  stored?: Partial<Record<'participants' | 'guests', number | null>> | null,
+): boolean {
+  const resulting = (key: 'participants' | 'guests') =>
+    draft[key] !== '' ? Number(draft[key]) : stored?.[key] ?? null;
+  const participants = resulting('participants');
+  const guests = resulting('guests');
+  return participants != null && guests != null && guests > participants;
+}
+
+/**
+ * « 40 participants dont 12 invités · 3 conversions » — D-EVT-17 (JP 14/10) : les invités se
+ * disent DANS les participants (« dont ») ; seuls, « 12 invités ». Ne garde que les compteurs
+ * non null : un total de statistiques (zéros compris) les donne tous.
+ */
+export function counterParts(counters: Partial<Record<CounterKey, number | null>>, t: Translate): string[] {
+  const { participants, guests } = counters;
+  const parts: string[] = [];
+  if (participants != null) {
+    const head = t('events.mine.participants', { count: participants });
+    parts.push(guests != null ? `${head} ${t('events.mine.ofWhichGuests', { count: guests })}` : head);
+  } else if (guests != null) {
+    parts.push(t('events.mine.guests', { count: guests }));
+  }
+  for (const key of EVANGELISM_COUNTERS) {
+    const count = counters[key];
+    if (count != null) parts.push(t(`events.mine.${key}`, { count }));
+  }
+  return parts;
+}
 
 /**
  * Création et clôture (contrat §3.3 / §3.8) : seuls les compteurs RENSEIGNÉS partent — à la
@@ -80,6 +126,37 @@ export function replacedCounters(draft: CounterDraft, evangelism: boolean): Reco
     out[key] = keys.includes(key) && draft[key] !== '' ? Number(draft[key]) : null;
   }
   return out;
+}
+
+// ---------------- Prédicateur (D-EVT-16, JP 14/10) ----------------
+
+/**
+ * D-EVT-16 (JP 14/10 : « Pour un évènement évangélique, il faut rajouter le nom du prédicateur.
+ * C'est important. ») : texte libre facultatif, ≤ 120 caractères (EventDtos.PREACHER_MAX). Comme
+ * les compteurs D-EVT-15, il n'existe QUE pour un type évangélique : affiché et
+ * envoyé dans ce seul cas — le serveur l'ignorerait sinon. Le serveur retire les espaces de bord
+ * et lit une chaîne vide comme null.
+ */
+export const PREACHER_MAX = 120;
+
+/** Création (contrat §3.3) : envoyé seulement s'il est renseigné, pour un type évangélique. */
+export function filledPreacher(draft: string, evangelism: boolean): { preacher?: string } {
+  return evangelism && draft.trim() !== '' ? { preacher: draft.trim() } : {};
+}
+
+/**
+ * Modification (`PATCH`, remplacement complet) : vide = null ; null aussi pour un type non
+ * évangélique — c'est ce que le serveur en ferait de toute façon.
+ */
+export const replacedPreacher = (draft: string, evangelism: boolean): string | null =>
+  evangelism && draft.trim() !== '' ? draft.trim() : null;
+
+/**
+ * Clôture (`POST /{id}/done`, contrat §3.8) : un champ absent garde sa valeur, '' l'efface — la
+ * saisie, préremplie, est donc toujours renvoyée pour un type évangélique.
+ */
+export function closingPreacher(draft: string, evangelism: boolean): { preacher?: string } {
+  return evangelism ? { preacher: draft.trim() } : {};
 }
 
 // ---------------- Dates (toujours LOCALES : contrat §1.4) ----------------

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import Card from '@/components/Card';
 import Label from '@/components/Label';
-import { EventFigures, EventPill, eventMetaLine, eventRowStyles } from '@/components/EventRow';
+import { EventFigures, EventPill, EventPreacherLine, eventMetaLine, eventRowStyles } from '@/components/EventRow';
 import { colors, fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -108,8 +108,12 @@ function PendingRow({ item, label }: { item: QueuedEvent; label: string }) {
         <EventPill tone={colors.earthDeep} icon="cloud-upload-outline" text={t('events.mine.pending')} />
       </View>
       <Text style={styles.rowMeta}>{eventMetaLine(fmtIsoDay(r.eventDate, t), r.place, item.scopeName)}</Text>
-      {/* D-EVT-15 (JP 14/10) : compteurs évangéliques seulement si le type l'était à la saisie. */}
-      <EventFigures counters={item.evangelism ? r : { participants: r.participants }} />
+      {/* D-EVT-16 (JP 14/10) : `preacher` n'est mis en file que pour un type évangélique ; absent
+          d'un élément plus ancien, la ligne n'en dit rien. */}
+      <EventPreacherLine preacher={r.preacher} />
+      {/* D-EVT-15 (JP 14/10) : compteurs évangéliques seulement si le type l'était à la saisie.
+          D-EVT-17 (JP 14/10) : invités pour tout type ; absents d'un élément plus ancien. */}
+      <EventFigures counters={item.evangelism ? r : { participants: r.participants, guests: r.guests }} />
       {reasonKey && <Text style={styles.pendingReason}>{t(reasonKey)}</Text>}
     </Card>
   );
