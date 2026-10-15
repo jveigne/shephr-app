@@ -115,6 +115,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (token) void cacheMe(me, token);
       setState((s) => ({ ...s, me }));
       setMeStale(false);
+      // Les modules dépendent du rattachement (unité, zone, ministère) : un `/me` relu après
+      // `join` ou un changement d'assemblée doit aussi les relire — sinon, même jeton et même
+      // `me.id`, l'effet ci-dessous ne se relancerait qu'au prochain login.
+      setModulesEpoch((n) => n + 1);
     } catch (e) {
       // Hors ligne : le profil connu reste (RG-ACT-08) — le perdre fermerait la tuile de
       // déclaration et la file hors-ligne jusqu'au prochain lancement. Revalidé plus tard.
