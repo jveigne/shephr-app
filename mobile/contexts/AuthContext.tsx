@@ -28,6 +28,10 @@ import { resetDonationCategoriesCache } from '@/hooks/useDonationCategories';
 import { claimEventCatalog } from '@/hooks/useEventCatalog';
 import { claimEventQueue, isOnline, releaseEventQueue } from '@/services/eventQueue';
 import { loginWithAppleToken, loginWithGoogleToken } from '@/services/socialAuthApi';
+import {
+  resetPassword as resetPasswordRequest,
+  type ResetPasswordPayload,
+} from '@/services/passwordResetApi';
 import { getAppleCredential, getGoogleIdToken, googleSignOut } from '@/services/socialSignIn';
 
 /**
@@ -79,6 +83,12 @@ interface AuthContextValue extends AuthState {
   loginWithGoogle: () => Promise<SocialLoginResult>;
   /** Sign in with Apple (iOS) — `POST /api/auth/oauth/apple`. */
   loginWithApple: () => Promise<SocialLoginResult>;
+  /**
+   * Mot de passe oublié (18/10/2026) — `POST /api/auth/password/reset` : change le mot de passe
+   * avec le code reçu par e-mail et ouvre la session comme `login` (même réponse, même chemin).
+   * Renvoie le profil chargé, pour le même routage post-login.
+   */
+  resetPassword: (payload: ResetPasswordPayload) => Promise<MeResponse | null>;
   /** Établit une session à partir d'une réponse d'auth (ex. activation par code — Lot 3.4). */
   establishSession: (res: AuthResponse) => Promise<void>;
   refreshMe: () => Promise<void>;
@@ -222,9 +232,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * vidé AVANT que le nouveau jeton ne soit posé — dès cet instant, `apiClient` envoie sous la
    * nouvelle identité (Lot E6, 14/10).
    *
-   * Point d'entrée UNIQUE de toute connexion — mot de passe, inscription, Google, Apple : la
-   * réponse des endpoints OAuth est la même que celle de `/api/church/auth/login`, et tout ce qui
-   * suit une session (push via `PushBridge`, modules, file hors-ligne) réagit au jeton posé ici.
+   * Point d'entrée UNIQUE de toute connexion — mot de passe, inscription, Google, Apple, mot de
+   * passe oublié : la réponse des endpoints OAuth et de `/api/auth/password/reset` est la même
+   * que celle de `/api/church/auth/login`, et tout ce qui suit une session (push via
+   * `PushBridge`, modules, file hors-ligne) réagit au jeton posé ici.
    */
   const applySession = useCallback(async (res: AuthResponse): Promise<MeResponse | null> => {
     releaseEventQueue();
@@ -268,6 +279,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const me = await applySession(await loginWithAppleToken(credential));
     return { status: 'success', me };
   }, [applySession]);
+
+  const resetPassword = useCallback(
+    async (payload: ResetPasswordPayload) => applySession(await resetPasswordRequest(payload)),
+    [applySession],
+  );
 
   const establishSession = useCallback(
     async (res: AuthResponse) => {
@@ -346,6 +362,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     register,
     loginWithGoogle,
     loginWithApple,
+    resetPassword,
     establishSession,
     refreshMe,
     logout,

@@ -13,9 +13,12 @@ import { router } from 'expo-router';
  * seul `app/structure.tsx` s'en prémunissait, avec exactement cette garde recopiée à la main.
  * Elle vit désormais ici, une fois.
  *
- * @param fallback écran de repli quand il n'y a rien derrière. L'accueil par défaut.
+ * @param fallback écran de repli quand il n'y a rien derrière. L'accueil par défaut ; la connexion
+ *   pour les écrans du groupe `(auth)` (mot de passe oublié), qu'on atteint sans être connecté.
  */
-export function goBack(fallback: '/(tabs)/home' | '/(tabs)/donations' = '/(tabs)/home') {
+export function goBack(
+  fallback: '/(tabs)/home' | '/(tabs)/donations' | '/(auth)/login' = '/(tabs)/home',
+) {
   if (router.canGoBack()) {
     router.back();
     return;

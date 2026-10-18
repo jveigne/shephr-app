@@ -102,6 +102,37 @@
       }
     }
   },
+  "passwordReset": {
+    "forgotTitle": "Forgot password",
+    "forgotHint": "Enter the email address you sign in with. We will send a 6-digit code to it so you can choose a new password.",
+    "emailLabel": "Email address",
+    "sendCode": "Get a code",
+    "rememberPassword": "Remember it?",
+    "resetTitle": "New password",
+    "sentNotice": "If an account exists for this address, a code has just been sent to it.",
+    "resentNotice": "If an account exists for this address, a new code has just been sent to it. Previous codes no longer work.",
+    "validity": "It is valid for {{minutes}} minutes. Remember to check your spam folder.",
+    "changeEmail": "Change",
+    "codeLabel": "Code received by email",
+    "codePlaceholder": "000000",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "confirmPasswordPlaceholder": "Type it again",
+    "passwordTooShort": "At least 6 characters.",
+    "passwordsMismatch": "Passwords do not match.",
+    "submit": "Confirm and sign in",
+    "resend": "Resend the code",
+    "resendIn": "Resend the code in {{seconds}} s",
+    "newCode": "Get a new code",
+    "errors": {
+      "INVALID_REQUEST": "Check the code (6 digits) and the password (at least 6 characters).",
+      "INVALID_CODE": "Incorrect code. Check it and try again.",
+      "CODE_EXPIRED": "This code has expired. Request a new one.",
+      "TOO_MANY_ATTEMPTS": "Too many attempts. Request a new code.",
+      "TOO_MANY_REQUESTS": "Too many attempts. Try again in {{minutes}} min.",
+      "generic": "Something went wrong, please try again."
+    }
+  },
   "signup": {
     "title1": "Create your account",
     "step1Hint": "A few details to create your account, then you will join your assembly.",

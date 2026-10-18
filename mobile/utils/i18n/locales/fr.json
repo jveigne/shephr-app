@@ -102,6 +102,37 @@
       }
     }
   },
+  "passwordReset": {
+    "forgotTitle": "Mot de passe oublié",
+    "forgotHint": "Indiquez l'adresse e-mail avec laquelle vous vous connectez. Nous y enverrons un code à 6 chiffres pour choisir un nouveau mot de passe.",
+    "emailLabel": "Adresse e-mail",
+    "sendCode": "Recevoir un code",
+    "rememberPassword": "Vous vous en souvenez ?",
+    "resetTitle": "Nouveau mot de passe",
+    "sentNotice": "Si un compte existe pour cette adresse, un code vient d'y être envoyé.",
+    "resentNotice": "Si un compte existe pour cette adresse, un nouveau code vient d'y être envoyé. Les codes précédents ne sont plus valables.",
+    "validity": "Il est valable {{minutes}} minutes. Pensez à regarder dans les courriers indésirables.",
+    "changeEmail": "Modifier",
+    "codeLabel": "Code reçu par e-mail",
+    "codePlaceholder": "000000",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "confirmPasswordPlaceholder": "Saisissez-le à nouveau",
+    "passwordTooShort": "6 caractères au moins.",
+    "passwordsMismatch": "Les mots de passe ne correspondent pas.",
+    "submit": "Valider et me connecter",
+    "resend": "Renvoyer le code",
+    "resendIn": "Renvoyer le code dans {{seconds}} s",
+    "newCode": "Recevoir un nouveau code",
+    "errors": {
+      "INVALID_REQUEST": "Vérifiez le code (6 chiffres) et le mot de passe (6 caractères min.).",
+      "INVALID_CODE": "Code incorrect. Vérifiez-le et réessayez.",
+      "CODE_EXPIRED": "Ce code a expiré. Demandez-en un nouveau.",
+      "TOO_MANY_ATTEMPTS": "Trop d'essais. Demandez un nouveau code.",
+      "TOO_MANY_REQUESTS": "Trop de tentatives. Réessayez dans {{minutes}} min.",
+      "generic": "Une erreur est survenue, réessayez."
+    }
+  },
   "signup": {
     "title1": "Créer votre compte",
     "step1Hint": "Quelques informations pour créer votre compte, puis vous rejoindrez votre assemblée.",

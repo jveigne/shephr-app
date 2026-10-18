@@ -22,20 +22,7 @@ import { notify } from '@/utils/dialogs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import SocialSignInButtons from '@/components/auth/SocialSignInButtons';
-import type { MeResponse } from '@/services/authApi';
-
-/** Après toute connexion (mot de passe, Google, Apple) : même routage. */
-function goAfterLogin(me: MeResponse | null) {
-  // Feature B : sans AUCUN rattachement ni rôle → parcours de rattachement.
-  const unattached =
-    !!me &&
-    !me.superAdmin &&
-    !me.goalRole &&
-    !me.donationRole &&
-    !me.goalUnitId &&
-    !me.donationUnitId;
-  router.replace(unattached ? '/(auth)/join' : '/(tabs)/home');
-}
+import { routeAfterLogin as goAfterLogin } from '@/utils/authRouting';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -125,7 +112,19 @@ export default function LoginScreen() {
             />
 
             <View style={styles.linksRow}>
-              <Text style={styles.linkSub}>{t('auth.forgotPassword')}</Text>
+              {/* Mot de passe oublié (18/10/2026) : l'identifiant déjà saisi suit dans le parcours. */}
+              <Text
+                style={styles.linkSub}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(auth)/forgot-password',
+                    params: { identifier: email.trim() },
+                  })
+                }
+                accessibilityRole="link"
+              >
+                {t('auth.forgotPassword')}
+              </Text>
             </View>
 
             <View style={styles.divider} />
