@@ -187,7 +187,9 @@
       "treasury": "Trésorerie",
       "treasuryHint": "Les dons de votre périmètre",
       "events": "Déclarer une action",
-      "eventsHint": "Évangélisation"
+      "eventsHint": "Évangélisation",
+      "documents": "Documents",
+      "documentsHint": "Enseignements à lire et partager"
     },
     "comingSoonBadge": "Bientôt disponible",
     "comingAck": "D'accord",
@@ -1456,6 +1458,74 @@
       "unflag": "Retirer « à vérifier »",
       "flagged": "Marqué « à vérifier ».",
       "unflagged": "Marqueur « à vérifier » retiré."
+    }
+  },
+  "documents": {
+    "reader": {
+      "loading": "Chargement du document…",
+      "share": "Partager",
+      "more": "D'autres documents",
+      "home": "Retour à l'accueil",
+      "previewIndicator": "Aperçu — page {{page}} sur {{count}} offertes",
+      "pageIndicator": "Page {{page}} / {{count}}",
+      "offline": "Hors ligne — ce document n'a pas encore été lu en entier sur cet appareil. Reconnectez-vous au réseau pour l'ouvrir.",
+      "loadFailed": "Le document n'a pas pu être chargé.",
+      "unavailableTitle": "Ce document n'est plus disponible",
+      "unavailableBody": "Le lien a peut-être été remplacé ou retiré. Demandez à la personne qui vous l'a envoyé de vous le partager à nouveau.",
+      "updateTitle": "Mettez Shephr à jour",
+      "updateBody": "Cette version de l'application ne sait pas encore afficher les documents. Installez la dernière version depuis le store.",
+      "openInBrowser": "Ouvrir le PDF dans le navigateur"
+    },
+    "wall": {
+      "title": "Vous avez lu l'aperçu de « {{title}} »",
+      "body": "La suite vous attend dans Shephr, avec d'autres enseignements.",
+      "remaining_one": "Encore {{count}} page",
+      "remaining_other": "Encore {{count}} pages",
+      "continue": "Lire la suite",
+      "loginHint": "Connectez-vous ou créez votre compte : vous reviendrez directement sur ce document.",
+      "login": "Se connecter",
+      "signup": "Créer un compte",
+      "joinHint": "Rejoignez votre assemblée pour lire le document en entier : vous reviendrez directement ici.",
+      "join": "Rejoindre mon assemblée"
+    },
+    "space": {
+      "kicker": "Enseignements",
+      "title": "Documents",
+      "searchPlaceholder": "Rechercher un titre…",
+      "allCategories": "Toutes",
+      "wholeMinistry": "Tout le ministère",
+      "myAssembly": "Mon assemblée",
+      "pages_one": "{{count}} page",
+      "pages_other": "{{count}} pages",
+      "empty": "Aucun document n'est encore publié pour vous.",
+      "noMatch": "Aucun document ne correspond à votre recherche.",
+      "loadFailed": "Les documents n'ont pas pu être chargés.",
+      "offline": "Hors ligne — la liste des documents demande le réseau.",
+      "moduleUnavailable": "L'espace Documents n'est pas activé pour votre ministère.",
+      "joinRequired": "Rejoignez votre assemblée pour accéder aux documents."
+    },
+    "scope": {
+      "MINISTRY": "Tout le ministère",
+      "COUNTRY": "Nation",
+      "ZONE": "Région",
+      "LOCALITY": "Ville",
+      "UNIT": "Assemblée de maison"
+    },
+    "errors": {
+      "DOCUMENT_NOT_FOUND": "Ce document n'est plus disponible.",
+      "DOCUMENT_UNAVAILABLE": "Ce document n'est plus disponible.",
+      "DOCUMENT_JOIN_REQUIRED": "Rejoignez votre assemblée pour lire ce document en entier.",
+      "RATE_LIMITED": "Trop de demandes — réessayez dans une minute.",
+      "DOC_FILE_TOO_LARGE": "Le fichier dépasse la taille maximale (50 Mo).",
+      "DOC_NOT_A_PDF": "Le fichier n'est pas un PDF.",
+      "DOC_PDF_ENCRYPTED": "Le PDF est protégé par un mot de passe.",
+      "DOC_PDF_UNREADABLE": "Le PDF est illisible.",
+      "DOC_INVALID_SCOPE": "La portée choisie n'est pas valide.",
+      "DOC_FREE_PAGES_OUT_OF_RANGE": "Le nombre de pages offertes dépasse le nombre de pages du document.",
+      "DOC_CATEGORY_MINISTRY_MISMATCH": "Cette catégorie appartient à un autre ministère.",
+      "DOC_CATEGORY_IN_USE": "Cette catégorie est utilisée : désactivez-la plutôt.",
+      "DOC_CATEGORY_NAME_EXISTS": "Une catégorie porte déjà ce nom.",
+      "DOC_INVALID_TRANSITION": "Cette action n'est pas possible dans l'état actuel du document."
     }
   }
 }

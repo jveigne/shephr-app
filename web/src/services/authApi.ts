@@ -121,6 +121,18 @@ export function hasMemberSpace(me: MeResponse | null): boolean {
   return me?.goalRole === 'MEMBRE' && !!me?.goalUnitId;
 }
 
+/**
+ * D-DOC-04 (JP 18/10), contrat Documents §2.3 — compte « rattaché » : superAdmin, un rôle module
+ * > MEMBRE, ou une assemblée principale (`goalUnitId`). Plus large que `hasMemberSpace` (pas de
+ * condition sur `goalRole`) ; le ministère du compte n'entre pas en compte (D-DOC-12). Même nom et
+ * même corps que `mobile/services/authApi.ts`. Le serveur reste juge (403 `DOCUMENT_JOIN_REQUIRED`).
+ * ⚠ D-DOC-05 : sur le web, être rattaché n'ouvre PAS le document complet — le lecteur n'en a pas besoin.
+ */
+export function isAttachedAccount(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return hasMinistryAccess(me) || !!me.goalUnitId;
+}
+
 /** Accès à la page Objectifs (Lot 4.1) : dirigeant+ du module Goals, ou superAdmin. */
 export function hasGoalsAccess(me: MeResponse | null): boolean {
   if (!me) return false;

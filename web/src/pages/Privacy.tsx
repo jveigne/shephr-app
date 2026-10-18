@@ -88,6 +88,14 @@ export function PrivacyPage() {
           <List items={tr('noTracking', ['sale', 'ads', 'analytics', 'sensors'])} />
         </Section>
 
+        {/* D-DOC-15 (JP 18/10) — mesure d'audience anonyme des documents partagés par lien (`/d/…`) :
+            identifiant visiteur aléatoire en stockage local, aucune IP stockée, aucun cookie tiers. */}
+        <Section title={t('privacy.documentsTitle')}>
+          <Para>{t('privacy.documentsIntro')}</Para>
+          <List items={tr('documents', ['what', 'visitorId', 'noIp', 'account', 'use', 'optOut'])} />
+          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: '16px 0 0' }}>{t('privacy.documentsBasis')}</p>
+        </Section>
+
         <Section title={t('privacy.purposeTitle')}>
           <List items={tr('purpose', ['service', 'org', 'support', 'security', 'legal'])} />
         </Section>

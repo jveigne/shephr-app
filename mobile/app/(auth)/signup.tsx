@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { goBack } from '@/utils/navigation';
+import { routeAfterLogin } from '@/utils/authRouting';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -80,17 +81,12 @@ export default function SignupScreen() {
     password.length >= 6 &&
     confirm === password;
 
-  /** Un compte déjà rattaché va directement à l'app ; sinon il finit son inscription. */
-  const routeAfterAuth = (me: MeResponse | null) => {
-    const unattached =
-      !!me &&
-      !me.superAdmin &&
-      !me.goalRole &&
-      !me.donationRole &&
-      !me.goalUnitId &&
-      !me.donationUnitId;
-    router.replace(unattached ? '/(auth)/join' : '/(tabs)/home');
-  };
+  /**
+   * Un compte déjà rattaché va directement à l'app ; sinon il finit son inscription. Plan 18/10
+   * (lot D5) : même routage que la connexion (`routeAfterLogin`), qui rouvre aussi le lien
+   * universel mémorisé — la règle « sans aucun rattachement → /join » est inchangée.
+   */
+  const routeAfterAuth = (me: MeResponse | null) => routeAfterLogin(me);
 
   const submit = async () => {
     if (!formValid) return;

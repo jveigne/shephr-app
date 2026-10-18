@@ -187,7 +187,9 @@
       "treasury": "Treasury",
       "treasuryHint": "Donations in your scope",
       "events": "Record an action",
-      "eventsHint": "Evangelism"
+      "eventsHint": "Evangelism",
+      "documents": "Documents",
+      "documentsHint": "Teachings to read and share"
     },
     "comingSoonBadge": "Coming soon",
     "comingAck": "Got it",
@@ -1456,6 +1458,74 @@
       "unflag": "Remove “to verify”",
       "flagged": "Marked “to verify”.",
       "unflagged": "“To verify” removed."
+    }
+  },
+  "documents": {
+    "reader": {
+      "loading": "Loading document…",
+      "share": "Share",
+      "more": "More documents",
+      "home": "Back to home",
+      "previewIndicator": "Preview — page {{page}} of {{count}} free",
+      "pageIndicator": "Page {{page}} / {{count}}",
+      "offline": "Offline — this document hasn't been read in full on this device yet. Reconnect to open it.",
+      "loadFailed": "The document could not be loaded.",
+      "unavailableTitle": "This document is no longer available",
+      "unavailableBody": "The link may have been replaced or removed. Ask the person who sent it to share it again.",
+      "updateTitle": "Update Shephr",
+      "updateBody": "This version of the app can't display documents yet. Install the latest version from the store.",
+      "openInBrowser": "Open the PDF in the browser"
+    },
+    "wall": {
+      "title": "You've read the preview of “{{title}}”",
+      "body": "The rest is waiting for you in Shephr, along with other teachings.",
+      "remaining_one": "{{count}} more page",
+      "remaining_other": "{{count}} more pages",
+      "continue": "Keep reading",
+      "loginHint": "Sign in or create your account: you'll come straight back to this document.",
+      "login": "Sign in",
+      "signup": "Create an account",
+      "joinHint": "Join your assembly to read the whole document: you'll come straight back here.",
+      "join": "Join my assembly"
+    },
+    "space": {
+      "kicker": "Teachings",
+      "title": "Documents",
+      "searchPlaceholder": "Search a title…",
+      "allCategories": "All",
+      "wholeMinistry": "Whole ministry",
+      "myAssembly": "My assembly",
+      "pages_one": "{{count}} page",
+      "pages_other": "{{count}} pages",
+      "empty": "No document has been published for you yet.",
+      "noMatch": "No document matches your search.",
+      "loadFailed": "Documents could not be loaded.",
+      "offline": "Offline — the document list needs a connection.",
+      "moduleUnavailable": "The Documents space is not enabled for your ministry.",
+      "joinRequired": "Join your assembly to access documents."
+    },
+    "scope": {
+      "MINISTRY": "Whole ministry",
+      "COUNTRY": "Nation",
+      "ZONE": "Region",
+      "LOCALITY": "City",
+      "UNIT": "House assembly"
+    },
+    "errors": {
+      "DOCUMENT_NOT_FOUND": "This document is no longer available.",
+      "DOCUMENT_UNAVAILABLE": "This document is no longer available.",
+      "DOCUMENT_JOIN_REQUIRED": "Join your assembly to read this document in full.",
+      "RATE_LIMITED": "Too many requests — try again in a minute.",
+      "DOC_FILE_TOO_LARGE": "The file exceeds the maximum size (50 MB).",
+      "DOC_NOT_A_PDF": "The file is not a PDF.",
+      "DOC_PDF_ENCRYPTED": "The PDF is password-protected.",
+      "DOC_PDF_UNREADABLE": "The PDF is unreadable.",
+      "DOC_INVALID_SCOPE": "The selected scope is not valid.",
+      "DOC_FREE_PAGES_OUT_OF_RANGE": "The number of free pages exceeds the document's page count.",
+      "DOC_CATEGORY_MINISTRY_MISMATCH": "This category belongs to another ministry.",
+      "DOC_CATEGORY_IN_USE": "This category is in use: deactivate it instead.",
+      "DOC_CATEGORY_NAME_EXISTS": "A category with this name already exists.",
+      "DOC_INVALID_TRANSITION": "This action is not possible in the document's current state."
     }
   }
 }

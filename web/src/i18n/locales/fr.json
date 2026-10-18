@@ -132,7 +132,7 @@
   },
   "privacy": {
     "title": "Politique de confidentialité",
-    "updated": "Dernière mise à jour : 5 août 2026",
+    "updated": "Dernière mise à jour : 18 octobre 2026",
     "intro": "Shephr est une plateforme de gestion pour les ministères et les églises. Cette politique explique quelles données nous collectons, pourquoi, qui peut les consulter et comment vous en gardez le contrôle. Elle s'applique à l'application mobile Shephr comme au site web.",
     "controllerTitle": "Qui est responsable de vos données",
     "controllerText": "Shephr est édité par JEXCELLENCE SAS, 9 rue des Colonnes, 75002 Paris, France, responsable du traitement des données décrites ici. Votre ministère ou votre église, qui décide des personnes à inscrire et des modules activés, en est responsable conjointement pour les données de ses membres.",
@@ -151,9 +151,20 @@
     "noTracking": {
       "sale": "Nous ne vendons ni ne louons vos données à qui que ce soit.",
       "ads": "Nous n'affichons aucune publicité et n'alimentons aucun réseau publicitaire.",
-      "analytics": "L'application n'intègre aucun outil de mesure d'audience ni de pistage tiers.",
+      "analytics": "L'application n'intègre aucun outil de mesure d'audience ni de pistage tiers. Seule exception, décrite ci-dessous : une mesure d'audience anonyme et interne des documents partagés par lien.",
       "sensors": "L'application n'accède ni à votre position, ni à vos contacts, ni à votre appareil photo, ni à votre microphone."
     },
+    "documentsTitle": "Documents partagés par lien : mesure d'audience anonyme",
+    "documentsIntro": "Lorsque vous ouvrez un document reçu par un lien Shephr (adresse en /d/…), nous mesurons de façon anonyme la diffusion de ce document, pour savoir si les enseignements partagés sont lus et repartagés.",
+    "documents": {
+      "what": "Ce qui est enregistré : l'ouverture du document, l'arrivée en fin d'aperçu, le clic vers l'App Store ou Google Play, le clic « Ouvrir dans l'app » et le partage du lien — avec la date, le type d'appareil (iPhone, Android ou ordinateur) et la référence de partage éventuellement contenue dans le lien.",
+      "visitorId": "Un identifiant aléatoire, sans lien avec votre identité, est conservé dans le stockage local de votre navigateur (ou de l'application) pour compter les visiteurs uniques. Ce n'est pas un cookie tiers et il n'est partagé avec personne.",
+      "noIp": "Votre adresse IP n'est pas enregistrée dans cette mesure ; elle ne sert qu'à limiter les abus, sans être conservée.",
+      "account": "Si vous êtes connecté à votre compte Shephr, l'événement est rattaché à votre compte ; sinon, il reste anonyme.",
+      "use": "Ces données servent uniquement aux statistiques de diffusion des documents, consultées par l'équipe Shephr. Elles ne sont ni revendues, ni utilisées à des fins publicitaires.",
+      "optOut": "Vous pouvez effacer l'identifiant à tout moment en supprimant les données du site dans votre navigateur."
+    },
+    "documentsBasis": "Cette mesure, strictement limitée à la production de statistiques anonymes pour notre propre compte, relève de l'exemption de consentement prévue pour la mesure d'audience (recommandations de la CNIL).",
     "purposeTitle": "Pourquoi nous utilisons ces données",
     "purpose": {
       "service": "Créer votre compte, vous authentifier et vous donner accès aux modules de votre ministère — sans ces données, le service ne peut pas fonctionner.",
@@ -1738,6 +1749,65 @@
       "RESOURCE_NOT_FOUND": "Élément introuvable : il a peut-être été supprimé.",
       "SERVICE_UNAVAILABLE": "Service momentanément indisponible. Rien n'a été enregistré : réessayez dans un instant.",
       "network": "Connexion au serveur impossible. Vérifiez votre réseau puis réessayez."
+    }
+  },
+  "documents": {
+    "reader": {
+      "loading": "Chargement du document…",
+      "previewIndicator": "Aperçu — page {{page}} sur {{total}} offertes",
+      "pageIndicator": "Page {{page}} sur {{total}}",
+      "pageLabel": "Page {{page}}",
+      "retryPage": "Afficher la page",
+      "pdfError": "Le document n'a pas pu s'afficher. Vérifiez votre connexion puis réessayez.",
+      "loadErrorTitle": "Impossible d'ouvrir le document",
+      "loadErrorBody": "Une erreur est survenue. Vérifiez votre connexion puis réessayez.",
+      "retry": "Réessayer"
+    },
+    "wall": {
+      "title": "Vous avez lu l'aperçu de « {{title}} ».",
+      "body": "La suite vous attend dans Shephr, avec d'autres enseignements.",
+      "remaining_one": "Encore {{count}} page",
+      "remaining_other": "Encore {{count}} pages",
+      "openInApp": "Ouvrir dans l'app",
+      "qrAlt": "QR code du lien de ce document",
+      "qrCaption": "Scannez ce code avec votre téléphone pour continuer la lecture dans l'app Shephr."
+    },
+    "footer": {
+      "body": "Retrouvez ce document et d'autres enseignements dans l'app Shephr."
+    },
+    "stores": {
+      "appStore": "Télécharger sur l'App Store",
+      "playStore": "Disponible sur Google Play",
+      "soon": "Bientôt disponible"
+    },
+    "share": {
+      "button": "Partager",
+      "text": "Je vous partage « {{title}} » :",
+      "copied": "Lien copié",
+      "copy": "Copier le lien",
+      "close": "Fermer",
+      "sheetTitle": "Partager ce document",
+      "linkLabel": "Lien du document"
+    },
+    "unavailable": {
+      "title": "Ce document n'est plus disponible",
+      "body": "Le lien que vous avez reçu a peut-être été retiré ou remplacé. Retrouvez les enseignements de votre ministère dans l'app Shephr."
+    },
+    "errors": {
+      "DOCUMENT_NOT_FOUND": "Ce document n'est plus disponible.",
+      "DOCUMENT_UNAVAILABLE": "Ce document n'est plus disponible.",
+      "DOCUMENT_JOIN_REQUIRED": "Rejoignez votre assemblée pour lire ce document en entier.",
+      "RATE_LIMITED": "Trop de demandes en peu de temps. Patientez une minute puis réessayez.",
+      "DOC_FILE_TOO_LARGE": "Le fichier dépasse la taille maximale (50 Mo).",
+      "DOC_NOT_A_PDF": "Le fichier n'est pas un PDF.",
+      "DOC_PDF_ENCRYPTED": "Ce PDF est protégé par un chiffrement : déposez une version non protégée.",
+      "DOC_PDF_UNREADABLE": "Ce PDF est illisible ou ne contient aucune page.",
+      "DOC_INVALID_SCOPE": "La portée choisie n'est pas valide pour ce ministère.",
+      "DOC_FREE_PAGES_OUT_OF_RANGE": "Le nombre de pages offertes dépasse le nombre de pages du document.",
+      "DOC_CATEGORY_MINISTRY_MISMATCH": "Cette catégorie appartient à un autre ministère.",
+      "DOC_CATEGORY_IN_USE": "Cette catégorie est utilisée par au moins un document : désactivez-la plutôt.",
+      "DOC_CATEGORY_NAME_EXISTS": "Une catégorie porte déjà ce nom dans ce ministère.",
+      "DOC_INVALID_TRANSITION": "Cette action n'est pas possible dans l'état actuel du document."
     }
   }
 }

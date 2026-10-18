@@ -218,6 +218,25 @@ export function canDeclareEvents(me: MeResponse | null): boolean {
   return !!me.goalUnitId || isLeaderRole(me);
 }
 
+/**
+ * D-DOC-04 (JP 18/10) — compte « RATTACHÉ » au sens du module DOCUMENTS (contrat 18/10 §2.3) :
+ * superAdmin, un rôle module > MEMBRE (LEADER / SECRETARIAT compris), ou une assemblée principale
+ * (`goalUnitId`), quel que soit le rôle. Seul un compte rattaché lit un document EN ENTIER dans
+ * l'app ; sinon aperçu + mur « Rejoindre mon assemblée ». Le ministère n'entre pas en compte
+ * (D-DOC-12). Même nom et même corps que `web/src/services/authApi.ts` ; le serveur reste juge
+ * (403 `DOCUMENT_JOIN_REQUIRED`). Plus large que `routeAfterLogin`, qui ne pousse vers `/join`
+ * que les comptes sans AUCUN rattachement.
+ */
+export function isAttachedAccount(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return (
+    me.superAdmin ||
+    (me.donationRole != null && me.donationRole !== 'MEMBRE') ||
+    (me.goalRole != null && me.goalRole !== 'MEMBRE') ||
+    me.goalUnitId != null
+  );
+}
+
 /** Goals tab access (Lot 4.1) : dirigeant+ du module Goals, ou superAdmin. */
 export function hasGoalsAccess(me: MeResponse | null): boolean {
   if (!me) return false;

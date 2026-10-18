@@ -76,6 +76,12 @@ interface AuthContextValue extends AuthState {
    * invisibles (RG-06).
    */
   hasEvents: boolean;
+  /**
+   * Documents (liseuse & partage, plan 18/10) : abonnement DOCUMENTS actif — D-DOC-01 (JP 18/10).
+   * Ne gate QUE l'espace Documents (tuile d'accueil, D-DOC-14 ; « D'autres documents » du lecteur) :
+   * un lien reçu se lit quel que soit l'abonnement du lecteur (D-DOC-12).
+   */
+  hasDocuments: boolean;
   /** Renvoie le profil chargé (null si /me a échoué) — permet le routage post-login (Feature B). */
   login: (payload: LoginRequest) => Promise<MeResponse | null>;
   register: (payload: RegisterRequest) => Promise<void>;
@@ -358,6 +364,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     hasAssembly: modules.includes('ASSEMBLY'),
     hasDonations: modules.includes('DONATIONS'),
     hasEvents: modules.includes('EVENTS'),
+    hasDocuments: modules.includes('DOCUMENTS'),
     login,
     register,
     loginWithGoogle,

@@ -11,7 +11,9 @@ import {
   ActivityIndicator,
   Linking,
 } from 'react-native';
-import { router } from 'expo-router';
+// Plan 18/10 (lot D5) : toute sortie du rattachement rouvre le lien universel mémorisé (document
+// reçu avant d'avoir rejoint son assemblée), à défaut l'accueil — `routeHomeOrReturn`.
+import { routeHomeOrReturn } from '@/utils/authRouting';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -178,7 +180,7 @@ export default function JoinScreen() {
           asLeader ? t('join.nowLeaderTitle') : t('join.nowMemberTitle'),
           asLeader ? t('join.nowLeaderBody', { name }) : t('join.nowMemberBody', { name }),
         );
-        router.replace('/(tabs)/home');
+        void routeHomeOrReturn();
         return;
       }
       setPending(r);
@@ -253,7 +255,7 @@ export default function JoinScreen() {
     try {
       await joinUnit({ joinCode: codeNormalized });
       await refreshMe();
-      router.replace('/(tabs)/home');
+      void routeHomeOrReturn();
     } catch (e: any) {
       notify(t('signup.invalidCodeTitle'), e?.response?.data?.message ?? t('signup.invalidCodeBody'));
     } finally {
@@ -478,7 +480,7 @@ export default function JoinScreen() {
               <Text style={styles.pendingHint}>{t('join.pendingHint')}</Text>
               <Button
                 label={t('join.continueApp')}
-                onPress={() => router.replace('/(tabs)/home')}
+                onPress={() => void routeHomeOrReturn()}
                 fullWidth
                 height={54}
                 style={{ marginTop: 18 }}

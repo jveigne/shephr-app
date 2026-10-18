@@ -132,7 +132,7 @@
   },
   "privacy": {
     "title": "Privacy Policy",
-    "updated": "Last updated: 5 August 2026",
+    "updated": "Last updated: 18 October 2026",
     "intro": "Shephr is a management platform for ministries and churches. This policy explains what data we collect, why, who can see it and how you stay in control of it. It applies to the Shephr mobile app as well as to the website.",
     "controllerTitle": "Who is responsible for your data",
     "controllerText": "Shephr is published by JEXCELLENCE SAS, 9 rue des Colonnes, 75002 Paris, France, the controller for the processing described here. Your ministry or church, which decides who is enrolled and which modules are enabled, is a joint controller for its members' data.",
@@ -151,9 +151,20 @@
     "noTracking": {
       "sale": "We do not sell or rent your data to anyone.",
       "ads": "We display no advertising and feed no advertising network.",
-      "analytics": "The app embeds no audience-measurement or third-party tracking tool.",
+      "analytics": "The app embeds no audience-measurement or third-party tracking tool. The only exception, described below: an anonymous, in-house audience measurement of documents shared by link.",
       "sensors": "The app accesses neither your location, nor your contacts, nor your camera, nor your microphone."
     },
+    "documentsTitle": "Documents shared by link: anonymous audience measurement",
+    "documentsIntro": "When you open a document received through a Shephr link (an address in /d/…), we measure that document's reach anonymously, to know whether shared teachings are read and shared again.",
+    "documents": {
+      "what": "What is recorded: opening the document, reaching the end of the preview, tapping the App Store or Google Play button, tapping “Open in the app” and sharing the link — with the date, the type of device (iPhone, Android or computer) and the share reference the link may contain.",
+      "visitorId": "A random identifier, unrelated to your identity, is kept in your browser's (or the app's) local storage to count unique visitors. It is not a third-party cookie and is shared with no one.",
+      "noIp": "Your IP address is not recorded in this measurement; it is only used to limit abuse and is not stored.",
+      "account": "If you are signed in to your Shephr account, the event is linked to your account; otherwise it remains anonymous.",
+      "use": "This data is used only for document reach statistics, viewed by the Shephr team. It is never sold or used for advertising.",
+      "optOut": "You can erase the identifier at any time by clearing this site's data in your browser."
+    },
+    "documentsBasis": "This measurement, strictly limited to producing anonymous statistics for our own use, falls under the consent exemption for audience measurement (CNIL guidelines).",
     "purposeTitle": "Why we use this data",
     "purpose": {
       "service": "Create your account, authenticate you and give you access to your ministry's modules — the service cannot work without this data.",
@@ -1738,6 +1749,65 @@
       "RESOURCE_NOT_FOUND": "Item not found: it may have been deleted.",
       "SERVICE_UNAVAILABLE": "Service temporarily unavailable. Nothing was saved: please try again in a moment.",
       "network": "Cannot reach the server. Check your connection and try again."
+    }
+  },
+  "documents": {
+    "reader": {
+      "loading": "Loading document…",
+      "previewIndicator": "Preview — page {{page}} of {{total}} free",
+      "pageIndicator": "Page {{page}} of {{total}}",
+      "pageLabel": "Page {{page}}",
+      "retryPage": "Show page",
+      "pdfError": "The document could not be displayed. Check your connection and try again.",
+      "loadErrorTitle": "Unable to open the document",
+      "loadErrorBody": "Something went wrong. Check your connection and try again.",
+      "retry": "Try again"
+    },
+    "wall": {
+      "title": "You've read the preview of “{{title}}”.",
+      "body": "The rest is waiting for you in Shephr, along with other teachings.",
+      "remaining_one": "{{count}} more page",
+      "remaining_other": "{{count}} more pages",
+      "openInApp": "Open in the app",
+      "qrAlt": "QR code of this document's link",
+      "qrCaption": "Scan this code with your phone to keep reading in the Shephr app."
+    },
+    "footer": {
+      "body": "Find this document and other teachings in the Shephr app."
+    },
+    "stores": {
+      "appStore": "Download on the App Store",
+      "playStore": "Get it on Google Play",
+      "soon": "Coming soon"
+    },
+    "share": {
+      "button": "Share",
+      "text": "Sharing “{{title}}” with you:",
+      "copied": "Link copied",
+      "copy": "Copy link",
+      "close": "Close",
+      "sheetTitle": "Share this document",
+      "linkLabel": "Document link"
+    },
+    "unavailable": {
+      "title": "This document is no longer available",
+      "body": "The link you received may have been removed or replaced. Find your ministry's teachings in the Shephr app."
+    },
+    "errors": {
+      "DOCUMENT_NOT_FOUND": "This document is no longer available.",
+      "DOCUMENT_UNAVAILABLE": "This document is no longer available.",
+      "DOCUMENT_JOIN_REQUIRED": "Join your assembly to read this document in full.",
+      "RATE_LIMITED": "Too many requests in a short time. Please wait a minute and try again.",
+      "DOC_FILE_TOO_LARGE": "The file exceeds the maximum size (50 MB).",
+      "DOC_NOT_A_PDF": "The file is not a PDF.",
+      "DOC_PDF_ENCRYPTED": "This PDF is encrypted: please upload an unprotected version.",
+      "DOC_PDF_UNREADABLE": "This PDF cannot be read or has no pages.",
+      "DOC_INVALID_SCOPE": "The selected scope is not valid for this ministry.",
+      "DOC_FREE_PAGES_OUT_OF_RANGE": "The number of free pages exceeds the document's page count.",
+      "DOC_CATEGORY_MINISTRY_MISMATCH": "This category belongs to another ministry.",
+      "DOC_CATEGORY_IN_USE": "This category is used by at least one document: deactivate it instead.",
+      "DOC_CATEGORY_NAME_EXISTS": "A category with this name already exists in this ministry.",
+      "DOC_INVALID_TRANSITION": "This action is not possible in the document's current state."
     }
   }
 }

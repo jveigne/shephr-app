@@ -11,7 +11,7 @@ import Amount from '@/components/Amount';
 import HandDivider from '@/components/HandDivider';
 import { colors, fonts, radii } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { canDeclareEvents, hasMemberGoals } from '@/services/authApi';
+import { canDeclareEvents, hasMemberGoals, isAttachedAccount } from '@/services/authApi';
 import { getSummary, type CurrencyTotal, type DonationSummary } from '@/services/statsApi';
 import { fmtAmount, monthLabel } from '@/utils/format';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -20,7 +20,7 @@ type IoniconName = ComponentProps<typeof Ionicons>['name'];
 type ComingKind = 'cantique' | 'priere' | 'compte-rendu';
 
 export default function HomeScreen() {
-  const { me, isLeader, isTreasurer, hasGoals, hasDonations, hasEvents } = useAuth();
+  const { me, isLeader, isTreasurer, hasGoals, hasDonations, hasEvents, hasDocuments } = useAuth();
   const { t } = useLanguage();
   const [summary, setSummary] = useState<DonationSummary | null>(null);
   const [summaryFailed, setSummaryFailed] = useState(false);
@@ -216,6 +216,20 @@ export default function HomeScreen() {
           icon="megaphone-outline"
           tone={colors.clay}
           onPress={() => router.push('/events/declare')}
+        />
+        )}
+        {/* Plan 18/10 (§6.3, RG-DOC-09) — espace Documents. D-DOC-14 (JP 18/10) [HYPOTHÈSE] : une
+            tuile, pas un onglet (la barre en compte déjà jusqu'à 8). RG-06 : invisible sans
+            l'abonnement DOCUMENTS ; D-DOC-04 : réservée aux comptes rattachés (`isAttachedAccount`),
+            comme la liste côté serveur (403 `DOCUMENT_JOIN_REQUIRED`). Un lien reçu, lui, se lit
+            quel que soit l'abonnement du lecteur (D-DOC-12). */}
+        {hasDocuments && isAttachedAccount(me) && (
+        <Tile
+          label={t('dashboard.tiles.documents')}
+          hint={t('dashboard.tiles.documentsHint')}
+          icon="library-outline"
+          tone={colors.mossSoft}
+          onPress={() => router.push('/documents')}
         />
         )}
 {/* Lot S1 (21/07) : briques visibles de TOUS — le contenu des écrans s'adapte au rôle

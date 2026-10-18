@@ -121,6 +121,11 @@ export default function RootLayout() {
                 options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
               />
               <Stack.Screen name="events/[id]" options={{ animation: 'slide_from_right' }} />
+              {/* Documents (plan 18/10, §6.3) : le lecteur d'un lien universel `/d/{slug}` — atteint
+                  aussi sans session (aperçu + mur, RG-DOC-01) — et l'espace Documents de l'accueil
+                  (D-DOC-14) se poussent depuis la droite. */}
+              <Stack.Screen name="d/[slug]" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="documents/index" options={{ animation: 'slide_from_right' }} />
             </Stack>
           </AuthProvider>
         </LanguageProvider>

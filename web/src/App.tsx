@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './hooks/useAuth';
@@ -33,6 +34,12 @@ import { SettingsPage } from './pages/Settings';
 import { ContactPage } from './pages/Contact';
 import { FEATURES } from './config/features';
 
+// Lot D4 (plan Documents du 18/10) : lecteur public chargé à la demande — PDF.js et `qrcode` restent
+// hors du bundle de l'Espace ministère.
+const DocumentReaderPage = lazy(() =>
+  import('./pages/DocumentReader').then((m) => ({ default: m.DocumentReaderPage })),
+);
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -66,6 +73,17 @@ export function App() {
               {/* Page publique exigée par Google Play : règles de confidentialité. */}
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/confidentialite" element={<PrivacyPage />} />
+              {/* Lot D4 — lecteur public d'un document partagé (RG-DOC-02, D-DOC-09) : AUCUNE garde, comme
+                  /privacy. D-DOC-05 (JP 18/10) : n'affiche que l'aperçu, même connecté. Même chemin que le
+                  lien universel `https://<domaine>/d/{slug}` (apple-app-site-association / assetlinks). */}
+              <Route
+                path="/d/:slug"
+                element={
+                  <Suspense fallback={null}>
+                    <DocumentReaderPage />
+                  </Suspense>
+                }
+              />
               {/* Feature B — onboarding : authentifié mais HORS AppShell (aucun rattachement). */}
               <Route path="/join" element={<OnboardingPage />} />
               {/* Feature A — espace membre minimal (MEMBRE Goals rattaché), gaté par MemberShell. */}

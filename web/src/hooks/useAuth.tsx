@@ -64,6 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSessionExpiredHandler((from) => {
       queryClient.clear();
       setState({ ready: true, token: null, user: null, me: null });
+      // Lot D4 (plan Documents du 18/10, RG-DOC-02) : un lien de document `/d/{slug}` reçu par un
+      // visiteur dont le jeton a expiré (401 du /me au démarrage) reste sur le lecteur public — la
+      // session est purgée, mais on ne l'éjecte pas vers /login (jamais de lien « cassé »).
+      if (from.startsWith('/d/')) return;
       const next = from && !from.startsWith('/login') ? `?next=${encodeURIComponent(from)}` : '';
       navigate(`/login${next}`, { replace: true });
     });
