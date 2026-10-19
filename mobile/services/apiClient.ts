@@ -27,6 +27,10 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use(async (config) => {
+  // Un appel qui porte DÉJÀ son jeton le garde : c'est l'identité qu'il a choisie, et celle du
+  // stockage peut avoir changé entre-temps (déconnexion — `pushApi.supprimerAppareil` —, ou
+  // connexion d'un autre compte pendant un vidage de la file des actions — `eventQueue`, Lot E6).
+  if (config.headers?.has('Authorization')) return config;
   const token = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
   if (token) {
     config.headers = config.headers ?? {};

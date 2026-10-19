@@ -98,6 +98,11 @@ export function Sidebar() {
   // MEMBER_CARE est accessible (gratuit/activé OU abonnement actif couvrant le user).
   const modulesQ = useQuery({ queryKey: ['accessible-modules'], queryFn: getAccessibleModules });
   const hasMemberCare = (modulesQ.data ?? []).includes('MEMBER_CARE');
+  // D-ASM-12 (JP 23/09) : « Vie d'assemblée » = abonnement ASSEMBLY, distinct de MEMBER_CARE,
+  // et flag de livraison FEATURES.assembly.
+  const hasAssembly = FEATURES.assembly && (modulesQ.data ?? []).includes('ASSEMBLY');
+  // D-EVT-05 (JP 14/10) : « Évènements » = abonnement EVENTS + flag de livraison FEATURES.events.
+  const hasEvents = FEATURES.events && (modulesQ.data ?? []).includes('EVENTS');
 
   // Le /me ne porte ni la localité, ni — pour un DIRIGEANT_UNITE — la zone (zoneNames
   // n'est renseigné que pour le DIRIGEANT_SENIOR). On les résout par ID depuis l'unité du
@@ -154,12 +159,18 @@ export function Sidebar() {
           ? { ...item, children: item.children.filter((c) => canSeeStructureChild(c.id)) }
           : item,
       );
+      if (hasAssembly && sec.sectionKey === 'nav.section.pilotage') {
+        items = [...items, { id: 'assembly', labelKey: 'nav.assembly', icon: 'calendar', to: '/assembly' }];
+      }
+      if (hasEvents && sec.sectionKey === 'nav.section.pilotage') {
+        items = [...items, { id: 'events', labelKey: 'nav.events', icon: 'megaphone', to: '/events' }];
+      }
       if (hasMemberCare && sec.sectionKey === 'nav.section.pilotage') {
         items = [...items, { id: 'member-care', labelKey: 'nav.memberCare', icon: 'users', to: '/member-care' }];
       }
       return { ...sec, items };
     });
-  }, [hasMemberCare, canSeeStructureChild]);
+  }, [hasMemberCare, hasAssembly, hasEvents, canSeeStructureChild]);
 
   const initials = (me?.fullName ?? 'A·')
     .split(' ')

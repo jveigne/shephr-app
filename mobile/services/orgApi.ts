@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 
 // Lectures scopées de la structure org (Lot 3.2 backend) — utilisées pour libeller
 // le périmètre Goals d'un leader (noms de zone / pays). Listes filtrées au périmètre

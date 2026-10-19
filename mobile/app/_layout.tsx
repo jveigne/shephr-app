@@ -20,9 +20,12 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { AuthProvider } from '../contexts/AuthContext';
-import { LanguageProvider } from '../contexts/LanguageContext';
-import { loadContactSettings } from '../services/contactApi';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { LanguageProvider } from '@/contexts/LanguageContext';
+import PushBridge from '@/components/push/PushBridge';
+import EventQueueSync from '@/components/EventQueueSync';
+import { loadContactSettings } from '@/services/contactApi';
+import { configureGoogleSignIn } from '@/services/socialSignIn';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -43,7 +46,7 @@ export default function RootLayout() {
   useEffect(() => {
     (async () => {
       try {
-        await import('../utils/i18n/i18n');
+        await import('@/utils/i18n/i18n');
       } catch (e) {
         console.error('i18n init failed', e);
       }
@@ -54,6 +57,10 @@ export default function RootLayout() {
   // Coordonnées de support pilotées depuis le back-office : on les récupère au démarrage.
   // L'appel ne bloque PAS l'ouverture de l'app — en cas d'échec, le repli codé en dur sert.
   useEffect(() => { void loadContactSettings(); }, []);
+
+  // Connexion Google : le SDK se configure une fois au démarrage (rien sur web, ni tant que les
+  // client IDs de `app.json` sont les valeurs factices REMPLACER_...).
+  useEffect(() => { configureGoogleSignIn(); }, []);
 
   useEffect(() => {
     if (appReady && fontsLoaded) {
@@ -71,6 +78,15 @@ export default function RootLayout() {
         <LanguageProvider>
           <AuthProvider>
             <StatusBar style="dark" />
+            {/* Lot N4b (J-3 14/09) — push Expo : enregistrement de l'appareil, canaux Android,
+                routage du tap, invitation d'activation. Sous `AuthProvider` parce qu'il suit la
+                connexion et la déconnexion ; il ne rend rien tant qu'il n'y a rien à demander, et
+                il ne bloque JAMAIS le démarrage — sans clé APNs ni `google-services.json`,
+                l'application s'ouvre et la file in-app fonctionne à l'identique. */}
+            <PushBridge />
+            {/* Lot E6 (14/10) — vidage de la file hors-ligne des déclarations d'action
+                (RG-ACT-08) : démarrage, retour au premier plan, retour du réseau. Ne rend rien. */}
+            <EventQueueSync />
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#E8DCC4' } }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="(auth)" />
@@ -84,14 +100,32 @@ export default function RootLayout() {
                 name="donation/edit/[id]"
                 options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
               />
-              <Stack.Screen
-                name="invite"
-                options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-              />
               <Stack.Screen name="structure" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="membres" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="hierarchie" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="superviseur" options={{ animation: 'slide_from_right' }} />
+              {/* Réglages des notifications — hors onglets : on y vient du Profil, et la
+                  catégorie « Rappels » de N4a y a son interrupteur. */}
+              <Stack.Screen name="notification-settings" options={{ animation: 'slide_from_right' }} />
+              {/* Évènements (plan 14/10, §6.3) : déclarer une action s'ouvre en modale, comme
+                  « Déclarer un don » ; « Mes actions » se pousse depuis la droite. */}
+              <Stack.Screen
+                name="events/declare"
+                options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+              />
+              <Stack.Screen name="events/mine" options={{ animation: 'slide_from_right' }} />
+              {/* Lot E7 : programmer s'ouvre en modale, comme déclarer ; le détail d'un
+                  évènement (agenda, « Mes actions ») se pousse depuis la droite. */}
+              <Stack.Screen
+                name="events/plan"
+                options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+              />
+              <Stack.Screen name="events/[id]" options={{ animation: 'slide_from_right' }} />
+              {/* Documents (plan 18/10, §6.3) : le lecteur d'un lien universel `/d/{slug}` — atteint
+                  aussi sans session (aperçu + mur, RG-DOC-01) — et l'espace Documents de l'accueil
+                  (D-DOC-14) se poussent depuis la droite. */}
+              <Stack.Screen name="d/[slug]" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="documents/index" options={{ animation: 'slide_from_right' }} />
             </Stack>
           </AuthProvider>
         </LanguageProvider>

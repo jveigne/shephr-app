@@ -1,8 +1,8 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import en from './locales/en.json';
-import fr from './locales/fr.json';
+import en from '@/utils/i18n/locales/en.json';
+import fr from '@/utils/i18n/locales/fr.json';
 
 /** Clé AsyncStorage de la préférence de langue choisie par l'utilisateur. */
 export const LANGUAGE_STORAGE_KEY = 'shephr.lang';

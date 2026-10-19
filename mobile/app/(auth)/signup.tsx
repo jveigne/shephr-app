@@ -11,21 +11,23 @@ import {
   TextInput,
 } from 'react-native';
 import { router } from 'expo-router';
+import { goBack } from '@/utils/navigation';
+import { routeAfterLogin } from '@/utils/authRouting';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Card from '../../components/Card';
-import Field from '../../components/Field';
-import Label from '../../components/Label';
-import Button from '../../components/Button';
-import Wordmark from '../../components/Wordmark';
-import { colors, fonts } from '../../theme';
-import { useAuth } from '../../contexts/AuthContext';
-import { useLanguage } from '../../contexts/LanguageContext';
-import { notify } from '../../utils/dialogs';
-import i18n from '../../utils/i18n/i18n';
-import { flagEmoji, sortedDialCountries, type DialCountry } from '../../constants/dialCodes';
-import type { MeResponse } from '../../services/authApi';
+import Card from '@/components/Card';
+import Field from '@/components/Field';
+import Label from '@/components/Label';
+import Button from '@/components/Button';
+import Wordmark from '@/components/Wordmark';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { notify } from '@/utils/dialogs';
+import i18n from '@/utils/i18n/i18n';
+import { flagEmoji, sortedDialCountries, type DialCountry } from '@/constants/dialCodes';
+import type { MeResponse } from '@/services/authApi';
 
 /**
  * Inscription — écran unique : identité, email, téléphone (RG-ID-04/05), mot de passe confirmé.
@@ -79,17 +81,12 @@ export default function SignupScreen() {
     password.length >= 6 &&
     confirm === password;
 
-  /** Un compte déjà rattaché va directement à l'app ; sinon il finit son inscription. */
-  const routeAfterAuth = (me: MeResponse | null) => {
-    const unattached =
-      !!me &&
-      !me.superAdmin &&
-      !me.goalRole &&
-      !me.donationRole &&
-      !me.goalUnitId &&
-      !me.donationUnitId;
-    router.replace(unattached ? '/(auth)/join' : '/(tabs)/home');
-  };
+  /**
+   * Un compte déjà rattaché va directement à l'app ; sinon il finit son inscription. Plan 18/10
+   * (lot D5) : même routage que la connexion (`routeAfterLogin`), qui rouvre aussi le lien
+   * universel mémorisé — la règle « sans aucun rattachement → /join » est inchangée.
+   */
+  const routeAfterAuth = (me: MeResponse | null) => routeAfterLogin(me);
 
   const submit = async () => {
     if (!formValid) return;
@@ -163,7 +160,7 @@ export default function SignupScreen() {
         >
           <View style={styles.headerRow}>
             <Pressable
-              onPress={() => (mode === 'existing' ? setMode('form') : router.back())}
+              onPress={() => (mode === 'existing' ? setMode('form') : goBack())}
               style={styles.iconBtn}
               hitSlop={10}
             >
@@ -212,11 +209,11 @@ export default function SignupScreen() {
               </View>
 
               <View>
-                <Label style={{ marginBottom: 6 }}>{t('activate.phoneLabel')}</Label>
+                <Label style={{ marginBottom: 6 }}>{t('signup.phoneLabel')}</Label>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <Pressable onPress={() => setCountryOpen(true)} style={styles.countryButton}>
                     <Text style={styles.countryButtonText}>
-                      {country ? `${flagEmoji(country.iso)} ${country.dial}` : t('activate.countryPlaceholder')}
+                      {country ? `${flagEmoji(country.iso)} ${country.dial}` : t('signup.countryPlaceholder')}
                     </Text>
                     <Ionicons name="chevron-down" size={14} color={colors.ink3} />
                   </Pressable>
@@ -227,7 +224,7 @@ export default function SignupScreen() {
                         setPhone(v);
                         setPhoneTaken(false);
                       }}
-                      placeholder={t('activate.phonePlaceholder')}
+                      placeholder={t('signup.phonePlaceholder')}
                       keyboardType="phone-pad"
                     />
                   </View>
@@ -238,7 +235,7 @@ export default function SignupScreen() {
                     {i18n.language?.startsWith('en') ? country.nameEn : country.name} · {country.dial}
                   </Text>
                 )}
-                {countryMissing && <Text style={styles.errText}>{t('activate.countryRequired')}</Text>}
+                {countryMissing && <Text style={styles.errText}>{t('signup.countryRequired')}</Text>}
                 {phoneTooShort && <Text style={styles.errText}>{t('signup.phoneInvalid')}</Text>}
                 {phoneTaken && <Text style={styles.errText}>{t('signup.phoneTaken')}</Text>}
               </View>
@@ -254,15 +251,15 @@ export default function SignupScreen() {
               </View>
 
               <View>
-                <Label style={{ marginBottom: 6 }}>{t('activate.confirmPassword')}</Label>
+                <Label style={{ marginBottom: 6 }}>{t('signup.confirmPassword')}</Label>
                 <Field
                   value={confirm}
                   onChangeText={setConfirm}
                   secureTextEntry
-                  placeholder={t('activate.confirmPasswordPlaceholder')}
+                  placeholder={t('signup.confirmPasswordPlaceholder')}
                 />
                 {confirm.length > 0 && confirm !== password && (
-                  <Text style={styles.errText}>{t('activate.passwordsMismatch')}</Text>
+                  <Text style={styles.errText}>{t('signup.passwordsMismatch')}</Text>
                 )}
               </View>
 
@@ -360,14 +357,14 @@ function CountryPickerModal({
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.pickerBackdrop}>
         <Card style={styles.pickerCard}>
-          <Label style={{ marginBottom: 8 }}>{t('activate.countryLabel')}</Label>
+          <Label style={{ marginBottom: 8 }}>{t('signup.countryLabel')}</Label>
           <View style={styles.pickerSearch}>
             <Ionicons name="search" size={15} color={colors.ink3} />
             <TextInput
               value={query}
               onChangeText={setQuery}
               style={styles.pickerSearchInput}
-              placeholder={t('activate.countrySearchPlaceholder')}
+              placeholder={t('signup.countrySearchPlaceholder')}
               placeholderTextColor={colors.ink3}
               autoCapitalize="none"
             />
@@ -410,7 +407,7 @@ function Hills() {
     <Svg
       viewBox="0 0 402 240"
       preserveAspectRatio="none"
-      style={[StyleSheet.absoluteFillObject, { opacity: 0.65 }] as any}
+      style={[StyleSheet.absoluteFill, { opacity: 0.65 }] as any}
     >
       <Path
         d="M-10,130 C 80,80 160,180 240,130 S 380,80 420,120 L 420,250 L -10,250 Z"

@@ -90,3 +90,16 @@ expo-env.d.ts
 
 android
 ios
+
+# ---------------------------------------------------------------------------
+# Identifiants push (mise en service du 16/09/2026) — JAMAIS dans le dépôt.
+#   google-services.json         : configuration Firebase du package com.cmfi.shephr
+#   *firebase-adminsdk*.json     : clé de compte de service (accès serveur au projet Firebase)
+#   *.p8                         : clé APNs, qu'Apple ne laisse télécharger qu'une seule fois
+# ---------------------------------------------------------------------------
+google-services.json
+GoogleService-Info.plist
+*firebase-adminsdk*.json
+*.p8
+*.mobileprovision
+*.keystore

@@ -3,32 +3,27 @@ import { View, Text, StyleSheet, Pressable, RefreshControl, Modal, Linking, Plat
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
-import ScreenShell from '../../components/ScreenShell';
-import Card from '../../components/Card';
-import Button from '../../components/Button';
-import Label from '../../components/Label';
-import Amount from '../../components/Amount';
-import HandDivider from '../../components/HandDivider';
-import DonationRow from '../../components/DonationRow';
-import { colors, fonts, radii } from '../../theme';
-import { useAuth } from '../../contexts/AuthContext';
-import { hasMemberGoals } from '../../services/authApi';
-import { getSummary, type DonationSummary } from '../../services/statsApi';
-import { listDonations, type DonationResponse } from '../../services/donationApi';
-import { fmtAmount, monthLabel } from '../../utils/format';
-import { useLanguage } from '../../contexts/LanguageContext';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Button from '@/components/Button';
+import Label from '@/components/Label';
+import Amount from '@/components/Amount';
+import HandDivider from '@/components/HandDivider';
+import { colors, fonts, radii } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { canDeclareEvents, hasMemberGoals, isAttachedAccount } from '@/services/authApi';
+import { getSummary, type CurrencyTotal, type DonationSummary } from '@/services/statsApi';
+import { fmtAmount, monthLabel } from '@/utils/format';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 type ComingKind = 'cantique' | 'priere' | 'compte-rendu';
 
-const PRIMARY_CURRENCY = 'GBP';
-const YEAR_GOAL = 3000;
-
 export default function HomeScreen() {
-  const { me, isLeader, hasGoals, hasDonations } = useAuth();
+  const { me, isLeader, isTreasurer, hasGoals, hasDonations, hasEvents, hasDocuments } = useAuth();
   const { t } = useLanguage();
   const [summary, setSummary] = useState<DonationSummary | null>(null);
-  const [recent, setRecent] = useState<DonationResponse[]>([]);
+  const [summaryFailed, setSummaryFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [coming, setComing] = useState<ComingKind | null>(null);
 
@@ -37,12 +32,15 @@ export default function HomeScreen() {
   // et les données de dons ne se chargent jamais.
   const load = useCallback(async () => {
     if (!hasDonations) return; // module Dons non couvert par un abonnement : rien à charger
-    const [s, list] = await Promise.allSettled([
-      getSummary(),
-      listDonations({ size: 5 }),
-    ]);
+    // `listDonations` n'est plus appelé ici depuis le retrait de « Dons récents » (15/09) :
+    // l'accueil n'a plus besoin que du résumé du mois.
+    const [s] = await Promise.allSettled([getSummary()]);
+    // Défaut B (14/09) : `/donations/stats/summary` était réservé aux dirigeants ; le 403 était
+    // avalé ici et le bloc affichait « 0 » à un fidèle qui avait pourtant déclaré. Depuis le lot
+    // T2 l'endpoint est ouvert à tout membre abonné, SCOPÉ SUR SES PROPRES DONS (périmètre de
+    // trésorerie s'il est trésorier). Un échec résiduel se dit désormais à l'écran.
     if (s.status === 'fulfilled') setSummary(s.value);
-    if (list.status === 'fulfilled') setRecent(list.value.content);
+    setSummaryFailed(s.status === 'rejected');
   }, [hasDonations]);
 
   useEffect(() => {
@@ -72,12 +70,12 @@ export default function HomeScreen() {
     .map((s) => s[0]?.toUpperCase() ?? '')
     .join('');
 
-  const thisMonth = pickAmount(summary?.currentMonth, PRIMARY_CURRENCY);
-  const lastMonth = pickAmount(summary?.lastMonth, PRIMARY_CURRENCY);
-  const yearTotal = pickAmount(summary?.yearToDate, PRIMARY_CURRENCY);
-  const diff = thisMonth - lastMonth;
-  const diffPct = lastMonth > 0 ? Math.round((diff / lastMonth) * 100) : 0;
-  const pct = Math.min(100, Math.round((yearTotal / YEAR_GOAL) * 100));
+  // Défaut D (14/09) : l'accueil ne suppose plus une devise unique. La déclaration accepte
+  // GBP/EUR/USD : un total « toutes devises confondues » n'a aucun sens comptable, on affiche
+  // donc UNE LIGNE PAR DEVISE. L'objectif annuel en dur (3 000 £) est retiré : il n'est
+  // paramétrable nulle part, il ne doit donc pas être montré.
+  const monthLines = buildMonthLines(summary);
+  const yearLines = sortedTotals(summary?.yearToDate);
 
   const today = new Date();
 
@@ -111,8 +109,11 @@ export default function HomeScreen() {
         <Text style={styles.verseRef}>{t('dashboard.verseRef')}</Text>
       </View>*/}
 
-      {/* Feature A — le simple membre accède aussi à SES objectifs depuis l'accueil. */}
-      {!hasDonations && (hasGoals || hasMemberGoals(me)) && (
+      {/* Feature A — le simple membre accède aussi à SES objectifs depuis l'accueil.
+          Défaut A (14/09) : cette tuile était conditionnée par `!hasDonations` et disparaissait
+          dès l'activation du module Dons. Le but quinquennal est CENTRAL : elle reste affichée
+          quoi qu'il arrive. Ne jamais la re-conditionner sur un abonnement Dons. */}
+      {(hasGoals || hasMemberGoals(me)) && (
         <Card onPress={() => router.push('/(tabs)/goals')} style={styles.scopeCta}>
           <Ionicons name="flag" size={26} color={colors.white} />
           <View style={{ flex: 1 }}>
@@ -126,37 +127,53 @@ export default function HomeScreen() {
       {hasDonations && (
       <Card style={styles.hero}>
         <Label style={{ color: colors.mossSoft }}>{t('dashboard.thisMonth')}</Label>
-        <Amount value={thisMonth} currency={PRIMARY_CURRENCY} size={54} showDecimals />
-        <View style={styles.diffRow}>
-          <Ionicons
-            name={diff >= 0 ? 'arrow-up' : 'arrow-down'}
-            size={14}
-            color={diff >= 0 ? colors.mossSoft : colors.clay}
-          />
-          <Text
-            style={[
-              styles.diffPct,
-              { color: diff >= 0 ? colors.mossSoft : colors.clay },
-            ]}
-          >
-            {diff >= 0 ? '+' : '−'}
-            {Math.abs(diffPct)}%
-          </Text>
-          <Text style={styles.diffNote}>
-            {t('dashboard.vsLastMonth', { amount: fmtAmount(lastMonth, PRIMARY_CURRENCY) })}
-          </Text>
-        </View>
+        {summaryFailed ? (
+          <Text style={styles.heroEmpty}>{t('dashboard.summaryUnavailable')}</Text>
+        ) : monthLines.length === 0 ? (
+          <Text style={styles.heroEmpty}>{t('dashboard.noneThisMonth')}</Text>
+        ) : (
+          monthLines.map((line, i) => (
+            <View key={line.currency} style={i > 0 ? styles.extraCurrency : undefined}>
+              <Amount
+                value={line.total}
+                currency={line.currency}
+                size={i === 0 ? 46 : 28}
+                showDecimals
+              />
+              <View style={styles.diffRow}>
+                <Ionicons
+                  name={line.diff >= 0 ? 'arrow-up' : 'arrow-down'}
+                  size={14}
+                  color={line.diff >= 0 ? colors.mossSoft : colors.clay}
+                />
+                <Text
+                  style={[
+                    styles.diffPct,
+                    { color: line.diff >= 0 ? colors.mossSoft : colors.clay },
+                  ]}
+                >
+                  {line.diff >= 0 ? '+' : '\u2212'}
+                  {Math.abs(line.diffPct)}%
+                </Text>
+                <Text style={styles.diffNote}>
+                  {t('dashboard.vsLastMonth', { amount: fmtAmount(line.lastTotal, line.currency) })}
+                </Text>
+              </View>
+            </View>
+          ))
+        )}
 
-        <HandDivider style={{ marginVertical: 16 }} />
-
-        <Label style={{ color: colors.mossSoft }}>{t('dashboard.yearTotal')}</Label>
-        <View style={styles.yearRow}>
-          <Amount value={yearTotal} currency={PRIMARY_CURRENCY} size={24} showDecimals />
-          <Text style={styles.goalLabel}>{t('dashboard.yearGoal', { amount: fmtAmount(YEAR_GOAL, PRIMARY_CURRENCY) })}</Text>
-        </View>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${pct}%` }]} />
-        </View>
+        {yearLines.length > 0 && (
+          <>
+            <HandDivider style={{ marginVertical: 16 }} />
+            <Label style={{ color: colors.mossSoft }}>{t('dashboard.yearTotal')}</Label>
+            {yearLines.map((y) => (
+              <View key={y.currency} style={styles.yearRow}>
+                <Amount value={y.total} currency={y.currency} size={24} showDecimals />
+              </View>
+            ))}
+          </>
+        )}
       </Card>
       )}
 
@@ -171,14 +188,59 @@ export default function HomeScreen() {
           onPress={() => router.push('/declare')}
         />
         )}
+        {/* JP 15/09 — la Trésorerie était une carte pleine largeur en BAS de l'accueil, sous les
+            dons récents : il fallait défiler tout l'écran pour la trouver. En tuile, à côté de
+            « Déclarer un don », elle se lit d'un coup d'œil. C'est aussi devenu son SEUL accès :
+            l'onglet de la barre du bas a été masqué le même jour (voir `(tabs)/_layout.tsx`).
+            Gaté sur `isTreasurer`, JAMAIS sur `isLeader` (lot T4, défaut C) : le rang pastoral
+            ne confère rien côté Dons, et un dirigeant Goals récoltait sinon des 403 silencieux. */}
+        {hasDonations && isTreasurer && (
+        <Tile
+          label={t('dashboard.tiles.treasury')}
+          hint={t('dashboard.tiles.treasuryHint')}
+          icon="wallet-outline"
+          tone={colors.earthDeep}
+          onPress={() => router.push('/(tabs)/leader')}
+        />
+        )}
+        {/* Plan 14/10 (§6.3, spec Recensement §4.1) — « Déclarer une action · Évangélisation ».
+            RG-06 : invisible sans l'abonnement EVENTS (D-EVT-05). RG-ACT-01 : réservée aux comptes
+            rattachés (`canDeclareEvents`) ; l'écran relit `canDeclare` côté serveur.
+            D-EVT-13 (JP 14/10) : pas de seconde tuile « Agenda » — les mêmes comptes ont l'onglet
+            « Évènements » dans la barre du bas. D-EVT-14 : pour le simple membre, cet onglet est sa
+            vue d'assemblée, son « Mes actions » ; la saisie l'y ramène. */}
+        {hasEvents && canDeclareEvents(me) && (
+        <Tile
+          label={t('dashboard.tiles.events')}
+          hint={t('dashboard.tiles.eventsHint')}
+          icon="megaphone-outline"
+          tone={colors.clay}
+          onPress={() => router.push('/events/declare')}
+        />
+        )}
+        {/* Plan 18/10 (§6.3, RG-DOC-09) — espace Documents. D-DOC-14 (JP 18/10) [HYPOTHÈSE] : une
+            tuile, pas un onglet (la barre en compte déjà jusqu'à 8). RG-06 : invisible sans
+            l'abonnement DOCUMENTS ; D-DOC-04 : réservée aux comptes rattachés (`isAttachedAccount`),
+            comme la liste côté serveur (403 `DOCUMENT_JOIN_REQUIRED`). Un lien reçu, lui, se lit
+            quel que soit l'abonnement du lecteur (D-DOC-12). */}
+        {hasDocuments && isAttachedAccount(me) && (
+        <Tile
+          label={t('dashboard.tiles.documents')}
+          hint={t('dashboard.tiles.documentsHint')}
+          icon="library-outline"
+          tone={colors.mossSoft}
+          onPress={() => router.push('/documents')}
+        />
+        )}
 {/* Lot S1 (21/07) : briques visibles de TOUS — le contenu des écrans s'adapte au rôle
     (listes scopées côté backend ; lecture seule pour un membre simple).
-    RDG 25/07 : le simple fidèle ne voit QUE Structure et Cantiques (+ ses objectifs en haut) —
+    RDG 25/07 : le simple fidèle ne voit QUE « Créer une assemblée » (ex-Structure, recette
+    15/09) et Cantiques (+ ses objectifs en haut) —
     Membres et Hiérarchie sont des outils de dirigeant, sans objet pour lui. */}
         <Tile
           label={t('dashboard.tiles.structure')}
           hint={t('dashboard.tiles.structureHint')}
-          icon="business-outline"
+          icon="add"
           tone={colors.moss}
           onPress={() => router.push('/structure')}
         />
@@ -226,44 +288,10 @@ export default function HomeScreen() {
         />*/}
       </View>
 
-      {hasDonations && (
-      <>
-      <View style={styles.sectionRow}>
-        <Text style={styles.sectionTitle}>{t('dashboard.recent')}</Text>
-        <Pressable onPress={() => router.push('/(tabs)/donations')}>
-          <Text style={styles.sectionLink}>{t('dashboard.seeAll')}</Text>
-        </Pressable>
-      </View>
+      {/* JP 15/09 — « Dons récents » retiré de l'accueil : la même liste, complète et
+          filtrable, est l'objet de l'onglet « Déclarations ». La répéter ici allongeait l'écran
+          sans rien apprendre, et reléguait les tuiles d'action au-dessus d'un long défilement. */}
 
-      <View style={{ marginTop: 10, gap: 8 }}>
-        {recent.length === 0 ? (
-          <Text style={styles.empty}>{t('dashboard.empty')}</Text>
-        ) : (
-          recent.map((d) => (
-            <DonationRow
-              key={d.id}
-              donation={d}
-              onPress={() => router.push(`/donation/${d.id}`)}
-            />
-          ))
-        )}
-      </View>
-      </>
-      )}
-
-      {hasDonations && isLeader && (
-        <Card
-          onPress={() => router.push('/(tabs)/leader')}
-          style={styles.scopeCta}
-        >
-          <Ionicons name="people" size={26} color={colors.white} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.scopeTitle}>{t('dashboard.scope')}</Text>
-            <Text style={styles.scopeSub}>{t('dashboard.scopeSub')}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.white} />
-        </Card>
-      )}
 
       <ComingSoonModal kind={coming} onClose={() => setComing(null)} />
     </ScreenShell>
@@ -404,9 +432,44 @@ function ComingSoonModal({
   );
 }
 
-function pickAmount(totals: { currency: string; total: number }[] | undefined, cur: string): number {
-  if (!totals) return 0;
-  return totals.find((t) => t.currency === cur)?.total ?? 0;
+interface MonthLine {
+  currency: string;
+  total: number;
+  lastTotal: number;
+  diff: number;
+  diffPct: number;
+}
+
+/** Totaux d'une devise, du plus gros au plus petit — ordre d'affichage stable. */
+function sortedTotals(totals: CurrencyTotal[] | undefined): CurrencyTotal[] {
+  return [...(totals ?? [])].sort((a, b) => b.total - a.total);
+}
+
+/**
+ * Une ligne par devise présente ce mois-ci OU le mois dernier : une devise qui a disparu doit
+ * rester visible (elle affiche 0 et une variation négative), sinon le total « recule » sans
+ * explication. Rien n'est additionné entre devises (défaut D, 14/09).
+ */
+function buildMonthLines(summary: DonationSummary | null): MonthLine[] {
+  const current = summary?.currentMonth ?? [];
+  const last = summary?.lastMonth ?? [];
+  const currencies = Array.from(
+    new Set([...current, ...last].map((c) => c.currency)),
+  );
+  return currencies
+    .map((currency) => {
+      const total = current.find((c) => c.currency === currency)?.total ?? 0;
+      const lastTotal = last.find((c) => c.currency === currency)?.total ?? 0;
+      const diff = total - lastTotal;
+      return {
+        currency,
+        total,
+        lastTotal,
+        diff,
+        diffPct: lastTotal > 0 ? Math.round((diff / lastTotal) * 100) : 0,
+      };
+    })
+    .sort((a, b) => b.total - a.total);
 }
 
 const styles = StyleSheet.create({
@@ -461,7 +524,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.serif,
     fontSize: 18,
   },
-  hero: { paddingHorizontal: 22, paddingVertical: 22 },
+  // marginTop 18 = le rythme vertical de l'accueil (headerRow.marginBottom, scopeCta,
+  // tileGrid). Il manquait ici : tant que « Mes objectifs » disparaissait à l'activation
+  // des Dons (défaut A, corrigé le 14/09), les deux cartes ne pouvaient jamais être
+  // voisines et l'absence de marge ne se voyait pas. Recette 15/09.
+  hero: { marginTop: 18, paddingHorizontal: 22, paddingVertical: 22 },
   diffRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
   diffPct: { fontFamily: fonts.sans, fontWeight: '600', fontSize: 13 },
   diffNote: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
@@ -471,34 +538,18 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     marginTop: 4,
   },
-  goalLabel: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3 },
-  progressTrack: {
-    height: 6,
+  extraCurrency: {
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.hair,
+  },
+  heroEmpty: {
     marginTop: 8,
-    backgroundColor: 'rgba(42,38,32,0.07)',
-    borderRadius: 99,
-    overflow: 'hidden',
-  },
-  progressFill: { height: '100%', backgroundColor: colors.moss, borderRadius: 99 },
-  sectionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginTop: 26,
-  },
-  sectionTitle: { fontFamily: fonts.serif, fontSize: 20, color: colors.ink, letterSpacing: -0.2 },
-  sectionLink: {
-    fontFamily: fonts.sans,
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.earthDeep,
-  },
-  empty: {
     fontFamily: fonts.serif,
     fontStyle: 'italic',
+    fontSize: 16,
     color: colors.ink3,
-    textAlign: 'center',
-    paddingVertical: 20,
   },
   scopeCta: {
     marginTop: 18,

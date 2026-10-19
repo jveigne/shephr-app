@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 
 // Real role model exposed by the backend (ModuleRole + superAdmin).
 // Lot 3.5 : DIRIGEANT_LEADER renommé DIRIGEANT_SENIOR + nouveau DIRIGEANT_UNITE (aligné backend/web).
@@ -129,6 +129,22 @@ export interface MeResponse {
   donationUnitId: string | null;
   donationZoneId: string | null;
   active: boolean;
+  // Lot T2/T4 (décision J-1 14/09) — LA FONCTION DE TRÉSORIER (module Dons).
+  // Miroir de `don_treasurer_assignment`, relu en base à chaque /me (jamais un claim JWT) : une
+  // nomination — ou un retrait — prend effet immédiatement, sans nouveau login (recette §4.10).
+  /**
+   * Vrai si la personne porte au moins une affectation de trésorier ACTIVE (ou est superAdmin).
+   * C'est CE booléen, et lui seul, qui gate l'onglet « Trésorerie » : `donationRole` ne confère
+   * plus rien côté Dons — « on ne mélange pas Dons et Goals ». Un simple MEMBRE peut être
+   * trésorier ; un DIRIGEANT Goals peut ne pas l'être.
+   */
+  treasurer: boolean;
+  /**
+   * Nœuds sur lesquels la personne est trésorière (assemblée, ville, région ou nation). Le
+   * périmètre EFFECTIF en assemblées n'est PAS exposé : il est dérivé serveur du sous-arbre,
+   * donc toujours à jour. Vide pour un non-trésorier.
+   */
+  treasurerNodeIds: string[] | null;
   // Lot 4.2 — périmètre GOALS (UC-LDR-04/05, COO-04/05) :
   /** Unité du DIRIGEANT côté Goals ; null sinon. */
   goalUnitId: string | null;
@@ -174,6 +190,51 @@ function isElevated(role: ModuleRole | null): boolean {
 export function isLeaderRole(me: MeResponse | null): boolean {
   if (!me) return false;
   return me.superAdmin || isElevated(me.donationRole) || isElevated(me.goalRole);
+}
+
+/**
+ * Lot T4 (défaut C, §8 de docs/donations-etat-des-lieux.md) — accès aux vues de TRÉSORERIE.
+ * Ne JAMAIS y substituer `isLeaderRole` : celui-ci dérive aussi de `goalRole`, si bien qu'un
+ * dirigeant Goals voyait l'onglet puis récoltait trois 403 silencieux. Miroir exact de
+ * `TreasuryAccessService.isTreasurer` côté backend.
+ */
+export function isTreasurerRole(me: MeResponse | null): boolean {
+  return !!me?.treasurer;
+}
+
+/**
+ * Plan 14/10 (§6.3, RG-ACT-01) — tuile « Déclarer une action » : compte RATTACHÉ, c'est-à-dire
+ * membre d'une assemblée (`goalUnitId`), dirigeant (son périmètre), viewer ministère-large
+ * (LEADER / SECRETARIAT déclarent sur tout le ministère, [HYPOTHÈSE] RG-EVT-02) ou superAdmin.
+ * Miroir de `EventPerimeters.declare` côté backend. D-EVT-13 (JP 14/10) : programmer = déclarer, et
+ * l'assemblée principale rejoint la lecture — ce sont donc aussi les comptes qui voient l'onglet
+ * « Évènements » (D-EVT-14 : agenda et statistiques si `isLeaderRole`, sinon la vue de son
+ * assemblée). Ce n'est qu'un filtre d'affichage : la vérité
+ * est `GET /api/church/events/me/scopes` (`canDeclare`), que l'écran de saisie lit et respecte —
+ * un dirigeant sans aucun nœud y voit un état vide explicite, jamais un formulaire voué au 403.
+ */
+export function canDeclareEvents(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return !!me.goalUnitId || isLeaderRole(me);
+}
+
+/**
+ * D-DOC-04 (JP 18/10) — compte « RATTACHÉ » au sens du module DOCUMENTS (contrat 18/10 §2.3) :
+ * superAdmin, un rôle module > MEMBRE (LEADER / SECRETARIAT compris), ou une assemblée principale
+ * (`goalUnitId`), quel que soit le rôle. Seul un compte rattaché lit un document EN ENTIER dans
+ * l'app ; sinon aperçu + mur « Rejoindre mon assemblée ». Le ministère n'entre pas en compte
+ * (D-DOC-12). Même nom et même corps que `web/src/services/authApi.ts` ; le serveur reste juge
+ * (403 `DOCUMENT_JOIN_REQUIRED`). Plus large que `routeAfterLogin`, qui ne pousse vers `/join`
+ * que les comptes sans AUCUN rattachement.
+ */
+export function isAttachedAccount(me: MeResponse | null): boolean {
+  if (!me) return false;
+  return (
+    me.superAdmin ||
+    (me.donationRole != null && me.donationRole !== 'MEMBRE') ||
+    (me.goalRole != null && me.goalRole !== 'MEMBRE') ||
+    me.goalUnitId != null
+  );
 }
 
 /** Goals tab access (Lot 4.1) : dirigeant+ du module Goals, ou superAdmin. */
@@ -350,38 +411,12 @@ export async function register(payload: RegisterRequest): Promise<AuthResponse> 
   return data;
 }
 
-// --- Activation par CODE COURT (Lot 3.4, UC-TRV-10) — endpoints publics ---------------
-export interface InvitationPreview {
-  email: string | null;
-  /** A1 — identifiant de connexion (comptes créés sans email). */
-  username: string | null;
-  fullName: string;
-  ministryName: string | null;
-}
-
-/** Aperçu d'une invitation à partir du code court (404/erreur si code inconnu/expiré/utilisé). */
-export async function previewInvitationByCode(shortCode: string): Promise<InvitationPreview> {
-  const { data } = await apiClient.get<InvitationPreview>(
-    `/api/cmfipraise/auth/invitation/code/${encodeURIComponent(shortCode)}`,
-  );
-  return data;
-}
-
-/**
- * Active le compte par code court (A1 — RG-ID-04) : mot de passe + TÉLÉPHONE obligatoire
- * (avec indicatif) + email facultatif ; active et connecte (renvoie token+user).
- */
-export async function acceptInvitationByCode(
-  shortCode: string,
-  password: string,
-  contact: { phoneNumber: string; countryCode?: string; email?: string },
-): Promise<AuthResponse> {
-  const { data } = await apiClient.post<AuthResponse>(
-    '/api/cmfipraise/auth/invitation/code/accept',
-    { shortCode, password, ...contact },
-  );
-  return data;
-}
+// --- Activation par CODE COURT : SUPPRIMÉE le 15/09 (JP) ------------------------------
+// `previewInvitationByCode` / `acceptInvitationByCode` / `InvitationPreview` vivaient ici et
+// ne servaient qu'à `(auth)/activate.tsx`, retiré avec tout le parcours d'invitation : on crée
+// un compte et on se rattache directement à une assemblée. Les endpoints
+// `/api/cmfipraise/auth/invitation/**` existent toujours côté backend (le back-office peut
+// encore inviter) — c'est le MOBILE qui ne les appelle plus.
 
 export async function fetchMe(): Promise<MeResponse> {
   const { data } = await apiClient.get<MeResponse>('/api/church/auth/me');

@@ -9,25 +9,26 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { router } from 'expo-router';
+
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ScreenShell from '../components/ScreenShell';
-import Card from '../components/Card';
-import Label from '../components/Label';
-import Field from '../components/Field';
-import Button from '../components/Button';
-import { colors, fonts } from '../theme';
-import { useLanguage } from '../contexts/LanguageContext';
-import { notify } from '../utils/dialogs';
-import { MODULE_ROLE_LABELS } from '../services/authApi';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Field from '@/components/Field';
+import Button from '@/components/Button';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { notify } from '@/utils/dialogs';
+import { MODULE_ROLE_LABELS } from '@/services/authApi';
 import {
   declareMySupervisor,
   fetchMyDiscipleship,
   searchSupervisorCandidates,
   type DiscipleshipPerson,
   type MyDiscipleshipResponse,
-} from '../services/leadersApi';
+} from '@/services/leadersApi';
 
 /**
  * Faiseur de disciple (28/07) : chacun — du simple fidèle au coordinateur — déclare QUI
@@ -135,7 +136,7 @@ export default function FaiseurDeDiscipleScreen() {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScreenShell withTabBar={false} paddingTop={insets.top ? 4 : 16}>
         <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()} hitSlop={10}>
+          <Pressable onPress={() => goBack()} hitSlop={10}>
             <Ionicons name="arrow-back" size={24} color={colors.ink2} />
           </Pressable>
           <Text style={styles.title}>{t('supervisor.title')}</Text>

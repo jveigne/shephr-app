@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 
 // Campagnes in-app (23/07 — porté de CMFIPraise) : GET /api/notifications, endpoint PUBLIC,
 // ciblage par app (TargetApp.Shephr), version, pays et ministère (optionnel). Types :

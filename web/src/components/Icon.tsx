@@ -62,6 +62,7 @@ const NAME_MAP: Record<string, IconName> = {
   folder: 'Folder',
   tree: 'Tree',
   inbox: 'Inbox',
+  megaphone: 'Megaphone',
   mark: 'Mark',
 };
 

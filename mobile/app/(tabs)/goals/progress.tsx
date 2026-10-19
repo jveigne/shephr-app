@@ -9,23 +9,24 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ScreenShell from '../../../components/ScreenShell';
-import Card from '../../../components/Card';
-import Label from '../../../components/Label';
-import Field from '../../../components/Field';
-import Button from '../../../components/Button';
-import Chip from '../../../components/Chip';
-import { colors, fonts } from '../../../theme';
-import { useLanguage } from '../../../contexts/LanguageContext';
-import { goalName } from '../../../utils/goalName';
-import { useGoalsData } from '../../../hooks/useGoalsData';
-import { goalCategoryMeta } from '../../../constants/goalCategories';
-import { currencySymbol, fmtAmount, fmtDateLong, toLocalDate } from '../../../utils/format';
-import { confirmDialog, notify } from '../../../utils/dialogs';
-import { addProgress } from '../../../services/goalsApi';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Field from '@/components/Field';
+import Button from '@/components/Button';
+import Chip from '@/components/Chip';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { goalName } from '@/utils/goalName';
+import { useGoalsData } from '@/hooks/useGoalsData';
+import { goalCategoryMeta } from '@/constants/goalCategories';
+import { currencySymbol, fmtAmount, fmtDateLong, toLocalDate } from '@/utils/format';
+import { confirmDialog, notify } from '@/utils/dialogs';
+import { addProgress } from '@/services/goalsApi';
 
 const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallback;
 
@@ -66,7 +67,7 @@ export default function AddProgressScreen() {
       });
       await reload();
       notify(t('common.appName'), t('progress.saved'));
-      router.back();
+      goBack();
     } catch (e: any) {
       // ⚠ DEADLINE_PASSED reste levé après la date limite (RG-BQ-07) — le secrétariat passe outre.
       const code = e?.response?.data?.error;
@@ -106,7 +107,7 @@ export default function AddProgressScreen() {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScreenShell withTabBar={false} paddingTop={insets.top ? 4 : 16}>
         <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()} hitSlop={10}>
+          <Pressable onPress={() => goBack()} hitSlop={10}>
             <Ionicons name="arrow-back" size={24} color={colors.ink2} />
           </Pressable>
         </View>

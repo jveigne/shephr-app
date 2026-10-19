@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 
 // Demandes de création de structure (RDG 22/07/2026 — Lot D4).
 // La création directe est réservée au back-office (RG-DS-05) : le mobile DÉPOSE une demande à

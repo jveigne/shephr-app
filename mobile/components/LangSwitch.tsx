@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import { colors, fonts } from '../theme';
-import { useLanguage } from '../contexts/LanguageContext';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const LANGS = ['fr', 'en'] as const;
 

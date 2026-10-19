@@ -8,28 +8,29 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ScreenShell from '../../../components/ScreenShell';
-import Card from '../../../components/Card';
-import Label from '../../../components/Label';
-import Field from '../../../components/Field';
-import Button from '../../../components/Button';
-import Chip from '../../../components/Chip';
-import { colors, fonts } from '../../../theme';
-import { useLanguage } from '../../../contexts/LanguageContext';
-import { goalName } from '../../../utils/goalName';
-import { useGoalsData } from '../../../hooks/useGoalsData';
-import { goalCategoryMeta } from '../../../constants/goalCategories';
-import { currencySymbol, fmtAmount, fmtDate, parseLocalDate } from '../../../utils/format';
-import { confirmDialog, notify } from '../../../utils/dialogs';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Field from '@/components/Field';
+import Button from '@/components/Button';
+import Chip from '@/components/Chip';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { goalName } from '@/utils/goalName';
+import { useGoalsData } from '@/hooks/useGoalsData';
+import { goalCategoryMeta } from '@/constants/goalCategories';
+import { currencySymbol, fmtAmount, fmtDate, parseLocalDate } from '@/utils/format';
+import { confirmDialog, notify } from '@/utils/dialogs';
 import {
   deleteProgress,
   updateProgress,
   type GoalCategory,
   type ProgressResponse,
-} from '../../../services/goalsApi';
+} from '@/services/goalsApi';
 
 const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallback;
 
@@ -107,7 +108,7 @@ export default function HistoryScreen() {
       }
     >
       <View style={styles.headerRow}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
+        <Pressable onPress={() => goBack()} hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={colors.ink2} />
         </Pressable>
       </View>

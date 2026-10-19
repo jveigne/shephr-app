@@ -1,20 +1,21 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ScreenShell from '../../../components/ScreenShell';
-import Card from '../../../components/Card';
-import Button from '../../../components/Button';
-import HandDivider from '../../../components/HandDivider';
-import { colors, fonts } from '../../../theme';
-import { useLanguage } from '../../../contexts/LanguageContext';
-import { goalName } from '../../../utils/goalName';
-import { useGoalsData } from '../../../hooks/useGoalsData';
-import { goalCategoryMeta } from '../../../constants/goalCategories';
-import { fmtAmount, fmtDate } from '../../../utils/format';
-import { confirmDialog, notify } from '../../../utils/dialogs';
-import { submitMyMemberPledges, type SubmitResponse } from '../../../services/goalsApi';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Button from '@/components/Button';
+import HandDivider from '@/components/HandDivider';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { goalName } from '@/utils/goalName';
+import { useGoalsData } from '@/hooks/useGoalsData';
+import { goalCategoryMeta } from '@/constants/goalCategories';
+import { fmtAmount, fmtDate } from '@/utils/format';
+import { confirmDialog, notify } from '@/utils/dialogs';
+import { submitMyMemberPledges, type SubmitResponse } from '@/services/goalsApi';
 
 /**
  * Soumission INDIVIDUELLE (RG-BQ-06, JP 16/08) — chacun verrouille SES engagements. Il n'y a plus
@@ -81,7 +82,7 @@ export default function SubmitScreen() {
         </View>
         <Button
           label={t('submit.backToGoals')}
-          onPress={() => router.back()}
+          onPress={() => goBack()}
           fullWidth
           style={{ marginTop: 32 }}
         />
@@ -92,7 +93,7 @@ export default function SubmitScreen() {
   return (
     <ScreenShell withTabBar={false} paddingTop={insets.top ? 4 : 16}>
       <View style={styles.headerRow}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
+        <Pressable onPress={() => goBack()} hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={colors.ink2} />
         </Pressable>
       </View>

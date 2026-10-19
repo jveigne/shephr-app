@@ -10,19 +10,19 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
-import ScreenShell from './ScreenShell';
-import Card from './Card';
-import Label from './Label';
-import Button from './Button';
-import HandDivider from './HandDivider';
-import { GoalScreenTitle } from './GoalCards';
-import { colors, fonts } from '../theme';
-import { goalCategoryMeta } from '../constants/goalCategories';
-import { useLanguage } from '../contexts/LanguageContext';
-import { goalName } from '../utils/goalName';
-import { useAuth } from '../contexts/AuthContext';
-import { isSubCoordinatorLeader } from '../services/authApi';
-import { fmtAmount } from '../utils/format';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import Button from '@/components/Button';
+import HandDivider from '@/components/HandDivider';
+import { GoalScreenTitle } from '@/components/GoalCards';
+import { colors, fonts } from '@/theme';
+import { goalCategoryMeta } from '@/constants/goalCategories';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { goalName } from '@/utils/goalName';
+import { useAuth } from '@/contexts/AuthContext';
+import { isSubCoordinatorLeader } from '@/services/authApi';
+import { fmtAmount } from '@/utils/format';
 import {
   getActiveGoal,
   getAggregate,
@@ -36,8 +36,8 @@ import {
   type GoalCategory,
   type UnitPledgeDetail,
   type ZoneUnitStatus,
-} from '../services/goalsApi';
-import { listCountries, listLocalities, listZones } from '../services/orgApi';
+} from '@/services/goalsApi';
+import { listCountries, listLocalities, listZones } from '@/services/orgApi';
 
 /** Regroupement d'assemblées par ville (localityName) — clé stable même sans localityId. */
 interface CityUnitsGroup {

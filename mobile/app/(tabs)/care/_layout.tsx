@@ -5,7 +5,6 @@ export default function CareLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
-      <Stack.Screen name="new" />
       <Stack.Screen name="record/[id]" />
     </Stack>
   );

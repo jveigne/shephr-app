@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, RefreshControl, ActivityIndicator, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from './ScreenShell';
-import Card from './Card';
-import Label from './Label';
-import { GoalScreenTitle } from './GoalCards';
-import { colors, fonts } from '../theme';
-import { useLanguage } from '../contexts/LanguageContext';
-import { goalName } from '../utils/goalName';
-import { fmtAmount, fmtDate } from '../utils/format';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import { GoalScreenTitle } from '@/components/GoalCards';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { goalName } from '@/utils/goalName';
+import { fmtAmount, fmtDate } from '@/utils/format';
 import {
   getActiveGoal,
   getGlobalSummary,
@@ -16,7 +16,7 @@ import {
   type ActiveGoal,
   type GlobalSummary,
   type NationStatus,
-} from '../services/goalsApi';
+} from '@/services/goalsApi';
 
 /**
  * Lot V1 — vues ministère-large mobile : « Présentation générale » (LEADER, lecture) et

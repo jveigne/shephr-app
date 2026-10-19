@@ -15,6 +15,12 @@ import { getActiveGoal, getMyPerimeterAggregate } from '../services/goalsApi';
 import { goalName } from '../utils/goalName';
 import { fmtAmount } from '../utils/format';
 import { FEATURES } from '../config/features';
+import {
+  AssemblyStatsProvider,
+  LeaderAssemblySummary,
+  LeaderJournalButton,
+  UnitAssemblyLine,
+} from '../components/AssemblyHierarchyStats';
 
 // Hiérarchie des dirigeants (21/07) — arbre du leadership renvoyé par le backend, déjà scopé
 // par rôle (SUBTREE dirigeant / CHAIN membre / MINISTRY leader-secrétariat-superadmin).
@@ -195,6 +201,10 @@ export function HierarchyPage() {
             « Mon périmètre » — le serveur scope l'agrégat au sous-arbre de personnes. */}
         <LeadershipTotals unitCount={totals.units} memberCount={totals.members} />
 
+        {/* D-ASM-18 (JP 08/10) : statistiques de Vie d'assemblée des assemblées de l'arbre +
+            journal PDF consolidé. Aucun nom de personne ; alerte 3 semaines en affichage seul.
+            Le provider porte la période, partagée par le bloc et par les lignes de l'arbre. */}
+        <AssemblyStatsProvider roots={roots} isChain={data?.mode === 'CHAIN'}>
         <p className="section-sub">{intro}</p>
 
         {data && roots.length > 0 && (
@@ -233,6 +243,7 @@ export function HierarchyPage() {
             ))
           )}
         </div>
+        </AssemblyStatsProvider>
 
         {(data?.unassignedUnits.length ?? 0) > 0 && (
           <>
@@ -273,11 +284,14 @@ function LeaderNode({ node, depth, meId }: { node: LeaderHierarchyNode; depth: n
 
   return (
     <div>
+      {/* D-ASM-18 : le bouton « Journal PDF » du dirigeant est à côté de la ligne (pas dedans :
+          pas de bouton imbriqué). */}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
       <button
         type="button"
         onClick={() => hasContent && setOpen(!open)}
         style={{
-          display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+          display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0,
           padding: '9px 14px', paddingLeft: 14 + depth * 22,
           background: 'none', border: 'none', cursor: hasContent ? 'pointer' : 'default',
           textAlign: 'left', font: 'inherit',
@@ -294,10 +308,16 @@ function LeaderNode({ node, depth, meId }: { node: LeaderHierarchyNode; depth: n
         )}
         {meId === node.id && <Badge tone="ok">{t('hierarchy.you')}</Badge>}
         <GoalPastille hasPledges={node.goalHasPledges} submitted={node.goalSubmitted} late={node.goalLate} />
+        {/* D-ASM-18 : avec les stats de Vie d'assemblée, le compte devient celui du sous-arbre
+            (« N assemblées · k ⚠ ») ; sans elles, le compte des assemblées directes, comme avant. */}
         <span style={{ marginLeft: 'auto', color: 'var(--ink-500)', fontSize: 12 }}>
-          {node.units.length > 0 && t('hierarchy.unitsCount', { count: node.units.length })}
+          <LeaderAssemblySummary node={node}>
+            {node.units.length > 0 && t('hierarchy.unitsCount', { count: node.units.length })}
+          </LeaderAssemblySummary>
         </span>
       </button>
+      <LeaderJournalButton node={node} />
+      </div>
 
       {open && (
         <>
@@ -345,6 +365,7 @@ function UnitRow({ unit, depth }: { unit: HierarchyUnitView; depth: number }) {
             : t('hierarchy.unitNoMembers')}
         </span>
       </button>
+      <UnitAssemblyLine unitId={unit.id} depth={depth} />
 
       {open &&
         unit.members.map((m) => (

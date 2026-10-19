@@ -2,17 +2,19 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Modal, Image, Linking, Platform, AppState, type AppStateStatus } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Card from './Card';
-import Button from './Button';
-import { colors, fonts } from '../theme';
-import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
+import Card from '@/components/Card';
+import Button from '@/components/Button';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getUnreadNotifications,
   markNotificationRead,
   type UserNotification,
-} from '../services/notificationsApi';
-import { getCampaigns, type CampaignNotification } from '../services/appNotificationsApi';
+} from '@/services/notificationsApi';
+import { getCampaigns, type CampaignNotification } from '@/services/appNotificationsApi';
+import { abonnerRechargement, declarerGateOuverte } from '@/components/push/fileNotifications';
+import { useConduireParSource } from '@/components/push/routagePush';
 
 /**
  * Porte d'entrée des messages à l'ouverture — UNE seule modale à la fois, dans l'ordre :
@@ -29,6 +31,11 @@ type CampaignState = Record<string, { snoozedUntil: number }>;
 export default function NotificationGate() {
   const { t } = useLanguage();
   const { isAuthenticated, me } = useAuth();
+  // 16/09 — la modale mène enfin quelque part. Le routage par `source` existait déjà pour le tap
+  // sur une bannière push, et restait donc inatteignable tant que manquent les clés APNs /
+  // Firebase. On le réutilise ici tel quel : une seule table de destinations, deux points
+  // d'entrée. (§2 de `docs/dons-reste-a-faire.md`.)
+  const { conduire, estActionnable } = useConduireParSource();
   const [campaign, setCampaign] = useState<CampaignNotification | null>(null);
   const [queue, setQueue] = useState<UserNotification[]>([]);
   const [dismissed, setDismissed] = useState(false);
@@ -85,6 +92,39 @@ export default function NotificationGate() {
     });
     return () => sub.remove();
   }, [isAuthenticated, loadCampaigns]);
+
+  // ---- N4c (J-3 14/09) — le push ne remplace pas cette porte, il la réveille ----
+  // Un tap sur une bannière recharge la file : l'application était en arrière-plan, et rien
+  // n'aurait rechargé sans ça. Le push TRANSPORTE une notification déjà écrite en base — qui a
+  // refusé les notifications système, dont le jeton est mort, ou qui a coupé l'interrupteur
+  // « Rappels », la lit quand même ici, à l'ouverture. Cet abonnement n'ajoute aucun affichage.
+  useEffect(
+    () =>
+      abonnerRechargement((notificationId) => {
+        setDismissed(false);
+        void (async () => {
+          try {
+            const unread = await getUnreadNotifications();
+            // Cas mono-destinataire : la notification tapée passe devant, les autres suivent.
+            const visee = notificationId ? unread.filter((n) => n.id === notificationId) : [];
+            const autres = notificationId ? unread.filter((n) => n.id !== notificationId) : unread;
+            setQueue([...visee, ...autres]);
+          } catch {
+            // silencieux : un échec de chargement ne doit pas bloquer l'app
+          }
+        })();
+      }),
+    [],
+  );
+
+  // L'invitation d'activation du push (N4b) attend que cette porte soit libre : deux `Modal`
+  // affichées en même temps ne laissent voir que la dernière, et le message déjà écrit passe
+  // avant la demande de permission.
+  const modaleAffichee = !!campaign || (queue.length > 0 && !dismissed);
+  useEffect(() => {
+    declarerGateOuverte(modaleAffichee);
+    return () => declarerGateOuverte(false);
+  }, [modaleAffichee]);
 
   const snoozeCampaign = async () => {
     if (!campaign) return;
@@ -156,6 +196,8 @@ export default function NotificationGate() {
   const current = queue[0] ?? null;
   if (!current || dismissed) return null;
 
+  const actionnable = estActionnable(current.source);
+
   const onAck = async () => {
     try {
       await markNotificationRead(current.id);
@@ -163,6 +205,12 @@ export default function NotificationGate() {
       // au pire la notification réapparaîtra à la prochaine session
     }
     setQueue((q) => q.slice(1));
+    if (!actionnable) return;
+    // Les rappels restants sont REMIS À PLUS TARD, pas perdus : aucun n'est marqué lu, et la
+    // porte les represente à la prochaine session. Sans ça, une seconde modale s'ouvrirait
+    // par-dessus l'écran qu'on vient tout juste de demander.
+    setDismissed(true);
+    conduire(current.source);
   };
 
   const onLater = () => setDismissed(true); // réapparaît à la prochaine session
@@ -181,7 +229,12 @@ export default function NotificationGate() {
           )}
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
             <Button label={t('notifications.later')} variant="ghost" onPress={onLater} style={{ flex: 1 }} height={48} />
-            <Button label={t('common.ok')} onPress={onAck} style={{ flex: 1 }} height={48} />
+            <Button
+              label={actionnable ? t('notifications.see') : t('common.ok')}
+              onPress={onAck}
+              style={{ flex: 1 }}
+              height={48}
+            />
           </View>
         </Card>
       </View>

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './hooks/useAuth';
@@ -15,6 +16,9 @@ import { DashboardPage } from './pages/Dashboard';
 import { DonationsPage } from './pages/Donations';
 import { GoalsPage } from './pages/Goals';
 import { MemberCarePage } from './pages/MemberCare';
+import { AssemblyPage } from './pages/Assembly';
+import { EventsPage } from './pages/Events';
+import { MyActionsPage } from './pages/MyActions';
 import { UsersPage } from './pages/Users';
 import { MonMinisterePage } from './pages/MonMinistere';
 import { PaysPage } from './pages/Pays';
@@ -29,6 +33,12 @@ import { OnboardingPage } from './pages/Onboarding';
 import { SettingsPage } from './pages/Settings';
 import { ContactPage } from './pages/Contact';
 import { FEATURES } from './config/features';
+
+// Lot D4 (plan Documents du 18/10) : lecteur public chargé à la demande — PDF.js et `qrcode` restent
+// hors du bundle de l'Espace ministère.
+const DocumentReaderPage = lazy(() =>
+  import('./pages/DocumentReader').then((m) => ({ default: m.DocumentReaderPage })),
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -63,11 +73,27 @@ export function App() {
               {/* Page publique exigée par Google Play : règles de confidentialité. */}
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/confidentialite" element={<PrivacyPage />} />
+              {/* Lot D4 — lecteur public d'un document partagé (RG-DOC-02, D-DOC-09) : AUCUNE garde, comme
+                  /privacy. D-DOC-05 (JP 18/10) : n'affiche que l'aperçu, même connecté. Même chemin que le
+                  lien universel `https://<domaine>/d/{slug}` (apple-app-site-association / assetlinks). */}
+              <Route
+                path="/d/:slug"
+                element={
+                  <Suspense fallback={null}>
+                    <DocumentReaderPage />
+                  </Suspense>
+                }
+              />
               {/* Feature B — onboarding : authentifié mais HORS AppShell (aucun rattachement). */}
               <Route path="/join" element={<OnboardingPage />} />
               {/* Feature A — espace membre minimal (MEMBRE Goals rattaché), gaté par MemberShell. */}
               <Route element={<MemberShell />}>
                 <Route path="/my-goals" element={<MemberGoalsPage />} />
+                {/* D-ASM-17 (JP 25/09) — CR et avancement de son assemblée, en lecture seule. */}
+                {FEATURES.assembly && <Route path="/my-assembly" element={<AssemblyPage />} />}
+                {/* Lot E8 (§6.2 du plan du 14/10) — D-EVT-14 (JP 14/10) : vue dédiée du membre, les actions
+                    de SON assemblée seulement (compteur, programmés, réalisés, Déclarer / Programmer). */}
+                {FEATURES.events && <Route path="/my-actions" element={<MyActionsPage />} />}
                 <Route path="/member-settings" element={<SettingsPage />} />
                 <Route path="/member-contact" element={<ContactPage />} />
               </Route>
@@ -87,6 +113,20 @@ export function App() {
                   <Route path="/goals" element={<GoalsPage />} />
                 ) : (
                   <Route path="/goals" element={<Navigate to={HOME} replace />} />
+                )}
+                {/* Vie d'assemblée (D-ASM-12, JP 23/09) : flag de livraison ; la page gère en plus
+                    l'absence d'abonnement ASSEMBLY (RG-06). */}
+                {FEATURES.assembly ? (
+                  <Route path="/assembly" element={<AssemblyPage />} />
+                ) : (
+                  <Route path="/assembly" element={<Navigate to={HOME} replace />} />
+                )}
+                {/* Évènements (D-EVT-05, JP 14/10) : flag de livraison ; la page gère en plus
+                    l'absence d'abonnement EVENTS (RG-06). */}
+                {FEATURES.events ? (
+                  <Route path="/events" element={<EventsPage />} />
+                ) : (
+                  <Route path="/events" element={<Navigate to={HOME} replace />} />
                 )}
                 <Route path="/member-care" element={<MemberCarePage />} />
                 <Route path="/users" element={<UsersPage />} />

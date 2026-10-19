@@ -25,7 +25,7 @@ Les deux surfaces consomment le **même backend** `cmfipraise-backend` (Spring B
 
 | | mobile | web (`Espace ministère`) | `shephr-webapp` |
 |---|---|---|---|
-| Simple membre (`MEMBRE` + rattaché) | ✅ usage principal | ⚠ espace minimal « Mes objectifs » (`MemberShell`) | ❌ |
+| Simple membre (`MEMBRE` + rattaché) | ✅ usage principal | ⚠ espace minimal « Mes objectifs » + « Mes actions » (`MemberShell` ; « Mes actions » = vue dédiée, les actions de **son assemblée seule** : compteur, programmés, réalisés, Déclarer / Programmer — D-EVT-14) | ❌ |
 | Dirigeant (`DIRIGEANT_UNITE`→`DIRIGEANT_COORDINATEUR`) | ✅ | ✅ pilotage & administration de son périmètre | ❌ |
 | `LEADER` / `SECRETARIAT` (ministère-large) | ✅ | ✅ (lecture large ; `SECRETARIAT` crée nation/région/ville) | ❌ |
 | `superAdmin` | ✅ | ✅ | ✅ |
@@ -47,7 +47,7 @@ type ModuleRole =
 - ⚠ **`DIRIGEANT_LEADER` n'existe plus** (renommé `DIRIGEANT_SENIOR` au Lot 3.5) et `DIRIGEANT_UNITE` a été ajouté. Le `CLAUDE.md` du backend est encore partiellement sur l'ancienne nomenclature — **la vérité est `com.excellence.back.auth.ModuleRole`**.
 - Un compte porte **un rôle par module** (`donationRole`, `goalRole`, potentiellement différents) + un booléen transverse **`superAdmin`**.
 - **`managerRank(me)`** = rang max parmi les rôles **manager** uniquement ; `LEADER`/`SECRETARIAT` valent **0** en autorité (ils voient tout, n'administrent rien). Cette fonction est le miroir exact de `managerRank` côté backend — la modifier sans le backend crée des 403 silencieux.
-- Helpers de gating (dans `authApi.ts` des deux surfaces) : `isLeaderRole`, `hasGoalsAccess`, `hasMemberGoals`/`hasMemberSpace`, `hasMinistryAccess` (web), `canManageStructure`, `canManageZones`, `canManageUnits`, `canManageUsers`, `isSecretariat`, `isCityLeader`, `isAssemblyLeaderOnly`, `assignableRoles`/`assignableLeaderRoles`.
+- Helpers de gating (dans `authApi.ts` des deux surfaces) : `isLeaderRole`, `hasGoalsAccess`, `hasMemberGoals`/`hasMemberSpace`, `hasMinistryAccess` (web), `canManageStructure`, `canManageZones`, `canManageUnits`, `canManageUsers`, `isSecretariat`, `isCityLeader`, `isAssemblyLeaderOnly`, `assignableRoles`/`assignableLeaderRoles`, `isAttachedAccount` (Documents : `superAdmin`, rôle module > `MEMBRE` ou `goalUnitId` — même définition que `hasMinistryAccess || hasMemberSpace`).
 
 ### Vocabulaire structurel (« Chantier B »)
 
@@ -65,7 +65,7 @@ Le niveau `TEAM` est supprimé, le type d'unité `CENTER` aussi.
 ### Deux gating orthogonaux
 
 1. **Rôle** (`ModuleRole` + périmètre géographique) — qui voit/écrit quoi.
-2. **Abonnement au module** — `GET /api/me/accessible-modules` renvoie les codes accessibles (`DONATIONS`, `GOALS`, `MEMBER_CARE`…). Un module non couvert est **invisible** (RG-06), pas juste désactivé. Côté backend, l'accès est aussi refusé par `@RequiresModule` (403 `MODULE_ACCESS_DENIED`).
+2. **Abonnement au module** — `GET /api/me/accessible-modules` renvoie les codes accessibles (`DONATIONS`, `GOALS`, `MEMBER_CARE`, `ASSEMBLY`, `EVENTS`, `DOCUMENTS`…). Un module non couvert est **invisible** (RG-06), pas juste désactivé. Côté backend, l'accès est aussi refusé par `@RequiresModule` (403 `MODULE_ACCESS_DENIED`).
 
 Un utilisateur peut donc avoir le rôle requis **et** se voir refuser l'accès faute d'abonnement.
 
@@ -102,35 +102,41 @@ web/src/
 ├── App.tsx              Routes + QueryClient (staleTime 30 s, retry 1, pas de refetch on focus)
 ├── AppShell.tsx         Espace dirigeant — garde `canAccessWeb` (= hasMinistryAccess)
 ├── MemberShell.tsx      Espace membre minimal — garde `canAccessMemberSpace`
-├── config/features.ts   Flags de livraison { donations: false, goals: true }
+├── config/features.ts   Flags de livraison { donations: false, goals: true, assembly: true, events: true }
+├── config/links.ts      Domaine des liens universels (`VITE_SHARE_BASE_URL`, P1 Documents) ; config/stores.ts liens stores (P2)
 ├── components/          ui.tsx (Button…TopBar, Picker, Table, Modal, Drawer), charts.tsx,
 │                        NationsMap, GoalTimeline, YearPicker, GeoPicker, CountryDialPicker,
-│                        SupervisorCard, Sidebar, Toast, Icon/icons, LangSwitch
+│                        SupervisorCard, Sidebar, Toast, Icon/icons, LangSwitch,
+│                        Event{Declare,Detail,Form,PeriodFilter,StatsDrill}, EventsTable (module EVENTS)
 ├── hooks/useAuth.tsx    AuthProvider (token, me, login/register/establishSession/refreshMe/logout)
 ├── i18n/                index.ts + locales/{fr,en}.json (37 sections)
 ├── pages/               voir routes ci-dessous
 ├── services/            apiClient (axios + interceptors) + 1 module par domaine
-└── utils/               format, download, isoNumeric
+└── utils/               format, download, isoNumeric, meetingReport (texte du CR, §5.4),
+                         events (dates locales, périodes, libellés de type, messages d'erreur EVENTS),
+                         documents (visitorId, plateforme, journal du lecteur public)
+web/api/document-page.ts Fonction Vercel : `/d/{slug}` avec balises OpenGraph (D-DOC-10), réécrite par vercel.json avant la règle SPA
+web/public/.well-known/  apple-app-site-association + assetlinks.json (liens universels `/d/*` ; `/e/*` à n'ajouter **qu'avec** la route mobile `app/e/*`, sinon iOS ouvre l'app sur « route introuvable »)
 ```
 
 ### Routes et gardes
 
 | Zone | Routes | Garde |
 |---|---|---|
-| **Publique** | `/` (landing), `/login`, `/signup`, `/activate`, `/invitation/:token`, `/delete-account` (+`/supprimer-compte`), `/privacy` (+`/confidentialite`) | aucune |
+| **Publique** | `/` (landing), `/login`, `/signup`, `/activate`, `/invitation/:token`, `/delete-account` (+`/supprimer-compte`), `/privacy` (+`/confidentialite`), `/d/:slug` (lecteur public d'un document partagé, `pages/DocumentReader.tsx`, chargé en `lazy` — aperçu seul, D-DOC-05) | aucune |
 | **Onboarding** | `/join` | authentifié, **hors shell** (compte sans rattachement) |
-| **`MemberShell`** | `/my-goals`, `/member-settings`, `/member-contact` | `goalRole === 'MEMBRE'` **et** `goalUnitId` |
-| **`AppShell`** | `/dashboard`, `/donations`, `/goals`, `/member-care`, `/users`, `/structure/{ministeres,pays,zones,localites,unites}`, `/hierarchy`, `/requests`, `/exports`, `/settings`, `/contact` | `hasMinistryAccess` = `superAdmin` ou tout rôle module > `MEMBRE` |
+| **`MemberShell`** | `/my-goals`, `/my-assembly` (`FEATURES.assembly` + abonnement `ASSEMBLY`), `/my-actions` (`FEATURES.events` + abonnement `EVENTS` ; vue membre dédiée `pages/MyActions.tsx`, distincte de `/events` — D-EVT-14), `/member-settings`, `/member-contact` | `goalRole === 'MEMBRE'` **et** `goalUnitId` |
+| **`AppShell`** | `/dashboard`, `/donations`, `/goals`, `/assembly`, `/events`, `/member-care`, `/users`, `/structure/{ministeres,pays,zones,localites,unites}`, `/hierarchy`, `/requests`, `/exports`, `/settings`, `/contact` | `hasMinistryAccess` = `superAdmin` ou tout rôle module > `MEMBRE` |
 
-`/delete-account` et `/privacy` sont **exigées par Google Play** — ne pas les supprimer ni les mettre derrière une garde.
+`/delete-account` et `/privacy` sont **exigées par Google Play** — ne pas les supprimer ni les mettre derrière une garde. `/d/:slug` est la cible des **liens universels** des Documents (voir Points d'attention n°14) : publique elle aussi, jamais derrière une garde.
 
 ### Feature flags (`config/features.ts`)
 
 ```ts
-export const FEATURES = { donations: false, goals: true } as const;
+export const FEATURES = { donations: false, goals: true, assembly: true, events: true } as const;
 ```
 
-Flags de **livraison client**, pas de configuration produit — leur historique est documenté en tête du fichier (« Member Care only » JP 2026-06-27, puis mise en avant des Goals JP 2026-07-10). Ils pilotent : les routes (`App.tsx`), les entrées de menu (`Sidebar.tsx`) et la page d'accueil `HOME`. Réactiver un pan = repasser le flag à `true` (rien d'autre à toucher).
+Flags de **livraison client**, pas de configuration produit — leur historique est documenté en tête du fichier (« Member Care only » JP 2026-06-27, puis mise en avant des Goals JP 2026-07-10, puis Évènements lot E8 du 14/10). Ils pilotent : les routes (`App.tsx`), les entrées de menu (`Sidebar.tsx`, `MemberShell.tsx`) et la page d'accueil `HOME`. Réactiver un pan = repasser le flag à `true` (rien d'autre à toucher). `assembly` et `events` sont **en plus** gatés par l'abonnement (`accessible-modules`, RG-06) : flag à `true` ne suffit pas à afficher le menu.
 
 ### Services
 
@@ -140,7 +146,10 @@ Flags de **livraison client**, pas de configuration produit — leur historique 
 | `authApi.ts` | auth, invitations, helpers de rôles, `getAccessibleModules` |
 | `adminApi.ts` | utilisateurs (`/api/church/admin/users`) + structure org (`/countries`, `/zones`, `/localities`, `/units`, `/continents`, `/ministries`) |
 | `goalsApi.ts` | module Goals (584 lignes) — pledges, progress, faith, agrégats, timeline, drill, deadlines, rappels |
-| `memberCareApi.ts` | suivi pastoral (`/api/church/member-care`) |
+| `memberCareApi.ts` | suivi pastoral (`/api/church/member-care`) — fiches adressées par **`userId`** du membre (refonte 23/09) |
+| `assemblyApi.ts` | Vie d'assemblée (`/api/church/assembly`, module `ASSEMBLY`) — assemblées, roster, réunions/CR, modules d'enseignement, avancement |
+| `documentsApi.ts` | Documents (module `DOCUMENTS`) — lecture **publique** par lien (`/api/public/documents/{slug}`, `/preview`, `/events`) pour le lecteur `/d/:slug`. Miroirs de `DocumentDtos`. Pas d'espace Documents sur le web (D-DOC-14) |
+| `eventsApi.ts` | Évènements & recensement (`/api/church/events`, module `EVENTS`) — types, `/me/scopes`, déclarer/programmer (idempotent sur `clientId`), « Mes actions », agenda, détail, clôture, « à vérifier », statistiques. Miroirs de `EventDtos` |
 | `donationApi.ts`, `statsApi.ts` | dons + statistiques (masqués par `FEATURES.donations`) |
 | `joinRequestsApi.ts`, `structureRequestsApi.ts` | demandes de rattachement / de création de structure |
 | `leadersApi.ts` | organigramme, superviseur, discipulat |
@@ -155,7 +164,7 @@ Flags de **livraison client**, pas de configuration produit — leur historique 
 ## `mobile/` — application Expo
 
 ### Stack
-Expo SDK 54 · React Native 0.81 · React 19 · **expo-router** (routing par fichiers, `typedRoutes`) · axios · AsyncStorage · react-i18next · react-native-svg · reanimated. Fonts Google : **Fraunces** (serif, titres/montants), **Inter** (corps), **JetBrains Mono** (codes/références).
+Expo SDK 57 · React Native 0.86 · React 19.2 · **expo-router** (routing par fichiers, `typedRoutes`) · axios · AsyncStorage · react-i18next · react-native-svg · reanimated. Fonts Google : **Fraunces** (serif, titres/montants), **Inter** (corps), **JetBrains Mono** (codes/références).
 
 ### Structure
 
@@ -165,17 +174,25 @@ mobile/
 │   ├── _layout.tsx             Stack racine + providers (Language, Auth) + fonts + splash
 │   ├── index.tsx               Redirection /(tabs)/home ↔ /(auth)/login
 │   ├── (auth)/                 login · signup · activate (code court) · join (rattachement)
-│   ├── (tabs)/                 home · donations · goals/ · leader/ · care/ · profile
+│   ├── (tabs)/                 home · donations · goals/ · leader/ · assembly/ · events/ · care/ · profile
 │   ├── declare.tsx             modale de déclaration de don
 │   ├── donation/[id].tsx, donation/edit/[id].tsx
+│   ├── events/                 declare (modale) · mine (« Mes actions ») · plan (modale) · [id] (détail)
+│   ├── d/[slug].tsx            lecteur d'un document partagé (lien universel `/d/{slug}?r=`, module DOCUMENTS)
+│   ├── documents/index.tsx     espace Documents (tuile d'accueil `hasDocuments`, pas un onglet — D-DOC-14)
 │   ├── structure.tsx, membres.tsx, hierarchie.tsx, superviseur.tsx, invite.tsx
-├── components/                 UI atomiques + NotificationGate + GoalAggregates…
-├── contexts/                   AuthContext (token, me, modules) · LanguageContext
-├── constants/                  categories, goalCategories, dialCodes, contact, features(⚠ inutilisé)
-├── hooks/useGoalsData.ts       agrégat pledges + progress par catégorie (`GoalLine`)
-├── services/                   apiClient + 16 modules API
+├── components/                 UI atomiques + NotificationGate + GoalAggregates + EventQueueSync, Event{Agenda,Form,Row,PeriodPicker,StatsDrill}…
+│                               + documents/PdfReader (react-native-pdf, chargé seulement si le module natif est présent ; `.web.tsx` pour Expo web)
+├── contexts/                   AuthContext (token, me, modules, hasMemberCare, hasAssembly, hasEvents, hasDocuments) · LanguageContext
+├── constants/                  categories, goalCategories, dialCodes, contact, links (`SHARE_DOMAIN`, P1 Documents), features(⚠ inutilisé)
+├── hooks/                      useGoalsData (agrégat pledges + progress, `GoalLine`) · useDonationCategories ·
+│                               useEventCatalog (types + nœuds de saisie EVENTS, mémoire + AsyncStorage)
+├── services/                   apiClient + modules API (dont eventsApi) + eventQueue (file hors-ligne EVENTS)
+│                               + sessionCache (dernier profil connu, lancement hors ligne)
+│                               + documentsApi + documentReadCache (relecture hors ligne des documents)
+│                               + returnTarget (retour après connexion sur un lien universel, générique `/d/*` · `/e/*`)
 ├── theme/                      colors.ts (moss/parchment/earth/ink) + typography.ts + radii
-├── utils/                      format, dialogs, demandes, i18n/ (fr + en, 32 sections)
+├── utils/                      format, dialogs, demandes, meetingReport (texte du CR), events, eventErrors, i18n/ (fr + en)
 └── docs/architecture.md        ⚠ partiellement obsolète (voir Points d'attention n°6)
 ```
 
@@ -186,9 +203,13 @@ mobile/
 | `home`, `profile` | toujours |
 | `donations` | `hasDonations` (abonnement `DONATIONS` — RG-06) |
 | `goals` | `hasGoals` (dirigeant+ Goals) **ou** `hasMemberGoals(me)` (membre rattaché) |
-| `leader` (« Périmètre ») | `hasDonations && isLeader` |
+| `leader` (« Trésorerie ») | `hasDonations && isTreasurer` (jamais `isLeader`) |
+| `assembly` (Vie d'assemblée) | `isLeader && hasAssembly` (abonnement `ASSEMBLY`) |
+| `events` (Évènements) | `canDeclareEvents(me) && hasEvents` (abonnement `EVENTS`) — contenu selon le rôle (D-EVT-14, JP 14/10) : agenda + statistiques si `isLeader` (dirigeants, LEADER/SECRETARIAT, superAdmin) ; sinon `EventMemberView`, la vue de son assemblée (spec §6.1), la même que `app/events/mine` |
 | `care` (suivi pastoral) | `isLeader && hasMemberCare` |
 | `demandes` | **commenté** dans le code |
+
+Les **Documents** ne sont **pas** un onglet (D-DOC-14) : tuile de `home` si `hasDocuments` (abonnement `DOCUMENTS`) **et** `isAttachedAccount(me)`, vers `app/documents`.
 
 Un onglet masqué se fait avec `href: null`, pas en retirant le `<Tabs.Screen>`.
 
@@ -226,7 +247,10 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local"
 
 Variables : `VITE_API_BASE_URL` pour `web/` (⚠ nom différent de `VITE_API_URL` dans `shephr-webapp`) ; `extra.API_URL` d'`app.json` pour le mobile. Aucun `.env` n'est versionné.
 
-**Aucun test automatisé** dans ce dépôt. La vérification minimale avant de conclure : `npx tsc --noEmit` dans la surface touchée (propre des deux côtés au 2026-08-14) + `npm run lint`. Les plans de test sont **manuels** : `docs/goals-test-plan.md`, `web/MEMBER_CARE_TEST_PLAN.md`.
+**Aucun test automatisé** dans ce dépôt. La vérification minimale avant de conclure : `npx tsc --noEmit` dans la surface touchée (propre des deux côtés au 2026-08-14) + `npm run lint`.
+
+- ⚠ **`web/` : `npm run lint` ne s'exécute pas** (`sh: eslint: command not found`, code 127) — `eslint` n'est pas dans `web/package.json` et il n'y a aucune config ESLint. Constaté au 14/10 ; seuls `tsc` et `npm run build` vérifient le web.
+- **`mobile/` : `tsc` s'appuie sur `.expo/types/router.d.ts`** (non versionné, généré par `expo start` avec `typedRoutes`). Après l'ajout d'une route (ex. `app/events/*`, `app/(tabs)/events`), un fichier périmé fait échouer `tsc` (TS2345 sur `router.push`) : le régénérer par un bref `npx expo start`. Les plans de test sont **manuels** : `docs/goals-test-plan.md`, `web/MEMBER_CARE_TEST_PLAN.md`.
 
 ---
 
@@ -239,6 +263,7 @@ Variables : `VITE_API_BASE_URL` pour `web/` (⚠ nom différent de `VITE_API_URL
 - **Erreurs axios** : message utile dans `err.response.data.message` (helper `errMsg` dans les pages). Les 422 métier portent un code à traiter explicitement (`USERNAME_ALREADY_EXISTS`, `PHONE_ALREADY_EXISTS`, `USER_LEADS_ORPHAN_NODES`, `SUPER_ADMIN_SELF_DELETE`).
 - **Style web** : tokens CSS de `theme/styles.css` (`var(--green-800)`, `var(--ink-500)`, `var(--font-serif)`…) en `style={{}}` inline ou classes existantes ; pas de framework utilitaire.
 - **Style mobile** : `StyleSheet.create` + tokens de `theme/` (`colors.moss`, `colors.parchment`, `radii.md`, `fonts.sans`). La palette est **identique** à celle du web et de `shephr-webapp` — ne pas introduire de couleur en dur.
+- **Imports mobile** : imports internes en `@/` (alias tsconfig `"@/*": ["./*"]`, résolu nativement par Metro depuis le SDK 50 — aucune config babel/metro) ; plus aucun chemin relatif `./` ou `../` (JP 14/10).
 - **Commentaires** : le code porte beaucoup de commentaires de **décision** (« RDG 25/07 », « JP 31/07 », « Lot 3.5 », « Chantier B », « RG-06 »). Ils sont la mémoire produit du projet : les conserver et en ajouter au même format lorsqu'une règle métier est encodée.
 
 ---
@@ -264,7 +289,7 @@ Variables : `VITE_API_BASE_URL` pour `web/` (⚠ nom différent de `VITE_API_URL
 
 4. **Le mobile tape la production par défaut** (`app.json` › `extra.API_URL`). Voir « URL de l'API » ci-dessus avant tout test local.
 
-5. **Aucune interception de 401 côté mobile** (contrairement au web) : un token expiré produit des erreurs par appel, sans redirection automatique vers le login.
+5. **Aucune interception de 401 côté mobile** (contrairement au web) : un token expiré produit des erreurs par appel, sans redirection automatique vers le login. Depuis le lot E6 (14/10, RG-ACT-08), la **restauration de session** ne retire le jeton que sur un vrai refus (401 / 403) : sans réseau ou sur une panne serveur, `AuthContext` repart du dernier profil et des derniers modules connus (`services/sessionCache.ts`, liés au compte **et** au jeton) et revalide au retour du réseau / du premier plan. Un `apiClient` appelé avec un en-tête `Authorization` explicite le garde (file EVENTS, `pushApi.supprimerAppareil`) : ne pas « simplifier » l'intercepteur.
 
 6. **`mobile/docs/architecture.md` est daté** : il décrit l'app à l'époque « module donation » (tabs, endpoints, « web companion à décider »). Les tabs Goals / Care, l'organigramme, les demandes et l'onboarding n'y figurent pas. Utiliser le présent fichier comme référence ; corriger ce doc si on y touche.
 
@@ -275,3 +300,11 @@ Variables : `VITE_API_BASE_URL` pour `web/` (⚠ nom différent de `VITE_API_URL
 9. **Lectures ouvertes, écritures gardées** : les endpoints de structure sont lisibles par tout membre du ministère ; seules les écritures sont contrôlées (le backend renvoie 403). Le gating front sert à ne pas afficher de boutons inutiles — il ne remplace pas la garde serveur, et ne doit pas être « assoupli » pour contourner un 403.
 
 10. **`web/src/services/authApi.ts` conserve un type legacy `UserRole = 'MEMBER'|'LEADER'|'ADMIN'`** (et `LeaderLevel`) hérité de l'ancien modèle. Son commentaire dit « still used by adminApi/Users page » — c'est faux aujourd'hui : plus aucune référence dans `web/src`. Code mort, à ne pas réutiliser.
+
+11. **Vie d'assemblée (module `ASSEMBLY`, plan `cmfipraise-backend/docs/shephr/23_09_2026`)** : réunions et comptes rendus (CR), modules d'enseignement (créés par SUPER_ADMIN dans `shephr-webapp`, `/admin/teaching-modules`), avancement. **Lecture** = périmètre visible (`getAllVisibleUnitIds`, RG-ASM-05 : chaîne, géographie, LEADER/SECRETARIAT) ; **écriture** = `DIRIGEANT_UNITE` de l'assemblée uniquement (`canWrite`, D-ASM-03). Le texte copiable du CR est généré côté client par **deux copies** de `utils/meetingReport.ts` (web : clés `assembly.report.*`, mobile : `assemblyLife.report.*`), qui doivent produire le même texte au caractère près (modèle §5.4 du plan) : toute modification se porte des deux côtés.
+
+12. **Member Care = accès par chaîne de superviseurs, jamais par la géographie (D-ASM-04/05, 23/09).** Une fiche = un compte `MEMBRE` rattaché (`goalUnitId`), automatique, adressée par `userId` ; plus de création, suppression, liaison ni export. **Lecture** : `DIRIGEANT_UNITE` de l'assemblée courante du membre + ses superviseurs (`supervisor_id`, récursif) + `superAdmin` (lecture seule). LEADER, SECRETARIAT et la géographie (ville/région/nation) ne voient **aucune** fiche. **Écriture** (statut, note) : `DIRIGEANT_UNITE` de l'assemblée uniquement (`canEdit`). Les présences viennent des CR si `ASSEMBLY` est actif (`attendanceEnabled`). Redevabilité (`/overview`, relances) : gelée (D-ASM-09).
+
+13. **Évènements & recensement (module `EVENTS`, plan `cmfipraise-backend/docs/shephr/14_10_2026`, contrat `02_Contrat_API_Evenements.md`)** : un seul objet `Event` (D-EVT-01) ; une « action d'évangélisation » est un évènement d'un type `evangelism = true` (catalogue par ministère, créé par SUPER_ADMIN dans `shephr-webapp`, `/admin/event-types`). Cycle `PLANNED → DONE | CANCELLED` (D-EVT-02) : une **déclaration** terrain naît `DONE` (date jamais future), une **programmation** naît `PLANNED` — D-EVT-13 (JP 14/10, remplace D-EVT-08) : programmer n'est **pas** une prérogative du dirigeant, on programme exactement là où l'on déclare (MEMBRE dans son assemblée, dirigeant à son niveau ou dessous, SECRETARIAT partout, LEADER partout par conséquence de la règle — RG-EVT-03). Rattachement à **un** nœud (`scopeLevel` `COUNTRY`/`ZONE`/`LOCALITY`/`UNIT` + `scopeId`) : un évènement de ville compte une fois, à la ville, dans aucune assemblée (D-EVT-04). **Comptés** (D-EVT-03) : `DONE`, non supprimés, type évangélique — « à vérifier » ne retire **jamais** du total (RG-ACT-07) ; **aucun objectif** affiché (D-EVT-06). **Prédicateur** (D-EVT-16, JP 14/10) : champ `preacher` (texte libre ≤ 120, facultatif) réservé, comme les compteurs de D-EVT-15, à un type évangélique — ignoré / remis à null sinon ; saisi juste après le type et la date (création, modification, « marquer comme réalisé », où `""` l'efface), en évidence dans le détail et sur les lignes quand il est renseigné ; aucune statistique par prédicateur. **Invités** (D-EVT-17, JP 14/10) : compteur `guests` facultatif, **tout type**, part extérieure **incluse** dans `participants` ; si les deux sont renseignés, `guests ≤ participants` sur l'état résultant (création, PATCH, `/done`), sinon 422 `EVENT_GUESTS_EXCEED_PARTICIPANTS` — contrôlé avant envoi (bouton inactif), sommé dans les statistiques comme `participants`, affiché « 40 participants dont 12 invités ». **Lecture** = géographie classique (D-EVT-07, à l'inverse de Member Care) **+ l'assemblée principale** (`goalUnitId`) du compte (D-EVT-13) ; LEADER / SECRETARIAT tout le ministère ; un évènement d'un ancêtre est lisible (lecture « par le haut »), jamais modifiable ni compté en dessous. **Simple membre** (D-EVT-14, JP 14/10 — aucun rôle de dirigeant, ni LEADER / SECRETARIAT, ni superAdmin) : il ne lit **que** son assemblée (tous types, évènements des autres compris) et ses propres évènements — pas de lecture « par le haut » (`includeAncestors` sans effet, `GET /{id}` d'un évènement de sa ville / région / nation → 403), jamais une assemblée sœur ; il a une vue **dédiée** (contrat §3.12), un dirigeant rattaché à une assemblée garde la vue dirigeant. Lire n'ouvre aucune gestion : un membre ne modifie / clôture / annule / supprime que **ses** évènements et ne pose jamais « à vérifier » ; les dirigeants du périmètre gardent leurs droits sur les évènements programmés par des membres. Les droits viennent **du serveur** (`canDeclare` / `canPlan` de `/me/scopes`, `canEdit` / `canFlag` de chaque `EventResponse`) : ne jamais les recalculer côté client. Toute création porte un `clientId` UUID tiré **une fois par saisie** (RG-EVT-07) : rejouer renvoie 200 et l'existant. Mobile : seules les **déclarations** passent par la file hors-ligne (`services/eventQueue.ts`, `shephr.eventQueue.v1`, vidée au démarrage / premier plan / retour réseau par `EventQueueSync`) ; le tri « définitif / reste en file » suit **à la lettre** le tableau §3.3 du contrat (401, 403 `MODULE_ACCESS_DENIED`, 400 non qualifié, 5xx et réseau restent). File et catalogue (`useEventCatalog`) sont liés au **compte** (`me.id`), pas au jeton. `expo-crypto` est chargé par `requireOptionalNativeModule` (un binaire ancien ne plante pas) : refaire le dev build / EAS avant un test sur appareil. Web : `/events` (AppShell, `pages/Events.tsx` : Agenda · Déclarer · Statistiques, bouton « Programmer » sur l'agenda si `canPlan` ; onglet par défaut Statistiques pour le SECRETARIAT, D-EVT-09, sinon Agenda) et `/my-actions` (MemberShell, `pages/MyActions.tsx`, D-EVT-14) : compteur ce mois / cette année de l'assemblée (**un** `/stats` sur l'année locale), « Programmés » puis « Actions d'évangélisation » réalisées de l'assemblée (`GET /` sur `UNIT` = `goalUnitId`, `includeAncestors=false`), pastille « Moi » sur ses évènements (`createdById`), boutons « Déclarer » / « Programmer » en modale ; aucun onglet, sélecteur de nœud ni descente statistique. Les deux pages partagent les briques `EventForm`, `EventDetailModal`, `EventsTable` / `EventsBlock` et `utils/events`. Les types et clients sont **dupliqués** web / mobile (`services/eventsApi.ts`) : tout changement de contrat se porte des deux côtés, et dans `shephr-webapp/src/services/eventTypeService.ts` pour le back-office.
+
+14. **Documents & liseuse (module `DOCUMENTS`, plan `cmfipraise-backend/docs/shephr/18_10_2026`, contrat `02_Contrat_API_Documents.md`)** : un PDF publié par SUPER_ADMIN dans `shephr-webapp` (`/documents`, routes backend `/admin/documents` et `/admin/document-categories`, D-DOC-07) se partage par **un seul lien** `https://<SHARE_DOMAIN>/d/{slug}` (slug base62 de 10 caractères, non devinable ; « régénérer » l'invalide). **PDF seuls** (D-DOC-02) : aucune image de page, aucun filigrane — la seule image est la vignette `cover.jpg` (page 1) pour l'aperçu WhatsApp (D-DOC-10). **Aperçu = second PDF** (D-DOC-03) : le backend découpe `preview.pdf` (les `freePages` premières pages) à l'upload ; le PDF complet n'est **jamais** signé pour une requête anonyme ni pour un compte non rattaché (RG-DOC-01b). **Le web n'affiche jamais que l'aperçu** (D-DOC-05, JP 18/10), même connecté, même sur ordinateur (mur : stores, QR code, « Ouvrir dans l'app » `shephr://d/{slug}`) ; seule exception, un document `open = true` (D-DOC-06, champ distinct de `freePages`). **Lecture complète = app + compte connecté et rattaché** (`isAttachedAccount`, D-DOC-04) via `GET /api/church/documents/{slug}/file` — non connecté : mur « Se connecter / Créer un compte » ; non rattaché : mur « Rejoindre mon assemblée » (`/join`). Un lien se lit **quel que soit l'abonnement du lecteur** : seul compte l'abonnement `DOCUMENTS` du ministère du document (D-DOC-12, à confirmer — P5) ; `hasDocuments` ne gate que l'espace Documents de l'app (tuile d'accueil, D-DOC-14 ; aucun espace Documents sur le web). Lien inconnu, dépublié, expiré, régénéré ou ministère sans `DOCUMENTS` → « Ce document n'est plus disponible » (404 / 410, RG-DOC-02). Les fronts **ne composent jamais** le lien de partage : ils prennent `shareUrl` (`POST /events` `SHARE` → `?r={shareRef}`, D-DOC-11). Mesure sans IP ni cookie tiers (D-DOC-15) : `visitorId` aléatoire (`localStorage` `shephr.visitorId` / AsyncStorage), `/privacy` complétée. Sur `/api/public/documents/**`, le backend **ignore** un jeton invalide (jamais 401) — ne pas « corriger » cela, l'intercepteur 401 du web purgerait la session depuis un lien public. Mobile : lecteur natif `react-native-pdf` (+ `react-native-blob-util`, plugins `@config-plugins/*`), chargé seulement si le module est dans le binaire ; cache disque `${slug}-v${version}.pdf` + `services/documentReadCache.ts` (relecture hors ligne) ; Expo web → `iframe` vers le lecteur web ; **retour après connexion** générique (`services/returnTarget.ts` + `utils/authRouting.routeHomeOrReturn`) — refaire un **build EAS** avant tout test sur appareil. **Liens universels partagés avec `/e/*`** (Évènements, cadrage 14/10) : un seul domaine, un seul `apple-app-site-association` / `assetlinks.json` (`web/public/.well-known/`), `vercel.json` réécrit `/d/:slug` vers `web/api/document-page.ts` (OpenGraph) avant la règle SPA et exclut `api/` et `.well-known/`. **Placeholders à remplacer** (prérequis JP non fournis, une source par valeur) : `www.shephr.org` (P1 — web `VITE_SHARE_BASE_URL` / `src/config/links.ts`, mobile `constants/links.ts` **et** `app.json` `associatedDomains` + `intentFilters`, à changer ensemble), `TODO_APP_STORE_URL` / `TODO_PLAY_STORE_URL` (P2, `web/src/config/stores.ts` — boutons inactifs tant qu'ils ne sont pas en `https://`), `TODO_APPLE_TEAM_ID` / `TODO_PLAY_SHA256_FINGERPRINT` (P3, `web/public/.well-known/`), `TODO_API_PUBLIC_BASE_URL` (env Vercel `API_PUBLIC_BASE_URL` de la fonction OpenGraph) ; côté backend `DOCUMENTS_SHARE_BASE_URL` et `R2_*` (P4). Types et clients **dupliqués** web / mobile (`services/documentsApi.ts`) et `shephr-webapp/src/services/documentService.ts` : tout changement de contrat se porte des trois côtés.

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { apiClient } from './apiClient';
-import { DEFAULT_CONTACT_EMAIL, DEFAULT_CONTACT_WHATSAPP_NUMBER } from '../constants/contact';
+import { apiClient } from '@/services/apiClient';
+import { DEFAULT_CONTACT_EMAIL, DEFAULT_CONTACT_WHATSAPP_NUMBER } from '@/constants/contact';
 
 /**
  * Coordonnées de support de la plateforme (JP 31/07) — pilotées depuis le back-office.

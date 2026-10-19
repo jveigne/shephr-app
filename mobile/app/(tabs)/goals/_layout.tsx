@@ -16,6 +16,8 @@ export default function GoalsLayout() {
       <Stack.Screen name="pledge/[categoryId]" />
       {/* RG-BQ-06 — soumission INDIVIDUELLE : chacun verrouille ses propres engagements. */}
       <Stack.Screen name="submit" />
+      {/* Lot G3 — rappel GROUPÉ, à périmètre CHOISI (géographique OU disciples, jamais fondus). */}
+      <Stack.Screen name="remind" />
       <Stack.Screen name="progress" />
       <Stack.Screen name="history" />
     </Stack>

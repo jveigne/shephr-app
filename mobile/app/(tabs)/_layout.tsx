@@ -2,16 +2,16 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLanguage } from '../../contexts/LanguageContext';
-import { useAuth } from '../../contexts/AuthContext';
-import { hasMemberGoals } from '../../services/authApi';
-import { colors, fonts } from '../../theme';
-import NotificationGate from '../../components/NotificationGate';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { canDeclareEvents, hasMemberGoals } from '@/services/authApi';
+import { colors, fonts } from '@/theme';
+import NotificationGate from '@/components/NotificationGate';
 
 export default function TabLayout() {
   const { t, applyAccountLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { isLeader, hasGoals, hasMemberCare, hasDonations, me } = useAuth();
+  const { isLeader, hasGoals, hasMemberCare, hasAssembly, hasDonations, hasEvents, me } = useAuth();
 
   // Initialise la langue depuis le compte (me.language) tant que l'utilisateur
   // n'a pas choisi explicitement une langue dans l'app (cf. LanguageContext).
@@ -82,11 +82,18 @@ export default function TabLayout() {
       <Tabs.Screen
         name="leader"
         options={{
-          // « Périmètre » = vues de lecture des DONS → suit l'accès au module.
-          href: hasDonations && isLeader ? '/(tabs)/leader' : null,
-          title: t('tabs.leader'),
+          // « Trésorerie » (ex-« Périmètre ») — Lot T4, défaut C (14/09).
+          // Gaté sur `isTreasurer` (= MeResponse.treasurer), JAMAIS sur `isLeader` : ce dernier
+          // dérive aussi de `goalRole`, si bien qu'un dirigeant Goals voyait l'onglet puis
+          // récoltait trois 403 silencieux. Le rang pastoral ne confère plus rien côté Dons.
+          // JP 15/09 — onglet MASQUÉ : la Trésorerie s'atteint par sa tuile sur l'accueil, la
+          // barre du bas était trop chargée. `href: null` et non suppression du <Tabs.Screen> :
+          // la route doit rester atteignable par `router.push('/(tabs)/leader')` et par le deep
+          // link des notifications (digest trésorier → file « À vérifier »).
+          href: null,
+          title: t('tabs.treasury'),
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" size={size} color={color} />
+            <Ionicons name="wallet-outline" size={size} color={color} />
           ),
         }}
       />
@@ -100,6 +107,38 @@ export default function TabLayout() {
           ),
         }}
       />*/}
+      <Tabs.Screen
+        name="assembly"
+        options={{
+          // Vie d'assemblée (§6.3 plan 23/09, lot L5) : dirigeants + abonnement ASSEMBLY (D-ASM-12).
+          // D-ASM-17 (JP 25/09) : aussi le MEMBRE rattaché à une assemblée, en lecture seule.
+          // L'écriture des CR reste décidée par le serveur (`canWrite`, D-ASM-03).
+          href: (isLeader || hasMemberGoals(me)) && hasAssembly ? '/(tabs)/assembly' : null,
+          title: t('tabs.assembly'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="book-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="events"
+        options={{
+          // Évènements (plan 14/10, §6.3, lot E7) : agenda + statistiques, abonnement EVENTS
+          // (D-EVT-05, RG-06). D-EVT-09 : le SECRETARIAT est le destinataire des statistiques.
+          // D-EVT-13 (JP 14/10) : comptes rattachés (`goalUnitId`), tout rôle > MEMBRE (LEADER /
+          // SECRETARIAT compris) ou superAdmin — `canDeclareEvents`, miroir de
+          // `EventPerimeters.declare` ; un compte sans nœud voit l'état vide du serveur.
+          // D-EVT-14 (JP 14/10) : le contenu dépend du rôle — agenda + statistiques pour les
+          // dirigeants / LEADER / SECRETARIAT, vue de son assemblée pour le simple membre
+          // (`!isLeader`, cf. `events/index.tsx`). Les boutons restent pilotés par le serveur
+          // (`canPlan` / `canDeclare` de `/me/scopes`).
+          href: hasEvents && canDeclareEvents(me) ? '/(tabs)/events' : null,
+          title: t('tabs.events'),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="megaphone-outline" size={size} color={color} />
+          ),
+        }}
+      />
       <Tabs.Screen
         name="care"
         options={{

@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TODO_APPLE_TEAM_ID.org.cmfi.shephr",
+        "appIDs": ["TODO_APPLE_TEAM_ID.org.cmfi.shephr"],
+        "paths": ["/d/*"],
+        "components": [
+          { "/": "/d/*", "comment": "Documents partagés (plan du 18/10, D-DOC-09)" }
+        ]
+      }
+    ]
+  }
+}

@@ -1,4 +1,4 @@
-import i18n from './i18n/i18n';
+import i18n from '@/utils/i18n/i18n';
 
 /** Objet nommé servi par l'API Goals — le backend porte les DEUX langues. */
 export interface GoalNamed {

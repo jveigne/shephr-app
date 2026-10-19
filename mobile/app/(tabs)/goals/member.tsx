@@ -2,24 +2,24 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, RefreshControl, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import ScreenShell from '../../../components/ScreenShell';
-import Button from '../../../components/Button';
-import Card from '../../../components/Card';
-import Label from '../../../components/Label';
-import { YearSelector, GoalLineCard, GoalEmptyState } from '../../../components/GoalCards';
-import UnitMembersAggregate from '../../../components/UnitMembersAggregate';
-import { colors, fonts } from '../../../theme';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useLanguage } from '../../../contexts/LanguageContext';
-import { goalName } from '../../../utils/goalName';
-import { hasGoalsAccess, hasPerimeterView, isSubCoordinatorLeader } from '../../../services/authApi';
-import { useGoalsData } from '../../../hooks/useGoalsData';
+import ScreenShell from '@/components/ScreenShell';
+import Button from '@/components/Button';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import { YearSelector, GoalLineCard, GoalEmptyState } from '@/components/GoalCards';
+import UnitMembersAggregate from '@/components/UnitMembersAggregate';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { goalName } from '@/utils/goalName';
+import { hasGoalsAccess, hasPerimeterView, isSubCoordinatorLeader } from '@/services/authApi';
+import { useGoalsData } from '@/hooks/useGoalsData';
 import {
   getMyAssemblyGoal,
   type ActiveGoal,
   type MyAssemblyGoalResponse,
-} from '../../../services/goalsApi';
-import { fmtDate, fmtAmount } from '../../../utils/format';
+} from '@/services/goalsApi';
+import { fmtDate, fmtAmount } from '@/utils/format';
 
 /**
  * « Mes objectifs » — l'écran de TOUT LE MONDE depuis le chantier du 16/08.
@@ -176,7 +176,7 @@ export default function MemberGoalsScreen() {
           l'écran de déclaration et concluait que le résumé de son périmètre n'existait plus.
           Chaque carte porte SA garde, miroir de celle du backend — on ne propose pas un écran qui
           répondra 403 (le refus s'y afficherait en « rien à voir », ce qui est faux). */}
-      {(perimeter || myUnits) && (
+      {(perimeter || myUnits || leader) && (
         <View style={{ gap: 8, marginTop: 14 }}>
           {perimeter && (
             <Card variant="tinted" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/perimeter')}>
@@ -194,6 +194,22 @@ export default function MemberGoalsScreen() {
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={styles.navTitle}>{t('goals.nav.units')}</Text>
                 <Text style={styles.navHint}>{t('goals.nav.unitsHint')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+            </Card>
+          )}
+          {/* Lot G3 (14/09) — relance groupée. Proposée à tout compte NON simple membre : les
+              périmètres géographiques sont gardés côté serveur (un LEADER/SECRETARIAT n'y a pas
+              droit et ne reçoit que « Mes disciples »), et depuis J-5 seul un dirigeant peut être
+              désigné faiseur de disciple — un simple fidèle n'a donc de disciple ni à relancer,
+              ni à afficher. L'écran ne calcule aucun périmètre : il affiche ce que renvoie
+              `GET /goals/reminders/scopes`. */}
+          {leader && (
+            <Card variant="tinted" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/remind')}>
+              <Ionicons name="paper-plane-outline" size={18} color={colors.mossDeep} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.navTitle}>{t('goals.nav.remind')}</Text>
+                <Text style={styles.navHint}>{t('goals.nav.remindHint')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
             </Card>

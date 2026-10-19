@@ -8,51 +8,66 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
+import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ScreenShell from '../components/ScreenShell';
-import Card from '../components/Card';
-import { colors, fonts } from '../theme';
-import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
-import { canManageUsers, isSubCoordinatorLeader, MODULE_ROLE_LABELS } from '../services/authApi';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { canManageUsers, isSubCoordinatorLeader, MODULE_ROLE_LABELS } from '@/services/authApi';
 import {
   getActiveGoal,
   getMyPerimeterAggregate,
   type ActiveGoal,
   type AggregateLine,
-} from '../services/goalsApi';
-import { goalName } from '../utils/goalName';
-import { fmtAmount } from '../utils/format';
+} from '@/services/goalsApi';
+import { goalName } from '@/utils/goalName';
+import { fmtAmount } from '@/utils/format';
 import {
   fetchLeaderHierarchy,
   type HierarchyUnitView,
   type LeaderHierarchyNode,
   type LeaderHierarchyResponse,
-} from '../services/leadersApi';
+} from '@/services/leadersApi';
+import {
+  AssemblyStatsBlock,
+  LeaderAssemblySummary,
+  UnitAssemblyLine,
+  useAssemblyHierarchyStats,
+  type AssemblyStatsState,
+} from '@/components/AssemblyHierarchyStats';
 
 /**
  * Hiérarchie des dirigeants (Lot H3 — 21/07) : arbre du leadership renvoyé par le backend,
- * déjà scopé par rôle — sous-arbre pour un dirigeant, chaîne de rattachement pour un membre,
+ * déjà scopé par rôle — sous-arbre pour un dirigeant, chaîne de dirigeants pour un membre,
  * arbres du ministère pour LEADER/SECRETARIAT/SUPER_ADMIN.
+ *
+ * J-4 (14/09) — CET ÉCRAN N'AFFICHE QUE LA CHAÎNE DE SUPERVISION, jamais le leadership
+ * géographique : les assemblées du périmètre sans dirigeant (`unassignedUnits`) en sont parties
+ * pour l'écran Structure, où le label « dirigeant requis » (RG-DS-10) est à sa place. Ne pas les
+ * réintroduire ici : les deux notions doivent rester séparées.
+ * J-5 (14/09) — la chaîne est une chaîne de DIRIGEANTS : un simple fidèle n'y est pas un nœud,
+ * et sa propre vue part de son assemblée (côté serveur).
  */
 type ViewMode = 'leaders' | 'units';
 
 type UnitEntry = { unit: HierarchyUnitView; leaderName?: string };
 
 /**
- * Aplatis l'arbre en liste d'assemblées (chacune avec son dirigeant), et y AJOUTE les
- * assemblées du périmètre sans dirigeant (le label « dirigeant requis » vient du serveur —
- * `unit.needsLeader`, RG-DS-10).
+ * Aplatis l'arbre en liste d'assemblées, chacune avec SON DIRIGEANT.
+ *
+ * <p>J-4 (14/09) : uniquement les assemblées portées par l'arbre de supervision. Les assemblées
+ * du périmètre sans dirigeant ne sont plus ajoutées ici — elles sont sur l'écran Structure.
  */
-function flattenUnits(nodes: LeaderHierarchyNode[], unassigned: HierarchyUnitView[]): UnitEntry[] {
+function flattenUnits(nodes: LeaderHierarchyNode[]): UnitEntry[] {
   const out: UnitEntry[] = [];
   const walk = (node: LeaderHierarchyNode) => {
     node.units.forEach((unit) => out.push({ unit, leaderName: node.fullName }));
     node.children.forEach(walk);
   };
   nodes.forEach(walk);
-  unassigned.forEach((unit) => out.push({ unit }));
   // Regroupement pays → région → ville (22/07) : le tri porte l'ordre des sections.
   return out.sort((a, b) =>
     (a.unit.countryName ?? '').localeCompare(b.unit.countryName ?? '')
@@ -63,13 +78,19 @@ function flattenUnits(nodes: LeaderHierarchyNode[], unassigned: HierarchyUnitVie
 
 export default function HierarchieScreen() {
   const insets = useSafeAreaInsets();
-  const { me } = useAuth();
+  const { me, isLeader, hasAssembly } = useAuth();
   const { t } = useLanguage();
   const [data, setData] = useState<LeaderHierarchyResponse | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [view, setView] = useState<ViewMode>('leaders');
+  // D-ASM-18 (JP 08/10) : stats de Vie d'assemblée — abonnement ASSEMBLY + rôle au-dessus de MEMBRE
+  // (RG-06 : masqué sinon). `statsRefresh` suit le tirer-pour-rafraîchir de l'écran.
+  const [statsRefresh, setStatsRefresh] = useState(0);
+  const assemblyEnabled = hasAssembly && isLeader;
+  const assemblyStats = useAssemblyHierarchyStats(assemblyEnabled, statsRefresh);
+  const asm = assemblyEnabled ? assemblyStats : null;
 
   const load = useCallback(async () => {
     try {
@@ -85,6 +106,7 @@ export default function HierarchieScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setStatsRefresh((k) => k + 1);
     try { await load(); } finally { setRefreshing(false); }
   };
 
@@ -129,7 +151,7 @@ export default function HierarchieScreen() {
       refreshControl={<RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={styles.headerRow}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
+        <Pressable onPress={() => goBack()} hitSlop={10}>
           <Ionicons name="arrow-back" size={24} color={colors.ink2} />
         </Pressable>
         <Text style={styles.title}>{t('hierarchy.title')}</Text>
@@ -157,7 +179,9 @@ export default function HierarchieScreen() {
 
       {/* Déclaration de SON superviseur (JP 30/07) : réservée aux DIRIGEANTS, et logée ici —
           jamais dans le parcours de création d'assemblée, qu'elle alourdirait. Un membre ne la
-          voit pas : son rattachement à une assemblée détermine implicitement son dirigeant. */}
+          voit pas : son rattachement à une assemblée détermine implicitement son dirigeant.
+          J-5 (14/09) : la même règle est désormais gardée CÔTÉ SERVEUR (403) — ce test ne fait
+          plus que masquer un chemin fermé, il ne le ferme plus à lui seul. */}
       {canManageUsers(me) && (
         <Card
           variant="paper2"
@@ -172,6 +196,9 @@ export default function HierarchieScreen() {
           <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
         </Card>
       )}
+
+      {/* D-ASM-18 (JP 08/10) : Vie d'assemblée des assemblées de l'arbre — que des nombres. */}
+      {asm && roots.length > 0 && <AssemblyStatsBlock asm={asm} roots={roots} />}
 
       <View style={styles.segmentRow}>
         {(['leaders', 'units'] as ViewMode[]).map((v) => (
@@ -188,10 +215,10 @@ export default function HierarchieScreen() {
         {!error && roots.length === 0 && <Text style={styles.empty}>{t('hierarchy.empty')}</Text>}
         {view === 'leaders'
           ? roots.map((root) => (
-              <LeaderNodeRow key={root.id} node={root} depth={0} meId={me?.id ?? null} />
+              <LeaderNodeRow key={root.id} node={root} depth={0} meId={me?.id ?? null} asm={asm} />
             ))
           : (() => {
-              const units = flattenUnits(roots, data?.unassignedUnits ?? []);
+              const units = flattenUnits(roots);
               if (!error && roots.length > 0 && units.length === 0) {
                 return <Text style={styles.empty}>{t('hierarchy.noUnits')}</Text>;
               }
@@ -217,7 +244,7 @@ export default function HierarchieScreen() {
                   prevCity = city;
                 }
                 rows.push(
-                  <UnitRow key={unit.id} unit={unit} depth={1} leaderName={leaderName} hideLocality />,
+                  <UnitRow key={unit.id} unit={unit} depth={1} leaderName={leaderName} hideLocality asm={asm} />,
                 );
               });
               return rows;
@@ -327,7 +354,9 @@ function GoalPill({
   );
 }
 
-function LeaderNodeRow({ node, depth, meId }: { node: LeaderHierarchyNode; depth: number; meId: string | null }) {
+function LeaderNodeRow({ node, depth, meId, asm }: {
+  node: LeaderHierarchyNode; depth: number; meId: string | null; asm: AssemblyStatsState | null;
+}) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(depth < 2);
   const hasContent = node.children.length > 0 || node.units.length > 0;
@@ -358,16 +387,17 @@ function LeaderNodeRow({ node, depth, meId }: { node: LeaderHierarchyNode; depth
             {role ? MODULE_ROLE_LABELS[role] : '—'}
             {node.units.length > 0 ? ` · ${t('hierarchy.unitsCount', { count: node.units.length })}` : ''}
           </Text>
+          {asm && <LeaderAssemblySummary asm={asm} node={node} />}
         </View>
       </Card>
 
       {open && (
         <View style={{ gap: 8, marginTop: 8 }}>
           {node.units.map((unit) => (
-            <UnitRow key={unit.id} unit={unit} depth={depth + 1} />
+            <UnitRow key={unit.id} unit={unit} depth={depth + 1} asm={asm} />
           ))}
           {node.children.map((child) => (
-            <LeaderNodeRow key={child.id} node={child} depth={depth + 1} meId={meId} />
+            <LeaderNodeRow key={child.id} node={child} depth={depth + 1} meId={meId} asm={asm} />
           ))}
         </View>
       )}
@@ -375,8 +405,9 @@ function LeaderNodeRow({ node, depth, meId }: { node: LeaderHierarchyNode; depth
   );
 }
 
-function UnitRow({ unit, depth, leaderName, hideLocality }: {
+function UnitRow({ unit, depth, leaderName, hideLocality, asm }: {
   unit: HierarchyUnitView; depth: number; leaderName?: string; hideLocality?: boolean;
+  asm: AssemblyStatsState | null;
 }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
@@ -404,6 +435,7 @@ function UnitRow({ unit, depth, leaderName, hideLocality }: {
               ? t('hierarchy.membersCount', { count: unit.members.length })
               : t('hierarchy.unitNoMembers')}
           </Text>
+          {asm && <UnitAssemblyLine asm={asm} unitId={unit.id} />}
         </View>
         {hasMembers && (
           <Ionicons name={open ? 'chevron-down' : 'chevron-forward'} size={14} color={colors.ink3} />

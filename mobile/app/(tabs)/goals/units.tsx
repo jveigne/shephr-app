@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import ScreenShell from '../../../components/ScreenShell';
-import Card from '../../../components/Card';
-import Label from '../../../components/Label';
-import { UnitStatusBadge } from '../../../components/GoalAggregates';
-import { GoalScreenTitle } from '../../../components/GoalCards';
-import UnitMembersAggregate from '../../../components/UnitMembersAggregate';
-import { colors, fonts } from '../../../theme';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useLanguage } from '../../../contexts/LanguageContext';
-import { goalName } from '../../../utils/goalName';
-import { fmtAmount } from '../../../utils/format';
+import ScreenShell from '@/components/ScreenShell';
+import Card from '@/components/Card';
+import Label from '@/components/Label';
+import { UnitStatusBadge } from '@/components/GoalAggregates';
+import { GoalScreenTitle } from '@/components/GoalCards';
+import UnitMembersAggregate from '@/components/UnitMembersAggregate';
+import { colors, fonts } from '@/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { goalName } from '@/utils/goalName';
+import { fmtAmount } from '@/utils/format';
 import {
   getActiveGoal,
   getMyUnits,
@@ -19,7 +19,7 @@ import {
   type ActiveGoal,
   type UnitPledgeDetail,
   type ZoneUnitStatus,
-} from '../../../services/goalsApi';
+} from '@/services/goalsApi';
 
 /**
  * « Mes assemblées » — drill-down du dirigeant, en LECTURE SEULE.

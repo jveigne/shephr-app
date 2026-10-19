@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 
 // Structure org scopée (Lot 3.4 mobile) — calque l'adminApi web. Endpoints `/api/church/admin/*`
 // ouverts/scopés au Lot 3.2 : la VISIBILITÉ et l'ÉCRITURE sont enforcées côté backend (403 hors périmètre).
@@ -166,7 +166,7 @@ export async function deleteUnit(id: string): Promise<void> {
 // POST /api/church/admin/users/invite — route `authenticated()`, le périmètre (rôle ≤ le sien,
 // sous-arbre) est enforcé côté backend. V1 : aucun email envoyé, on récupère le code court à
 // transmettre à l'invité (flux d'activation par code — cf. (auth)/activate).
-import type { ModuleRole } from './authApi';
+import type { ModuleRole } from '@/services/authApi';
 
 export interface InviteUserRequest {
   /** A1 (RG-ID-02) — email de contact facultatif ; identifiant OU email requis. */

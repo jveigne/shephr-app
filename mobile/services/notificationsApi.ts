@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient } from '@/services/apiClient';
 
 // Notifications in-app de l'utilisateur courant (Lot 4.4 — UC-MBR-09).
 

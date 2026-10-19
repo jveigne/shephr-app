@@ -1,11 +1,11 @@
 import React from 'react';
 import { router } from 'expo-router';
-import GoalAggregatesScreen from '../../../components/GoalAggregates';
-import GoalsMinistryOverview from '../../../components/GoalsMinistryOverview';
-import { GoalEmptyState } from '../../../components/GoalCards';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useLanguage } from '../../../contexts/LanguageContext';
-import { goalPerimeterNodes, isMinistryWideGoals, isSubCoordinatorLeader } from '../../../services/authApi';
+import GoalAggregatesScreen from '@/components/GoalAggregates';
+import GoalsMinistryOverview from '@/components/GoalsMinistryOverview';
+import { GoalEmptyState } from '@/components/GoalCards';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { goalPerimeterNodes, isMinistryWideGoals, isSubCoordinatorLeader } from '@/services/authApi';
 
 /**
  * « Mon périmètre » — vues de LECTURE d'un dirigeant (RG-BQ-04 : le label de dirigeant ne confère

@@ -11,16 +11,18 @@ import { router } from 'expo-router';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Wordmark from '../../components/Wordmark';
-import LangSwitch from '../../components/LangSwitch';
-import Card from '../../components/Card';
-import Field from '../../components/Field';
-import Label from '../../components/Label';
-import Button from '../../components/Button';
-import { colors, fonts } from '../../theme';
-import { notify } from '../../utils/dialogs';
-import { useAuth } from '../../contexts/AuthContext';
-import { useLanguage } from '../../contexts/LanguageContext';
+import Wordmark from '@/components/Wordmark';
+import LangSwitch from '@/components/LangSwitch';
+import Card from '@/components/Card';
+import Field from '@/components/Field';
+import Label from '@/components/Label';
+import Button from '@/components/Button';
+import { colors, fonts } from '@/theme';
+import { notify } from '@/utils/dialogs';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import SocialSignInButtons from '@/components/auth/SocialSignInButtons';
+import { routeAfterLogin as goAfterLogin } from '@/utils/authRouting';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -38,15 +40,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const me = await login({ identifier: email.trim(), password });
-      // Feature B : sans AUCUN rattachement ni rôle → parcours de rattachement.
-      const unattached =
-        !!me &&
-        !me.superAdmin &&
-        !me.goalRole &&
-        !me.donationRole &&
-        !me.goalUnitId &&
-        !me.donationUnitId;
-      router.replace(unattached ? '/(auth)/join' : '/(tabs)/home');
+      goAfterLogin(me);
     } catch (e: any) {
       // Sans e.response, la requête n'a pas atteint le backend (URL/réseau), ce n'est pas un 401.
       const msg = e?.response
@@ -83,6 +77,9 @@ export default function LoginScreen() {
             <Label style={{ marginBottom: 6 }}>{t('auth.welcome')}</Label>
             <Text style={styles.heading}>{t('auth.loginTitle')}</Text>
 
+            {/* Apple (iOS) puis Google, au-dessus du formulaire ; rien sur web. */}
+            <SocialSignInButtons onSignedIn={goAfterLogin} disabled={loading} />
+
             <View style={{ gap: 12 }}>
               <View>
                 <Label style={{ marginBottom: 6 }}>{t('auth.email')}</Label>
@@ -115,9 +112,18 @@ export default function LoginScreen() {
             />
 
             <View style={styles.linksRow}>
-              <Text style={styles.linkSub}>{t('auth.forgotPassword')}</Text>
-              <Text style={styles.linkAccent} onPress={() => router.push('/(auth)/activate')}>
-                {t('auth.haveActivationCode')}
+              {/* Mot de passe oublié (18/10/2026) : l'identifiant déjà saisi suit dans le parcours. */}
+              <Text
+                style={styles.linkSub}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(auth)/forgot-password',
+                    params: { identifier: email.trim() },
+                  })
+                }
+                accessibilityRole="link"
+              >
+                {t('auth.forgotPassword')}
               </Text>
             </View>
 
@@ -148,7 +154,7 @@ function Hills() {
     <Svg
       viewBox="0 0 402 380"
       preserveAspectRatio="none"
-      style={StyleSheet.absoluteFillObject as any}
+      style={StyleSheet.absoluteFill as any}
     >
       <Defs>
         <LinearGradient id="hill1" x1="0" x2="0" y1="0" y2="1">

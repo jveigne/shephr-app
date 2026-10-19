@@ -2,10 +2,13 @@
   "expo": {
     "name": "shephr",
     "slug": "shephr",
-    "version": "0.1.6",
-    "sdkVersion": "54.0.0",
+    "version": "0.2.6",
+    "sdkVersion": "57.0.0",
     "extra": {
       "API_URL": "http://localhost:8080",
+      "GOOGLE_WEB_CLIENT_ID": "921845497694-g1kjo9380t9g9dbtf6n32kk9t9qm8kt1.apps.googleusercontent.com",
+      "GOOGLE_IOS_CLIENT_ID": "921845497694-cuugiern2jk9gfsgqvf79k90bfrs8hh4.apps.googleusercontent.com",
+      "GOOGLE_IOS_URL_SCHEME": "com.googleusercontent.apps.921845497694-cuugiern2jk9gfsgqvf79k90bfrs8hh4",
       "router": {
         "origin": false
       },
@@ -16,12 +19,6 @@
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/logo.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "platforms": [
       "ios",
       "android",
@@ -31,6 +28,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "org.cmfi.shephr",
+      "usesAppleSignIn": true,
+      "associatedDomains": [
+        "applinks:www.shephr.org"
+      ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -41,7 +42,25 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.cmfi.shephr",
-      "versionCode": 1
+      "versionCode": 1,
+      "googleServicesFile": "./google-services.json",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "www.shephr.org",
+              "pathPrefix": "/d/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -56,7 +75,32 @@
           "resizeMode": "contain",
           "backgroundColor": "#000"
         }
-      ]
+      ],
+      "expo-localization",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#1E3A2F",
+          "defaultChannel": "default",
+          "mode": "production"
+        }
+      ],
+      "expo-asset",
+      "expo-font",
+      "expo-image",
+      "expo-sharing",
+      "expo-status-bar",
+      "expo-web-browser",
+      "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.921845497694-cuugiern2jk9gfsgqvf79k90bfrs8hh4"
+        }
+      ],
+      "@config-plugins/react-native-blob-util",
+      "@config-plugins/react-native-pdf"
     ],
     "experiments": {
       "typedRoutes": true

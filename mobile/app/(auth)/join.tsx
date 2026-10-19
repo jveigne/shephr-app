@@ -11,27 +11,29 @@ import {
   ActivityIndicator,
   Linking,
 } from 'react-native';
-import { router } from 'expo-router';
+// Plan 18/10 (lot D5) : toute sortie du rattachement rouvre le lien universel mémorisé (document
+// reçu avant d'avoir rejoint son assemblée), à défaut l'accueil — `routeHomeOrReturn`.
+import { routeHomeOrReturn } from '@/utils/authRouting';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Card from '../../components/Card';
-import Field from '../../components/Field';
-import Label from '../../components/Label';
-import Button from '../../components/Button';
-import Wordmark from '../../components/Wordmark';
-import SelectField from '../../components/SelectField';
-import { colors, fonts } from '../../theme';
-import { useLanguage } from '../../contexts/LanguageContext';
-import { useAuth } from '../../contexts/AuthContext';
-import { confirmDialog, notify } from '../../utils/dialogs';
-import { joinUnit } from '../../services/unitApi';
-import { contactMailto, useContactSettings } from '../../services/contactApi';
+import Card from '@/components/Card';
+import Field from '@/components/Field';
+import Label from '@/components/Label';
+import Button from '@/components/Button';
+import Wordmark from '@/components/Wordmark';
+import SelectField from '@/components/SelectField';
+import { colors, fonts } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { confirmDialog, notify } from '@/utils/dialogs';
+import { joinUnit } from '@/services/unitApi';
+import { contactMailto, useContactSettings } from '@/services/contactApi';
 import {
   fetchRequestContext,
   type RequestNodeOption,
   type StructureRequestContext,
-} from '../../services/structureRequestsApi';
+} from '@/services/structureRequestsApi';
 import {
   cancelJoinRequest,
   createJoinRequest,
@@ -40,7 +42,7 @@ import {
   type AssemblySearchResult,
   type JoinRequestResponse,
   type JoinRequestedRole,
-} from '../../services/joinRequestsApi';
+} from '@/services/joinRequestsApi';
 
 type Mode = 'search' | 'create' | 'code' | 'pending';
 
@@ -178,7 +180,7 @@ export default function JoinScreen() {
           asLeader ? t('join.nowLeaderTitle') : t('join.nowMemberTitle'),
           asLeader ? t('join.nowLeaderBody', { name }) : t('join.nowMemberBody', { name }),
         );
-        router.replace('/(tabs)/home');
+        void routeHomeOrReturn();
         return;
       }
       setPending(r);
@@ -253,7 +255,7 @@ export default function JoinScreen() {
     try {
       await joinUnit({ joinCode: codeNormalized });
       await refreshMe();
-      router.replace('/(tabs)/home');
+      void routeHomeOrReturn();
     } catch (e: any) {
       notify(t('signup.invalidCodeTitle'), e?.response?.data?.message ?? t('signup.invalidCodeBody'));
     } finally {
@@ -478,7 +480,7 @@ export default function JoinScreen() {
               <Text style={styles.pendingHint}>{t('join.pendingHint')}</Text>
               <Button
                 label={t('join.continueApp')}
-                onPress={() => router.replace('/(tabs)/home')}
+                onPress={() => void routeHomeOrReturn()}
                 fullWidth
                 height={54}
                 style={{ marginTop: 18 }}
@@ -740,7 +742,7 @@ function Hills() {
     <Svg
       viewBox="0 0 402 240"
       preserveAspectRatio="none"
-      style={[StyleSheet.absoluteFillObject, { opacity: 0.65 }] as any}
+      style={[StyleSheet.absoluteFill, { opacity: 0.65 }] as any}
     >
       <Path
         d="M-10,130 C 80,80 160,180 240,130 S 380,80 420,120 L 420,250 L -10,250 Z"
