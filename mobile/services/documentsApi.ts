@@ -16,9 +16,6 @@ import { newEventClientId } from '@/services/eventQueue';
 /** Mirrors com.excellence.back.documents.DocumentScopeLevel — D-DOC-08 : MINISTRY + OrgLevel, dans l'ordre d'affichage (§2.2). */
 export type DocumentScopeLevel = 'MINISTRY' | 'COUNTRY' | 'ZONE' | 'LOCALITY' | 'UNIT';
 
-/** Ordre d'affichage des portées (contrat §2.2) = ordre de déclaration de l'enum. */
-export const DOCUMENT_SCOPE_ORDER: DocumentScopeLevel[] = ['MINISTRY', 'COUNTRY', 'ZONE', 'LOCALITY', 'UNIT'];
-
 /** Mirrors com.excellence.back.documents.DocumentLanguage — affichage seulement. */
 export type DocumentLanguage = 'FR' | 'EN';
 
@@ -91,7 +88,7 @@ export interface DocumentListItem {
   slug: string;
   title: string;
   author: string | null;
-  /** [AJOUT] filtre par puce sans rappel. */
+  /** [AJOUT] dossier du document (D-DOC-16) ; null = « sans dossier ». */
   categoryId: string | null;
   categoryName: string | null;
   categoryNameEn: string | null;
@@ -105,12 +102,20 @@ export interface DocumentListItem {
   publishedAt: string;
 }
 
-/** Mirrors com.excellence.back.documents.DocumentDtos.DocumentCategoryItem (§5.3) — catégories ACTIVES. */
+/**
+ * Mirrors com.excellence.back.documents.DocumentDtos.DocumentCategoryItem (§5.3) — catégories ACTIVES.
+ *
+ * <p>D-DOC-16 (JP 19/10) — les catégories deviennent des DOSSIERS hiérarchiques (comme Drive,
+ * 3 niveaux max, par ministère). Le serveur renvoie une liste PLATE ; l'arbre se construit côté app
+ * à partir de `parentId` (`utils/documentFolders.ts`).
+ */
 export interface DocumentCategoryItem {
   id: string;
   name: string;
   nameEn: string | null;
   displayOrder: number;
+  /** D-DOC-16 : dossier parent ; null = dossier racine. */
+  parentId: string | null;
 }
 
 /** Codes d'erreur propres au module (contrat §1.5), traduits sous `documents.errors.<CODE>`. */
@@ -203,6 +208,7 @@ export async function listDocuments(params?: { categoryId?: string; q?: string }
   return data ?? [];
 }
 
+/** D-DOC-16 (JP 19/10) : dossiers actifs du ministère, à plat (`parentId`). */
 export async function getDocumentCategories(): Promise<DocumentCategoryItem[]> {
   const { data } = await apiClient.get<DocumentCategoryItem[]>('/api/church/documents/categories');
   return data ?? [];

@@ -1,10 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
 import Card from '@/components/Card';
-import Chip from '@/components/Chip';
 import Field from '@/components/Field';
 import Label from '@/components/Label';
 import ErrorBanner from '@/components/ErrorBanner';
@@ -14,14 +13,13 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { isAttachedAccount } from '@/services/authApi';
 import {
   DOCUMENT_ERROR_CODES,
-  DOCUMENT_SCOPE_ORDER,
-  categoryLabel,
   documentErrorCode,
   getDocumentCategories,
   listDocuments,
   type DocumentCategoryItem,
   type DocumentListItem,
 } from '@/services/documentsApi';
+import { buildFolderTree, folderPath, type FolderNode } from '@/utils/documentFolders';
 import { goBack } from '@/utils/navigation';
 
 /**
@@ -30,25 +28,35 @@ import { goBack } from '@/utils/navigation';
  *
  * <p>Visible si le ministère du compte a `DOCUMENTS` (RG-06, `hasDocuments`) ET que le compte est
  * rattaché (`isAttachedAccount`) — le serveur juge de même (403 `MODULE_ACCESS_DENIED` /
- * `DOCUMENT_JOIN_REQUIRED`). Contenu (RG-FOLDER-02, filtré côté serveur) : liste groupée par portée
- * — « Tout le ministère », la nation, la région, la ville, « Mon assemblée » —, puces de catégories
- * et recherche sur le titre. Pas d'arbre navigable en V1.
+ * `DOCUMENT_JOIN_REQUIRED`). Contenu filtré côté serveur (RG-FOLDER-02).
  *
- * <p>La liste arrive triée (portée, nom, publication ↓, contrat §5.2) et porte `categoryId` : puces
- * et recherche filtrent EN LOCAL, sans rappel. Pattern de données local : `useState` +
- * `useFocusEffect`, pas de react-query. Ouvrir un document = le lecteur du lien (`/d/{slug}`).
+ * <p>D-DOC-16 (JP 19/10) — DOSSIERS : l'écran se parcourt dossier par dossier, comme Drive (fini
+ * les puces de catégories et les sections par portée). À la racine : les dossiers racines puis les
+ * documents « sans dossier » ; dans un dossier : ses sous-dossiers puis ses documents. Le dossier
+ * courant est le paramètre de route `?folder=<id>` : entrer dans un dossier POUSSE le même écran,
+ * de sorte que le retour système (Android, geste iOS) remonte d'un dossier avant de quitter
+ * l'espace. Seuls les dossiers contenant un document visible apparaissent, avec leur nombre de
+ * documents (récursif). La portée devient une mention sur chaque ligne (« Bruxelles »).
+ *
+ * <p>La recherche (titre) reste GLOBALE, quel que soit le dossier courant : résultats à plat avec le
+ * chemin du dossier sous chaque titre. Pattern de données local : `useState` + `useFocusEffect`,
+ * pas de react-query ; le dernier chargement est gardé en mémoire (lié au compte) pour qu'entrer
+ * dans un dossier s'affiche sans attente, puis se revalide. Ouvrir un document = le lecteur du lien
+ * (`/d/{slug}`).
  */
 export default function DocumentsScreen() {
   const { t, language } = useLanguage();
   const { me, hasDocuments } = useAuth();
   const active = hasDocuments && isAttachedAccount(me);
+  const { folder } = useLocalSearchParams<{ folder?: string }>();
+  const folderId = typeof folder === 'string' && folder ? folder : null;
 
-  const [docs, setDocs] = useState<DocumentListItem[]>([]);
-  const [categories, setCategories] = useState<DocumentCategoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cached = me && snapshot?.userId === me.id ? snapshot : null;
+  const [docs, setDocs] = useState<DocumentListItem[]>(cached?.docs ?? []);
+  const [categories, setCategories] = useState<DocumentCategoryItem[]>(cached?.categories ?? []);
+  const [loading, setLoading] = useState(!cached);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
 
   const load = useCallback(async () => {
@@ -61,6 +69,7 @@ export default function DocumentsScreen() {
       setDocs(list);
       setCategories(cats);
       setLoadError(null);
+      if (me) snapshot = { userId: me.id, docs: list, categories: cats };
     } catch (e: any) {
       const code = documentErrorCode(e);
       setLoadError(
@@ -75,7 +84,7 @@ export default function DocumentsScreen() {
     } finally {
       setLoading(false);
     }
-  }, [active, t]);
+  }, [active, me, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -92,45 +101,46 @@ export default function DocumentsScreen() {
     }
   };
 
-  // Une catégorie choisie qui n'a plus de document ne doit pas vider l'écran sans raison visible :
-  // les puces ne montrent que les catégories utilisées par au moins un document.
-  const usedCategories = useMemo(() => {
-    const used = new Set(docs.map((d) => d.categoryId).filter(Boolean));
-    return categories.filter((c) => used.has(c.id));
-  }, [docs, categories]);
+  const tree = useMemo(() => buildFolderTree(categories, docs, language), [categories, docs, language]);
+  const path = useMemo(() => folderPath(tree, folderId), [tree, folderId]);
+  const current: FolderNode | null = path.length ? path[path.length - 1] : null;
+  // Dossier demandé mais absent (vidé, désactivé, lien périmé) — seulement une fois chargé.
+  const folderMissing = !!folderId && !current && !loading && !loadError;
 
-  const groups = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const filtered = docs.filter(
-      (d) =>
-        (!categoryId || d.categoryId === categoryId) &&
-        (!q || d.title.toLowerCase().includes(q)),
-    );
-    // Un groupe par (scopeLevel, scopeId) — deux villes distinctes ne se mélangent pas (§5.2).
-    const map = new Map<string, { key: string; level: DocumentListItem['scopeLevel']; scopeId: string | null; name: string | null; items: DocumentListItem[] }>();
-    for (const d of filtered) {
-      const key = `${d.scopeLevel}:${d.scopeId ?? ''}`;
-      let g = map.get(key);
-      if (!g) {
-        g = { key, level: d.scopeLevel, scopeId: d.scopeId, name: d.scopeName, items: [] };
-        map.set(key, g);
-      }
-      g.items.push(d);
-    }
-    // Ordre des portées du contrat §2.2 (le serveur trie déjà ; on le garantit après filtrage).
-    return [...map.values()].sort(
-      (a, b) => DOCUMENT_SCOPE_ORDER.indexOf(a.level) - DOCUMENT_SCOPE_ORDER.indexOf(b.level),
-    );
-  }, [docs, categoryId, query]);
+  const q = query.trim().toLowerCase();
+  const searchResults = useMemo(
+    () => (q ? docs.filter((d) => d.title.toLowerCase().includes(q)) : []),
+    [docs, q],
+  );
 
-  const groupTitle = (level: DocumentListItem['scopeLevel'], scopeId: string | null, name: string | null) => {
-    if (level === 'MINISTRY') return t('documents.space.wholeMinistry');
-    if (level === 'UNIT' && scopeId && scopeId === me?.goalUnitId) return t('documents.space.myAssembly');
-    return name ?? t(`documents.scope.${level}`);
+  const scopeLabel = (d: DocumentListItem) => {
+    if (d.scopeLevel === 'MINISTRY') return t('documents.space.wholeMinistry');
+    if (d.scopeLevel === 'UNIT' && d.scopeId && d.scopeId === me?.goalUnitId) return t('documents.space.myAssembly');
+    return d.scopeName ?? t(`documents.scope.${d.scopeLevel}`);
   };
 
+  const pathLabel = (d: DocumentListItem) => {
+    const p = folderPath(tree, d.categoryId);
+    return p.length ? p.map((f) => f.label).join(' › ') : t('documents.space.unfiled');
+  };
+
+  const openDoc = (d: DocumentListItem) => router.push({ pathname: '/d/[slug]', params: { slug: d.slug } });
+  const openFolder = (f: FolderNode) => router.push({ pathname: '/documents', params: { folder: f.id } });
+
+  const subFolders = current ? current.children : tree.roots;
+  const folderDocs = current ? current.docs : tree.unfiled;
   const nothing = !loading && !loadError && docs.length === 0;
-  const noMatch = !loading && !loadError && docs.length > 0 && groups.length === 0;
+  const emptyFolder = !!current && subFolders.length === 0 && folderDocs.length === 0;
+
+  const renderDoc = (d: DocumentListItem, withPath: boolean) => (
+    <DocumentRow
+      key={d.slug}
+      doc={d}
+      scope={scopeLabel(d)}
+      path={withPath ? pathLabel(d) : null}
+      onPress={() => openDoc(d)}
+    />
+  );
 
   return (
     <ScreenShell
@@ -144,8 +154,17 @@ export default function DocumentsScreen() {
           <Ionicons name="chevron-back" size={22} color={colors.ink2} />
         </Pressable>
       </View>
-      <Text style={styles.kicker}>{t('documents.space.kicker')}</Text>
-      <Text style={styles.title}>{t('documents.space.title')}</Text>
+      {folderId && active ? (
+        // Fil d'Ariane : « Documents › Parent › » au-dessus du nom du dossier courant.
+        <Text style={styles.kicker} numberOfLines={1}>
+          {[t('documents.space.title'), ...path.slice(0, -1).map((f) => f.label)].join(' › ')}
+        </Text>
+      ) : (
+        <Text style={styles.kicker}>{t('documents.space.kicker')}</Text>
+      )}
+      <Text style={styles.title} numberOfLines={2}>
+        {current && active ? current.label : t('documents.space.title')}
+      </Text>
 
       {!active ? (
         <Card variant="paper2" style={styles.empty}>
@@ -172,29 +191,6 @@ export default function DocumentsScreen() {
             />
           </View>
 
-          {usedCategories.length > 0 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.chips}
-              style={{ marginTop: 12, marginHorizontal: -20 }}
-            >
-              <Chip
-                label={t('documents.space.allCategories')}
-                selected={!categoryId}
-                onPress={() => setCategoryId(null)}
-              />
-              {usedCategories.map((c) => (
-                <Chip
-                  key={c.id}
-                  label={categoryLabel(c.name, c.nameEn, language) ?? c.name}
-                  selected={categoryId === c.id}
-                  onPress={() => setCategoryId(categoryId === c.id ? null : c.id)}
-                />
-              ))}
-            </ScrollView>
-          )}
-
           {!!loadError && <ErrorBanner message={loadError} onRetry={load} />}
 
           {loading ? (
@@ -206,25 +202,41 @@ export default function DocumentsScreen() {
               <Ionicons name="library-outline" size={26} color={colors.ink3} />
               <Text style={styles.emptyText}>{t('documents.space.empty')}</Text>
             </Card>
-          ) : noMatch ? (
+          ) : q ? (
+            searchResults.length === 0 ? (
+              <Card variant="paper2" style={styles.empty}>
+                <Ionicons name="search-outline" size={26} color={colors.ink3} />
+                <Text style={styles.emptyText}>{t('documents.space.noMatch')}</Text>
+              </Card>
+            ) : (
+              <View style={styles.block}>{searchResults.map((d) => renderDoc(d, true))}</View>
+            )
+          ) : folderMissing || emptyFolder ? (
             <Card variant="paper2" style={styles.empty}>
-              <Ionicons name="search-outline" size={26} color={colors.ink3} />
-              <Text style={styles.emptyText}>{t('documents.space.noMatch')}</Text>
+              <Ionicons name="folder-open-outline" size={26} color={colors.ink3} />
+              <Text style={styles.emptyText}>{t('documents.space.folderEmpty')}</Text>
             </Card>
           ) : (
-            groups.map((g) => (
-              <View key={g.key} style={styles.block}>
-                <Label style={styles.blockLabel}>{groupTitle(g.level, g.scopeId, g.name)}</Label>
-                {g.items.map((d) => (
-                  <DocumentRow
-                    key={d.slug}
-                    doc={d}
-                    category={categoryLabel(d.categoryName, d.categoryNameEn, language)}
-                    onPress={() => router.push({ pathname: '/d/[slug]', params: { slug: d.slug } })}
-                  />
-                ))}
-              </View>
-            ))
+            <>
+              {subFolders.length > 0 && (
+                <View style={styles.block}>
+                  <Label style={styles.blockLabel}>
+                    {current ? t('documents.space.subfolders') : t('documents.space.folders')}
+                  </Label>
+                  {subFolders.map((f) => (
+                    <FolderRow key={f.id} folder={f} onPress={() => openFolder(f)} />
+                  ))}
+                </View>
+              )}
+              {folderDocs.length > 0 && (
+                <View style={styles.block}>
+                  <Label style={styles.blockLabel}>
+                    {current ? t('documents.space.documents') : t('documents.space.unfiled')}
+                  </Label>
+                  {folderDocs.map((d) => renderDoc(d, false))}
+                </View>
+              )}
+            </>
           )}
         </>
       )}
@@ -232,17 +244,51 @@ export default function DocumentsScreen() {
   );
 }
 
+/**
+ * Dernier chargement, lié au compte (`me.id`) : chaque niveau de dossier est un écran poussé, il
+ * s'affiche aussitôt avec ces données puis se revalide (useFocusEffect). Jamais partagé entre comptes.
+ */
+let snapshot: { userId: string; docs: DocumentListItem[]; categories: DocumentCategoryItem[] } | null = null;
+
+function FolderRow({ folder, onPress }: { folder: FolderNode; onPress: () => void }) {
+  const { t } = useLanguage();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.row, { opacity: pressed ? 0.9 : 1 }]}
+    >
+      <View style={[styles.rowIcon, styles.folderIcon]}>
+        <Ionicons name="folder-outline" size={20} color={colors.clay} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.rowTitle} numberOfLines={2}>
+          {folder.label}
+        </Text>
+        <Text style={styles.rowMeta} numberOfLines={1}>
+          {t('documents.space.documentCount', { count: folder.count })}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={colors.ink3} />
+    </Pressable>
+  );
+}
+
 function DocumentRow({
   doc,
-  category,
+  scope,
+  path,
   onPress,
 }: {
   doc: DocumentListItem;
-  category: string | null;
+  /** D-DOC-16 : la portée n'est plus une section, mais une mention sur la ligne. */
+  scope: string;
+  /** Chemin du dossier — affiché seulement en recherche (résultats à plat). */
+  path: string | null;
   onPress: () => void;
 }) {
   const { t } = useLanguage();
-  const meta = [doc.author, category, t('documents.space.pages', { count: doc.pageCount })]
+  const meta = [doc.author, scope, t('documents.space.pages', { count: doc.pageCount })]
     .filter(Boolean)
     .join(' · ');
   return (
@@ -254,6 +300,14 @@ function DocumentRow({
         <Text style={styles.rowTitle} numberOfLines={2}>
           {doc.title}
         </Text>
+        {!!path && (
+          <View style={styles.pathRow}>
+            <Ionicons name="folder-outline" size={12} color={colors.ink3} />
+            <Text style={styles.pathText} numberOfLines={1}>
+              {path}
+            </Text>
+          </View>
+        )}
         <Text style={styles.rowMeta} numberOfLines={1}>
           {meta}
         </Text>
@@ -274,7 +328,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4, marginTop: 4 },
-  chips: { paddingHorizontal: 20, gap: 8 },
   block: { marginTop: 20, gap: 8 },
   blockLabel: { marginBottom: 0 },
   loadingBox: { marginTop: 40, alignItems: 'center' },
@@ -312,6 +365,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.mossTint,
   },
+  folderIcon: { backgroundColor: colors.paper2 },
+  pathRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  pathText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2 },
   rowTitle: { fontFamily: fonts.serif, fontSize: 16, color: colors.ink, letterSpacing: -0.1 },
   rowMeta: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 2 },
 });
