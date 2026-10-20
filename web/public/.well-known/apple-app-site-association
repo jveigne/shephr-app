@@ -3,8 +3,8 @@
     "apps": [],
     "details": [
       {
-        "appID": "TODO_APPLE_TEAM_ID.org.cmfi.shephr",
-        "appIDs": ["TODO_APPLE_TEAM_ID.org.cmfi.shephr"],
+        "appID": "Q9QK5S76RP.org.cmfi.shephr",
+        "appIDs": ["Q9QK5S76RP.org.cmfi.shephr"],
         "paths": ["/d/*"],
         "components": [
           { "/": "/d/*", "comment": "Documents partagés (plan du 18/10, D-DOC-09)" }

@@ -4,7 +4,7 @@
     "target": {
       "namespace": "android_app",
       "package_name": "com.cmfi.shephr",
-      "sha256_cert_fingerprints": ["TODO_PLAY_SHA256_FINGERPRINT"]
+      "sha256_cert_fingerprints": ["B0:A7:D2:8A:EA:D5:29:79:9A:DA:3F:94:A7:D3:5F:47:9E:02:92:0B:11:EC:F7:1B:43:4A:CA:E1:16:FB:26:70"]
     }
   }
 ]

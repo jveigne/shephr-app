@@ -240,7 +240,7 @@ function StoreButton({ store, onClick }: { store: 'ios' | 'android'; onClick?: (
   const { t } = useTranslation();
   const url = store === 'ios' ? APP_STORE_URL : PLAY_STORE_URL;
   const label = store === 'ios' ? t('documents.stores.appStore') : t('documents.stores.playStore');
-  // P2 non fourni : placeholder `TODO_…` → bouton inactif plutôt qu'un lien relatif mort.
+  // Garde-fou P2 (liens fournis le 20/10) : une URL non `https://` → bouton inactif plutôt qu'un lien mort.
   if (!isStoreUrlConfigured(url)) {
     return (
       <button type="button" disabled title={t('documents.stores.soon')} style={{ ...storeBtnStyle, opacity: 0.55, cursor: 'not-allowed' }}>

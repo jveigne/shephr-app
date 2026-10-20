@@ -5,7 +5,7 @@
     "version": "0.2.6",
     "sdkVersion": "57.0.0",
     "extra": {
-      "API_URL": "http://localhost:8080",
+      "API_URL": "https://cmfipraise-prod-production.up.railway.app",
       "GOOGLE_WEB_CLIENT_ID": "921845497694-g1kjo9380t9g9dbtf6n32kk9t9qm8kt1.apps.googleusercontent.com",
       "GOOGLE_IOS_CLIENT_ID": "921845497694-cuugiern2jk9gfsgqvf79k90bfrs8hh4.apps.googleusercontent.com",
       "GOOGLE_IOS_URL_SCHEME": "com.googleusercontent.apps.921845497694-cuugiern2jk9gfsgqvf79k90bfrs8hh4",
