@@ -87,7 +87,8 @@ type WallKind = 'login' | 'join';
 type Phase =
   | { kind: 'loading' }
   | { kind: 'gone' }
-  | { kind: 'error'; offline: boolean }
+  /** `detail` : cause technique (statut HTTP + code, ou message du lecteur natif), affichée en petit. */
+  | { kind: 'error'; offline: boolean; detail?: string }
   | {
       kind: 'ready';
       /** `full` : document complet (rattaché ou `open`) ; `preview` : aperçu seul. */
@@ -100,6 +101,18 @@ type Phase =
       /** Mur à afficher en fin d'aperçu ; null = aucun (RG-DOC-01c). */
       wall: WallKind | null;
     };
+
+/**
+ * Cause technique d'un échec, pour le support (une tablette de test sans journal le 20/10) : statut
+ * HTTP + code métier, sinon message d'erreur — sans la requête d'une URL signée (`DownloadFailed:<url>`).
+ */
+function errorDetail(e: any): string {
+  const status = e?.response?.status;
+  if (status) return `HTTP ${status}${documentErrorCode(e) ? ` ${documentErrorCode(e)}` : ''}`;
+  const status2 = typeof e?.status === 'number' ? ` (HTTP ${e.status})` : '';
+  const msg = String(e?.message ?? e?.nativeEvent?.message ?? e ?? 'unknown').replace(/\?\S*/g, '');
+  return `${msg.slice(0, 160)}${status2}`;
+}
 
 function DocumentReader({ slug, refParam }: { slug: string; refParam: string | null }) {
   const insets = useSafeAreaInsets();
@@ -232,7 +245,8 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
           if (entry) setDoc(entry.doc);
           return apply({ kind: 'error', offline: true });
         }
-        return apply({ kind: 'error', offline: false });
+        console.warn('[documents] fiche', errorDetail(e));
+        return apply({ kind: 'error', offline: false, detail: errorDetail(e) });
       }
       if (seq !== loadSeq.current) return;
       setDoc(d);
@@ -256,7 +270,8 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
         return apply(await previewPhase(d, isAuthenticated ? 'join' : 'login'));
       } catch (e: any) {
         if (isDocumentGone(e)) return apply({ kind: 'gone' });
-        return apply({ kind: 'error', offline: !e?.response });
+        console.warn('[documents] fichier', errorDetail(e));
+        return apply({ kind: 'error', offline: !e?.response, detail: errorDetail(e) });
       }
     },
     [ready, slug, attached, isAuthenticated, refParam, previewPhase, fullPhase],
@@ -291,13 +306,14 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
     }
   };
 
-  const onPdfError = () => {
+  const onPdfError = (e: unknown) => {
+    console.warn('[documents] lecteur PDF', errorDetail(e));
     // Cache disque purgé par le système : on ne le promet plus et on redemande le fichier.
     if (phase.kind === 'ready' && phase.fromCacheOnly) {
       void forgetFullCache(slug).then(() => load({ skipCache: true }));
       return;
     }
-    setPhase({ kind: 'error', offline: false });
+    setPhase({ kind: 'error', offline: false, detail: errorDetail(e) });
   };
 
   /** RG-SHARE-01/03 : journal `SHARE` d'abord (→ lien `?r=`), repli sur le lien sans `r`. */
@@ -430,6 +446,7 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
               <Text style={styles.stateBody}>
                 {phase.offline ? t('documents.reader.offline') : t('documents.reader.loadFailed')}
               </Text>
+              {!!phase.detail && <Text style={styles.stateDetail}>{phase.detail}</Text>}
               <Button
                 label={t('common.retry')}
                 variant="soft"
@@ -631,6 +648,12 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     color: colors.ink2,
     lineHeight: 20,
+    textAlign: 'center',
+  },
+  stateDetail: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: colors.ink3,
     textAlign: 'center',
   },
   wallWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 14 },
