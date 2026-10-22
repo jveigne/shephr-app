@@ -20,10 +20,11 @@ import Card from '@/components/Card';
 import Label from '@/components/Label';
 import Button from '@/components/Button';
 import SelectField from '@/components/SelectField';
+import Chip from '@/components/Chip';
 import { colors, fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { canManageStructure, isSecretariat } from '@/services/authApi';
+import { canManageStructure, isSecretariat, LANGUAGES, type Language } from '@/services/authApi';
 import { contactMailto, useContactSettings } from '@/services/contactApi';
 import { confirmDialog, notify } from '@/utils/dialogs';
 import i18n from '@/utils/i18n/i18n';
@@ -360,6 +361,8 @@ function StructureFormModal({
   const [leaderQuery, setLeaderQuery] = useState('');
   const [leaderResults, setLeaderResults] = useState<AdminUserResponse[]>([]);
   const [leaderLoading, setLeaderLoading] = useState(false);
+  // D-ETU-24 (JP 21/10) — langue de l'assemblée, à la création comme à la modification (défaut FR).
+  const [language, setLanguage] = useState<Language>('FR');
   const open = editing != null;
   const level = editing?.level ?? 'zones';
   const item = editing?.item ?? null;
@@ -396,6 +399,7 @@ function StructureFormModal({
         setCountryId(''); setZoneId('');
       }
       setLeaderId(''); setLeaderQuery(''); setLeaderResults([]);
+      setLanguage(item?.language ?? 'FR');
     }
   }, [open, editing]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -465,10 +469,10 @@ function StructureFormModal({
         else await createLocality({ ministryId: ministryId!, zoneId: parentId || undefined, name: name.trim() });
       } else {
         // Décision #5 : plus de type CENTER — toute unité est une assemblée de maison.
-        if (item) await updateUnit(item.id, { name: name.trim(), localityId: parentId, type: 'ASSEMBLY' });
+        if (item) await updateUnit(item.id, { name: name.trim(), localityId: parentId, type: 'ASSEMBLY', language });
         else await createUnit({
           ministryId: ministryId!, localityId: parentId, name: name.trim(), type: 'ASSEMBLY',
-          leaderUserId: leaderId || undefined,
+          leaderUserId: leaderId || undefined, language,
         });
       }
       await onSaved();
@@ -557,6 +561,25 @@ function StructureFormModal({
                   <Text style={styles.empty}>{t('structure.noParent', { parent: parentLabel.toLowerCase() })}</Text>
                 )}
               </View>
+            )}
+
+            {/* D-ETU-24 (JP 21/10) — langue de l'assemblée : le catalogue d'étude propose d'abord
+                la version dans cette langue (D-ETU-26). Deux choix : des pastilles suffisent. */}
+            {level === 'units' && (
+              <>
+                <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.language')}</Label>
+                <Text style={styles.leaderHint}>{t('structure.languageHint')}</Text>
+                <View style={styles.languageRow}>
+                  {LANGUAGES.map((l) => (
+                    <Chip
+                      key={l}
+                      label={t(`structure.languages.${l}`)}
+                      selected={language === l}
+                      onPress={() => setLanguage(l)}
+                    />
+                  ))}
+                </View>
+              </>
             )}
 
             {/* RG-BQ-12 : la VILLE reste créée par le secrétariat. Sans issue de secours, une
@@ -670,6 +693,7 @@ const styles = StyleSheet.create({
   modalCard: { paddingHorizontal: 20, paddingVertical: 20, maxHeight: '88%' },
   modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink },
   leaderHint: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginBottom: 6, lineHeight: 17 },
+  languageRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   contactBlock: { marginTop: 18, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.hair },
   leaderRow: {
     paddingHorizontal: 12, paddingVertical: 10, marginTop: 6, borderRadius: 10,

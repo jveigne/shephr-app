@@ -672,7 +672,13 @@
     "contactMailSubject": "Shephr — création d'une ville",
     "needsLeader": "Dirigeant requis",
     "needsLeaderHint": "{{count}} assemblée(s) de votre périmètre attendent un dirigeant.",
-    "emptyUnits": "Aucune assemblée dans votre périmètre."
+    "emptyUnits": "Aucune assemblée dans votre périmètre.",
+    "language": "Langue de l'assemblée",
+    "languageHint": "Les unités d'étude sont proposées d'abord dans cette langue.",
+    "languages": {
+      "FR": "Français",
+      "EN": "English"
+    }
   },
   "notifications": {
     "morePending": "{{count}} autre(s) rappel(s) en attente",
@@ -1532,6 +1538,201 @@
       "DOC_CATEGORY_IN_USE": "Cette catégorie est utilisée : désactivez-la plutôt.",
       "DOC_CATEGORY_NAME_EXISTS": "Une catégorie porte déjà ce nom.",
       "DOC_INVALID_TRANSITION": "Cette action n'est pas possible dans l'état actuel du document."
+    }
+  },
+  "study": {
+    "tile": {
+      "title": "Le Message de Bertoua",
+      "hint": "Étude de l'assemblée",
+      "live": "En cours"
+    },
+    "kicker": "Étude de l'assemblée",
+    "lesson": "Leçon {{number}}",
+    "lessonTitled": "Leçon {{number}} · {{title}}",
+    "score": "{{score}} / {{max}}",
+    "points_one": "{{value}} pt",
+    "points_other": "{{value}} pts",
+    "status": {
+      "REPONSES_OUVERTES": "Réponses ouvertes",
+      "CORRECTION": "Correction",
+      "TERMINEE": "Terminée"
+    },
+    "types": {
+      "VRAI_FAUX": "Vrai ou faux",
+      "OUI_NON": "Oui ou non",
+      "CHOIX_UNIQUE": "Choix unique",
+      "CHOIX_MULTIPLE": "Choix multiple",
+      "OUVERTE": "Réponse écrite",
+      "PERSONNELLE": "Personnelle",
+      "EXERCICE": "Exercice",
+      "CONSIGNE": "Consigne"
+    },
+    "verdict": {
+      "JUSTE": "Juste",
+      "A_PRECISER": "À préciser",
+      "A_REVOIR": "À revoir"
+    },
+    "values": {
+      "VRAI": "Vrai",
+      "FAUX": "Faux",
+      "OUI": "Oui",
+      "NON": "Non"
+    },
+    "home": {
+      "moduleUnavailable": "L'étude de l'assemblée n'est pas ouverte pour votre ministère.",
+      "joinRequired": "Rejoignez votre assemblée pour participer à l'étude.",
+      "join": "Rejoindre mon assemblée",
+      "resume": "Reprendre",
+      "answer": "Répondre",
+      "correct": "Corriger",
+      "noCurrent": "Aucune étude en cours",
+      "noCurrentHint": "Quand votre dirigeant commencera une séance, elle apparaîtra ici.",
+      "startSession": "Commencer une séance",
+      "startOther": "Commencer une autre leçon",
+      "noCatalog": "Aucune unité d'étude n'est encore publiée.",
+      "locked": "Verrouillée : terminez d'abord l'unité prérequise dans l'assemblée",
+      "lessonsDone": "{{done}} / {{total}} leçons",
+      "start": "Commencer",
+      "redo": "Refaire",
+      "startTitle": "Commencer la séance ?",
+      "startConfirm": "{{lesson}} — les répondants pourront répondre dès maintenant.",
+      "forgottenTitle": "Une séance est encore ouverte",
+      "forgottenBody": "La séance de la {{lesson}} n'a pas été terminée. La terminer pour commencer celle-ci ?",
+      "finishAndStart": "Terminer et commencer",
+      "sessions": "Séances terminées",
+      "noSessions": "Aucune séance terminée pour l'instant.",
+      "copies_one": "{{count}} copie",
+      "copies_other": "{{count}} copies",
+      "allSessions_one": "Voir la séance",
+      "allSessions_other": "Voir les {{count}} séances",
+      "unitProgress": "Avancement de l'assemblée",
+      "myProgress": "Ma progression",
+      "overviewTitle": "Avancement des assemblées",
+      "overviewEmpty": "Aucune assemblée de votre périmètre n'a encore étudié."
+    },
+    "session": {
+      "answered": "{{done}} / {{total}} répondues",
+      "save": {
+        "saving": "enregistrement…",
+        "saved": "enregistré ✓",
+        "failed": "non enregistré"
+      },
+      "offline": "Hors ligne — l'écran se mettra à jour au retour du réseau.",
+      "offlinePending": "Hors ligne — vos réponses sont sur le téléphone et partiront au retour du réseau.",
+      "ignored_one": "{{count}} réponse saisie après le passage à la correction n'a pas été prise en compte.",
+      "ignored_other": "{{count}} réponses saisies après le passage à la correction n'ont pas été prises en compte.",
+      "readerHint": "Vous consultez cette séance sans y répondre.",
+      "correctionHint": "Échangez les téléphones : votre voisin lit la réponse donnée et la réponse du manuel, puis choisit un avis.",
+      "writtenLeft_one": "{{count}} réponse écrite restante",
+      "writtenLeft_other": "{{count}} réponses écrites restantes",
+      "writtenDone": "Toutes les réponses écrites ont un avis.",
+      "noAnswerCorrection": "Vous n'avez pas répondu dans l'application : rien à corriger sur ce téléphone.",
+      "myScore": "Ma note",
+      "noCopy": "Vous n'avez pas de copie dans l'application pour cette séance.",
+      "gone": "Cette séance n'existe plus : elle a été annulée par le dirigeant."
+    },
+    "question": {
+      "number": "Q{{number}}",
+      "placeholder": "Votre réponse…",
+      "exerciseDone": "Fait",
+      "exerciseDoneMark": "Fait ✓",
+      "exerciseNotDone": "Non fait",
+      "noAnswer": "Sans réponse",
+      "given": "Réponse donnée",
+      "manual": "Réponse du manuel",
+      "wrong": "faux",
+      "expected": "bonne réponse",
+      "noVerdict": "Sans avis — 0 point",
+      "adjusted": "ajusté",
+      "personalAnswered": "Question personnelle — répondu ✓",
+      "personalNotAnswered": "Question personnelle — sans réponse"
+    },
+    "leader": {
+      "panel": "Dirigeant",
+      "results": "Résultats",
+      "respondents_one": "{{count}} répondant",
+      "respondents_other": "{{count}} répondants",
+      "showKey": "Afficher les réponses du manuel",
+      "hideKey": "Masquer les réponses du manuel",
+      "toCorrection": "Passer à la correction",
+      "toCorrectionConfirm": "La saisie sera verrouillée sur les téléphones et les questions fermées corrigées.",
+      "cancel": "Annuler la séance",
+      "cancelTitle": "Annuler la séance ?",
+      "cancelConfirm": "La séance et toutes les réponses déjà données seront supprimées.",
+      "cancelled": "Séance annulée.",
+      "reviewsLeft_one": "{{count}} avis restant",
+      "reviewsLeft_other": "{{count}} avis restants",
+      "reviewsDone": "Tous les avis sont posés.",
+      "finish": "Terminer",
+      "finishConfirm": "Les notes seront arrêtées. Vous pourrez encore ajuster des points depuis les résultats.",
+      "finishConfirmLeft_one": "Encore {{count}} réponse écrite sans avis : elle vaudra 0 point. Vous pourrez ajuster depuis les résultats.",
+      "finishConfirmLeft_other": "Encore {{count}} réponses écrites sans avis : elles vaudront 0 point. Vous pourrez ajuster depuis les résultats.",
+      "finished_one": "Séance terminée — {{count}} copie",
+      "finished_other": "Séance terminée — {{count}} copies"
+    },
+    "results": {
+      "kicker": "Résultats",
+      "outOf": "note sur {{max}}",
+      "copies_one": "{{count}} copie",
+      "copies_other": "{{count}} copies",
+      "noCopies": "Aucune copie pour cette séance.",
+      "paper": "papier",
+      "answeredCount_one": "{{count}} réponse",
+      "answeredCount_other": "{{count}} réponses",
+      "addPaper": "Ajouter une copie papier",
+      "addPaperHint": "Pour un membre qui a répondu sur son livret (ou rattrape une séance) : sa note seule.",
+      "noneWithout": "Tous les répondants de l'assemblée ont déjà une copie.",
+      "member": "Membre",
+      "scoreOutOf": "Note (sur {{max}})",
+      "invalidScore": "Note invalide : entre 0 et {{max}}.",
+      "editPaper": "Note de la copie papier",
+      "deletePaper": "Supprimer la note",
+      "deletePaperConfirm": "La copie papier de {{name}} sera supprimée.",
+      "adjust": "Ajuster les points",
+      "pointsRange": "Points (0 à {{max}})"
+    },
+    "progress": {
+      "unitTitle": "Avancement de l'assemblée",
+      "mineTitle": "Ma progression",
+      "memberTitle": "Progression",
+      "members": "Membres",
+      "noMembers": "Aucun membre n'a encore de copie.",
+      "noModules": "Aucune unité d'étude n'est encore publiée.",
+      "lastSession": "Dernière séance le {{date}}",
+      "cumulative": "Note cumulée : {{score}} / {{max}}",
+      "notDone": "Pas encore faite"
+    },
+    "errors": {
+      "offline": "Pas de réseau : réessayez dans un instant.",
+      "generic": "L'opération n'a pas abouti.",
+      "STUDY_SESSION_ALREADY_OPEN": "Une séance est déjà ouverte dans cette assemblée.",
+      "STUDY_SESSION_NOT_OPEN": "La correction n'est pas (ou plus) en cours.",
+      "STUDY_SESSION_LOCKED": "La séance est terminée : les réponses ne sont plus acceptées.",
+      "STUDY_INVALID_TRANSITION": "Cette étape n'est pas possible dans l'état actuel de la séance.",
+      "STUDY_SESSION_NOT_CANCELLABLE": "Une séance ne s'annule que tant que les réponses sont ouvertes.",
+      "STUDY_PREREQUISITE_NOT_MET": "L'unité prérequise n'est pas encore terminée dans cette assemblée.",
+      "STUDY_LESSON_WITHOUT_QUESTIONS": "Cette leçon n'a pas encore de questions.",
+      "TEACHING_MODULE_INACTIVE": "Cette unité n'est pas publiée.",
+      "NOT_ASSEMBLY_MEMBER": "Ce compte ne fait pas partie des répondants de l'assemblée.",
+      "QUESTION_NOT_IN_LESSON": "Cette question n'appartient pas à la leçon.",
+      "STUDY_INVALID_ANSWER": "Réponse invalide pour ce type de question.",
+      "STUDY_NOTHING_TO_REVIEW": "Rien à corriger sur cette question.",
+      "STUDY_COPY_ALREADY_EXISTS": "Ce membre a déjà une copie dans cette séance : ajustez-la.",
+      "STUDY_COPY_NOT_PAPER": "Seule une copie papier se modifie ou se supprime ainsi.",
+      "STUDY_SCORE_OUT_OF_RANGE": "La note dépasse le maximum de la séance.",
+      "STUDY_POINTS_OUT_OF_RANGE": "Les points dépassent ceux de la question.",
+      "UNAUTHORIZED_ACCESS": "Vous n'avez pas accès à cette étude.",
+      "RESOURCE_NOT_FOUND": "Cette séance ou cette copie n'existe plus.",
+      "MODULE_ACCESS_DENIED": "L'étude de l'assemblée n'est pas ouverte pour votre ministère."
+    },
+    "language": {
+      "FR": "FR",
+      "EN": "EN",
+      "pillA11y": "Unité en {{language}}",
+      "names": {
+        "FR": "français",
+        "EN": "anglais"
+      }
     }
   }
 }

@@ -126,6 +126,12 @@ export default function RootLayout() {
                   (D-DOC-14) se poussent depuis la droite. */}
               <Stack.Screen name="d/[slug]" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="documents/index" options={{ animation: 'slide_from_right' }} />
+              {/* Étude de l'assemblée (plan 21/10, §6.3) : accueil de la tuile, séance (un écran
+                  en trois temps), résultats et avancement se poussent depuis la droite. */}
+              <Stack.Screen name="study/index" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="study/session/[id]" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="study/results/[id]" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="study/progress" options={{ animation: 'slide_from_right' }} />
             </Stack>
           </AuthProvider>
         </LanguageProvider>

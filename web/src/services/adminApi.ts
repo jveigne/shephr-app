@@ -1,6 +1,6 @@
 import { apiClient } from './apiClient';
 import type { PageResponse } from './donationApi';
-import type { ModuleRole } from './authApi';
+import type { Language, ModuleRole } from './authApi';
 
 // ---------------- Users (Lot 3.3 — contrat ModuleRole + périmètre) ----------------
 export interface AdminUserResponse {
@@ -350,6 +350,8 @@ export interface UnitResponse {
   type: UnitType;
   joinCode: string;
   active: boolean;
+  /** D-ETU-24 (JP 21/10) : langue de l'assemblée (`FR` par défaut). */
+  language: Language;
   createdAt: string;
 }
 
@@ -366,6 +368,8 @@ export interface CreateUnitRequest {
    * ⚠ Anti-doublon : deux assemblées du même nom dans la même ville → 422 `STRUCTURE_NAME_EXISTS`.
    */
   leaderUserId?: string;
+  /** D-ETU-24 (JP 21/10) : facultatif, `FR` par défaut côté serveur. */
+  language?: Language;
 }
 
 export interface UpdateUnitRequest {
@@ -373,6 +377,8 @@ export interface UpdateUnitRequest {
   localityId?: string;
   type?: UnitType;
   active?: boolean;
+  /** D-ETU-24 (JP 21/10) : absent = inchangé. */
+  language?: Language;
 }
 
 export async function listUnits(params: { localityId?: string } = {}) {

@@ -672,7 +672,13 @@
     "contactMailSubject": "Shephr — new city request",
     "needsLeader": "Leader needed",
     "needsLeaderHint": "{{count}} assembly/assemblies in your scope are waiting for a leader.",
-    "emptyUnits": "No assembly in your scope."
+    "emptyUnits": "No assembly in your scope.",
+    "language": "Assembly language",
+    "languageHint": "Study units are offered in this language first.",
+    "languages": {
+      "FR": "Français",
+      "EN": "English"
+    }
   },
   "notifications": {
     "morePending": "{{count}} more reminder(s) pending",
@@ -1532,6 +1538,201 @@
       "DOC_CATEGORY_IN_USE": "This category is in use: deactivate it instead.",
       "DOC_CATEGORY_NAME_EXISTS": "A category with this name already exists.",
       "DOC_INVALID_TRANSITION": "This action is not possible in the document's current state."
+    }
+  },
+  "study": {
+    "tile": {
+      "title": "Bertoua message",
+      "hint": "Assembly study",
+      "live": "Live"
+    },
+    "kicker": "Assembly study",
+    "lesson": "Lesson {{number}}",
+    "lessonTitled": "Lesson {{number}} · {{title}}",
+    "score": "{{score}} / {{max}}",
+    "points_one": "{{value}} pt",
+    "points_other": "{{value}} pts",
+    "status": {
+      "REPONSES_OUVERTES": "Answering",
+      "CORRECTION": "Correction",
+      "TERMINEE": "Finished"
+    },
+    "types": {
+      "VRAI_FAUX": "True or false",
+      "OUI_NON": "Yes or no",
+      "CHOIX_UNIQUE": "Single choice",
+      "CHOIX_MULTIPLE": "Multiple choice",
+      "OUVERTE": "Written answer",
+      "PERSONNELLE": "Personal",
+      "EXERCICE": "Exercise",
+      "CONSIGNE": "Instruction"
+    },
+    "verdict": {
+      "JUSTE": "Right",
+      "A_PRECISER": "Needs detail",
+      "A_REVOIR": "Review"
+    },
+    "values": {
+      "VRAI": "True",
+      "FAUX": "False",
+      "OUI": "Yes",
+      "NON": "No"
+    },
+    "home": {
+      "moduleUnavailable": "Assembly study is not available for your ministry.",
+      "joinRequired": "Join your assembly to take part in the study.",
+      "join": "Join my assembly",
+      "resume": "Resume",
+      "answer": "Answer",
+      "correct": "Correct",
+      "noCurrent": "No study in progress",
+      "noCurrentHint": "When your leader starts a session, it will show up here.",
+      "startSession": "Start a session",
+      "startOther": "Start another lesson",
+      "noCatalog": "No study unit has been published yet.",
+      "locked": "Locked: finish the prerequisite unit in the assembly first",
+      "lessonsDone": "{{done}} / {{total}} lessons",
+      "start": "Start",
+      "redo": "Redo",
+      "startTitle": "Start the session?",
+      "startConfirm": "{{lesson}} — respondents can answer right away.",
+      "forgottenTitle": "A session is still open",
+      "forgottenBody": "The session for {{lesson}} was not finished. Finish it to start this one?",
+      "finishAndStart": "Finish and start",
+      "sessions": "Finished sessions",
+      "noSessions": "No finished session yet.",
+      "copies_one": "{{count}} copy",
+      "copies_other": "{{count}} copies",
+      "allSessions_one": "See the session",
+      "allSessions_other": "See all {{count}} sessions",
+      "unitProgress": "Assembly progress",
+      "myProgress": "My progress",
+      "overviewTitle": "Assemblies' progress",
+      "overviewEmpty": "No assembly in your area has studied yet."
+    },
+    "session": {
+      "answered": "{{done}} / {{total}} answered",
+      "save": {
+        "saving": "saving…",
+        "saved": "saved ✓",
+        "failed": "not saved"
+      },
+      "offline": "Offline — the screen will update when the network is back.",
+      "offlinePending": "Offline — your answers are on the phone and will be sent when the network is back.",
+      "ignored_one": "{{count}} answer entered after correction started was not taken into account.",
+      "ignored_other": "{{count}} answers entered after correction started were not taken into account.",
+      "readerHint": "You are viewing this session without answering it.",
+      "correctionHint": "Swap phones: your neighbour reads the given answer and the manual's answer, then picks a verdict.",
+      "writtenLeft_one": "{{count}} written answer left",
+      "writtenLeft_other": "{{count}} written answers left",
+      "writtenDone": "Every written answer has a verdict.",
+      "noAnswerCorrection": "You did not answer in the app: nothing to correct on this phone.",
+      "myScore": "My score",
+      "noCopy": "You have no app copy for this session.",
+      "gone": "This session no longer exists: the leader cancelled it."
+    },
+    "question": {
+      "number": "Q{{number}}",
+      "placeholder": "Your answer…",
+      "exerciseDone": "Done",
+      "exerciseDoneMark": "Done ✓",
+      "exerciseNotDone": "Not done",
+      "noAnswer": "No answer",
+      "given": "Given answer",
+      "manual": "Manual's answer",
+      "wrong": "wrong",
+      "expected": "right answer",
+      "noVerdict": "No verdict — 0 points",
+      "adjusted": "adjusted",
+      "personalAnswered": "Personal question — answered ✓",
+      "personalNotAnswered": "Personal question — no answer"
+    },
+    "leader": {
+      "panel": "Leader",
+      "results": "Results",
+      "respondents_one": "{{count}} respondent",
+      "respondents_other": "{{count}} respondents",
+      "showKey": "Show the manual's answers",
+      "hideKey": "Hide the manual's answers",
+      "toCorrection": "Move to correction",
+      "toCorrectionConfirm": "Answering will be locked on the phones and closed questions corrected.",
+      "cancel": "Cancel the session",
+      "cancelTitle": "Cancel the session?",
+      "cancelConfirm": "The session and every answer already given will be deleted.",
+      "cancelled": "Session cancelled.",
+      "reviewsLeft_one": "{{count}} verdict left",
+      "reviewsLeft_other": "{{count}} verdicts left",
+      "reviewsDone": "Every verdict is in.",
+      "finish": "Finish",
+      "finishConfirm": "Scores will be closed. You can still adjust points from the results.",
+      "finishConfirmLeft_one": "{{count}} written answer still has no verdict: it will be worth 0 points. You can adjust from the results.",
+      "finishConfirmLeft_other": "{{count}} written answers still have no verdict: they will be worth 0 points. You can adjust from the results.",
+      "finished_one": "Session finished — {{count}} copy",
+      "finished_other": "Session finished — {{count}} copies"
+    },
+    "results": {
+      "kicker": "Results",
+      "outOf": "out of {{max}}",
+      "copies_one": "{{count}} copy",
+      "copies_other": "{{count}} copies",
+      "noCopies": "No copy for this session.",
+      "paper": "paper",
+      "answeredCount_one": "{{count}} answer",
+      "answeredCount_other": "{{count}} answers",
+      "addPaper": "Add a paper copy",
+      "addPaperHint": "For a member who answered in the booklet (or catches up on a session): the score only.",
+      "noneWithout": "Every respondent of the assembly already has a copy.",
+      "member": "Member",
+      "scoreOutOf": "Score (out of {{max}})",
+      "invalidScore": "Invalid score: between 0 and {{max}}.",
+      "editPaper": "Paper copy score",
+      "deletePaper": "Delete the score",
+      "deletePaperConfirm": "{{name}}'s paper copy will be deleted.",
+      "adjust": "Adjust points",
+      "pointsRange": "Points (0 to {{max}})"
+    },
+    "progress": {
+      "unitTitle": "Assembly progress",
+      "mineTitle": "My progress",
+      "memberTitle": "Progress",
+      "members": "Members",
+      "noMembers": "No member has a copy yet.",
+      "noModules": "No study unit has been published yet.",
+      "lastSession": "Last session on {{date}}",
+      "cumulative": "Cumulative score: {{score}} / {{max}}",
+      "notDone": "Not done yet"
+    },
+    "errors": {
+      "offline": "No network: try again in a moment.",
+      "generic": "The operation did not go through.",
+      "STUDY_SESSION_ALREADY_OPEN": "A session is already open in this assembly.",
+      "STUDY_SESSION_NOT_OPEN": "Correction is not (or no longer) in progress.",
+      "STUDY_SESSION_LOCKED": "The session is finished: answers are no longer accepted.",
+      "STUDY_INVALID_TRANSITION": "This step is not possible in the session's current state.",
+      "STUDY_SESSION_NOT_CANCELLABLE": "A session can only be cancelled while answers are open.",
+      "STUDY_PREREQUISITE_NOT_MET": "The prerequisite unit is not finished in this assembly yet.",
+      "STUDY_LESSON_WITHOUT_QUESTIONS": "This lesson has no questions yet.",
+      "TEACHING_MODULE_INACTIVE": "This unit is not published.",
+      "NOT_ASSEMBLY_MEMBER": "This account is not one of the assembly's respondents.",
+      "QUESTION_NOT_IN_LESSON": "This question does not belong to the lesson.",
+      "STUDY_INVALID_ANSWER": "Invalid answer for this type of question.",
+      "STUDY_NOTHING_TO_REVIEW": "Nothing to correct on this question.",
+      "STUDY_COPY_ALREADY_EXISTS": "This member already has a copy in this session: adjust it instead.",
+      "STUDY_COPY_NOT_PAPER": "Only a paper copy can be edited or deleted this way.",
+      "STUDY_SCORE_OUT_OF_RANGE": "The score exceeds the session's maximum.",
+      "STUDY_POINTS_OUT_OF_RANGE": "The points exceed the question's points.",
+      "UNAUTHORIZED_ACCESS": "You do not have access to this study.",
+      "RESOURCE_NOT_FOUND": "This session or copy no longer exists.",
+      "MODULE_ACCESS_DENIED": "Assembly study is not available for your ministry."
+    },
+    "language": {
+      "FR": "FR",
+      "EN": "EN",
+      "pillA11y": "Unit in {{language}}",
+      "names": {
+        "FR": "French",
+        "EN": "English"
+      }
     }
   }
 }

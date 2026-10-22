@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
-import { Button, Field, Input, Modal, TopBar } from '../components/ui';
+import { Button, Field, Input, Modal, Select, TopBar } from '../components/ui';
 import { GeoPicker } from '../components/GeoPicker';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { canCreateAssembly, deleteMyAccount, primaryRoleKey } from '../services/authApi';
+import { canCreateAssembly, deleteMyAccount, primaryRoleKey, type Language } from '../services/authApi';
 import {
   changeMyAssembly,
   createUnit,
@@ -194,6 +194,8 @@ function MyAssemblyCard() {
   const [cityId, setCityId] = useState('');
   const [creatingOpen, setCreatingOpen] = useState(false);
   const [newName, setNewName] = useState('');
+  /** D-ETU-24 (JP 21/10) : langue de l'assemblée créée (`FR` par défaut, comme le serveur). */
+  const [newLanguage, setNewLanguage] = useState<Language>('FR');
   const ministryId = me?.ministryId ?? null;
 
   // Le GeoPicker ne fait aucun appel réseau : le référentiel est chargé ici, sur les mêmes
@@ -238,11 +240,12 @@ function MyAssemblyCard() {
    */
   const createM = useMutation({
     mutationFn: () =>
-      createUnit({ ministryId: ministryId ?? '', localityId: cityId, name: newName.trim() }),
+      createUnit({ ministryId: ministryId ?? '', localityId: cityId, name: newName.trim(), language: newLanguage }),
     onSuccess: async (unit) => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'units'] });
       setCreatingOpen(false);
       setNewName('');
+      setNewLanguage('FR');
       // Pré-sélectionnée : « Changer d'assemblée » enchaîne directement sur le rattachement.
       setUnitId(unit.id);
       push({ kind: 'ok', title: t('settings.myAssemblyCreated', { name: unit.name }) });
@@ -379,6 +382,13 @@ function MyAssemblyCard() {
                       placeholder={t('settings.myAssemblyNewNamePlaceholder')}
                       autoFocus
                     />
+                  </Field>
+                  <Field label={t('units.languageLabel')} hint={t('units.languageHint')}>
+                    <Select value={newLanguage} onChange={(e) => setNewLanguage(e.target.value as Language)}>
+                      {(['FR', 'EN'] as Language[]).map((l) => (
+                        <option key={l} value={l}>{t(`units.languages.${l}`)}</option>
+                      ))}
+                    </Select>
                   </Field>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <Button

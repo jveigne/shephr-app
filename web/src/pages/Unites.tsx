@@ -11,6 +11,7 @@ import {
   Modal,
   Pagination,
   Picker,
+  Select,
   StatusBadge,
   Table,
   Toggle,
@@ -19,7 +20,7 @@ import {
 } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { canCreateAssembly, canManageUnits, isSecretariat } from '../services/authApi';
+import { canCreateAssembly, canManageUnits, isSecretariat, type Language } from '../services/authApi';
 import {
   createUnit,
   deleteUnit,
@@ -45,6 +46,9 @@ const errMsg = (err: unknown, fallback: string) =>
 /** Code métier d'une 422 (`ApiError.error`). */
 const errCode = (err: unknown): string | null =>
   (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? null;
+
+/** D-ETU-24 (JP 21/10) : langues possibles d'une assemblée (enum `auth.Language`). */
+const UNIT_LANGUAGES: Language[] = ['FR', 'EN'];
 
 export function UnitesPage() {
   const { t } = useTranslation();
@@ -94,7 +98,7 @@ export function UnitesPage() {
     },
   });
   const updateM = useMutation({
-    mutationFn: ({ id, ...payload }: { id: string; name?: string; localityId?: string; active?: boolean }) =>
+    mutationFn: ({ id, ...payload }: { id: string; name?: string; localityId?: string; active?: boolean; language?: Language }) =>
       updateUnit(id, payload),
     onSuccess: () => { invalidate(); setEditing(null); push({ kind: 'ok', title: t('units.updated') }); },
     onError: (err) => push({ kind: 'error', title: t('units.updateRefused'), msg: errMsg(err, t('units.updateFailed')) }),
@@ -122,6 +126,8 @@ export function UnitesPage() {
   const cols: Column<UnitResponse>[] = [
     { label: t('units.colUnit'), render: (u) => <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{u.name}</span> },
     { label: t('common.locality'), render: (u) => u.localityName },
+    // D-ETU-24 (JP 21/10) : langue de l'assemblée — un backend antérieur ne la renvoie pas (FR).
+    { label: t('units.colLanguage'), render: (u) => <Badge tone="gray">{u.language ?? 'FR'}</Badge> },
     {
       label: t('units.colCode'),
       render: (u) => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-600)' }}>{u.joinCode}</span>,
@@ -224,7 +230,7 @@ export function UnitesPage() {
         submitting={createM.isPending}
         onSubmit={(v) =>
           ministryId && createM.mutate({
-            ministryId, localityId: v.localityId, name: v.name, leaderUserId: v.leaderUserId,
+            ministryId, localityId: v.localityId, name: v.name, leaderUserId: v.leaderUserId, language: v.language,
           })
         }
       />
@@ -236,7 +242,9 @@ export function UnitesPage() {
         countries={countriesQ.data ?? []}
         unit={editing ?? undefined}
         submitting={updateM.isPending}
-        onSubmit={(v) => editing && updateM.mutate({ id: editing.id, name: v.name, localityId: v.localityId, active: v.active })}
+        onSubmit={(v) => editing && updateM.mutate({
+          id: editing.id, name: v.name, localityId: v.localityId, active: v.active, language: v.language,
+        })}
       />
       <ConfirmDelete
         open={toDelete != null}
@@ -399,7 +407,7 @@ function UnitFormModal({
   countries: CountryResponse[];
   unit?: UnitResponse;
   submitting: boolean;
-  onSubmit: (v: { localityId: string; name: string; active: boolean; leaderUserId?: string }) => void;
+  onSubmit: (v: { localityId: string; name: string; active: boolean; leaderUserId?: string; language: Language }) => void;
 }) {
   const { t } = useTranslation();
   // Charge les coordonnées de support et fait re-rendre quand elles arrivent : `contactMailto` /
@@ -414,6 +422,7 @@ function UnitFormModal({
   const [zoneId, setZoneId] = useState('');
   const [name, setName] = useState('');
   const [active, setActive] = useState(true);
+  const [language, setLanguage] = useState<Language>('FR');
   const [leaderId, setLeaderId] = useState('');
   const [leaderQuery, setLeaderQuery] = useState('');
 
@@ -438,6 +447,7 @@ function UnitFormModal({
       }
       setName(unit?.name ?? '');
       setActive(unit?.active ?? true);
+      setLanguage(unit?.language ?? 'FR');
       setLeaderId(''); setLeaderQuery('');
     }
   }, [open, unit, localities, zones, countries]);
@@ -496,7 +506,7 @@ function UnitFormModal({
             variant="primary"
             disabled={!valid || submitting}
             onClick={() => onSubmit({
-              localityId, name: name.trim(), active,
+              localityId, name: name.trim(), active, language,
               leaderUserId: canPickLeader ? leaderId || undefined : undefined,
             })}
           >
@@ -552,6 +562,15 @@ function UnitFormModal({
         </Field>
         <Field label={t('units.nameLabel')}>
           <Input placeholder={t('units.namePlaceholder')} value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        {/* D-ETU-24 (JP 21/10) : langue de l'assemblée — choisit la version des unités d'étude
+            proposée (D-ETU-26). Mêmes droits que le reste de la fiche. */}
+        <Field label={t('units.languageLabel')} hint={t('units.languageHint')}>
+          <Select value={language} onChange={(e) => setLanguage(e.target.value as Language)}>
+            {UNIT_LANGUAGES.map((l) => (
+              <option key={l} value={l}>{t(`units.languages.${l}`)}</option>
+            ))}
+          </Select>
         </Field>
         {/* RG-BQ-12 — responsable FACULTATIF : sans choix, le créateur devient responsable. */}
         {canPickLeader && (

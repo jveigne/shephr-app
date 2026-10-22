@@ -13,6 +13,7 @@ import { colors, fonts, radii } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { canDeclareEvents, hasMemberGoals, isAttachedAccount } from '@/services/authApi';
 import { getSummary, type CurrencyTotal, type DonationSummary } from '@/services/statsApi';
+import { getStudyMe } from '@/services/assemblyApi';
 import { fmtAmount, monthLabel } from '@/utils/format';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -20,12 +21,16 @@ type IoniconName = ComponentProps<typeof Ionicons>['name'];
 type ComingKind = 'cantique' | 'priere' | 'compte-rendu';
 
 export default function HomeScreen() {
-  const { me, isLeader, isTreasurer, hasGoals, hasDonations, hasEvents, hasDocuments } = useAuth();
+  const { me, isLeader, isTreasurer, hasGoals, hasDonations, hasEvents, hasDocuments, hasAssembly } = useAuth();
   const { t } = useLanguage();
   const [summary, setSummary] = useState<DonationSummary | null>(null);
   const [summaryFailed, setSummaryFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [coming, setComing] = useState<ComingKind | null>(null);
+  // Plan 21/10 (§6.3) — pastille « En cours » de la tuile d'étude : une séance non terminée dans
+  // une assemblée du compte (`GET /study/me`). Un échec la masque, sans plus.
+  const [studyLive, setStudyLive] = useState(false);
+  const hasStudy = hasAssembly && isAttachedAccount(me);
 
   // `hasDonations` arrive après coup (les modules accessibles sont chargés en asynchrone après le
   // token) : il DOIT être en dépendance, sinon `load` reste figé sur la valeur `false` du 1er rendu
@@ -43,6 +48,16 @@ export default function HomeScreen() {
     setSummaryFailed(s.status === 'rejected');
   }, [hasDonations]);
 
+  const loadStudy = useCallback(async () => {
+    if (!hasStudy) return;
+    try {
+      const { assemblies } = await getStudyMe();
+      setStudyLive(assemblies.some((a) => a.currentSession != null));
+    } catch {
+      setStudyLive(false);
+    }
+  }, [hasStudy]);
+
   useEffect(() => {
     load();
   }, [load]);
@@ -50,13 +65,14 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       load();
-    }, [load]),
+      void loadStudy();
+    }, [load, loadStudy]),
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await load();
+      await Promise.all([load(), loadStudy()]);
     } finally {
       setRefreshing(false);
     }
@@ -232,6 +248,21 @@ export default function HomeScreen() {
           onPress={() => router.push('/documents')}
         />
         )}
+        {/* Plan 21/10 (§6.3) — Étude de l'assemblée, programme « Le Message de Bertoua ».
+            D-ETU-04 : libellé i18n fixe (pas de nom de programme en base en V1). D-ETU-05 (JP
+            21/10) : visible de tout compte rattaché ou dirigeant (`isAttachedAccount`) si le
+            ministère a l'abonnement ASSEMBLY — pas de nouveau code ; l'écran s'adapte au rôle.
+            Pastille « En cours » tant qu'une séance de son assemblée est ouverte. */}
+        {hasStudy && (
+        <Tile
+          label={t('study.tile.title')}
+          hint={t('study.tile.hint')}
+          icon="school-outline"
+          tone={colors.moss}
+          badge={studyLive ? t('study.tile.live') : undefined}
+          onPress={() => router.push('/study')}
+        />
+        )}
 {/* Lot S1 (21/07) : briques visibles de TOUS — le contenu des écrans s'adapte au rôle
     (listes scopées côté backend ; lecture seule pour un membre simple).
     RDG 25/07 : le simple fidèle ne voit QUE « Créer une assemblée » (ex-Structure, recette
@@ -305,6 +336,7 @@ function Tile({
   tone,
   primary,
   comingSoon,
+  badge,
   onPress,
 }: {
   label: string;
@@ -313,6 +345,8 @@ function Tile({
   tone: string;
   primary?: boolean;
   comingSoon?: boolean;
+  /** Pastille d'état (ex. « En cours » de l'étude, plan 21/10) — à la place de « Bientôt ». */
+  badge?: string;
   onPress: () => void;
 }) {
   const { t } = useLanguage();
@@ -350,9 +384,10 @@ function Tile({
           {hint}
         </Text>
       </View>
-      {comingSoon && (
+      {comingSoon && !badge && (
         <Text style={styles.comingPill}>{t('common.comingSoon')}</Text>
       )}
+      {!!badge && <Text style={[styles.comingPill, styles.livePill]}>{badge}</Text>}
     </Pressable>
   );
 }
@@ -630,6 +665,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(42,38,32,0.07)',
     overflow: 'hidden',
+  },
+  livePill: {
+    color: colors.white,
+    backgroundColor: colors.clay,
+    borderColor: colors.clay,
   },
 
   footerMark: {

@@ -1,4 +1,5 @@
 import { apiClient } from '@/services/apiClient';
+import type { Language, ModuleRole } from '@/services/authApi';
 
 // Structure org scopée (Lot 3.4 mobile) — calque l'adminApi web. Endpoints `/api/church/admin/*`
 // ouverts/scopés au Lot 3.2 : la VISIBILITÉ et l'ÉCRITURE sont enforcées côté backend (403 hors périmètre).
@@ -125,6 +126,8 @@ export interface UnitResponse {
   type: UnitType;
   joinCode: string;
   active: boolean;
+  /** D-ETU-24 (JP 21/10) : langue de l'assemblée (défaut FR). */
+  language: Language;
 }
 
 export async function listUnits(params: { localityId?: string } = {}): Promise<UnitResponse[]> {
@@ -148,12 +151,17 @@ export async function listUnits(params: { localityId?: string } = {}): Promise<U
  */
 export async function createUnit(payload: {
   ministryId: string; localityId: string; name: string; type: UnitType; leaderUserId?: string;
+  /** D-ETU-24 (JP 21/10) : facultatif, défaut FR côté serveur. */
+  language?: Language;
 }) {
   const { data } = await apiClient.post<UnitResponse>('/api/church/admin/units', payload);
   return data;
 }
 
-export async function updateUnit(id: string, payload: { name?: string; localityId?: string; type?: UnitType; active?: boolean }) {
+/** D-ETU-24 (JP 21/10) : `language` absent = inchangé. */
+export async function updateUnit(id: string, payload: {
+  name?: string; localityId?: string; type?: UnitType; active?: boolean; language?: Language;
+}) {
   const { data } = await apiClient.patch<UnitResponse>(`/api/church/admin/units/${id}`, payload);
   return data;
 }
@@ -166,7 +174,6 @@ export async function deleteUnit(id: string): Promise<void> {
 // POST /api/church/admin/users/invite — route `authenticated()`, le périmètre (rôle ≤ le sien,
 // sous-arbre) est enforcé côté backend. V1 : aucun email envoyé, on récupère le code court à
 // transmettre à l'invité (flux d'activation par code — cf. (auth)/activate).
-import type { ModuleRole } from '@/services/authApi';
 
 export interface InviteUserRequest {
   /** A1 (RG-ID-02) — email de contact facultatif ; identifiant OU email requis. */

@@ -38,3 +38,13 @@ export const parseLocalDate = (s: string): Date => {
   const [y, m, d] = s.split('-').map(Number);
   return new Date(y, m - 1, d);
 };
+
+/**
+ * Étude de l'assemblée (contrat 21/10, §1.1) — points et notes à 2 décimales au plus, affichés
+ * SANS zéro inutile (`2`, `1,5`, `0,75`) ; virgule décimale en français. `null` → « – ».
+ */
+export const fmtPoints = (n: number | null | undefined, language = 'fr'): string => {
+  if (n == null || Number.isNaN(n)) return '–';
+  const s = String(Math.round(n * 100) / 100);
+  return language.startsWith('fr') ? s.replace('.', ',') : s;
+};

@@ -113,6 +113,14 @@ export interface AuthResponse {
   user: UserDTO;
 }
 
+/**
+ * Mirrors com.excellence.back.auth.Language — langue d'une assemblée et d'une unité d'étude
+ * (D-ETU-24 / D-ETU-25, JP 21/10). `me.language` reste typé `string` : le backend peut en porter
+ * d'autres pour le compte.
+ */
+export type Language = 'FR' | 'EN';
+export const LANGUAGES: Language[] = ['FR', 'EN'];
+
 // Mirrors com.excellence.back.donation.auth.dto.MeResponse
 export interface MeResponse {
   id: string;
