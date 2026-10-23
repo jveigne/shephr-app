@@ -18,6 +18,9 @@ function safeNext(raw: string | null): string | null {
   return raw.startsWith('/login') ? null : raw;
 }
 
+/** Pages d'abonnement (hors shell, lot ABO4) : ouvertes à tout compte connecté. */
+const isBillingPath = (p: string) => p === '/abonnements' || p.startsWith('/abonnements/') || p.startsWith('/abonnements?');
+
 export function LoginPage() {
   const { login } = useAuth();
   const { push } = useToast();
@@ -42,6 +45,13 @@ export function LoginPage() {
     setLoading(true);
     try {
       const me = await login({ identifier: email.trim(), password });
+      // Lot ABO4 (D-ABO-05, JP 23/10) : les pages d'abonnement servent TOUT compte connecté,
+      // rattaché ou non — le retour après connexion n'attend donc aucun rôle.
+      if (nextPath && isBillingPath(nextPath)) {
+        push({ kind: 'ok', title: t('login.welcomeToast'), msg: t('login.welcomeToastMsg') });
+        navigate(nextPath, { replace: true });
+        return;
+      }
       if (hasMinistryAccess(me)) {
         // Comportement actuel : accès Web Espace ministère.
         push({ kind: 'ok', title: t('login.welcomeToast'), msg: t('login.welcomeToastMsg') });

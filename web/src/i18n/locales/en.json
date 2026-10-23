@@ -127,7 +127,8 @@
     "footer": {
       "tagline": "The management platform for your ministry.",
       "privacy": "Privacy",
-      "deleteAccount": "Delete my account"
+      "deleteAccount": "Delete my account",
+      "subscriptions": "Subscriptions"
     }
   },
   "privacy": {
@@ -322,7 +323,8 @@
     "requests": "Requests",
     "contact": "Contact us",
     "contactSubject": "Shephr support request",
-    "menu": "Menu"
+    "menu": "Menu",
+    "study": "Bertoua message"
   },
   "sidebar": {
     "logout": "Log out",
@@ -1519,7 +1521,11 @@
       "noReading": "No reading"
     },
     "study": {
-      "tab": "Study",
+      "title": "Bertoua message",
+      "moduleOff": "Module not enabled",
+      "moduleOffHint": "“Bertoua message” is not included in your ministry's subscription.",
+      "noCatalog": "No study unit",
+      "noCatalogHint": "No active study unit has questions in your ministry yet.",
       "lesson": "Lesson {{n}}",
       "sessionsTitle": "Study sessions — {{name}}",
       "sessionsSub": "Sessions are run from the mobile app; the web shows results and progress.",
@@ -1652,7 +1658,8 @@
           "EN": "English version"
         }
       }
-    }
+    },
+    "studySuggested": "Today's study chapter"
   },
   "events": {
     "title": "Events",
@@ -1950,6 +1957,103 @@
       "DOC_CATEGORY_IN_USE": "This category is used by at least one document: deactivate it instead.",
       "DOC_CATEGORY_NAME_EXISTS": "A category with this name already exists in this ministry.",
       "DOC_INVALID_TRANSITION": "This action is not possible in the document's current state."
+    }
+  },
+  "billing": {
+    "menu": "My subscriptions",
+    "period": {
+      "MONTHLY": "/ month",
+      "ANNUAL": "/ year"
+    },
+    "status": {
+      "PENDING": "Awaiting payment",
+      "ACTIVE": "Active",
+      "PAST_DUE": "Past due",
+      "CANCELED": "Canceled",
+      "EXPIRED": "Expired"
+    },
+    "offers": {
+      "title": "Subscriptions",
+      "subtitle": "Support the Shephr service for your ministry with a monthly subscription. Payment is secured by Stripe; your invoice is emailed to you every month.",
+      "canceled": "Payment was canceled: no subscription was created. You can try again whenever you like.",
+      "mySubscriptionsLink": "See my subscriptions and invoices",
+      "empty": "No offer is available at the moment.",
+      "vatIncluded": "Incl. {{rate}}% VAT — no commitment, cancel anytime.",
+      "subscribe": "Subscribe",
+      "redirecting": "Redirecting to payment…",
+      "loginRequired": "To subscribe, sign in to your Shephr account.",
+      "login": "Sign in",
+      "signup": "Create an account",
+      "stripeNote": "Card payment through Stripe. Shephr never sees or stores your card details."
+    },
+    "promo": {
+      "label": "Promo code",
+      "placeholder": "e.g. PASTEUR50",
+      "apply": "Apply",
+      "checking": "Checking…",
+      "loginHint": "Your code will be checked once you sign in.",
+      "applied": "Code {{code}} applied: −{{percent}}% every month, for the whole life of the subscription."
+    },
+    "return": {
+      "title": "Your subscription",
+      "pending": "Waiting for your payment to be confirmed…",
+      "slow": "Confirmation is taking longer than expected. You will receive an email as soon as the payment is received; you can close this page.",
+      "active": "Thank you, your subscription {{reference}} is active.",
+      "emailNote": "Your invoice is emailed to you; you will also find it in “My subscriptions”.",
+      "notCompleted": "The payment did not go through: this subscription is not active.",
+      "noRef": "Incomplete return link.",
+      "mySubscriptions": "My subscriptions",
+      "backToOffers": "Back to offers"
+    },
+    "mine": {
+      "title": "My subscriptions",
+      "subtitle": "Your Shephr subscriptions and invoices. Only you can see them.",
+      "backToSpace": "Back to my space",
+      "seeOffers": "See offers",
+      "subscriptions": "Subscriptions",
+      "invoices": "Invoices",
+      "noSubscription": "You have no subscription.",
+      "noInvoice": "No invoice yet.",
+      "promo": "{{code}} · −{{percent}}%",
+      "ministry": "Ministry: {{name}}",
+      "nextDue": "Next payment: {{date}}",
+      "cancelRequested": "Cancellation requested — the subscription ends on {{date}}.",
+      "canceledOn": "Canceled on {{date}}",
+      "pastDueHint": "The last payment failed. Stripe will retry; you can update your card.",
+      "pendingHint": "Payment awaiting confirmation.",
+      "manage": "Manage my subscription",
+      "updateCard": "Update my card",
+      "portalFailed": "Could not open the management area",
+      "downloadFailed": "Download failed"
+    },
+    "invoice": {
+      "date": "Date",
+      "number": "Number",
+      "period": "Period",
+      "amount": "Amount incl. VAT",
+      "refunded": "of which {{amount}} refunded",
+      "download": "PDF"
+    },
+    "errors": {
+      "BILLING_OFFER_NOT_FOUND": "This offer does not exist or is no longer available.",
+      "BILLING_SUBSCRIPTION_NOT_FOUND": "Subscription not found.",
+      "BILLING_INVOICE_NOT_FOUND": "Invoice not found.",
+      "PROMO_CODE_UNKNOWN": "This promo code does not exist.",
+      "PROMO_CODE_DISABLED": "This promo code has been disabled.",
+      "PROMO_CODE_NOT_STARTED": "This promo code is not valid yet.",
+      "PROMO_CODE_EXPIRED": "This promo code has expired.",
+      "PROMO_CODE_EXHAUSTED": "This promo code has reached its maximum number of uses.",
+      "PROMO_CODE_DUPLICATE": "This promo code already exists.",
+      "PROMO_CODE_IN_USE": "This promo code has already been used.",
+      "BILLING_OFFER_CODE_IMMUTABLE": "An offer's code cannot be changed.",
+      "BILLING_EMAIL_REQUIRED": "Your account has no email address: add one to receive your invoices.",
+      "BILLING_PORTAL_UNAVAILABLE": "The management area is not available for this subscription yet.",
+      "BILLING_PAYER_INVALID": "Payer not found.",
+      "BILLING_SUBSCRIPTION_NOT_ACTIVE": "This subscription is no longer active.",
+      "BILLING_PERIOD_UNSUPPORTED": "This billing period is not available yet.",
+      "BILLING_CURRENCY_UNSUPPORTED": "This currency is not available yet.",
+      "TOO_MANY_REQUESTS": "Too many attempts: please wait a minute before trying again.",
+      "PAYMENT_PROVIDER_UNAVAILABLE": "Online payment is temporarily unavailable. Please try again later."
     }
   }
 }

@@ -35,8 +35,8 @@ import { goBack } from '@/utils/navigation';
 /**
  * Étude de l'assemblée (plan 21/10, §6.3) — ACCUEIL de la tuile « Le Message de Bertoua ».
  *
- * <p>D-ETU-05 : atteint depuis l'accueil si le ministère a `ASSEMBLY` et que le compte est rattaché
- * (`isAttachedAccount`). Le contenu suit le rôle, tel que le dit `GET /study/me` :
+ * <p>D-ETU-28 (JP 23/10, remplace D-ETU-05) : atteint depuis l'accueil si le ministère a le module
+ * `STUDY` et que le compte est rattaché (`isAttachedAccount`). Le contenu suit le rôle, tel que le dit `GET /study/me` :
  * <ul>
  *   <li>DIRIGEANT de l'assemblée (`leader`, D-ETU-07) — séance en cours (*Reprendre*) ou
  *       *Commencer* : unité → leçon, leçons faites cochées, unité verrouillée si son prérequis
@@ -51,8 +51,8 @@ import { goBack } from '@/utils/navigation';
  */
 export default function StudyHomeScreen() {
   const { t } = useLanguage();
-  const { me, hasAssembly } = useAuth();
-  const active = hasAssembly && isAttachedAccount(me);
+  const { me, hasStudy } = useAuth();
+  const active = hasStudy && isAttachedAccount(me);
 
   const [assemblies, setAssemblies] = useState<StudyAssembly[]>([]);
   const [catalogs, setCatalogs] = useState<Record<string, StudyUnitForAssembly[]>>({});
@@ -172,9 +172,9 @@ export default function StudyHomeScreen() {
         <Card variant="paper2" style={styles.empty}>
           <Ionicons name="lock-closed-outline" size={26} color={colors.ink3} />
           <Text style={styles.emptyText}>
-            {hasAssembly ? t('study.home.joinRequired') : t('study.home.moduleUnavailable')}
+            {hasStudy ? t('study.home.joinRequired') : t('study.home.moduleUnavailable')}
           </Text>
-          {hasAssembly && (
+          {hasStudy && (
             <Text style={styles.link} onPress={() => router.push('/(auth)/join')}>
               {t('study.home.join')}
             </Text>

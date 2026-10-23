@@ -19,6 +19,8 @@ import { MemberCarePage } from './pages/MemberCare';
 import { AssemblyPage } from './pages/Assembly';
 import { EventsPage } from './pages/Events';
 import { MyActionsPage } from './pages/MyActions';
+import { StudyPage } from './pages/Study';
+import { BillingOffersPage, BillingReturnPage, MySubscriptionsPage } from './pages/Billing';
 import { UsersPage } from './pages/Users';
 import { MonMinisterePage } from './pages/MonMinistere';
 import { PaysPage } from './pages/Pays';
@@ -84,6 +86,13 @@ export function App() {
                   </Suspense>
                 }
               />
+              {/* Lot ABO4 (§6.1 du plan du 23/10) — abonnements payants, HORS shell. /abonnements est
+                  publique (offres) ; retour Stripe et « Mes abonnements » exigent une session, pour TOUT
+                  compte, rattaché ou non (D-ABO-05) — la garde est dans la page. D-ABO-01 (JP 23/10) :
+                  payer n'active aucun module. */}
+              <Route path="/abonnements" element={<BillingOffersPage />} />
+              <Route path="/abonnements/retour" element={<BillingReturnPage />} />
+              <Route path="/abonnements/mes-abonnements" element={<MySubscriptionsPage />} />
               {/* Feature B — onboarding : authentifié mais HORS AppShell (aucun rattachement). */}
               <Route path="/join" element={<OnboardingPage />} />
               {/* Feature A — espace membre minimal (MEMBRE Goals rattaché), gaté par MemberShell. */}
@@ -94,6 +103,9 @@ export function App() {
                 {/* Lot E8 (§6.2 du plan du 14/10) — D-EVT-14 (JP 14/10) : vue dédiée du membre, les actions
                     de SON assemblée seulement (compteur, programmés, réalisés, Déclarer / Programmer). */}
                 {FEATURES.events && <Route path="/my-actions" element={<MyActionsPage />} />}
+                {/* D-ETU-31 (JP 23/10, avenant ETU9) : « Le Message de Bertoua », page à part ; la page
+                    gère en plus l'absence d'abonnement STUDY (RG-06, D-ETU-28). */}
+                {FEATURES.study && <Route path="/my-study" element={<StudyPage />} />}
                 <Route path="/member-settings" element={<SettingsPage />} />
                 <Route path="/member-contact" element={<ContactPage />} />
               </Route>
@@ -127,6 +139,13 @@ export function App() {
                   <Route path="/events" element={<EventsPage />} />
                 ) : (
                   <Route path="/events" element={<Navigate to={HOME} replace />} />
+                )}
+                {/* D-ETU-31 (JP 23/10, avenant ETU9) : l'Étude sort de la Vie d'assemblée ; flag de
+                    livraison, la page gère en plus l'absence d'abonnement STUDY (RG-06, D-ETU-28). */}
+                {FEATURES.study ? (
+                  <Route path="/study" element={<StudyPage />} />
+                ) : (
+                  <Route path="/study" element={<Navigate to={HOME} replace />} />
                 )}
                 <Route path="/member-care" element={<MemberCarePage />} />
                 <Route path="/users" element={<UsersPage />} />

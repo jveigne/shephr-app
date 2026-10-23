@@ -132,6 +132,8 @@ export default function RootLayout() {
               <Stack.Screen name="study/session/[id]" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="study/results/[id]" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="study/progress" options={{ animation: 'slide_from_right' }} />
+              {/* Plan 23/10 (§6.2, lot ABO5) : « Mes factures », consultation seule (D-ABO-13). */}
+              <Stack.Screen name="billing/index" options={{ animation: 'slide_from_right' }} />
             </Stack>
           </AuthProvider>
         </LanguageProvider>

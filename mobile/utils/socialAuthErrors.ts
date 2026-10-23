@@ -10,6 +10,8 @@ import { SocialSignInError } from '@/services/socialSignIn';
 const BACKEND_CODES = [
   'INVALID_TOKEN',
   'EMAIL_NOT_VERIFIED',
+  // D-ABO-14 (JP 23/10) : plus levé par le serveur (Google / Apple ouverts aux comptes à rôle) ;
+  // traduction conservée pour un serveur plus ancien. Aucun bouton n'est masqué selon le rôle.
   'PRIVILEGED_ACCOUNT_REQUIRES_PASSWORD',
   'ACCOUNT_DISABLED',
   'PROVIDER_NOT_CONFIGURED',

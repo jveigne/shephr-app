@@ -364,6 +364,11 @@ export function LandingPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             {/* Lien exigé par Google Play : la demande de suppression de compte doit être
                 atteignable publiquement depuis le site, sans connexion. */}
+            {/* Lot ABO4 (§6.1 du plan du 23/10) : la section tarifs reste commentée ; la page publique
+                des abonnements est atteinte par ce lien. */}
+            <Link to="/abonnements" style={{ color: 'var(--ink-400)', fontSize: 13, textDecoration: 'none' }}>
+              {t('landing.footer.subscriptions')}
+            </Link>
             <Link to="/privacy" style={{ color: 'var(--ink-400)', fontSize: 13, textDecoration: 'none' }}>
               {t('landing.footer.privacy')}
             </Link>

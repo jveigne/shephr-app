@@ -7,13 +7,15 @@ import { FEATURES } from './config/features';
 import { getAccessibleModules } from './services/authApi';
 import { useAuth } from './hooks/useAuth';
 import { setLanguage } from './i18n';
+import { MySubscriptionsLink } from './components/MySubscriptionsLink';
 
 /**
  * Feature A — shell MINIMAL de l'espace membre (MEMBRE Goals rattaché à une assemblée).
  * N'expose QUE « Mes objectifs », « Mon assemblée » (D-ASM-17, lecture seule, si l'abonnement
  * ASSEMBLY couvre le membre), « Mes actions » (lot E8 ; D-EVT-14 JP 14/10 : vue dédiée, les
  * actions de SON assemblée seulement — compteur, programmés, réalisés, Déclarer / Programmer — si
- * l'abonnement EVENTS le couvre, D-EVT-05), « Réglages » et la déconnexion — aucun élargissement :
+ * l'abonnement EVENTS le couvre, D-EVT-05), « Le Message de Bertoua » (D-ETU-31 JP 23/10, si
+ * l'abonnement STUDY le couvre), « Réglages » et la déconnexion — aucun élargissement :
  * la garde d'AppShell (canAccessWeb / hasMinistryAccess) n'est pas touchée.
  */
 export function MemberShell() {
@@ -29,6 +31,8 @@ export function MemberShell() {
   });
   const hasAssembly = FEATURES.assembly && (modulesQ.data ?? []).includes('ASSEMBLY');
   const hasEvents = FEATURES.events && (modulesQ.data ?? []).includes('EVENTS');
+  // D-ETU-28 / D-ETU-31 (JP 23/10) : « Le Message de Bertoua » = abonnement STUDY + FEATURES.study.
+  const hasStudy = FEATURES.study && (modulesQ.data ?? []).includes('STUDY');
   const lang = i18n.language.startsWith('en') ? 'en' : 'fr';
 
   useEffect(() => {
@@ -104,6 +108,15 @@ export function MemberShell() {
                   <span>{t('assembly.memberNav')}</span>
                 </NavLink>
               )}
+              {hasStudy && (
+                <NavLink
+                  to="/my-study"
+                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                >
+                  <Icon name="edit" size={18} />
+                  <span>{t('nav.study')}</span>
+                </NavLink>
+              )}
               {hasEvents && (
                 <NavLink
                   to="/my-actions"
@@ -172,6 +185,7 @@ export function MemberShell() {
               {me?.leaderName ? (
                 <div className="rl" style={{ opacity: 0.7 }}>{t('sidebar.leader')} : {me.leaderName}</div>
               ) : null}
+              <MySubscriptionsLink />
             </div>
             <button className="logout" onClick={handleLogout} title={t('sidebar.logout')}>
               <Icon name="logout" size={16} />

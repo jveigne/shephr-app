@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Switch } from 'react-native';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,16 +12,19 @@ import MeetingReportCard from '@/components/MeetingReportCard';
 import { DatePickerModal } from '@/components/DeclarationForm';
 import { colors, fonts, radii } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   ASSEMBLY_ERROR_CODES,
   createMeeting,
   getMeeting,
   getRoster,
   getUnitProgress,
+  listStudySessions,
   listTeachingModules,
   updateMeeting,
   type MeetingDetail,
   type RosterEntry,
+  type StudySessionSummary,
   type TeachingChapter,
   type TeachingModule,
   type TeachingPart,
@@ -64,9 +67,14 @@ function assemblyErrorMessage(e: any, t: (k: string) => string, fallback: string
  *   cochable, sous son nom d'origine (le serveur l'accepte, lot L3).
  * - RG-ASM-02 : seuls les modules actifs sont proposés ; le module (désactivé) d'un CR existant
  *   reste affiché pour ne pas perdre la lecture saisie.
+ * - D-ETU-30 (JP 23/10) : en CRÉATION seulement, si le ministère a aussi STUDY, le chapitre d'une
+ *   séance d'étude de l'assemblée ouverte le jour du CR (date locale) est pré-coché — tant que le
+ *   dirigeant n'a rien coché lui-même ; modifiable. Le lien CR ↔ étude n'est que le catalogue
+ *   partagé (D-ETU-29) : rien n'est envoyé au serveur en plus.
  */
 export default function MeetingFormScreen() {
   const { t } = useLanguage();
+  const { hasStudy } = useAuth();
   const params = useLocalSearchParams<{ id?: string; unitId?: string; unitName?: string }>();
   const editId = params.id || null;
 
@@ -85,6 +93,12 @@ export default function MeetingFormScreen() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // D-ETU-30 — sélection pré-cochée d'après une séance d'étude (null : aucune). Tant que la
+  // sélection lui est identique, le dirigeant n'a « rien coché » : un changement de date la remplace.
+  const [suggested, setSuggested] = useState<{ moduleId: string; chapterId: string } | null>(null);
+  // Séances d'étude de l'assemblée, par année (un appel par année consultée).
+  const studySessionsByYear = useRef(new Map<number, Promise<StudySessionSummary[]>>());
 
   const unitId = existing?.unitId ?? params.unitId ?? null;
   const unitName = existing?.unitName ?? params.unitName ?? '';
@@ -148,6 +162,81 @@ export default function MeetingFormScreen() {
       },
     ];
   }, [modules, existing]);
+
+  const dateKey = toLocalDate(date);
+  // Sélection courante, relue au retour de l'appel : le dirigeant a pu cocher entre-temps.
+  // Mise à jour dans un effet (pas pendant le rendu), déclaré avant celui de la suggestion qui le lit.
+  const selectionRef = useRef({ chapterIds, moduleId, suggested });
+  useEffect(() => {
+    selectionRef.current = { chapterIds, moduleId, suggested };
+  });
+  useEffect(() => {
+    if (editId || !hasStudy || !unitId || modules.length === 0) return;
+    // « Rien coché » : sélection vide, ou identique à la suggestion encore intacte.
+    const isUntouched = () => {
+      const sel = selectionRef.current;
+      return (
+        sel.chapterIds.size === 0 ||
+        (!!sel.suggested &&
+          sel.moduleId === sel.suggested.moduleId &&
+          sel.chapterIds.size === 1 &&
+          sel.chapterIds.has(sel.suggested.chapterId))
+      );
+    };
+    if (!isUntouched()) return;
+    let active = true;
+    const local = parseLocalDate(dateKey);
+    const year = local.getFullYear();
+    // Le serveur range une séance dans son année UTC : un 1er janvier / 31 décembre local peut
+    // tomber dans l'année voisine, on la consulte aussi (filtre par date locale ci-dessous).
+    const years = [year];
+    if (local.getMonth() === 0 && local.getDate() === 1) years.push(year - 1);
+    if (local.getMonth() === 11 && local.getDate() === 31) years.push(year + 1);
+    const fetchYear = (y: number) => {
+      let p = studySessionsByYear.current.get(y);
+      if (!p) {
+        p = listStudySessions(unitId, y);
+        studySessionsByYear.current.set(y, p);
+        // Toute erreur : pas de suggestion (avenant 03 §3), et un nouvel essai au prochain changement.
+        p.catch(() => studySessionsByYear.current.delete(y));
+      }
+      return p;
+    };
+    const pending = Promise.all(years.map(fetchYear)).then((lists) => lists.flat());
+    pending
+      .then((sessions) => {
+        if (!active) return;
+        // Coche faite pendant l'appel : le choix du dirigeant prime, aucune suggestion.
+        if (!isUntouched()) return;
+        const { suggested: current } = selectionRef.current;
+        // Séance annulée = supprimée (D-ETU-22) : toute séance listée compte. La plus récente du jour.
+        const hit = sessions
+          .filter((x) => toLocalDate(new Date(x.openedAt)) === dateKey)
+          .sort((a, b) => b.openedAt.localeCompare(a.openedAt))
+          .find((x) => modules.some((m) => m.id === x.moduleId && m.chapters.some((c) => c.id === x.chapterId)));
+        if (hit) {
+          setModuleId(hit.moduleId);
+          setChapterIds(new Set([hit.chapterId]));
+          setSuggested({ moduleId: hit.moduleId, chapterId: hit.chapterId });
+        } else if (current) {
+          // Nouvelle date sans séance : la suggestion précédente, intacte, ne vaut plus.
+          setModuleId(null);
+          setChapterIds(new Set());
+          setSuggested(null);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+    // `chapterIds` / `moduleId` / `suggested` volontairement hors dépendances (relus par
+    // `selectionRef`) : la suggestion se réévalue au changement de date (ou à l'arrivée du
+    // catalogue), pas à chaque coche.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId, hasStudy, unitId, modules, dateKey]);
+
+  const suggestionShown =
+    !!suggested && moduleId === suggested.moduleId && chapterIds.has(suggested.chapterId);
 
   const selectedModule = moduleOptions.find((m) => m.id === moduleId) ?? null;
   const sortedChapters = useMemo(
@@ -359,6 +448,9 @@ export default function MeetingFormScreen() {
               </View>
             ))}
             <Text style={[styles.hint, { marginTop: 10 }]}>{t('assemblyLife.form.alreadyReadHint')}</Text>
+            {suggestionShown && (
+              <Text style={[styles.hint, { marginTop: 6 }]}>{t('assemblyLife.form.studySuggestionHint')}</Text>
+            )}
           </>
         )}
       </Card>

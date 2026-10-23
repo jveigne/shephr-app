@@ -17,6 +17,7 @@ import {
 import { listUnits, listLocalities } from '../services/adminApi';
 import { FEATURES } from '../config/features';
 import { setLanguage } from '../i18n';
+import { MySubscriptionsLink } from './MySubscriptionsLink';
 
 interface NavChild {
   id: string;
@@ -103,6 +104,9 @@ export function Sidebar() {
   const hasAssembly = FEATURES.assembly && (modulesQ.data ?? []).includes('ASSEMBLY');
   // D-EVT-05 (JP 14/10) : « Évènements » = abonnement EVENTS + flag de livraison FEATURES.events.
   const hasEvents = FEATURES.events && (modulesQ.data ?? []).includes('EVENTS');
+  // D-ETU-28 / D-ETU-31 (JP 23/10) : « Le Message de Bertoua » = abonnement STUDY (indépendant
+  // d'ASSEMBLY) + flag de livraison FEATURES.study. Libellé fixe, comme la tuile mobile (D-ETU-04).
+  const hasStudy = FEATURES.study && (modulesQ.data ?? []).includes('STUDY');
 
   // Le /me ne porte ni la localité, ni — pour un DIRIGEANT_UNITE — la zone (zoneNames
   // n'est renseigné que pour le DIRIGEANT_SENIOR). On les résout par ID depuis l'unité du
@@ -162,6 +166,9 @@ export function Sidebar() {
       if (hasAssembly && sec.sectionKey === 'nav.section.pilotage') {
         items = [...items, { id: 'assembly', labelKey: 'nav.assembly', icon: 'calendar', to: '/assembly' }];
       }
+      if (hasStudy && sec.sectionKey === 'nav.section.pilotage') {
+        items = [...items, { id: 'study', labelKey: 'nav.study', icon: 'edit', to: '/study' }];
+      }
       if (hasEvents && sec.sectionKey === 'nav.section.pilotage') {
         items = [...items, { id: 'events', labelKey: 'nav.events', icon: 'megaphone', to: '/events' }];
       }
@@ -170,7 +177,7 @@ export function Sidebar() {
       }
       return { ...sec, items };
     });
-  }, [hasMemberCare, hasAssembly, hasEvents, canSeeStructureChild]);
+  }, [hasMemberCare, hasAssembly, hasStudy, hasEvents, canSeeStructureChild]);
 
   const initials = (me?.fullName ?? 'A·')
     .split(' ')
@@ -346,6 +353,7 @@ export function Sidebar() {
             {registeredSince ? (
               <div className="rl" style={{ opacity: 0.7 }}>{t('sidebar.memberSince', { date: registeredSince })}</div>
             ) : null}
+            <MySubscriptionsLink />
           </div>
           <button className="logout" onClick={handleLogout} title={t('sidebar.logout')}>
             <Icon name="logout" size={16} />

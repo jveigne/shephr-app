@@ -285,8 +285,9 @@ export async function listMeetingsInRange(unitIds: string[], from: string, to: s
 }
 
 // ---------------------------------------------------------------------------------------------
-//  Étude de l'assemblée (plan et contrat du 21/10/2026, `/api/church/assembly/study/**`, sous le
-//  même @RequiresModule("ASSEMBLY") — pas de nouveau code d'abonnement, D-ETU-05). Miroirs du §8,
+//  Étude de l'assemblée (plan et contrat du 21/10/2026, `/api/church/assembly/study/**`). Depuis
+//  l'avenant 03 (D-ETU-28, JP 23/10) : module d'abonnement STUDY « Le Message de Bertoua »
+//  (@RequiresModule("STUDY") sur StudyController, mêmes chemins) — remplace D-ETU-05. Miroirs du §8,
 //  sous les MÊMES noms dans les trois fronts. Points et notes : décimaux à 2 chiffres au plus.
 //  D-ETU-14 (JP 21/10) : le web n'appelle que résultats, copies papier, ajustement et avancement —
 //  ni pilotage de séance (Commencer / Correction / Terminer / Annuler) ni réponse, réservés au
@@ -580,6 +581,16 @@ export interface StudyAssemblyOverview {
 }
 
 const STUDY = `${BASE}/study`;
+
+/**
+ * Mes assemblées d'étude (répondant ou dirigeant) et leur séance en cours (§4.1). Lot ETU9 (23/10) :
+ * le web s'en sert pour la langue et le rôle de dirigeant des assemblées de la page « Le Message de
+ * Bertoua », qui ne lit plus `/units` (route ASSEMBLY) — D-ETU-28.
+ */
+export async function getStudyMe() {
+  const { data } = await apiClient.get<StudyMeResponse>(`${STUDY}/me`);
+  return data;
+}
 
 /** Unités actives ayant au moins une question ; avec `unitId`, état pour cette assemblée (§4.2). */
 export async function getStudyCatalog(unitId?: string) {

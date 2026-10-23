@@ -1098,6 +1098,7 @@
       "noModulesHint": "No active teaching module: the reading cannot be recorded.",
       "chapters": "Chapters",
       "alreadyReadHint": "A dot marks a chapter the assembly has already read.",
+      "studySuggestionHint": "Chapter pre-selected from the \"Bertoua message\" study session held on the meeting day: untick it if it was not read.",
       "save": "Save report",
       "saved": "Report saved.",
       "partHeading": "Part {{n}}"
@@ -1733,6 +1734,49 @@
         "FR": "French",
         "EN": "English"
       }
+    }
+  },
+  "billing": {
+    "kicker": "Billing",
+    "title": "My invoices",
+    "profileValue": "Subscriptions · Invoices",
+    "loadFailed": "Could not load your invoices.",
+    "offline": "Unable to connect. Check your network and try again.",
+    "status": {
+      "PENDING": "Pending",
+      "ACTIVE": "Active",
+      "PAST_DUE": "Payment failed",
+      "CANCELED": "Cancelled",
+      "EXPIRED": "Expired"
+    },
+    "period": {
+      "MONTHLY": "{{amount}} / month",
+      "ANNUAL": "{{amount}} / year"
+    },
+    "subscriptions": {
+      "title": "My subscriptions",
+      "empty": "No subscription.",
+      "discount": "{{percent}}% off {{list}}",
+      "nextDue": "Next payment on {{date}}",
+      "endsOn": "Cancellation requested: ends on {{date}}",
+      "canceledOn": "Cancelled on {{date}}"
+    },
+    "invoices": {
+      "title": "My invoices",
+      "empty": "No invoice yet.",
+      "issuedOn": "Issued on {{date}}",
+      "period": "Period from {{from}} to {{to}}",
+      "refunded": "Refunded: {{amount}}",
+      "download": "Download",
+      "shareTitle": "Invoice {{number}}",
+      "sharingUnavailable": "File sharing is not available on this device.",
+      "downloadFailed": "The invoice download failed."
+    },
+    "errors": {
+      "BILLING_SUBSCRIPTION_NOT_FOUND": "This subscription could not be found.",
+      "BILLING_INVOICE_NOT_FOUND": "This invoice could not be found.",
+      "TOO_MANY_REQUESTS": "Too many attempts. Wait a minute and try again.",
+      "PAYMENT_PROVIDER_UNAVAILABLE": "The billing service is temporarily unavailable."
     }
   }
 }

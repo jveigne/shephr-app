@@ -280,9 +280,10 @@ export async function listMeetingsInRange(
 
 // ─── Étude de l'assemblée (plan 21/10, contrat 02_Contrat_API_Etude.md §4 et §8) ─────────────────
 //
-// Questionnaire en réunion, programme « Le Message de Bertoua ». Mêmes garde et préfixe que le
-// reste du module (`@RequiresModule("ASSEMBLY")`, D-ETU-05 : pas de nouvel abonnement), sous
-// `/study/**` parce que `/units` désigne déjà les assemblées. Une unité d'étude est un
+// Questionnaire en réunion, programme « Le Message de Bertoua ». Même préfixe que Vie d'assemblée,
+// sous `/study/**` parce que `/units` désigne déjà les assemblées ; garde propre depuis l'avenant 03 :
+// `@RequiresModule("STUDY")` (D-ETU-28, JP 23/10 — remplace D-ETU-05). Le lien avec le CR passe
+// par le catalogue partagé (D-ETU-29) : aucune clé entre séance et réunion. Une unité d'étude est un
 // `TeachingModule` (D-ETU-01), une leçon un `TeachingChapter` (D-ETU-02). Les droits viennent DU
 // SERVEUR (`leader`, `participant` de chaque réponse) : ne jamais les recalculer ici.
 // Points et notes : nombres à 2 décimales au plus (`BigDecimal` côté Java, contrat §1.1).

@@ -1098,6 +1098,7 @@
       "noModulesHint": "Aucun module d'enseignement actif : la lecture ne peut pas être saisie.",
       "chapters": "Chapitres",
       "alreadyReadHint": "Un point signale un chapitre déjà lu par l'assemblée.",
+      "studySuggestionHint": "Chapitre pré-coché d'après la séance d'étude « Le Message de Bertoua » du jour de la réunion : décochez-le s'il n'a pas été lu.",
       "save": "Enregistrer le CR",
       "saved": "Compte rendu enregistré.",
       "partHeading": "Partie {{n}}"
@@ -1733,6 +1734,49 @@
         "FR": "français",
         "EN": "anglais"
       }
+    }
+  },
+  "billing": {
+    "kicker": "Facturation",
+    "title": "Mes factures",
+    "profileValue": "Abonnements · Factures",
+    "loadFailed": "Impossible de charger vos factures.",
+    "offline": "Connexion impossible. Vérifiez votre réseau et réessayez.",
+    "status": {
+      "PENDING": "En attente",
+      "ACTIVE": "Actif",
+      "PAST_DUE": "Paiement en échec",
+      "CANCELED": "Résilié",
+      "EXPIRED": "Expiré"
+    },
+    "period": {
+      "MONTHLY": "{{amount}} / mois",
+      "ANNUAL": "{{amount}} / an"
+    },
+    "subscriptions": {
+      "title": "Mes abonnements",
+      "empty": "Aucun abonnement.",
+      "discount": "Remise de {{percent}} % sur {{list}}",
+      "nextDue": "Prochaine échéance le {{date}}",
+      "endsOn": "Résiliation demandée : prend fin le {{date}}",
+      "canceledOn": "Résilié le {{date}}"
+    },
+    "invoices": {
+      "title": "Mes factures",
+      "empty": "Aucune facture pour le moment.",
+      "issuedOn": "Émise le {{date}}",
+      "period": "Période du {{from}} au {{to}}",
+      "refunded": "Remboursé : {{amount}}",
+      "download": "Télécharger",
+      "shareTitle": "Facture {{number}}",
+      "sharingUnavailable": "Le partage de fichiers n'est pas disponible sur cet appareil.",
+      "downloadFailed": "Le téléchargement de la facture a échoué."
+    },
+    "errors": {
+      "BILLING_SUBSCRIPTION_NOT_FOUND": "Cet abonnement est introuvable.",
+      "BILLING_INVOICE_NOT_FOUND": "Cette facture est introuvable.",
+      "TOO_MANY_REQUESTS": "Trop de tentatives. Patientez une minute puis réessayez.",
+      "PAYMENT_PROVIDER_UNAVAILABLE": "Le service de facturation est momentanément indisponible."
     }
   }
 }

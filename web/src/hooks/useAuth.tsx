@@ -68,6 +68,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // visiteur dont le jeton a expiré (401 du /me au démarrage) reste sur le lecteur public — la
       // session est purgée, mais on ne l'éjecte pas vers /login (jamais de lien « cassé »).
       if (from.startsWith('/d/')) return;
+      // Lot ABO4 (23/10) : même règle pour la page PUBLIQUE des offres (/abonnements) — le visiteur
+      // y reste, déconnecté ; les pages authentifiées (/abonnements/…) renvoient, elles, à /login.
+      if (from === '/abonnements' || from.startsWith('/abonnements?')) return;
       const next = from && !from.startsWith('/login') ? `?next=${encodeURIComponent(from)}` : '';
       navigate(`/login${next}`, { replace: true });
     });

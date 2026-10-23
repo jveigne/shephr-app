@@ -127,7 +127,8 @@
     "footer": {
       "tagline": "La plateforme de gestion pour votre ministère.",
       "privacy": "Confidentialité",
-      "deleteAccount": "Supprimer mon compte"
+      "deleteAccount": "Supprimer mon compte",
+      "subscriptions": "Abonnements"
     }
   },
   "privacy": {
@@ -322,7 +323,8 @@
     "requests": "Demandes",
     "contact": "Contactez-nous",
     "contactSubject": "Demande d'assistance Shephr",
-    "menu": "Menu"
+    "menu": "Menu",
+    "study": "Le Message de Bertoua"
   },
   "sidebar": {
     "logout": "Déconnexion",
@@ -1519,7 +1521,11 @@
       "noReading": "Aucune lecture"
     },
     "study": {
-      "tab": "Étude",
+      "title": "Le Message de Bertoua",
+      "moduleOff": "Module non activé",
+      "moduleOffHint": "« Le Message de Bertoua » n'est pas inclus dans l'abonnement de votre ministère.",
+      "noCatalog": "Aucune unité d'étude",
+      "noCatalogHint": "Aucune unité d'étude active n'a encore de questions dans votre ministère.",
       "lesson": "Leçon {{n}}",
       "sessionsTitle": "Séances d'étude — {{name}}",
       "sessionsSub": "Les séances se pilotent depuis l'application mobile ; le web montre les résultats et l'avancement.",
@@ -1652,7 +1658,8 @@
           "EN": "Version anglaise"
         }
       }
-    }
+    },
+    "studySuggested": "Chapitre de l'étude du jour"
   },
   "events": {
     "title": "Évènements",
@@ -1950,6 +1957,103 @@
       "DOC_CATEGORY_IN_USE": "Cette catégorie est utilisée par au moins un document : désactivez-la plutôt.",
       "DOC_CATEGORY_NAME_EXISTS": "Une catégorie porte déjà ce nom dans ce ministère.",
       "DOC_INVALID_TRANSITION": "Cette action n'est pas possible dans l'état actuel du document."
+    }
+  },
+  "billing": {
+    "menu": "Mes abonnements",
+    "period": {
+      "MONTHLY": "/ mois",
+      "ANNUAL": "/ an"
+    },
+    "status": {
+      "PENDING": "En attente de paiement",
+      "ACTIVE": "Actif",
+      "PAST_DUE": "Impayé",
+      "CANCELED": "Résilié",
+      "EXPIRED": "Expiré"
+    },
+    "offers": {
+      "title": "Abonnements",
+      "subtitle": "Soutenez le service Shephr pour votre ministère par un abonnement mensuel. Le paiement est sécurisé par Stripe ; votre facture vous est envoyée par email chaque mois.",
+      "canceled": "Le paiement a été annulé : aucun abonnement n'a été créé. Vous pouvez réessayer quand vous le souhaitez.",
+      "mySubscriptionsLink": "Voir mes abonnements et mes factures",
+      "empty": "Aucune offre n'est proposée pour le moment.",
+      "vatIncluded": "TTC, TVA {{rate}} % incluse — sans engagement, résiliable à tout moment.",
+      "subscribe": "S'abonner",
+      "redirecting": "Redirection vers le paiement…",
+      "loginRequired": "Pour souscrire, connectez-vous à votre compte Shephr.",
+      "login": "Se connecter",
+      "signup": "Créer un compte",
+      "stripeNote": "Paiement par carte via Stripe. Shephr ne voit ni ne conserve vos données bancaires."
+    },
+    "promo": {
+      "label": "Code promo",
+      "placeholder": "Ex. PASTEUR50",
+      "apply": "Appliquer",
+      "checking": "Vérification…",
+      "loginHint": "Votre code sera vérifié après connexion.",
+      "applied": "Code {{code}} appliqué : −{{percent}} % chaque mois, pendant toute la durée de l'abonnement."
+    },
+    "return": {
+      "title": "Votre abonnement",
+      "pending": "Nous attendons la confirmation de votre paiement…",
+      "slow": "La confirmation prend plus de temps que prévu. Vous recevrez un email dès que le paiement sera reçu ; vous pouvez fermer cette page.",
+      "active": "Merci, votre abonnement {{reference}} est actif.",
+      "emailNote": "Votre facture vous est envoyée par email ; vous la retrouvez aussi dans « Mes abonnements ».",
+      "notCompleted": "Le paiement n'a pas abouti : cet abonnement n'est pas actif.",
+      "noRef": "Lien de retour incomplet.",
+      "mySubscriptions": "Mes abonnements",
+      "backToOffers": "Revenir aux offres"
+    },
+    "mine": {
+      "title": "Mes abonnements",
+      "subtitle": "Vos abonnements Shephr et vos factures. Vous seul y avez accès.",
+      "backToSpace": "Retour à mon espace",
+      "seeOffers": "Voir les offres",
+      "subscriptions": "Abonnements",
+      "invoices": "Factures",
+      "noSubscription": "Vous n'avez aucun abonnement.",
+      "noInvoice": "Aucune facture pour le moment.",
+      "promo": "{{code}} · −{{percent}} %",
+      "ministry": "Ministère : {{name}}",
+      "nextDue": "Prochaine échéance : {{date}}",
+      "cancelRequested": "Résiliation demandée — l'abonnement prend fin le {{date}}.",
+      "canceledOn": "Résilié le {{date}}",
+      "pastDueHint": "Le dernier paiement n'a pas abouti. Stripe va réessayer ; vous pouvez mettre à jour votre carte.",
+      "pendingHint": "Paiement en attente de confirmation.",
+      "manage": "Gérer mon abonnement",
+      "updateCard": "Mettre à jour ma carte",
+      "portalFailed": "Impossible d'ouvrir l'espace de gestion",
+      "downloadFailed": "Téléchargement impossible"
+    },
+    "invoice": {
+      "date": "Date",
+      "number": "Numéro",
+      "period": "Période",
+      "amount": "Montant TTC",
+      "refunded": "dont {{amount}} remboursé",
+      "download": "PDF"
+    },
+    "errors": {
+      "BILLING_OFFER_NOT_FOUND": "Cette offre n'existe pas ou n'est plus proposée.",
+      "BILLING_SUBSCRIPTION_NOT_FOUND": "Abonnement introuvable.",
+      "BILLING_INVOICE_NOT_FOUND": "Facture introuvable.",
+      "PROMO_CODE_UNKNOWN": "Ce code promo n'existe pas.",
+      "PROMO_CODE_DISABLED": "Ce code promo a été désactivé.",
+      "PROMO_CODE_NOT_STARTED": "Ce code promo n'est pas encore valable.",
+      "PROMO_CODE_EXPIRED": "Ce code promo a expiré.",
+      "PROMO_CODE_EXHAUSTED": "Ce code promo a atteint son nombre maximal d'utilisations.",
+      "PROMO_CODE_DUPLICATE": "Ce code promo existe déjà.",
+      "PROMO_CODE_IN_USE": "Ce code promo a déjà été utilisé.",
+      "BILLING_OFFER_CODE_IMMUTABLE": "Le code d'une offre ne peut pas être modifié.",
+      "BILLING_EMAIL_REQUIRED": "Votre compte n'a pas d'adresse email : ajoutez-en une pour recevoir vos factures.",
+      "BILLING_PORTAL_UNAVAILABLE": "L'espace de gestion n'est pas encore disponible pour cet abonnement.",
+      "BILLING_PAYER_INVALID": "Payeur introuvable.",
+      "BILLING_SUBSCRIPTION_NOT_ACTIVE": "Cet abonnement n'est plus actif.",
+      "BILLING_PERIOD_UNSUPPORTED": "Cette périodicité n'est pas encore proposée.",
+      "BILLING_CURRENCY_UNSUPPORTED": "Cette devise n'est pas encore proposée.",
+      "TOO_MANY_REQUESTS": "Trop de tentatives : patientez une minute avant de réessayer.",
+      "PAYMENT_PROVIDER_UNAVAILABLE": "Le paiement en ligne est momentanément indisponible. Réessayez plus tard."
     }
   }
 }

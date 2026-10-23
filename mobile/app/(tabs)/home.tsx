@@ -21,7 +21,7 @@ type IoniconName = ComponentProps<typeof Ionicons>['name'];
 type ComingKind = 'cantique' | 'priere' | 'compte-rendu';
 
 export default function HomeScreen() {
-  const { me, isLeader, isTreasurer, hasGoals, hasDonations, hasEvents, hasDocuments, hasAssembly } = useAuth();
+  const { me, isLeader, isTreasurer, hasGoals, hasDonations, hasEvents, hasDocuments, hasStudy: hasStudyModule } = useAuth();
   const { t } = useLanguage();
   const [summary, setSummary] = useState<DonationSummary | null>(null);
   const [summaryFailed, setSummaryFailed] = useState(false);
@@ -30,7 +30,8 @@ export default function HomeScreen() {
   // Plan 21/10 (§6.3) — pastille « En cours » de la tuile d'étude : une séance non terminée dans
   // une assemblée du compte (`GET /study/me`). Un échec la masque, sans plus.
   const [studyLive, setStudyLive] = useState(false);
-  const hasStudy = hasAssembly && isAttachedAccount(me);
+  // D-ETU-28 (JP 23/10) : module STUDY à part — plus gaté par ASSEMBLY (D-ETU-05 remplacée).
+  const hasStudy = hasStudyModule && isAttachedAccount(me);
 
   // `hasDonations` arrive après coup (les modules accessibles sont chargés en asynchrone après le
   // token) : il DOIT être en dépendance, sinon `load` reste figé sur la valeur `false` du 1er rendu
@@ -249,9 +250,9 @@ export default function HomeScreen() {
         />
         )}
         {/* Plan 21/10 (§6.3) — Étude de l'assemblée, programme « Le Message de Bertoua ».
-            D-ETU-04 : libellé i18n fixe (pas de nom de programme en base en V1). D-ETU-05 (JP
-            21/10) : visible de tout compte rattaché ou dirigeant (`isAttachedAccount`) si le
-            ministère a l'abonnement ASSEMBLY — pas de nouveau code ; l'écran s'adapte au rôle.
+            D-ETU-04 : libellé i18n fixe (pas de nom de programme en base en V1). D-ETU-28 (JP
+            23/10, remplace D-ETU-05) : visible de tout compte rattaché ou dirigeant
+            (`isAttachedAccount`) si le ministère a l'abonnement STUDY ; l'écran s'adapte au rôle.
             Pastille « En cours » tant qu'une séance de son assemblée est ouverte. */}
         {hasStudy && (
         <Tile

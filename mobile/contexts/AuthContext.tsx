@@ -68,6 +68,12 @@ interface AuthContextValue extends AuthState {
    * module distinct de MEMBER_CARE.
    */
   hasAssembly: boolean;
+  /**
+   * Étude « Le Message de Bertoua » : abonnement STUDY actif — D-ETU-28 (JP 23/10), module à part
+   * de Vie d'assemblée (remplace D-ETU-05). Gate la tuile d'accueil et les écrans `app/study/*`,
+   * et la suggestion de chapitre du formulaire de CR (D-ETU-30).
+   */
+  hasStudy: boolean;
   /** Module Dons accessible : abonnement DONATIONS actif couvrant l'utilisateur (RG-06). */
   hasDonations: boolean;
   /**
@@ -362,6 +368,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     modules,
     hasMemberCare: modules.includes('MEMBER_CARE'),
     hasAssembly: modules.includes('ASSEMBLY'),
+    hasStudy: modules.includes('STUDY'),
     hasDonations: modules.includes('DONATIONS'),
     hasEvents: modules.includes('EVENTS'),
     hasDocuments: modules.includes('DOCUMENTS'),

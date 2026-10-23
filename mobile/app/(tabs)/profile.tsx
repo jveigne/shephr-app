@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, Platform, Linking } from 'react-native';
-import { router, type Href } from 'expo-router';
+import { router, useFocusEffect, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
 import Button from '@/components/Button';
@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { canManageStructure, deleteMyAccount, roleLabel } from '@/services/authApi';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { confirmDialog, notify } from '@/utils/dialogs';
+import { listMySubscriptions } from '@/services/billingApi';
 import { contactMailto, contactWhatsapp, useContactSettings } from '@/services/contactApi';
 
 export default function ProfileScreen() {
@@ -19,6 +20,30 @@ export default function ProfileScreen() {
   // Coordonnées d'assistance pilotées depuis le back-office.
   const contact = useContactSettings();
   const { language, setLanguage, t } = useLanguage();
+
+  // Plan 23/10 (§6.2, lot ABO5) — entrée « Mes factures » seulement si le compte paie au moins un
+  // abonnement (`GET /subscriptions` non vide, D-ABO-07). Un échec la masque, sans plus.
+  const [hasBilling, setHasBilling] = useState(false);
+  const meId = me?.id ?? null;
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      if (!meId) {
+        setHasBilling(false);
+        return;
+      }
+      listMySubscriptions()
+        .then((subs) => {
+          if (active) setHasBilling(subs.length > 0);
+        })
+        .catch(() => {
+          if (active) setHasBilling(false);
+        });
+      return () => {
+        active = false;
+      };
+    }, [meId]),
+  );
 
   const initials = (me?.fullName ?? '')
     .split(' ')
@@ -187,8 +212,19 @@ export default function ProfileScreen() {
           // compilation : la route reste inconnue de TypeScript tant que le serveur n'a pas
           // tourné. C'est la seule raison de la conversion.
           onPress={() => router.push('/notification-settings' as unknown as Href)}
-          last
+          last={!hasBilling}
         />
+        {/* D-ABO-13 (JP 23/10) : consultation et téléchargement des factures UNIQUEMENT — aucun
+            achat ni lien de paiement dans l'app, sur iOS comme sur Android. */}
+        {hasBilling && (
+          <Row
+            icon="receipt-outline"
+            label={t('billing.title')}
+            value={t('billing.profileValue')}
+            onPress={() => router.push('/billing')}
+            last
+          />
+        )}
 {/*        <Row icon="receipt-outline" label={t('profile.receipts')} value={t('profile.receiptsValue')} />
         <Row icon="shield-outline" label={t('profile.privacy')} value={t('profile.privacyValue')} last />*/}
       </Card>
