@@ -293,7 +293,8 @@ export type StudyQuestionType = 'VRAI_FAUX' | 'OUI_NON' | 'CHOIX_UNIQUE' | 'CHOI
   | 'OUVERTE' | 'PERSONNELLE' | 'EXERCICE' | 'CONSIGNE';
 export type StudyAnswerFormat = 'TEXT' | 'YES_NO';
 export type StudySessionStatus = 'REPONSES_OUVERTES' | 'CORRECTION' | 'TERMINEE';
-export type StudyCopySource = 'APP' | 'PAPIER';
+/** D-ETU-44 (JP 23/10) : `RATTRAPAGE` = copie d'un absent, répondue seul dans l'app après la séance. */
+export type StudyCopySource = 'APP' | 'PAPIER' | 'RATTRAPAGE';
 export type StudyVerdict = 'JUSTE' | 'A_PRECISER' | 'A_REVOIR';
 export interface StudyOption { key: string; label: string }
 
@@ -318,6 +319,38 @@ export interface StudySessionSummary {
   finishedAt: string | null;
   /** Nb de copies (APP + PAPIER) — renseigné pour un dirigeant (sinon 0), et par `/units/{id}/sessions`. */
   copyCount: number;
+  /**
+   * D-ETU-38/39 (JP 23/10) : première question (de premier niveau) de la plage de la séance.
+   * Facultatif : absent d'un serveur antérieur au lot ETU11 (la séance couvre alors toute la leçon).
+   */
+  firstQuestionNumber?: string | null;
+  /** D-ETU-40 (JP 23/10) : dernière question de la plage — null tant que la correction n'a pas fixé la fin. */
+  lastQuestionNumber?: string | null;
+  /** D-ETU-40 (JP 23/10) : questions de la plage (jusqu'à la fin de la leçon avant la correction). */
+  questionCount?: number;
+}
+
+/**
+ * Mirrors com.excellence.back.assembly.AssemblyDtos.StudyCatchUp — D-ETU-44/45 (JP 23/10) : séance
+ * TERMINEE que l'appelant (répondant sans copie) peut encore rattraper seul dans l'app.
+ */
+export interface StudyCatchUp {
+  sessionId: string;
+  chapterId: string;
+  moduleId: string;
+  moduleCode: string | null;
+  moduleName: string;
+  lessonNumber: number;
+  lessonTitle: string | null;
+  /** D-ETU-38 / D-ETU-40 (JP 23/10) : plage de la séance (premier niveau) ; null pour une leçon sans question de premier niveau. */
+  firstQuestionNumber: string | null;
+  lastQuestionNumber: string | null;
+  /** Questions de la plage. */
+  questionCount: number;
+  /** Date de fin de la séance. */
+  finishedAt: string;
+  /** D-ETU-44 (JP 23/10) : rattrapage commencé (copie RATTRAPAGE non envoyée). */
+  started: boolean;
 }
 
 /** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyAssembly */
@@ -332,6 +365,8 @@ export interface StudyAssembly {
   participant: boolean;
   /** Séance non terminée (RG-ETU-02 : une au plus), ou null. */
   currentSession: StudySessionSummary | null;
+  /** D-ETU-44/45 (JP 23/10) : séances à rattraper (« À rattraper ») — absent d'un serveur antérieur. */
+  catchUps?: StudyCatchUp[] | null;
 }
 
 /**
@@ -352,6 +387,22 @@ export interface StudyLesson {
   partNumber: number | null;
   questionCount: number;
   maxScore: number;
+  /**
+   * D-ETU-33/34 (JP 23/10) : recommandations au dirigeant (texte brut, D-ETU-37) — renseignées
+   * seulement avec `?unitId=` et si l'appelant est dirigeant de l'assemblée ; null sinon.
+   */
+  leaderNotes?: string | null;
+  /** D-ETU-33 (JP 23/10) : « Chaque membre de l'assemblée doit : … » — pour tous ; null = aucune. */
+  memberActions?: string[] | null;
+  /**
+   * D-ETU-49 (JP 23/10, avenant 05 §8) : première question de premier niveau non couverte dans
+   * l'assemblée de `?unitId=` (départ par défaut de la prochaine séance, D-ETU-39) ; null si la leçon
+   * est entièrement couverte (reprise au début) ou sans `unitId`. Facultatif : absent d'un backend
+   * antérieur à ETU11b.
+   */
+  nextQuestionNumber?: string | null;
+  /** D-ETU-49 (JP 23/10) : numéros des questions de premier niveau, dans l'ordre (avec ou sans `unitId`). */
+  topLevelNumbers?: string[];
 }
 
 /** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyUnit — module actif ayant ≥ 1 question. */
@@ -368,6 +419,8 @@ export interface StudyUnit {
   orderIndex: number;
   /** Désigne une version ; le prérequis est atteint par `code`, quelle que soit la langue (D-ETU-27). */
   prerequisiteModuleId: string | null;
+  /** D-ETU-33/34 (JP 23/10) : présentation de l'unité pour le dirigeant de `?unitId=` ; null sinon. */
+  leaderNotes?: string | null;
   lessons: StudyLesson[];
 }
 
@@ -424,6 +477,8 @@ export interface StudyCopyView {
   score: number;
   maxScore: number;
   answers: StudyAnswerView[];
+  /** D-ETU-44 (JP 23/10) : envoi d'une copie RATTRAPAGE — null tant qu'elle n'est pas envoyée. */
+  submittedAt?: string | null;
 }
 
 /** Mirrors com.excellence.back.assembly.AssemblyDtos.StudySessionDetail — cible du rafraîchissement ≈ 5 s (D-ETU-23). */
@@ -433,12 +488,44 @@ export interface StudySessionDetail {
   lessonPortion: string | null;
   leader: boolean;
   participant: boolean;
-  /** Toutes les questions de la leçon, par `orderIndex`. */
+  /**
+   * Questions de la PLAGE, par `orderIndex` (D-ETU-40, JP 23/10) : avant la correction, du début de
+   * la plage à la fin de la leçon ; après, la plage fixée. Les réponses hors plage n'apparaissent
+   * jamais dans `myCopy`.
+   */
   questions: StudyQuestionView[];
   /** Copie de l'appelant, ou null (pas encore répondu, ou lecteur de la hiérarchie — H1). */
   myCopy: StudyCopyView | null;
   /** Dirigeant : ouvertes répondues sans avis, toutes copies ; sinon null. */
   pendingReviewCount: number | null;
+  /** D-ETU-34 (JP 23/10) : recommandations de l'unité, si `leader` ; null sinon. */
+  moduleLeaderNotes?: string | null;
+  /** D-ETU-34 (JP 23/10) : recommandations de la leçon, si `leader` ; null sinon. */
+  lessonLeaderNotes?: string | null;
+  /** D-ETU-36 (JP 23/10) : dirigeant toujours ; autre lecteur seulement à `TERMINEE` ; null sinon. */
+  memberActions?: string[] | null;
+  /**
+   * D-ETU-44/45 (JP 23/10) : l'appelant peut rattraper cette séance maintenant (TERMINEE, répondant
+   * sans copie ou copie RATTRAPAGE non envoyée, fenêtre ouverte). Absent d'un serveur antérieur.
+   */
+  catchUpOpen?: boolean;
+}
+
+/** Mirrors com.excellence.back.assembly.AssemblyDtos.StudySessionRequest — `POST /study/sessions`. */
+export interface StudySessionRequest {
+  unitId: string;
+  chapterId: string;
+  /**
+   * D-ETU-39 (JP 23/10) : numéro de premier niveau du point de départ ; absent = première question
+   * non encore couverte dans l'assemblée (ou le début si la leçon est entièrement couverte).
+   */
+  startQuestionNumber?: string | null;
+}
+
+/** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyCorrectionRequest — corps facultatif. */
+export interface StudyCorrectionRequest {
+  /** D-ETU-40 (JP 23/10) : « on s'arrête à la question N » (premier niveau) ; absent = la dernière. */
+  lastQuestionNumber?: string | null;
 }
 
 /** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyAnswerInput — forme selon le type : contrat §2.3. */
@@ -474,6 +561,8 @@ export interface StudyCopyResult {
   maxScore: number;
   /** APP : questions répondues ; PAPIER : 0. */
   answeredCount: number;
+  /** D-ETU-46 (JP 23/10) : ouvertes répondues sans avis du dirigeant (copie RATTRAPAGE surtout). */
+  pendingReview?: boolean;
 }
 
 /** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyRosterMember — répondant sans copie. */
@@ -511,9 +600,14 @@ export interface StudyScoreRequest {
   score: number;
 }
 
-/** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyPointsRequest */
+/**
+ * Mirrors com.excellence.back.assembly.AssemblyDtos.StudyPointsRequest — D-ETU-46 (JP 23/10) :
+ * `verdict` facultatif (avis sur une ouverte d'un rattrapage) ; sans `points`, le SERVEUR applique
+ * le barème du verdict (jamais calculé ici).
+ */
 export interface StudyPointsRequest {
-  points: number;
+  points?: number | null;
+  verdict?: StudyVerdict | null;
 }
 
 /** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyLessonProgress — `bestScore`/`maxScore` null si non faite. */
@@ -522,13 +616,23 @@ export interface StudyLessonProgress {
   number: number;
   title: string | null;
   done: boolean;
-  /** D-ETU-18 : meilleure note de la leçon (leçon refaite). */
+  /**
+   * D-ETU-43 (JP 23/10, remplace D-ETU-18 pour une leçon) : Σ des meilleurs points par question
+   * parmi les copies des séances TERMINEE — calculée par le serveur.
+   */
   bestScore: number | null;
   maxScore: number | null;
-  /** RG-ETU-13 : le lien n'est affiché que pour soi ou pour un dirigeant. */
+  /**
+   * RG-ETU-13 : le lien n'est affiché que pour soi ou pour un dirigeant. D-ETU-43 (JP 23/10) : copie
+   * la plus récente ayant contribué — peut être null si plusieurs.
+   */
   bestCopyId: string | null;
   bestSource: StudyCopySource | null;
   doneAt: string | null;
+  /** D-ETU-42/43 (JP 23/10) : questions de premier niveau couvertes (« 20 / 57 questions »). */
+  coveredQuestions?: number;
+  /** D-ETU-42/43 (JP 23/10) : questions de premier niveau de la leçon. */
+  totalQuestions?: number;
 }
 
 /**
@@ -619,6 +723,12 @@ export const STUDY_ERROR_CODES = [
   'STUDY_COPY_NOT_PAPER',
   'STUDY_SCORE_OUT_OF_RANGE',
   'STUDY_POINTS_OUT_OF_RANGE',
+  // D-ETU-39..45 (JP 23/10, avenant 05 §5)
+  'STUDY_QUESTION_INVALID',
+  'STUDY_CATCH_UP_CLOSED',
+  'STUDY_CATCH_UP_EMPTY',
+  // D-ETU-48 (JP 23/10, avenant 05 §8) : copie papier refusée en REPONSES_OUVERTES
+  'STUDY_PAPER_COPY_TOO_EARLY',
   'UNAUTHORIZED_ACCESS',
   'RESOURCE_NOT_FOUND',
   'MODULE_ACCESS_DENIED',
@@ -657,16 +767,38 @@ export async function getStudyCatalog(unitId?: string): Promise<StudyUnitForAsse
   return data ?? [];
 }
 
-/** §4.3 — Commencer (dirigeant, D-ETU-07). */
-export async function openStudySession(unitId: string, chapterId: string): Promise<StudySessionDetail> {
-  const { data } = await apiClient.post<StudySessionDetail>(`${STUDY}/sessions`, { unitId, chapterId });
+/**
+ * §4.3 — Commencer (dirigeant, D-ETU-07). D-ETU-39 (JP 23/10) : `startQuestionNumber` absent = défaut
+ * du serveur (première question non couverte) ; inconnu ou sous-question → 422 STUDY_QUESTION_INVALID.
+ */
+export async function openStudySession(
+  unitId: string,
+  chapterId: string,
+  startQuestionNumber?: string | null,
+): Promise<StudySessionDetail> {
+  const body: StudySessionRequest = { unitId, chapterId };
+  if (startQuestionNumber) body.startQuestionNumber = startQuestionNumber;
+  const { data } = await apiClient.post<StudySessionDetail>(`${STUDY}/sessions`, body);
   return data;
 }
 
-/** §4.3 — Passer à la correction (REPONSES_OUVERTES → CORRECTION). */
-export async function startStudyCorrection(id: string): Promise<StudySessionDetail> {
-  const { data } = await apiClient.post<StudySessionDetail>(`${STUDY}/sessions/${id}/correction`);
+/**
+ * §4.3 — Passer à la correction (REPONSES_OUVERTES → CORRECTION). D-ETU-40 (JP 23/10) :
+ * `lastQuestionNumber` = « on s'arrête à la question N » ; absent = la dernière de la leçon (corps omis).
+ */
+export async function startStudyCorrection(id: string, lastQuestionNumber?: string | null): Promise<StudySessionDetail> {
+  const body: StudyCorrectionRequest | undefined = lastQuestionNumber ? { lastQuestionNumber } : undefined;
+  const { data } = await apiClient.post<StudySessionDetail>(`${STUDY}/sessions/${id}/correction`, body);
   return data;
+}
+
+/**
+ * D-ETU-44 (JP 23/10) — « Envoyer ma copie » de rattrapage : le serveur corrige les fermées, pose
+ * `submittedAt` et calcule la note. Rien à envoyer → STUDY_CATCH_UP_EMPTY ; fenêtre fermée →
+ * STUDY_CATCH_UP_CLOSED. Le corps de la réponse n'est pas lu : l'écran relit la séance (§4.4).
+ */
+export async function submitStudyCatchUp(id: string): Promise<void> {
+  await apiClient.post(`${STUDY}/sessions/${id}/catch-up/submit`);
 }
 
 /** §4.3 — Terminer (REPONSES_OUVERTES | CORRECTION → TERMINEE). */
@@ -712,13 +844,16 @@ export async function getStudyResults(id: string): Promise<StudySessionResults> 
   return data;
 }
 
-/** §4.6 / D-ETU-13 — copie papier, même séance terminée (dirigeant). */
+/**
+ * §4.6 / D-ETU-13 — copie papier, même séance terminée (dirigeant). D-ETU-48 (JP 23/10) : à partir de
+ * CORRECTION seulement (plage fixée) — en REPONSES_OUVERTES → 422 STUDY_PAPER_COPY_TOO_EARLY.
+ */
 export async function addStudyPaperCopy(id: string, payload: StudyPaperCopyRequest): Promise<StudyCopyResult> {
   const { data } = await apiClient.post<StudyCopyResult>(`${STUDY}/sessions/${id}/paper-copies`, payload);
   return data;
 }
 
-/** §4.6 — modifier la note d'une copie PAPIER. */
+/** §4.6 — modifier la note d'une copie PAPIER (D-ETU-48 : refusé en REPONSES_OUVERTES, STUDY_PAPER_COPY_TOO_EARLY). */
 export async function updateStudyPaperCopy(copyId: string, score: number): Promise<StudyCopyResult> {
   const body: StudyScoreRequest = { score };
   const { data } = await apiClient.patch<StudyCopyResult>(`${STUDY}/copies/${copyId}`, body);
@@ -736,9 +871,17 @@ export async function getStudyCopy(copyId: string): Promise<StudyCopyDetail> {
   return data;
 }
 
-/** §4.6 / RG-ETU-07b — ajuster les points d'une question notée (dirigeant, à tout moment). */
-export async function adjustStudyAnswer(copyId: string, questionId: string, points: number): Promise<StudyCopyDetail> {
-  const body: StudyPointsRequest = { points };
+/**
+ * §4.6 / RG-ETU-07b — ajuster les points d'une question notée (dirigeant, à tout moment).
+ * D-ETU-46 (JP 23/10) : ou poser un avis (`verdict`) sur une ouverte d'un rattrapage — le serveur
+ * en déduit les points.
+ */
+export async function adjustStudyAnswer(
+  copyId: string,
+  questionId: string,
+  change: StudyPointsRequest,
+): Promise<StudyCopyDetail> {
+  const body: StudyPointsRequest = change;
   const { data } = await apiClient.patch<StudyCopyDetail>(`${STUDY}/copies/${copyId}/answers/${questionId}`, body);
   return data;
 }

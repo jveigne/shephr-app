@@ -1580,6 +1580,7 @@
       "answeredCount_other": "{{count}} réponses",
       "resultsTitle": "Résultats — {{lesson}}",
       "resultsOpenHint": "Séance en cours : les notes évoluent jusqu'à « Terminer » sur le téléphone du dirigeant.",
+      "memberActionsTitle": "Cette semaine, chaque membre doit :",
       "noCopy": "Aucune copie",
       "noCopyHint": "Personne n'a encore répondu à cette séance.",
       "addPaper": "Ajouter une copie papier",
@@ -1587,6 +1588,7 @@
       "member": "Membre",
       "chooseMember": "Choisir un membre",
       "noMemberLeft": "Tous les répondants de l'assemblée ont déjà une copie.",
+      "paperAfterCorrection": "Copies papier : à saisir à partir de la correction, une fois la plage de questions fixée.",
       "score": "Note",
       "scoreHint": "Sur {{max}} points",
       "scoreInvalid": "Note entre 0 et {{max}}, deux décimales au plus.",
@@ -1646,7 +1648,11 @@
         "STUDY_COPY_NOT_PAPER": "Seule une copie papier se modifie ou se supprime ainsi.",
         "STUDY_SCORE_OUT_OF_RANGE": "La note dépasse le barème de la séance.",
         "STUDY_POINTS_OUT_OF_RANGE": "Les points dépassent ceux de la question.",
-        "UNAUTHORIZED_ACCESS": "Vous n'avez pas accès à ce contenu."
+        "UNAUTHORIZED_ACCESS": "Vous n'avez pas accès à ce contenu.",
+        "STUDY_QUESTION_INVALID": "Cette question ne peut pas borner la séance (question de premier niveau de la leçon attendue).",
+        "STUDY_CATCH_UP_CLOSED": "Le rattrapage de cette séance est fermé.",
+        "STUDY_CATCH_UP_EMPTY": "Aucune réponse à envoyer.",
+        "STUDY_PAPER_COPY_TOO_EARLY": "Une copie papier se saisit à partir de la correction (la plage de questions est alors fixée)."
       },
       "language": {
         "badge": {
@@ -1657,7 +1663,18 @@
           "FR": "Version française",
           "EN": "Version anglaise"
         }
-      }
+      },
+      "catchUp": "Rattrapage",
+      "range": "Questions {{first}} à {{last}}",
+      "rangeOpen": "À partir de la question {{first}}",
+      "questionCount_one": "{{count}} question",
+      "questionCount_other": "{{count}} questions",
+      "questionsCovered": "{{covered}} / {{total}} questions",
+      "pendingReview": "Avis à donner",
+      "pendingReviewCount_one": "{{count}} copie de rattrapage attend votre avis sur ses questions ouvertes (comptées 0 d'ici là).",
+      "pendingReviewCount_other": "{{count}} copies de rattrapage attendent votre avis sur leurs questions ouvertes (comptées 0 d'ici là).",
+      "reviewLabel": "Votre avis :",
+      "submittedAt": "Envoyée le {{date}}"
     },
     "studySuggested": "Chapitre de l'étude du jour"
   },

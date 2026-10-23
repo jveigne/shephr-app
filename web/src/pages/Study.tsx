@@ -27,6 +27,7 @@ import {
   getStudyCatalog,
   getStudyCopy,
   getStudyMe,
+  getStudySession,
   getStudySessionResults,
   getStudyUnitProgress,
   listStudyProgress,
@@ -34,11 +35,13 @@ import {
   updatePaperCopy,
   type StudyAnswerView,
   type StudyCopyResult,
+  type StudyCopySource,
   type StudyPersonProgress,
   type StudyQuestionView,
   type StudySessionStatus,
   type StudySessionSummary,
   type StudyUnitForAssembly,
+  type StudyVerdict,
   type StudyUnitModuleProgress,
 } from '../services/assemblyApi';
 import { FEATURES } from '../config/features';
@@ -250,6 +253,33 @@ function lessonLabel(s: Pick<StudySessionSummary, 'moduleCode' | 'lessonNumber' 
   return s.lessonTitle ? `${head} — ${s.lessonTitle}` : head;
 }
 
+/**
+ * D-ETU-38 / D-ETU-40 (JP 23/10) : plage de la séance — « Questions 1 à 20 », ou « À partir de la
+ * question 21 » tant que la fin n'est pas fixée (avant correction). Null pour un backend antérieur à
+ * ETU11 (pas de plage).
+ */
+function rangeLabel(s: Pick<StudySessionSummary, 'firstQuestionNumber' | 'lastQuestionNumber'>, t: TFn): string | null {
+  if (!s.firstQuestionNumber) return null;
+  return s.lastQuestionNumber
+    ? t('assembly.study.range', { first: s.firstQuestionNumber, last: s.lastQuestionNumber })
+    : t('assembly.study.rangeOpen', { first: s.firstQuestionNumber });
+}
+
+/** D-ETU-38 : « Questions 1 à 20 · 20 questions » (le nombre vient du serveur). */
+function rangeLine(s: StudySessionSummary, t: TFn): string | null {
+  const range = rangeLabel(s, t);
+  if (!range) return null;
+  return s.questionCount != null ? `${range} · ${t('assembly.study.questionCount', { count: s.questionCount })}` : range;
+}
+
+/** Pastilles de source d'une copie : « Papier » (D-ETU-13), « Rattrapage » (D-ETU-46, JP 23/10). */
+function SourceBadge({ source }: { source: StudyCopySource | null | undefined }) {
+  const { t } = useTranslation();
+  if (source === 'PAPIER') return <Badge tone="earth">{t('assembly.study.paper')}</Badge>;
+  if (source === 'RATTRAPAGE') return <Badge tone="green">{t('assembly.study.catchUp')}</Badge>;
+  return null;
+}
+
 const sectionTitle = {
   margin: 0,
   fontSize: 16,
@@ -316,6 +346,7 @@ function StudyTab({
       render: (s) => (
         <div>
           <div>{lessonLabel(s, t)}</div>
+          {rangeLine(s, t) && <div style={{ color: 'var(--ink-600)', fontSize: 12.5 }}>{rangeLine(s, t)}</div>}
           <div style={{ color: 'var(--ink-500)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
             {s.moduleName}
             <StudyLangBadges languages={[s.moduleLanguage]} reference={unit.language} />
@@ -571,17 +602,22 @@ function StudyPersonProgressView({
                 </span>
                 {l.done ? (
                   <>
-                    {l.bestSource === 'PAPIER' && <Badge tone="earth">{t('assembly.study.paper')}</Badge>}
+                    <SourceBadge source={l.bestSource} />
                     <span style={{ whiteSpace: 'nowrap', fontWeight: 500 }}>
                       {t('assembly.study.scoreOf', { score: fmtPts(l.bestScore, lang), max: fmtPts(l.maxScore, lang) })}
                     </span>
-                    {/* Copie papier : note seule, rien à ouvrir. */}
-                    {onOpenCopy && l.bestCopyId && l.bestSource === 'APP' && (
+                    {/* Copie papier : note seule, rien à ouvrir. D-ETU-43 : bestCopyId null si plusieurs copies ont contribué. */}
+                    {onOpenCopy && l.bestCopyId && l.bestSource !== 'PAPIER' && (
                       <Button size="sm" variant="ghost" onClick={() => onOpenCopy(l.bestCopyId as string)}>
                         {t('assembly.study.view')}
                       </Button>
                     )}
                   </>
+                ) : (l.coveredQuestions ?? 0) > 0 && l.totalQuestions ? (
+                  // D-ETU-43 (JP 23/10) : leçon commencée — « 20 / 57 questions » (compteurs du serveur).
+                  <span style={{ color: 'var(--ink-500)', whiteSpace: 'nowrap' }}>
+                    {t('assembly.study.questionsCovered', { covered: l.coveredQuestions, total: l.totalQuestions })}
+                  </span>
                 ) : (
                   <span style={{ color: 'var(--ink-400)', whiteSpace: 'nowrap' }}>{t('assembly.study.toDo')}</span>
                 )}
@@ -683,7 +719,21 @@ function StudyResultsModal({
   });
   const r = resultsQ.data ?? null;
   const leader = r?.leader ?? false;
+  // D-ETU-36 (JP 23/10) : « Cette semaine, chaque membre doit : » dans le détail d'une séance
+  // TERMINEE seulement (web, avenant §6) — lu sur §4.4, qui ne les envoie à un non-dirigeant qu'à
+  // TERMINEE. Toute erreur = pas de bloc (les résultats restent affichés).
+  const finished = r?.session.status === 'TERMINEE';
+  const detailQ = useQuery({
+    queryKey: ['assembly', 'study', 'session', sessionId],
+    queryFn: () => getStudySession(sessionId),
+    enabled: finished,
+  });
+  const memberActions = finished ? (detailQ.data?.memberActions ?? []).filter((a) => a.trim() !== '') : [];
   const max = r?.session.maxScore ?? 0;
+  // D-ETU-48 (JP 23/10) : copie papier (ajout, modification) à partir de CORRECTION seulement — la
+  // plage est alors fixée ; en REPONSES_OUVERTES le serveur répond 422 STUDY_PAPER_COPY_TOO_EARLY.
+  // La suppression reste offerte (copie saisie avant ETU11b).
+  const paperAllowed = r != null && r.session.status !== 'REPONSES_OUVERTES';
 
   const [adding, setAdding] = useState(false);
   const [newUserId, setNewUserId] = useState('');
@@ -738,7 +788,9 @@ function StudyResultsModal({
       render: (c) => (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 500 }}>
           {c.displayName}
-          {c.source === 'PAPIER' && <Badge tone="earth">{t('assembly.study.paper')}</Badge>}
+          <SourceBadge source={c.source} />
+          {/* D-ETU-46 (JP 23/10) : ouvertes d'un rattrapage sans avis (comptent 0 tant que non revues). */}
+          {leader && c.pendingReview && <Badge tone="warn" dot>{t('assembly.study.pendingReview')}</Badge>}
         </span>
       ),
     },
@@ -749,7 +801,7 @@ function StudyResultsModal({
     {
       label: t('assembly.study.colAnswers'),
       render: (c) =>
-        c.source === 'APP' ? (
+        c.source !== 'PAPIER' ? (
           <span style={{ color: 'var(--ink-500)' }}>{t('assembly.study.answeredCount', { count: c.answeredCount })}</span>
         ) : (
           <span style={{ color: 'var(--ink-400)' }}>—</span>
@@ -763,14 +815,16 @@ function StudyResultsModal({
             render: (c: StudyCopyResult) =>
               c.source === 'PAPIER' ? (
                 <span style={{ display: 'inline-flex', gap: 4 }} onClick={(e) => e.stopPropagation()}>
-                  <IconButton
-                    icon={<Icon name="edit" size={14} />}
-                    title={t('common.edit')}
-                    onClick={() => {
-                      setEditing(c);
-                      setEditScore(String(c.score));
-                    }}
-                  />
+                  {paperAllowed && (
+                    <IconButton
+                      icon={<Icon name="edit" size={14} />}
+                      title={t('common.edit')}
+                      onClick={() => {
+                        setEditing(c);
+                        setEditScore(String(c.score));
+                      }}
+                    />
+                  )}
                   <IconButton
                     danger
                     icon={<Icon name="trash" size={14} />}
@@ -788,6 +842,7 @@ function StudyResultsModal({
       : []),
   ];
 
+  const pendingCount = leader ? (r?.copies ?? []).filter((c) => c.pendingReview).length : 0;
   const newScoreOk = validScore(newScore) != null;
   const editScoreOk = validScore(editScore) != null;
 
@@ -801,7 +856,7 @@ function StudyResultsModal({
         sub={r ? `${r.session.unitName} · ${fmtInstant(r.session.openedAt)} · ${r.session.moduleName}` : undefined}
         footer={
           <>
-            {leader && !adding && (
+            {leader && paperAllowed && !adding && (
               <Button
                 variant="secondary"
                 iconL={<Icon name="plus" size={14} />}
@@ -825,18 +880,43 @@ function StudyResultsModal({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <StudyStatusBadge status={r.session.status} />
+              {rangeLine(r.session, t) && <span style={{ fontSize: 13 }}>{rangeLine(r.session, t)}</span>}
               <span style={{ color: 'var(--ink-500)', fontSize: 13 }}>
                 {t('assembly.study.maxScore', { max: fmtPts(r.session.maxScore, lang) })}
               </span>
             </div>
+            {pendingCount > 0 && (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, color: 'var(--ink-600)' }}>
+                <Icon name="info" size={15} />
+                <span>{t('assembly.study.pendingReviewCount', { count: pendingCount })}</span>
+              </div>
+            )}
             {r.session.status !== 'TERMINEE' && (
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, color: 'var(--ink-600)' }}>
                 <Icon name="info" size={15} />
                 <span>{t('assembly.study.resultsOpenHint')}</span>
               </div>
             )}
+            {leader && r.session.status === 'REPONSES_OUVERTES' && (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, color: 'var(--ink-600)' }}>
+                <Icon name="info" size={15} />
+                <span>{t('assembly.study.paperAfterCorrection')}</span>
+              </div>
+            )}
 
-            {adding && (
+            {memberActions.length > 0 && (
+              // D-ETU-37 (JP 23/10) : texte brut, retours à la ligne conservés (pas de Markdown).
+              <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <strong style={{ fontSize: 13 }}>{t('assembly.study.memberActionsTitle')}</strong>
+                <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13.5 }}>
+                  {memberActions.map((a, i) => (
+                    <li key={i} style={{ whiteSpace: 'pre-wrap' }}>{a}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {adding && paperAllowed && (
               <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <strong style={{ fontSize: 13 }}>{t('assembly.study.addPaper')}</strong>
                 <span style={{ color: 'var(--ink-500)', fontSize: 12.5 }}>{t('assembly.study.addPaperHint')}</span>
@@ -879,8 +959,8 @@ function StudyResultsModal({
               columns={cols}
               rows={r.copies}
               zebra
-              // RG-ETU-13 : seul le dirigeant ouvre une copie (APP ; une copie papier n'a que sa note).
-              onRowClick={leader ? (c) => c.source === 'APP' && onOpenCopy(c.id) : undefined}
+              // RG-ETU-13 : seul le dirigeant ouvre une copie (APP / RATTRAPAGE ; une copie papier n'a que sa note).
+              onRowClick={leader ? (c) => c.source !== 'PAPIER' && onOpenCopy(c.id) : undefined}
               empty={<EmptyState title={t('assembly.study.noCopy')} text={t('assembly.study.noCopyHint')} />}
             />
           </div>
@@ -943,6 +1023,9 @@ function StudyResultsModal({
 //  à tout moment, même sans réponse et après TERMINEE (D-ETU-12, RG-ETU-07b).
 // ---------------------------------------------------------------------------------------------
 
+/** RG-ETU-07 : avis possibles sur une ouverte (barème appliqué par le serveur). */
+const VERDICTS: StudyVerdict[] = ['JUSTE', 'A_PRECISER', 'A_REVOIR'];
+
 /** RG-ETU-09 : EXERCICE et CONSIGNE ne sont pas notés. */
 const isGraded = (q: StudyQuestionView) => q.type !== 'EXERCICE' && q.type !== 'CONSIGNE';
 
@@ -983,13 +1066,18 @@ function StudyCopyModal({ copyId, canAdjust, onClose }: { copyId: string; canAdj
   });
   const d = copyQ.data ?? null;
   // Pas de détail par question sur une copie papier en V1 (§4.6) : on y modifie la note seule.
-  const adjustable = canAdjust && d?.copy.source === 'APP';
+  // D-ETU-46 (JP 23/10) : une copie de rattrapage s'ajuste comme une copie APP.
+  const adjustable = canAdjust && d != null && d.copy.source !== 'PAPIER';
+  // D-ETU-44 / D-ETU-46 (JP 23/10) : sur un rattrapage, les ouvertes attendent l'avis du dirigeant —
+  // Juste / À préciser / À revoir passent par l'ajustement, points = barème du verdict côté serveur.
+  const reviewable = adjustable && d?.copy.source === 'RATTRAPAGE';
 
   const answers = useMemo(() => new Map((d?.copy.answers ?? []).map((a) => [a.questionId, a])), [d]);
   const questions = useMemo(() => [...(d?.questions ?? [])].sort((a, b) => a.orderIndex - b.orderIndex), [d]);
 
   const adjustM = useMutation({
-    mutationFn: (v: { questionId: string; points: number }) => adjustStudyAnswer(copyId, v.questionId, { points: v.points }),
+    mutationFn: (v: { questionId: string; points?: number; verdict?: StudyVerdict }) =>
+      adjustStudyAnswer(copyId, v.questionId, v.verdict ? { verdict: v.verdict } : { points: v.points }),
     onSuccess: (data, v) => {
       qc.setQueryData(['assembly', 'study', 'copy', copyId], data);
       qc.invalidateQueries({ queryKey: ['assembly', 'study'] });
@@ -1018,8 +1106,14 @@ function StudyCopyModal({ copyId, canAdjust, onClose }: { copyId: string; canAdj
             <strong style={{ fontSize: 15 }}>
               {t('assembly.study.copyScore', { score: fmtPts(d.copy.score, lang), max: fmtPts(d.copy.maxScore, lang) })}
             </strong>
-            {d.copy.source === 'PAPIER' && <Badge tone="earth">{t('assembly.study.paper')}</Badge>}
+            <SourceBadge source={d.copy.source} />
             <StudyStatusBadge status={d.session.status} />
+            {rangeLabel(d.session, t) && <span style={{ fontSize: 13, color: 'var(--ink-500)' }}>{rangeLabel(d.session, t)}</span>}
+            {d.copy.submittedAt && (
+              <span style={{ fontSize: 13, color: 'var(--ink-500)' }}>
+                {t('assembly.study.submittedAt', { date: fmtInstant(d.copy.submittedAt) })}
+              </span>
+            )}
           </div>
           {d.copy.source === 'PAPIER' ? (
             <p style={{ color: 'var(--ink-500)', margin: 0, fontSize: 13 }}>{t('assembly.study.paperNoDetail')}</p>
@@ -1108,6 +1202,22 @@ function StudyCopyModal({ copyId, canAdjust, onClose }: { copyId: string; canAdj
                           </Button>
                         </span>
                       )}
+                    </div>
+                  )}
+                  {reviewable && q.type === 'OUVERTE' && given && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 13 }}>
+                      <span style={{ color: 'var(--ink-500)' }}>{t('assembly.study.reviewLabel')}</span>
+                      {VERDICTS.map((v) => (
+                        <Button
+                          key={v}
+                          size="sm"
+                          variant={a?.verdict === v ? 'primary' : 'secondary'}
+                          disabled={adjustM.isPending || a?.verdict === v}
+                          onClick={() => adjustM.mutate({ questionId: q.id, verdict: v })}
+                        >
+                          {t(`assembly.study.verdict.${v}`)}
+                        </Button>
+                      ))}
                     </div>
                   )}
                   {adjustable && isGraded(q) && draft.trim() !== '' && !draftOk && (

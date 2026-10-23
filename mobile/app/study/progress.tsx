@@ -37,6 +37,10 @@ import { goBack } from '@/utils/navigation';
  * </ul>
  * `bestCopyId` n'ouvre la copie que pour soi ou pour un dirigeant (`leader`), comme le dit le
  * contrat §4.8 ; le serveur refuse de toute façon les autres (RG-ETU-13).
+ *
+ * <p>D-ETU-42/43 (JP 23/10) : une leçon faite en plusieurs séances (ou en partie) affiche « 20 / 57
+ * questions » (`coveredQuestions` / `totalQuestions`, questions de premier niveau) et sa note en
+ * cours (`bestScore`, Σ des meilleurs points par question, calculée par le serveur).
  */
 export default function StudyProgressScreen() {
   const params = useLocalSearchParams<{ unitId?: string; mine?: string; userId?: string; leader?: string; lang?: string }>();
@@ -259,7 +263,15 @@ function PersonView({
             )}
           </Card>
           {m.lessons.map((l) => {
-            const link = canOpenCopy && !!l.bestCopyId && l.bestSource === 'APP';
+            // D-ETU-43/44 (JP 23/10) : une copie de rattrapage s'ouvre comme une copie APP.
+            const link =
+              canOpenCopy && !!l.bestCopyId && (l.bestSource === 'APP' || l.bestSource === 'RATTRAPAGE');
+            // D-ETU-42/43 (JP 23/10) : « 20 / 57 questions » tant que la leçon n'est pas couverte.
+            const covered =
+              l.totalQuestions != null && l.totalQuestions > 0 && l.coveredQuestions != null
+                ? t('study.progress.questionsCovered', { done: l.coveredQuestions, total: l.totalQuestions })
+                : null;
+            const partial = !l.done && !!l.coveredQuestions;
             return (
               <Pressable
                 key={l.chapterId}
@@ -280,16 +292,23 @@ function PersonView({
                   </Text>
                   <Text style={styles.rowMeta}>
                     {l.done
-                      ? [fmtInstantDay(l.doneAt, t), l.bestSource === 'PAPIER' ? t('study.results.paper') : null]
+                      ? [
+                          fmtInstantDay(l.doneAt, t),
+                          covered,
+                          l.bestSource === 'PAPIER' ? t('study.results.paper') : null,
+                          l.bestSource === 'RATTRAPAGE' ? t('study.results.catchUp') : null,
+                        ]
                           .filter(Boolean)
                           .join(' · ')
-                      : t('study.progress.notDone')}
+                      : partial
+                        ? covered
+                        : t('study.progress.notDone')}
                   </Text>
                 </View>
                 {opening === l.chapterId ? (
                   <ActivityIndicator color={colors.moss} />
                 ) : (
-                  l.done && (
+                  (l.done || (partial && l.bestScore != null && l.maxScore != null)) && (
                     <Text style={styles.score}>
                       {t('study.score', { score: fmtPoints(l.bestScore, language), max: fmtPoints(l.maxScore, language) })}
                     </Text>

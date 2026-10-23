@@ -35,6 +35,7 @@ import {
   type StudyCopyResult,
   type StudyQuestionView,
   type StudySessionResults,
+  type StudyVerdict,
 } from '@/services/assemblyApi';
 import { fmtPoints, toLocalDate } from '@/utils/format';
 import { fmtIsoDay } from '@/utils/meetingReport';
@@ -48,12 +49,19 @@ import { goBack } from '@/utils/navigation';
  * (`canView`), jamais leur contenu. Pour le DIRIGEANT (`leader`, D-ETU-07) :
  * <ul>
  *   <li>*Ajouter une copie papier* (D-ETU-13) — un répondant sans copie (`withoutCopy`) et sa note,
- *       même séance terminée (rattrapage d'un absent) ; note ≤ max (STUDY_SCORE_OUT_OF_RANGE) ;</li>
+ *       même séance terminée (rattrapage d'un absent) ; note ≤ max (STUDY_SCORE_OUT_OF_RANGE) ;
+ *       D-ETU-48 (JP 23/10) : à partir de CORRECTION seulement, une fois la plage fixée ;</li>
  *   <li>modifier / supprimer une note papier ;</li>
  *   <li>ouvrir une copie APP (RG-ETU-13, réponses personnelles comprises — RG-ETU-18) et ajuster les
  *       points de toute question notée, à tout moment (D-ETU-12, RG-ETU-07b).</li>
  * </ul>
  * L'auteur d'une copie peut aussi ouvrir la sienne (RG-ETU-13), en lecture.
+ *
+ * <p>D-ETU-46 (JP 23/10) : les copies de RATTRAPAGE (absents, répondues seuls après la séance)
+ * figurent dans la liste avec la pastille « rattrapage » ; le dirigeant voit combien attendent son
+ * avis (`pendingReview` du serveur) et donne *Juste* / *À préciser* / *À revoir* sur leurs ouvertes
+ * depuis la copie (ajustement `PATCH …/answers/{questionId}` avec `verdict`, points calculés par le
+ * serveur). D-ETU-38 : la plage de la séance est rappelée sous le titre.
  */
 export default function StudyResultsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -113,7 +121,20 @@ export default function StudyResultsScreen() {
   const onAdjust = async (q: StudyQuestionView, points: number): Promise<boolean> => {
     if (!copy) return false;
     try {
-      setCopy(await adjustStudyAnswer(copy.copy.id, q.id, points));
+      setCopy(await adjustStudyAnswer(copy.copy.id, q.id, { points }));
+      void load();
+      return true;
+    } catch (e: any) {
+      notify(t('study.tile.title'), studyErrorMessage(e, t));
+      return false;
+    }
+  };
+
+  /** D-ETU-46 (JP 23/10) : avis sur une ouverte d'un rattrapage — le serveur applique le barème. */
+  const onVerdict = async (q: StudyQuestionView, verdict: StudyVerdict): Promise<boolean> => {
+    if (!copy) return false;
+    try {
+      setCopy(await adjustStudyAnswer(copy.copy.id, q.id, { verdict }));
       void load();
       return true;
     } catch (e: any) {
@@ -156,6 +177,14 @@ export default function StudyResultsScreen() {
     ? t('study.lessonTitled', { number: s.lessonNumber, title: s.lessonTitle })
     : t('study.lesson', { number: s.lessonNumber });
   const day = fmtIsoDay(toLocalDate(new Date(s.finishedAt ?? s.openedAt)), t);
+  // D-ETU-38 (JP 23/10) : plage de la séance (bornes du serveur seulement — pas de questions ici).
+  const range =
+    s.firstQuestionNumber && s.lastQuestionNumber
+      ? t('study.range', { first: s.firstQuestionNumber, last: s.lastQuestionNumber })
+      : null;
+  // D-ETU-46 (JP 23/10) : copies dont des ouvertes attendent l'avis du dirigeant.
+  const toReview = leader ? results.copies.filter((c) => c.pendingReview).length : 0;
+  const paperTooEarly = s.status === 'REPONSES_OUVERTES';
 
   return (
     <ScreenShell
@@ -171,10 +200,21 @@ export default function StudyResultsScreen() {
       <Text style={styles.meta}>
         {[s.moduleCode, s.moduleName].filter(Boolean).join(' · ')} — {t('study.results.outOf', { max: fmtPoints(s.maxScore, language) })}
       </Text>
+      {!!range && <Text style={styles.range}>{range}</Text>}
 
       {!!error && <ErrorBanner message={error} onRetry={load} />}
 
-      {leader && (
+      {toReview > 0 && (
+        <Card variant="tinted" style={styles.reviewCard}>
+          <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.earthDeep} />
+          <Text style={styles.reviewText}>{t('study.results.toReview', { count: toReview })}</Text>
+        </Card>
+      )}
+
+      {/* D-ETU-48 (JP 23/10, avenant 05 §8) : copie papier à partir de CORRECTION seulement (plage
+          fixée) — en REPONSES_OUVERTES le serveur répond STUDY_PAPER_COPY_TOO_EARLY. */}
+      {leader && paperTooEarly && <Text style={styles.muted}>{t('study.results.paperTooEarly')}</Text>}
+      {leader && !paperTooEarly && (
         <Button
           label={t('study.results.addPaper')}
           variant="soft"
@@ -186,7 +226,7 @@ export default function StudyResultsScreen() {
           onPress={() => setPaperOpen(true)}
         />
       )}
-      {leader && results.withoutCopy.length === 0 && (
+      {leader && !paperTooEarly && results.withoutCopy.length === 0 && (
         <Text style={styles.muted}>{t('study.results.noneWithout')}</Text>
       )}
 
@@ -200,6 +240,7 @@ export default function StudyResultsScreen() {
         <View style={styles.list}>
           {results.copies.map((c) => {
             const paper = c.source === 'PAPIER';
+            const catchUp = c.source === 'RATTRAPAGE';
             const mine = c.userId === me?.id;
             // RG-ETU-13 : le contenu d'une copie APP n'est lisible que par son auteur et le dirigeant.
             const onPress = leader
@@ -222,7 +263,11 @@ export default function StudyResultsScreen() {
                       {c.displayName}
                     </Text>
                     {paper && <Text style={styles.paperPill}>{t('study.results.paper')}</Text>}
+                    {catchUp && <Text style={[styles.paperPill, styles.catchUpPill]}>{t('study.results.catchUp')}</Text>}
                   </View>
+                  {leader && c.pendingReview && (
+                    <Text style={styles.reviewMeta}>{t('study.results.pendingReview')}</Text>
+                  )}
                   {!paper && (
                     <Text style={styles.rowMeta}>{t('study.results.answeredCount', { count: c.answeredCount })}</Text>
                   )}
@@ -244,6 +289,7 @@ export default function StudyResultsScreen() {
       <StudyCopySheet
         copy={copy}
         onAdjust={leader ? onAdjust : undefined}
+        onVerdict={leader ? onVerdict : undefined}
         onClose={() => setCopy(null)}
       />
       {leader && (
@@ -475,6 +521,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   score: { fontFamily: fonts.mono, fontSize: 14, color: colors.moss },
+  catchUpPill: { color: colors.moss, borderColor: colors.moss },
+  range: { marginTop: 4, fontFamily: fonts.mono, fontSize: 12, color: colors.moss, letterSpacing: 0.4 },
+  reviewCard: { marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  reviewText: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, lineHeight: 19, color: colors.ink2 },
+  reviewMeta: { marginTop: 2, fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: colors.earthDeep },
   backdrop: { flex: 1, backgroundColor: colors.mossDeep + 'B3', justifyContent: 'center', paddingHorizontal: 24 },
   modalCard: {
     backgroundColor: colors.paper,

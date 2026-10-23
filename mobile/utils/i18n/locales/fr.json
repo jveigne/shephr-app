@@ -1551,6 +1551,7 @@
     "lesson": "Leçon {{number}}",
     "lessonTitled": "Leçon {{number}} · {{title}}",
     "score": "{{score}} / {{max}}",
+    "range": "questions {{first}} à {{last}}",
     "points_one": "{{value}} pt",
     "points_other": "{{value}} pts",
     "status": {
@@ -1609,7 +1610,24 @@
       "unitProgress": "Avancement de l'assemblée",
       "myProgress": "Ma progression",
       "overviewTitle": "Avancement des assemblées",
-      "overviewEmpty": "Aucune assemblée de votre périmètre n'a encore étudié."
+      "overviewEmpty": "Aucune assemblée de votre périmètre n'a encore étudié.",
+      "catchUpTitle": "À rattraper",
+      "catchUpHint": "Vous n'étiez pas à la séance : répondez seul aux questions, puis envoyez votre copie.",
+      "catchUpAction": "Rattraper",
+      "continue": "Continuer",
+      "covered": "Déjà traitées : {{ranges}}",
+      "startFrom": "Point de départ",
+      "startDefault": "À la suite (première question non encore traitée)",
+      "startDefaultRedo": "Depuis le début (la leçon est reprise)",
+      "startBeginning": "Reprendre au début (question {{number}})",
+      "startCustom": "Choisir la question de départ",
+      "startCustomPlaceholder": "Numéro de la question (ex. 21)",
+      "wholeLesson": "toute la leçon",
+      "sessionRange": "Cette séance : {{range}}",
+      "nextRange": "Suite : {{range}}",
+      "startPick": "Question de départ",
+      "startPickNext": "Par défaut : question {{number}}, la première non encore traitée. Touchez une autre question pour commencer ailleurs.",
+      "startPickFirst": "Par défaut : le début de la leçon. Touchez une autre question pour commencer ailleurs."
     },
     "session": {
       "answered": "{{done}} / {{total}} répondues",
@@ -1630,7 +1648,14 @@
       "noAnswerCorrection": "Vous n'avez pas répondu dans l'application : rien à corriger sur ce téléphone.",
       "myScore": "Ma note",
       "noCopy": "Vous n'avez pas de copie dans l'application pour cette séance.",
-      "gone": "Cette séance n'existe plus : elle a été annulée par le dirigeant."
+      "gone": "Cette séance n'existe plus : elle a été annulée par le dirigeant.",
+      "catchUpHint": "Rattrapage : répondez seul, à votre rythme. Les corrections et les réponses du manuel s'afficheront après l'envoi de votre copie.",
+      "catchUpSubmit": "Envoyer ma copie",
+      "catchUpSubmitTitle": "Envoyer votre copie ?",
+      "catchUpSubmitConfirm": "{{done}} / {{total}} répondues. Vous ne pourrez plus la modifier : les questions fermées seront corrigées tout de suite, les réponses écrites attendront l'avis du dirigeant.",
+      "catchUpNotSent": "Vos réponses ne sont pas encore parties (hors ligne ?). Réessayez au retour du réseau.",
+      "catchUpSent": "Copie envoyée.",
+      "catchUpAwaitingReview": "Vos réponses écrites attendent l'avis du dirigeant."
     },
     "question": {
       "number": "Q{{number}}",
@@ -1669,7 +1694,11 @@
       "finishConfirmLeft_one": "Encore {{count}} réponse écrite sans avis : elle vaudra 0 point. Vous pourrez ajuster depuis les résultats.",
       "finishConfirmLeft_other": "Encore {{count}} réponses écrites sans avis : elles vaudront 0 point. Vous pourrez ajuster depuis les résultats.",
       "finished_one": "Séance terminée — {{count}} copie",
-      "finished_other": "Séance terminée — {{count}} copies"
+      "finished_other": "Séance terminée — {{count}} copies",
+      "notes": "Notes du dirigeant",
+      "stopAfter": "S'arrêter après la question :",
+      "stopLast": "dernière",
+      "stopAfterCut": "Les questions après Q{{number}} seront retirées de cette séance (ni corrigées ni notées) ; les réponses déjà données seront reprises à la prochaine séance de la leçon. La saisie sera verrouillée et les questions fermées corrigées."
     },
     "results": {
       "kicker": "Résultats",
@@ -1683,6 +1712,7 @@
       "addPaper": "Ajouter une copie papier",
       "addPaperHint": "Pour un membre qui a répondu sur son livret (ou rattrape une séance) : sa note seule.",
       "noneWithout": "Tous les répondants de l'assemblée ont déjà une copie.",
+      "paperTooEarly": "La copie papier se saisit à partir de la correction, une fois fixée la question où la séance s'arrête.",
       "member": "Membre",
       "scoreOutOf": "Note (sur {{max}})",
       "invalidScore": "Note invalide : entre 0 et {{max}}.",
@@ -1690,7 +1720,12 @@
       "deletePaper": "Supprimer la note",
       "deletePaperConfirm": "La copie papier de {{name}} sera supprimée.",
       "adjust": "Ajuster les points",
-      "pointsRange": "Points (0 à {{max}})"
+      "pointsRange": "Points (0 à {{max}})",
+      "catchUp": "rattrapage",
+      "catchUpNotSent": "rattrapage non envoyé",
+      "pendingReview": "Avis à donner",
+      "toReview_one": "{{count}} copie attend votre avis sur des réponses écrites : ouvrez-la et choisissez Juste, À préciser ou À revoir.",
+      "toReview_other": "{{count}} copies attendent votre avis sur des réponses écrites : ouvrez-les et choisissez Juste, À préciser ou À revoir."
     },
     "progress": {
       "unitTitle": "Avancement de l'assemblée",
@@ -1701,7 +1736,8 @@
       "noModules": "Aucune unité d'étude n'est encore publiée.",
       "lastSession": "Dernière séance le {{date}}",
       "cumulative": "Note cumulée : {{score}} / {{max}}",
-      "notDone": "Pas encore faite"
+      "notDone": "Pas encore faite",
+      "questionsCovered": "{{done}} / {{total}} questions"
     },
     "errors": {
       "offline": "Pas de réseau : réessayez dans un instant.",
@@ -1724,7 +1760,11 @@
       "STUDY_POINTS_OUT_OF_RANGE": "Les points dépassent ceux de la question.",
       "UNAUTHORIZED_ACCESS": "Vous n'avez pas accès à cette étude.",
       "RESOURCE_NOT_FOUND": "Cette séance ou cette copie n'existe plus.",
-      "MODULE_ACCESS_DENIED": "L'étude de l'assemblée n'est pas ouverte pour votre ministère."
+      "MODULE_ACCESS_DENIED": "L'étude de l'assemblée n'est pas ouverte pour votre ministère.",
+      "STUDY_QUESTION_INVALID": "Ce numéro n'est pas une question principale de la leçon (ou il précède le début de la séance).",
+      "STUDY_CATCH_UP_CLOSED": "Le rattrapage de cette séance est fermé : l'assemblée est passée à une autre leçon.",
+      "STUDY_CATCH_UP_EMPTY": "Aucune réponse à envoyer : répondez d'abord à au moins une question.",
+      "STUDY_PAPER_COPY_TOO_EARLY": "La copie papier se saisit à partir de la correction, une fois la plage de questions fixée."
     },
     "language": {
       "FR": "FR",
@@ -1734,6 +1774,15 @@
         "FR": "français",
         "EN": "anglais"
       }
+    },
+    "briefing": {
+      "title": "À lire avant la leçon",
+      "unitNotes": "Présentation de l'unité",
+      "lessonNotes": "Recommandations pour la leçon",
+      "memberActions": "Aperçu — chaque membre devra :"
+    },
+    "memberActions": {
+      "title": "Cette semaine, chaque membre doit :"
     }
   },
   "billing": {

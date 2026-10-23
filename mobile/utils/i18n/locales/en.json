@@ -1551,6 +1551,7 @@
     "lesson": "Lesson {{number}}",
     "lessonTitled": "Lesson {{number}} · {{title}}",
     "score": "{{score}} / {{max}}",
+    "range": "questions {{first}} to {{last}}",
     "points_one": "{{value}} pt",
     "points_other": "{{value}} pts",
     "status": {
@@ -1609,7 +1610,24 @@
       "unitProgress": "Assembly progress",
       "myProgress": "My progress",
       "overviewTitle": "Assemblies' progress",
-      "overviewEmpty": "No assembly in your area has studied yet."
+      "overviewEmpty": "No assembly in your area has studied yet.",
+      "catchUpTitle": "To catch up",
+      "catchUpHint": "You missed the session: answer the questions on your own, then send your paper.",
+      "catchUpAction": "Catch up",
+      "continue": "Continue",
+      "covered": "Already covered: {{ranges}}",
+      "startFrom": "Starting point",
+      "startDefault": "Carry on (first question not yet covered)",
+      "startDefaultRedo": "From the beginning (the lesson is taken again)",
+      "startBeginning": "Start over (question {{number}})",
+      "startCustom": "Choose the starting question",
+      "startCustomPlaceholder": "Question number (e.g. 21)",
+      "wholeLesson": "the whole lesson",
+      "sessionRange": "This session: {{range}}",
+      "nextRange": "Next: {{range}}",
+      "startPick": "Starting question",
+      "startPickNext": "Default: question {{number}}, the first one not yet covered. Tap another question to start elsewhere.",
+      "startPickFirst": "Default: the beginning of the lesson. Tap another question to start elsewhere."
     },
     "session": {
       "answered": "{{done}} / {{total}} answered",
@@ -1630,7 +1648,14 @@
       "noAnswerCorrection": "You did not answer in the app: nothing to correct on this phone.",
       "myScore": "My score",
       "noCopy": "You have no app copy for this session.",
-      "gone": "This session no longer exists: the leader cancelled it."
+      "gone": "This session no longer exists: the leader cancelled it.",
+      "catchUpHint": "Catch-up: answer on your own, at your own pace. Corrections and the manual's answers will show once you have sent your paper.",
+      "catchUpSubmit": "Send my paper",
+      "catchUpSubmitTitle": "Send your paper?",
+      "catchUpSubmitConfirm": "{{done}} / {{total}} answered. You will not be able to change it: closed questions are marked straight away, written answers wait for the leader's review.",
+      "catchUpNotSent": "Your answers have not gone through yet (offline?). Try again once you are back online.",
+      "catchUpSent": "Paper sent.",
+      "catchUpAwaitingReview": "Your written answers are waiting for the leader's review."
     },
     "question": {
       "number": "Q{{number}}",
@@ -1669,7 +1694,11 @@
       "finishConfirmLeft_one": "{{count}} written answer still has no verdict: it will be worth 0 points. You can adjust from the results.",
       "finishConfirmLeft_other": "{{count}} written answers still have no verdict: they will be worth 0 points. You can adjust from the results.",
       "finished_one": "Session finished — {{count}} copy",
-      "finished_other": "Session finished — {{count}} copies"
+      "finished_other": "Session finished — {{count}} copies",
+      "notes": "Leader notes",
+      "stopAfter": "Stop after question:",
+      "stopLast": "last",
+      "stopAfterCut": "Questions after Q{{number}} will be removed from this session (neither marked nor scored); answers already given will carry over to the next session on this lesson. Answering will be locked and closed questions marked."
     },
     "results": {
       "kicker": "Results",
@@ -1683,6 +1712,7 @@
       "addPaper": "Add a paper copy",
       "addPaperHint": "For a member who answered in the booklet (or catches up on a session): the score only.",
       "noneWithout": "Every respondent of the assembly already has a copy.",
+      "paperTooEarly": "Paper copies can be entered from the correction stage on, once the session's last question is set.",
       "member": "Member",
       "scoreOutOf": "Score (out of {{max}})",
       "invalidScore": "Invalid score: between 0 and {{max}}.",
@@ -1690,7 +1720,12 @@
       "deletePaper": "Delete the score",
       "deletePaperConfirm": "{{name}}'s paper copy will be deleted.",
       "adjust": "Adjust points",
-      "pointsRange": "Points (0 to {{max}})"
+      "pointsRange": "Points (0 to {{max}})",
+      "catchUp": "catch-up",
+      "catchUpNotSent": "catch-up not sent",
+      "pendingReview": "Review needed",
+      "toReview_one": "{{count}} paper is waiting for your review of written answers: open it and choose Right, Needs detail or Review.",
+      "toReview_other": "{{count}} papers are waiting for your review of written answers: open them and choose Right, Needs detail or Review."
     },
     "progress": {
       "unitTitle": "Assembly progress",
@@ -1701,7 +1736,8 @@
       "noModules": "No study unit has been published yet.",
       "lastSession": "Last session on {{date}}",
       "cumulative": "Cumulative score: {{score}} / {{max}}",
-      "notDone": "Not done yet"
+      "notDone": "Not done yet",
+      "questionsCovered": "{{done}} / {{total}} questions"
     },
     "errors": {
       "offline": "No network: try again in a moment.",
@@ -1724,7 +1760,11 @@
       "STUDY_POINTS_OUT_OF_RANGE": "The points exceed the question's points.",
       "UNAUTHORIZED_ACCESS": "You do not have access to this study.",
       "RESOURCE_NOT_FOUND": "This session or copy no longer exists.",
-      "MODULE_ACCESS_DENIED": "Assembly study is not available for your ministry."
+      "MODULE_ACCESS_DENIED": "Assembly study is not available for your ministry.",
+      "STUDY_QUESTION_INVALID": "This number is not a main question of the lesson (or it comes before the start of the session).",
+      "STUDY_CATCH_UP_CLOSED": "Catching up on this session is closed: the assembly has moved on to another lesson.",
+      "STUDY_CATCH_UP_EMPTY": "Nothing to send: answer at least one question first.",
+      "STUDY_PAPER_COPY_TOO_EARLY": "Paper copies can be entered from the correction stage on, once the question range is set."
     },
     "language": {
       "FR": "FR",
@@ -1734,6 +1774,15 @@
         "FR": "French",
         "EN": "English"
       }
+    },
+    "briefing": {
+      "title": "Read before the lesson",
+      "unitNotes": "About this unit",
+      "lessonNotes": "Notes for this lesson",
+      "memberActions": "Preview — each member will have to:"
+    },
+    "memberActions": {
+      "title": "This week, each member must:"
     }
   },
   "billing": {

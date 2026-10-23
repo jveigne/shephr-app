@@ -8,6 +8,8 @@ import {
   AppState,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +21,10 @@ import ErrorBanner from '@/components/ErrorBanner';
 import StudyQuestionList, {
   isAnswerable,
   isStudyAnswered,
+  StudyMemberActions,
+  StudyNotesText,
+  studyRangeOf,
+  topLevelOf,
   type StudyAnswerValue,
 } from '@/components/StudyQuestionList';
 import { colors, fonts, radii } from '@/theme';
@@ -31,6 +37,7 @@ import {
   putMyStudyAnswers,
   reviewMyStudyAnswer,
   startStudyCorrection,
+  submitStudyCatchUp,
   studyErrorCode,
   studyErrorMessage,
   type StudyQuestionView,
@@ -69,6 +76,10 @@ import { goBack } from '@/utils/navigation';
  * *Annuler* (D-ETU-22, confirmation), avis restants, *Terminer*. Le dirigeant est aussi répondant
  * (D-ETU-06) ; il voit les réponses du manuel à la demande (RG-ETU-12).
  *
+ * <p>D-ETU-35/36 (JP 23/10) : bloc repliable « Notes du dirigeant » dans le panneau (recommandations
+ * de l'unité et de la leçon, actions des membres) ; à `TERMINEE`, « Cette semaine, chaque membre
+ * doit : » pour tous les lecteurs (`memberActions`, envoyées par le serveur à ce moment-là).
+ *
  * <p>D-ETU-11 (JP 21/10, « hors ligne compris ») : la dernière séance reçue est gardée avec le
  * brouillon (`StudyDraft.session`) ; rouverte sans réseau (app tuée par l'OS), la séance s'affiche
  * depuis elle et le membre continue à répondre — le serveur tranche au retour (RG-ETU-04).
@@ -76,6 +87,22 @@ import { goBack } from '@/utils/navigation';
  * <p>D-ETU-23 : pas de temps réel — l'écran relit la séance ≈ toutes les 5 s, SEULEMENT au premier
  * plan et tant qu'il a le focus (et jamais une fois terminée). Pas de react-query : useState +
  * useFocusEffect.
+ *
+ * <p>Avenant 05 (lot ETU11, JP 23/10) — une leçon en plusieurs séances :
+ * <ul>
+ *   <li>D-ETU-38 : en-tête « Leçon 1 · questions 1 à 20 » (plage de la séance ; avant la correction,
+ *       la fin est la dernière question reçue = fin de la leçon) ;</li>
+ *   <li>D-ETU-40 : *Passer à la correction* ouvre le sélecteur « S'arrêter après la question : [N] »
+ *       (questions de premier niveau de la plage, défaut = la dernière), puis confirme. Les
+ *       questions au-delà de N quittent la séance : les saisies non envoyées qui les visent sont
+ *       retirées du brouillon (le serveur garde celles déjà reçues pour la séance suivante, D-ETU-41) ;</li>
+ *   <li>D-ETU-44/45 : MODE RATTRAPAGE du même écran — séance `TERMINEE`, `catchUpOpen` du serveur,
+ *       pas de copie envoyée : saisie comme en séance (brouillon hors ligne `studyDraft`, lot
+ *       `PUT …/my-answers`), aucune réponse du manuel (le serveur les masque), bouton « Envoyer ma
+ *       copie » avec confirmation ; ensuite la copie corrigée se lit comme à `TERMINEE`, les
+ *       réponses écrites attendant l'avis du dirigeant. Pas de relecture toutes les 5 s pendant le
+ *       rattrapage (personne d'autre ne fait avancer la séance) : seul le lot en attente repart.</li>
+ * </ul>
  */
 
 const POLL_MS = 5000;
@@ -83,6 +110,20 @@ const POLL_MS = 5000;
 const SAVE_DEBOUNCE_MS = 700;
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'failed';
+
+/**
+ * D-ETU-44/45 (JP 23/10) — l'appelant rattrape cette séance : TERMINEE, `catchUpOpen` du serveur,
+ * répondant, et pas de copie déjà envoyée (aucune, ou RATTRAPAGE sans `submittedAt`).
+ * D-ETU-47 (JP 23/10, avenant 05 §8) : une copie APP faite des SEULES réponses reportées (D-ETU-41)
+ * est rattrapable — le serveur le dit par `catchUpOpen` ; l'app ne refait pas le tri, elle accepte
+ * toute copie non PAPIER non envoyée. Ses réponses reportées sont déjà dans `myCopy.answers` : elles
+ * s'affichent pré-remplies (sous le brouillon) et partent avec l'envoi.
+ */
+function isCatchUpWriting(d: StudySessionDetail | null | undefined): boolean {
+  if (!d || d.session.status !== 'TERMINEE' || !d.catchUpOpen || !d.participant) return false;
+  const c = d.myCopy;
+  return !c || (c.source !== 'PAPIER' && !c.submittedAt);
+}
 
 export default function StudySessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -103,10 +144,16 @@ export default function StudySessionScreen() {
   const [busy, setBusy] = useState(false);
   const [reviewing, setReviewing] = useState<string | null>(null);
   const [showKey, setShowKey] = useState(false);
+  // D-ETU-40 (JP 23/10) : sélecteur « S'arrêter après la question » ouvert.
+  const [stopPicker, setStopPicker] = useState(false);
 
   // Références lues par les rappels asynchrones (minuterie, envoi) : toujours la dernière valeur.
   const draftRef = useRef<StudyDraft>(emptyStudyDraft());
   const statusRef = useRef<string | null>(null);
+  // D-ETU-44 (JP 23/10) : rattrapage en cours — la séance est TERMINEE mais la saisie reste ouverte.
+  const catchUpRef = useRef(false);
+  // D-ETU-40 (JP 23/10) : questions de la séance affichée — une saisie hors plage ne part pas.
+  const questionIdsRef = useRef<Set<string> | null>(null);
   const sendingRef = useRef(false);
   const refreshingRef = useRef(false);
   // Pas d'écriture du brouillon avant sa lecture : elle écraserait les réponses gardées hors ligne.
@@ -132,8 +179,11 @@ export default function StudySessionScreen() {
   const showDetail = useCallback(
     (fresh: StudySessionDetail) => {
       statusRef.current = fresh.session.status;
+      catchUpRef.current = isCatchUpWriting(fresh);
+      questionIdsRef.current = new Set(fresh.questions.map((q) => q.id));
       setDetail(fresh);
-      if (fresh.session.status === 'TERMINEE') {
+      // D-ETU-44 (JP 23/10) : en rattrapage, le brouillon (et la séance gardée) restent jusqu'à l'envoi.
+      if (fresh.session.status === 'TERMINEE' && !catchUpRef.current) {
         purge();
         return;
       }
@@ -149,7 +199,26 @@ export default function StudySessionScreen() {
   /** Envoie le lot des saisies non accusées (D-ETU-11) — sans effet s'il n'y a rien. */
   const flush = useCallback(async () => {
     if (!userId || !sessionId || sendingRef.current) return;
-    if (statusRef.current === 'TERMINEE') return;
+    if (statusRef.current === 'TERMINEE' && !catchUpRef.current) return;
+    // D-ETU-41 (JP 23/10) : en REPONSES_OUVERTES / CORRECTION, une saisie non accusée qui vise une
+    // question retirée par la coupe (au-delà de « s'arrêter après ») part TELLE QUELLE : le serveur la
+    // garde sans la noter pour le report à la séance suivante (ou la renvoie dans
+    // `ignoredQuestionIds` si elle est hors délai). D-ETU-44 (JP 23/10) : seul le RATTRAPAGE refuse
+    // le lot entier pour une question hors plage — c'est là seulement qu'on l'abandonne.
+    const known = questionIdsRef.current;
+    if (catchUpRef.current && known && known.size > 0) {
+      const outside = draftRef.current.pending.filter((qid) => !known.has(qid));
+      if (outside.length > 0) {
+        const kept: StudyDraft = {
+          ...draftRef.current,
+          answers: { ...draftRef.current.answers },
+          pending: draftRef.current.pending.filter((qid) => known.has(qid)),
+        };
+        for (const qid of outside) delete kept.answers[qid];
+        applyDraft(kept);
+        void saveStudyDraft(userId, sessionId, kept);
+      }
+    }
     const inputs = pendingStudyInputs(draftRef.current);
     if (inputs.length === 0) return;
     sendingRef.current = true;
@@ -179,7 +248,7 @@ export default function StudySessionScreen() {
         for (const i of inputs) delete kept.answers[i.questionId];
         applyDraft(kept);
         void saveStudyDraft(userId, sessionId, kept);
-        if (code === 'STUDY_SESSION_LOCKED') void refreshRef.current?.(true);
+        if (code === 'STUDY_SESSION_LOCKED' || code === 'STUDY_CATCH_UP_CLOSED') void refreshRef.current?.(true);
       }
     } finally {
       sendingRef.current = false;
@@ -197,7 +266,7 @@ export default function StudySessionScreen() {
         showDetail(fresh);
         setLoadError(null);
         setOffline(false);
-        if (fresh.session.status !== 'TERMINEE') void flush();
+        if (fresh.session.status !== 'TERMINEE' || catchUpRef.current) void flush();
       } catch (e: any) {
         if (!e?.response) {
           // Hors ligne : la séance gardée avec le brouillon reste affichée (D-ETU-11).
@@ -247,16 +316,22 @@ export default function StudySessionScreen() {
           if (cached) {
             // D-ETU-11 : la dernière séance reçue s'affiche en attendant le serveur (hors ligne compris).
             setDetail((d) => d ?? cached);
-            if (statusRef.current == null) statusRef.current = cached.session.status;
+            if (statusRef.current == null) {
+              statusRef.current = cached.session.status;
+              catchUpRef.current = isCatchUpWriting(cached);
+              questionIdsRef.current = new Set(cached.questions.map((q) => q.id));
+            }
           }
         }
         await refresh(true);
       })();
+      // D-ETU-44 (JP 23/10) : en rattrapage, seul le lot en attente repart (pas de relecture).
+      const tick = () => (catchUpRef.current ? void flush() : void refresh());
       const timer = setInterval(() => {
-        if (AppState.currentState === 'active') void refresh();
+        if (AppState.currentState === 'active') tick();
       }, POLL_MS);
       const sub = AppState.addEventListener('change', (next) => {
-        if (next === 'active') void refresh();
+        if (next === 'active') tick();
       });
       return () => {
         cancelled = true;
@@ -265,11 +340,12 @@ export default function StudySessionScreen() {
         // Quitter l'écran n'abandonne pas une frappe récente.
         if (saveTimer.current) void persistNow();
       };
-    }, [userId, sessionId, refresh, applyDraft, persistNow]),
+    }, [userId, sessionId, refresh, flush, applyDraft, persistNow]),
   );
 
   const onAnswer = (q: StudyQuestionView, value: Pick<StudyAnswerValue, 'valueText' | 'valueOptions' | 'done'>) => {
-    if (statusRef.current !== 'REPONSES_OUVERTES') return; // RG-ETU-03 : verrouillé côté téléphone
+    // RG-ETU-03 : verrouillé côté téléphone — sauf le rattrapage non envoyé (D-ETU-44, JP 23/10).
+    if (statusRef.current !== 'REPONSES_OUVERTES' && !catchUpRef.current) return;
     applyDraft(setDraftAnswer(draftRef.current, { questionId: q.id, ...value }));
     setSaveState('saving');
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -305,9 +381,48 @@ export default function StudySessionScreen() {
     }
   };
 
-  const onToCorrection = async () => {
-    const ok = await confirmDialog(t('study.leader.toCorrection'), t('study.leader.toCorrectionConfirm'), t('study.leader.toCorrection'));
-    if (ok) void lead(() => startStudyCorrection(sessionId));
+  /** D-ETU-40 (JP 23/10) : le sélecteur « S'arrêter après la question » tient lieu de confirmation. */
+  const onToCorrection = () => setStopPicker(true);
+
+  const onConfirmCorrection = (lastQuestionNumber: string | null) => {
+    setStopPicker(false);
+    void lead(() => startStudyCorrection(sessionId, lastQuestionNumber));
+  };
+
+  /**
+   * D-ETU-44 (JP 23/10) — « Envoyer ma copie » : les saisies partent d'abord (lot), puis l'envoi ;
+   * la séance relue montre la copie corrigée (réponses du manuel visibles désormais).
+   */
+  const onSubmitCatchUp = async (done: number, total: number) => {
+    if (busy) return;
+    const ok = await confirmDialog(
+      t('study.session.catchUpSubmitTitle'),
+      t('study.session.catchUpSubmitConfirm', { done, total }),
+      t('study.session.catchUpSubmit'),
+    );
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await persistNow();
+      if (draftRef.current.pending.length > 0) {
+        // Lot pas encore reçu (hors ligne) : l'envoi attendrait une copie incomplète.
+        notify(t('study.tile.title'), t('study.session.catchUpNotSent'));
+        return;
+      }
+      await submitStudyCatchUp(sessionId);
+      catchUpRef.current = false;
+      try {
+        showDetail(await getStudySession(sessionId));
+      } catch {
+        void refresh(true);
+      }
+      notify(t('study.tile.title'), t('study.session.catchUpSent'));
+    } catch (e: any) {
+      notify(t('study.tile.title'), studyErrorMessage(e, t));
+      if (studyErrorCode(e) === 'STUDY_CATCH_UP_CLOSED') void refresh(true);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const onFinish = async () => {
@@ -405,6 +520,13 @@ export default function StudySessionScreen() {
     ? t('study.lessonTitled', { number: s.lessonNumber, title: s.lessonTitle })
     : t('study.lesson', { number: s.lessonNumber });
   const myCopy = detail.myCopy;
+  // D-ETU-38 (JP 23/10) : « Leçon 1 · questions 1 à 20 ».
+  const range = studyRangeOf(s, questions);
+  const catchUp = isCatchUpWriting(detail);
+  // D-ETU-44 (JP 23/10) : copie de rattrapage envoyée, réponses écrites en attente de l'avis du dirigeant.
+  // D-ETU-47 : `submittedAt` n'est posé que par l'envoi d'un rattrapage — copie reportée comprise,
+  // quelle que soit la source que le serveur lui laisse.
+  const catchUpAwaitingReview = !!myCopy?.submittedAt && writtenLeft > 0;
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -413,6 +535,11 @@ export default function StudySessionScreen() {
         <Text style={styles.kicker}>{[s.moduleCode, s.moduleName].filter(Boolean).join(' · ')}</Text>
         <Text style={styles.title}>{lessonTitle}</Text>
         {!!detail.lessonPortion && <Text style={styles.subtitle}>{detail.lessonPortion}</Text>}
+        {!!range && (
+          <Text style={styles.range}>
+            {[t('study.lesson', { number: s.lessonNumber }), t('study.range', range)].join(' · ')}
+          </Text>
+        )}
         <View style={styles.metaRow}>
           <StatusPill status={s.status} />
           <Text style={styles.meta} numberOfLines={1}>
@@ -443,6 +570,13 @@ export default function StudySessionScreen() {
             onToCorrection={onToCorrection}
             onCancel={onCancel}
             onFinish={onFinish}
+          />
+        )}
+        {detail.leader && stopPicker && (
+          <StopAfterSheet
+            questions={questions}
+            onClose={() => setStopPicker(false)}
+            onConfirm={onConfirmCorrection}
           />
         )}
 
@@ -507,7 +641,39 @@ export default function StudySessionScreen() {
           </>
         )}
 
-        {s.status === 'TERMINEE' && (
+        {catchUp && (
+          <>
+            {/* D-ETU-44 (JP 23/10) : rattrapage — ni corrections ni réponses du manuel avant l'envoi. */}
+            <Card variant="tinted" style={styles.notice}>
+              <Ionicons name="home-outline" size={20} color={colors.moss} />
+              <Text style={styles.noticeText}>{t('study.session.catchUpHint')}</Text>
+            </Card>
+            <View style={styles.counter}>
+              <Text style={styles.counterText}>
+                {t('study.session.answered', { done: answeredCount, total: answerable.length })}
+              </Text>
+              {saveState !== 'idle' && (
+                <Text style={[styles.counterText, saveState === 'failed' && { color: colors.clay }]}>
+                  {' · '}
+                  {t(`study.session.save.${saveState}`)}
+                </Text>
+              )}
+            </View>
+            <StudyQuestionList questions={questions} answers={answers} mode="answer" onAnswer={onAnswer} />
+            <Button
+              label={t('study.session.catchUpSubmit')}
+              onPress={() => void onSubmitCatchUp(answeredCount, answerable.length)}
+              loading={busy}
+              disabled={!hasAnything}
+              fullWidth
+              height={50}
+              style={{ marginTop: 18 }}
+              iconLeft={<Ionicons name="paper-plane-outline" size={18} color={colors.white} />}
+            />
+          </>
+        )}
+
+        {s.status === 'TERMINEE' && !catchUp && (
           <>
             {detail.participant && (
               <Card style={styles.scoreCard}>
@@ -519,6 +685,9 @@ export default function StudySessionScreen() {
                 ) : (
                   <Text style={styles.scoreEmpty}>{t('study.session.noCopy')}</Text>
                 )}
+                {catchUpAwaitingReview && (
+                  <Text style={styles.leaderHint}>{t('study.session.catchUpAwaitingReview')}</Text>
+                )}
                 <Button
                   label={t('study.home.myProgress')}
                   variant="ghost"
@@ -526,6 +695,12 @@ export default function StudySessionScreen() {
                   style={{ marginTop: 14 }}
                   onPress={() => router.push({ pathname: '/study/progress', params: { mine: '1' } })}
                 />
+              </Card>
+            )}
+            {/* D-ETU-36 (JP 23/10) : actions des membres, montrées à tous une fois la séance terminée. */}
+            {(detail.memberActions ?? []).some((a) => a && a.trim()) && (
+              <Card variant="tinted" style={styles.actionsCard}>
+                <StudyMemberActions actions={detail.memberActions} />
               </Card>
             )}
             {myCopy && (
@@ -537,6 +712,76 @@ export default function StudySessionScreen() {
         )}
       </ScreenShell>
     </KeyboardAvoidingView>
+  );
+}
+
+/**
+ * D-ETU-40 (JP 23/10) — « S'arrêter après la question : [N] » : questions de premier niveau de la
+ * plage (une sous-question suit son parent, D-ETU-38), défaut = la dernière ; *Passer à la
+ * correction* confirme. La dernière choisie → corps omis (« absent = dernière de la leçon »).
+ */
+function StopAfterSheet({
+  questions,
+  onClose,
+  onConfirm,
+}: {
+  questions: StudyQuestionView[];
+  onClose: () => void;
+  onConfirm: (lastQuestionNumber: string | null) => void;
+}) {
+  const { t } = useLanguage();
+  const top = topLevelOf(questions);
+  const last = top[top.length - 1]?.number ?? null;
+  const [pick, setPick] = useState<string | null>(last);
+  const cut = !!pick && pick !== last;
+  return (
+    <Modal transparent animationType="fade" visible onRequestClose={onClose}>
+      <View style={styles.backdrop}>
+        <View style={styles.modalCard}>
+          <Text style={styles.modalTitle}>{t('study.leader.toCorrection')}</Text>
+          <Text style={styles.modalHint}>{t('study.leader.stopAfter')}</Text>
+          <ScrollView style={styles.modalScroll} contentContainerStyle={styles.stopList}>
+            {top.map((q) => {
+              const selected = q.number === pick;
+              return (
+                <Pressable
+                  key={q.id}
+                  onPress={() => setPick(q.number)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
+                  style={({ pressed }) => [styles.stopRow, selected && styles.stopRowOn, { opacity: pressed ? 0.85 : 1 }]}
+                >
+                  <Ionicons
+                    name={selected ? 'radio-button-on' : 'radio-button-off'}
+                    size={18}
+                    color={selected ? colors.moss : colors.ink3}
+                  />
+                  <Text style={styles.stopNumber}>{t('study.question.number', { number: q.number })}</Text>
+                  <Text style={styles.stopStatement} numberOfLines={1}>
+                    {q.statement}
+                  </Text>
+                  {q.number === last && <Text style={styles.stopLast}>{t('study.leader.stopLast')}</Text>}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          <Text style={styles.modalFoot}>
+            {cut
+              ? t('study.leader.stopAfterCut', { number: pick })
+              : t('study.leader.toCorrectionConfirm')}
+          </Text>
+          <Button
+            label={t('study.leader.toCorrection')}
+            onPress={() => onConfirm(cut ? pick : null)}
+            disabled={!pick}
+            fullWidth
+            height={48}
+            style={{ marginTop: 14 }}
+          />
+          <Button label={t('common.cancel')} variant="ghost" onPress={onClose} fullWidth height={44} style={{ marginTop: 8 }} />
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -567,8 +812,15 @@ function LeaderPanel({
   onFinish: () => void;
 }) {
   const { t } = useLanguage();
+  const [notesOpen, setNotesOpen] = useState(false);
   const s = detail.session;
   const left = detail.pendingReviewCount ?? 0;
+  // D-ETU-35/36 (JP 23/10) : à TERMINEE, les actions des membres ont leur propre bloc (pour tous).
+  const panelActions = s.status === 'TERMINEE' ? null : detail.memberActions;
+  const hasNotes =
+    !!detail.moduleLeaderNotes?.trim() ||
+    !!detail.lessonLeaderNotes?.trim() ||
+    (panelActions ?? []).some((a) => a && a.trim());
   const openResults = () => router.push({ pathname: '/study/results/[id]', params: { id: s.id } });
   // RG-ETU-08 / D-ETU-09 (JP 21/10) : en CORRECTION, le téléphone du dirigeant (répondant lui aussi,
   // D-ETU-06) est entre les mains d'un voisin — pas de lien vers les copies des autres (réponses
@@ -611,6 +863,29 @@ function LeaderPanel({
 
       {s.status === 'TERMINEE' && (
         <Text style={styles.leaderStat}>{t('study.leader.finished', { count: s.copyCount })}</Text>
+      )}
+
+      {/* D-ETU-35 (JP 23/10) : « Notes du dirigeant », repliées par défaut (texte brut, D-ETU-37). */}
+      {hasNotes && (
+        <View style={styles.notes}>
+          <Pressable
+            onPress={() => setNotesOpen((v) => !v)}
+            hitSlop={6}
+            style={styles.toggle}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: notesOpen }}
+          >
+            <Ionicons name={notesOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.moss} />
+            <Text style={styles.link}>{t('study.leader.notes')}</Text>
+          </Pressable>
+          {notesOpen && (
+            <View style={styles.notesBody}>
+              <StudyNotesText title={t('study.briefing.unitNotes')} text={detail.moduleLeaderNotes} />
+              <StudyNotesText title={t('study.briefing.lessonNotes')} text={detail.lessonLeaderNotes} />
+              <StudyMemberActions title={t('study.briefing.memberActions')} actions={panelActions} />
+            </View>
+          )}
+        </View>
       )}
     </Card>
   );
@@ -665,9 +940,44 @@ const styles = StyleSheet.create({
   leaderHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   leaderStat: { marginTop: 8, fontFamily: fonts.serif, fontSize: 18, color: colors.ink },
   leaderHint: { marginTop: 2, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3 },
+  notes: { marginTop: 12, borderTopWidth: 1, borderTopColor: colors.hair, paddingTop: 4 },
+  notesBody: { marginTop: 10, gap: 14 },
+  actionsCard: { marginTop: 16, paddingHorizontal: 16, paddingVertical: 14 },
   toggle: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
   link: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.moss },
   scoreCard: { marginTop: 16, paddingHorizontal: 20, paddingVertical: 20, alignItems: 'flex-start' },
   scoreBig: { marginTop: 6, fontFamily: fonts.serif, fontSize: 44, color: colors.moss, letterSpacing: -0.6 },
   scoreEmpty: { marginTop: 8, fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 16, color: colors.ink3 },
+  range: { marginTop: 6, fontFamily: fonts.mono, fontSize: 12, color: colors.moss, letterSpacing: 0.4 },
+  backdrop: { flex: 1, backgroundColor: colors.mossDeep + 'B3', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 48 },
+  modalCard: {
+    maxHeight: '100%',
+    backgroundColor: colors.paper,
+    borderRadius: radii.lg,
+    paddingHorizontal: 20,
+    paddingTop: 22,
+    paddingBottom: 18,
+    borderWidth: 1,
+    borderColor: colors.hair,
+  },
+  modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink, letterSpacing: -0.3 },
+  modalHint: { marginTop: 4, marginBottom: 12, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2, lineHeight: 19 },
+  modalScroll: { flexGrow: 0, flexShrink: 1 },
+  modalFoot: { marginTop: 14, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, lineHeight: 18 },
+  stopList: { gap: 6, paddingBottom: 4 },
+  stopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.hair,
+    backgroundColor: colors.paper2,
+  },
+  stopRowOn: { borderColor: colors.moss, backgroundColor: colors.mossTint },
+  stopNumber: { fontFamily: fonts.mono, fontSize: 12.5, color: colors.clay },
+  stopStatement: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
+  stopLast: { fontFamily: fonts.sans, fontSize: 11.5, fontWeight: '600', color: colors.moss },
 });

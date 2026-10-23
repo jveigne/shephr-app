@@ -1,5 +1,16 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  ActivityIndicator,
+  RefreshControl,
+  Modal,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
@@ -7,7 +18,13 @@ import Card from '@/components/Card';
 import Label from '@/components/Label';
 import Button from '@/components/Button';
 import ErrorBanner from '@/components/ErrorBanner';
-import { StudyLanguagePill, studyLanguagesToMark } from '@/components/StudyQuestionList';
+import Field from '@/components/Field';
+import {
+  StudyLanguagePill,
+  StudyMemberActions,
+  StudyNotesText,
+  studyLanguagesToMark,
+} from '@/components/StudyQuestionList';
 import { colors, fonts, radii } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -23,6 +40,7 @@ import {
   studyErrorMessage,
   type StudyAssembly,
   type StudyAssemblyOverview,
+  type StudyCatchUp,
   type StudyLesson,
   type StudySessionSummary,
   type StudyUnitForAssembly,
@@ -48,6 +66,27 @@ import { goBack } from '@/utils/navigation';
  *       périmètre (`/study/progress`, D-ETU-08), jamais le contenu des copies.</li>
  * </ul>
  * Pas de react-query : useState + useFocusEffect.
+ *
+ * <p>Avenant 05 (lot ETU11, JP 23/10) — une leçon en plusieurs séances :
+ * <ul>
+ *   <li>D-ETU-38/39 : une leçon commencée (séances TERMINEE de cette leçon dans l'assemblée, sans
+ *       être faite) affiche les plages déjà traitées et *Continuer* ; à *Commencer*, la feuille
+ *       propose le point de départ : à la suite (défaut du SERVEUR, `startQuestionNumber` omis),
+ *       « Reprendre au début » (première question de la plus ancienne séance de la leçon) ou une
+ *       question choisie (numéro saisi, validé par le serveur — STUDY_QUESTION_INVALID) ;</li>
+ *   <li>D-ETU-44/45 : bloc « À rattraper » (`catchUps` de `/study/me`) → l'écran de séance en mode
+ *       rattrapage ;</li>
+ *   <li>séances terminées : la plage de chacune (« questions 1 à 20 »).</li>
+ * </ul>
+ *
+ * <p>D-ETU-49 (JP 23/10, avenant 05 §8) : le catalogue `?unitId=` porte `nextQuestionNumber` et
+ * `topLevelNumbers` de chaque leçon. Quand ils sont là, la feuille *Commencer* s'ouvre TOUJOURS (dès
+ * la première séance) : aperçu « questions 21 à 57 » ou « toute la leçon », puis sélecteur de la
+ * question de départ sur `topLevelNumbers` (défaut `nextQuestionNumber`, sinon la première). La
+ * question choisie part toujours en `startQuestionNumber`, défaut compris (le serveur ouvre ainsi la
+ * plage annoncée par l'aperçu, même après « Terminer l'oubliée »). Sans ces champs (backend
+ * antérieur à ETU11b), le contournement du lot ETU11 reste : plages déjà traitées et choix « à la
+ * suite / au début / numéro saisi », pour une leçon déjà commencée seulement.
  */
 export default function StudyHomeScreen() {
   const { t } = useLanguage();
@@ -62,6 +101,8 @@ export default function StudyHomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
+  // D-ETU-35 (JP 23/10) : feuille « À lire avant la leçon » en attente de *Commencer*.
+  const [briefing, setBriefing] = useState<Briefing | null>(null);
 
   const load = useCallback(async () => {
     if (!active) {
@@ -104,17 +145,56 @@ export default function StudyHomeScreen() {
 
   const openSession = (id: string) => router.push({ pathname: '/study/session/[id]', params: { id } });
 
-  /** *Commencer* (D-ETU-07) ; sur STUDY_SESSION_ALREADY_OPEN, propose de *Terminer* l'oubliée (D-ETU-22). */
-  const onStart = async (unitId: string, lesson: StudyLesson) => {
+  /**
+   * *Commencer* (D-ETU-07). D-ETU-35 (JP 23/10) : s'il y a quelque chose à lire — recommandations de
+   * l'unité (première séance de l'unité dans l'assemblée seulement : aucune leçon de l'unité dans
+   * `doneChapterIds`), de la leçon, aperçu des actions des membres — la feuille « À lire avant la
+   * leçon » remplace la confirmation ; sans aucun texte, la confirmation est inchangée.
+   */
+  const onStart = async (unitId: string, u: StudyUnitForAssembly, lesson: StudyLesson) => {
     if (opening) return;
-    const lessonLabel = lesson.title
-      ? t('study.lessonTitled', { number: lesson.number, title: lesson.title })
-      : t('study.lesson', { number: lesson.number });
-    const ok = await confirmDialog(t('study.home.startTitle'), t('study.home.startConfirm', { lesson: lessonLabel }), t('study.home.start'));
-    if (!ok) return;
+    const firstOfUnit = !u.unit.lessons.some((l) => u.doneChapterIds.includes(l.chapterId));
+    // D-ETU-39 (JP 23/10) : séances déjà tenues sur cette leçon (plus récentes d'abord, §4.7).
+    const past = pastOfLesson(sessions[unitId] ?? [], lesson.chapterId);
+    const next: Briefing = {
+      unitId,
+      lesson,
+      unitNotes: firstOfUnit ? blankToNull(u.unit.leaderNotes) : null,
+      lessonNotes: blankToNull(lesson.leaderNotes),
+      memberActions: (lesson.memberActions ?? []).filter((a) => a && a.trim()),
+      pastRanges: rangesOf(past, t),
+      beginning: past.length > 0 ? past[past.length - 1].firstQuestionNumber || null : null,
+      lessonDone: u.doneChapterIds.includes(lesson.chapterId),
+    };
+    // D-ETU-49 (JP 23/10) : avec les numéros de la leçon, la feuille porte l'aperçu et le départ.
+    const withPreview = topLevelOf(lesson).length > 0;
+    if (
+      withPreview ||
+      next.unitNotes ||
+      next.lessonNotes ||
+      next.memberActions.length > 0 ||
+      next.pastRanges.length > 0
+    ) {
+      setBriefing(next);
+      return;
+    }
+    const ok = await confirmDialog(
+      t('study.home.startTitle'),
+      t('study.home.startConfirm', { lesson: lessonLabelOf(t, lesson.number, lesson.title) }),
+      t('study.home.start'),
+    );
+    if (ok) await doStart(unitId, lesson);
+  };
+
+  /**
+   * Ouverture ; sur STUDY_SESSION_ALREADY_OPEN, propose de *Terminer* l'oubliée (D-ETU-22).
+   * D-ETU-39 (JP 23/10) : `start` absent = point de départ par défaut du serveur.
+   */
+  const doStart = async (unitId: string, lesson: StudyLesson, start?: string | null) => {
+    if (opening) return;
     setOpening(lesson.chapterId);
     try {
-      const created = await openStudySession(unitId, lesson.chapterId);
+      const created = await openStudySession(unitId, lesson.chapterId, start);
       openSession(created.session.id);
     } catch (e: any) {
       if (studyErrorCode(e) !== 'STUDY_SESSION_ALREADY_OPEN') {
@@ -140,7 +220,7 @@ export default function StudyHomeScreen() {
         );
         if (!finish) return;
         await finishStudySession(current.id);
-        const created = await openStudySession(unitId, lesson.chapterId);
+        const created = await openStudySession(unitId, lesson.chapterId, start);
         openSession(created.session.id);
       } catch (e2: any) {
         notify(t('study.tile.title'), studyErrorMessage(e2, t));
@@ -197,9 +277,21 @@ export default function StudyHomeScreen() {
               sessions={sessions[a.unitId] ?? []}
               opening={opening}
               onOpenSession={openSession}
-              onStart={(lesson) => void onStart(a.unitId, lesson)}
+              onStart={(u, lesson) => void onStart(a.unitId, u, lesson)}
             />
           ))}
+
+          {briefing && (
+            <BriefingSheet
+              briefing={briefing}
+              onClose={() => setBriefing(null)}
+              onConfirm={(start) => {
+                const b = briefing;
+                setBriefing(null);
+                void doStart(b.unitId, b.lesson, start);
+              }}
+            />
+          )}
 
           {anyParticipant && (
             <Button
@@ -217,6 +309,227 @@ export default function StudyHomeScreen() {
         </>
       )}
     </ScreenShell>
+  );
+}
+
+/** D-ETU-35 (JP 23/10) — ce que le dirigeant lit avant *Commencer*. */
+type Briefing = {
+  unitId: string;
+  lesson: StudyLesson;
+  /** Seulement à la première séance de l'unité dans l'assemblée. */
+  unitNotes: string | null;
+  lessonNotes: string | null;
+  memberActions: string[];
+  /** D-ETU-39 (JP 23/10) : plages des séances terminées de cette leçon (« questions 1 à 20 »). */
+  pastRanges: string[];
+  /** D-ETU-39 : première question de la plus ancienne séance de la leçon (« Reprendre au début »). */
+  beginning: string | null;
+  /** D-ETU-42 : leçon faite dans l'assemblée — le défaut du serveur repart alors du début. */
+  lessonDone: boolean;
+};
+
+type StartChoice = 'default' | 'beginning' | 'custom';
+
+/** D-ETU-49 (JP 23/10) — numéros de premier niveau de la leçon (vide : backend antérieur à ETU11b). */
+function topLevelOf(lesson: StudyLesson): string[] {
+  return (lesson.topLevelNumbers ?? []).filter((n) => !!n);
+}
+
+/**
+ * D-ETU-49 (JP 23/10) — départ par défaut de la prochaine séance : `nextQuestionNumber` du serveur,
+ * sinon (leçon entièrement couverte ou numéro inconnu) la première question ; null sans numéros.
+ */
+function defaultStartOf(lesson: StudyLesson): string | null {
+  const numbers = topLevelOf(lesson);
+  if (numbers.length === 0) return null;
+  const next = lesson.nextQuestionNumber;
+  return next && numbers.includes(next) ? next : numbers[0];
+}
+
+/** D-ETU-49 (JP 23/10) — « questions 21 à 57 » à partir de `start`, ou « toute la leçon » au début. */
+function previewRangeOf(lesson: StudyLesson, start: string | null, t: (k: string, o?: any) => string): string | null {
+  const numbers = topLevelOf(lesson);
+  if (numbers.length === 0 || !start) return null;
+  return start === numbers[0]
+    ? t('study.home.wholeLesson')
+    : t('study.range', { first: start, last: numbers[numbers.length - 1] });
+}
+
+/** D-ETU-39 (JP 23/10) — séances TERMINEE d'une leçon dans l'assemblée, plus récentes d'abord. */
+function pastOfLesson(sessions: StudySessionSummary[], chapterId: string): StudySessionSummary[] {
+  return sessions.filter((s) => s.status === 'TERMINEE' && s.chapterId === chapterId);
+}
+
+/** D-ETU-38 (JP 23/10) — « questions 1 à 20 » d'une séance, si le serveur porte ses bornes. */
+function rangeLabel(
+  s: { firstQuestionNumber?: string | null; lastQuestionNumber?: string | null },
+  t: (k: string, o?: any) => string,
+): string | null {
+  return s.firstQuestionNumber && s.lastQuestionNumber
+    ? t('study.range', { first: s.firstQuestionNumber, last: s.lastQuestionNumber })
+    : null;
+}
+
+/** Plages des séances passées, de la plus ancienne à la plus récente, sans doublon. */
+function rangesOf(past: StudySessionSummary[], t: (k: string, o?: any) => string): string[] {
+  const out: string[] = [];
+  for (const s of [...past].reverse()) {
+    const r = rangeLabel(s, t);
+    if (r && !out.includes(r)) out.push(r);
+  }
+  return out;
+}
+
+function blankToNull(text: string | null | undefined): string | null {
+  return text && text.trim() ? text : null;
+}
+
+/**
+ * D-ETU-35 (JP 23/10) : « À lire avant la leçon » — recommandations de l'unité, puis de la leçon,
+ * puis l'aperçu des actions des membres (texte brut, D-ETU-37) ; *Commencer* ouvre la séance.
+ * D-ETU-39 (JP 23/10) : pour une leçon déjà commencée, plages traitées et point de départ.
+ */
+function BriefingSheet({
+  briefing,
+  onClose,
+  onConfirm,
+}: {
+  briefing: Briefing;
+  onClose: () => void;
+  onConfirm: (startQuestionNumber: string | null) => void;
+}) {
+  const { t } = useLanguage();
+  const label = lessonLabelOf(t, briefing.lesson.number, briefing.lesson.title);
+  // D-ETU-49 (JP 23/10) : sélecteur sur les numéros de premier niveau, défaut = suite de la leçon.
+  const numbers = topLevelOf(briefing.lesson);
+  const defaultStart = defaultStartOf(briefing.lesson);
+  const [picked, setPicked] = useState<string | null>(defaultStart);
+  const [choice, setChoice] = useState<StartChoice>('default');
+  const [custom, setCustom] = useState('');
+  const resumed = briefing.pastRanges.length > 0;
+  // Leçon faite : le défaut du serveur repart déjà du début — « Reprendre au début » ferait doublon.
+  const showBeginning = resumed && !briefing.lessonDone && !!briefing.beginning;
+  const preview = numbers.length > 0;
+  // D-ETU-49 (JP 23/10) : avec l'aperçu, la question affichée et validée part TOUJOURS en
+  // `startQuestionNumber` (contrôlée par le serveur) — sinon, après « Terminer l'oubliée » ou sur un
+  // catalogue périmé, le serveur recalculerait D-ETU-39 et ouvrirait une autre plage que l'aperçu.
+  // Repli sans `topLevelNumbers` : choix par défaut → `startQuestionNumber` omis (défaut du serveur).
+  const start = preview
+    ? picked
+    : choice === 'beginning'
+      ? briefing.beginning
+      : choice === 'custom'
+        ? custom.trim() || null
+        : null;
+  const ready = preview ? !!picked : choice !== 'custom' || !!custom.trim();
+  const choices: { key: StartChoice; label: string }[] = [
+    { key: 'default', label: briefing.lessonDone ? t('study.home.startDefaultRedo') : t('study.home.startDefault') },
+    ...(showBeginning
+      ? [{ key: 'beginning' as const, label: t('study.home.startBeginning', { number: briefing.beginning }) }]
+      : []),
+    { key: 'custom', label: t('study.home.startCustom') },
+  ];
+  return (
+    <Modal transparent animationType="fade" visible onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.backdrop}>
+        <View style={styles.modalCard}>
+          <Text style={styles.modalTitle}>
+            {/* Sans texte à lire (D-ETU-35), seuls la reprise (D-ETU-39) ou l'aperçu (D-ETU-49) ouvrent la feuille. */}
+            {briefing.unitNotes || briefing.lessonNotes || briefing.memberActions.length > 0
+              ? t('study.briefing.title')
+              : t('study.home.startTitle')}
+          </Text>
+          <Text style={styles.modalHint}>{label}</Text>
+          <ScrollView style={styles.modalScroll} contentContainerStyle={{ gap: 16, paddingBottom: 4 }}>
+            <StudyNotesText title={t('study.briefing.unitNotes')} text={briefing.unitNotes} />
+            <StudyNotesText title={t('study.briefing.lessonNotes')} text={briefing.lessonNotes} />
+            <StudyMemberActions title={t('study.briefing.memberActions')} actions={briefing.memberActions} />
+            {preview && (
+              <View style={{ gap: 6 }}>
+                <Text style={styles.startTitle}>{t('study.home.startPick')}</Text>
+                <Text style={styles.previewRange}>
+                  {t('study.home.sessionRange', { range: previewRangeOf(briefing.lesson, picked, t) })}
+                </Text>
+                {resumed && (
+                  <Text style={styles.rowMeta}>{t('study.home.covered', { ranges: briefing.pastRanges.join(' · ') })}</Text>
+                )}
+                <Text style={styles.rowMeta}>
+                  {defaultStart && defaultStart !== numbers[0]
+                    ? t('study.home.startPickNext', { number: defaultStart })
+                    : t('study.home.startPickFirst')}
+                </Text>
+                <View style={styles.chips}>
+                  {numbers.map((n) => {
+                    const selected = n === picked;
+                    return (
+                      <Pressable
+                        key={n}
+                        onPress={() => setPicked(n)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: selected }}
+                        accessibilityLabel={t('study.question.number', { number: n })}
+                        style={({ pressed }) => [
+                          styles.chip,
+                          n === defaultStart && styles.chipDefault,
+                          selected && styles.chipOn,
+                          { opacity: pressed ? 0.85 : 1 },
+                        ]}
+                      >
+                        <Text style={[styles.chipText, selected && styles.chipTextOn]}>{n}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+            {!preview && resumed && (
+              <View style={{ gap: 6 }}>
+                <Text style={styles.startTitle}>{t('study.home.startFrom')}</Text>
+                <Text style={styles.rowMeta}>{t('study.home.covered', { ranges: briefing.pastRanges.join(' · ') })}</Text>
+                {choices.map((c) => {
+                  const selected = choice === c.key;
+                  return (
+                    <Pressable
+                      key={c.key}
+                      onPress={() => setChoice(c.key)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: selected }}
+                      style={({ pressed }) => [styles.choiceRow, selected && styles.choiceRowOn, { opacity: pressed ? 0.85 : 1 }]}
+                    >
+                      <Ionicons
+                        name={selected ? 'radio-button-on' : 'radio-button-off'}
+                        size={18}
+                        color={selected ? colors.moss : colors.ink3}
+                      />
+                      <Text style={styles.choiceText}>{c.label}</Text>
+                    </Pressable>
+                  );
+                })}
+                {choice === 'custom' && (
+                  <Field
+                    value={custom}
+                    onChangeText={setCustom}
+                    placeholder={t('study.home.startCustomPlaceholder')}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                )}
+              </View>
+            )}
+          </ScrollView>
+          <Text style={styles.modalFoot}>{t('study.home.startConfirm', { lesson: label })}</Text>
+          <Button
+            label={t('study.home.start')}
+            onPress={() => onConfirm(start)}
+            disabled={!ready}
+            fullWidth
+            height={48}
+            style={{ marginTop: 14 }}
+          />
+          <Button label={t('common.cancel')} variant="ghost" onPress={onClose} fullWidth height={44} style={{ marginTop: 8 }} />
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
 
@@ -243,13 +556,15 @@ function AssemblySection({
   sessions: StudySessionSummary[];
   opening: string | null;
   onOpenSession: (id: string) => void;
-  onStart: (lesson: StudyLesson) => void;
+  onStart: (unit: StudyUnitForAssembly, lesson: StudyLesson) => void;
 }) {
   const { t } = useLanguage();
   const [unitOpen, setUnitOpen] = useState<string | null>(null);
   const [allSessions, setAllSessions] = useState(false);
   const current = assembly.currentSession;
   const past = sessions.filter((s) => s.status === 'TERMINEE');
+  // D-ETU-44/45 (JP 23/10) : séances que l'appelant peut encore rattraper.
+  const catchUps = assembly.catchUps ?? [];
   const shownPast = allSessions ? past : past.slice(0, 5);
 
   const action = !current
@@ -282,13 +597,23 @@ function AssemblySection({
             <Ionicons name="chevron-forward" size={18} color={colors.white} />
           </View>
         </Card>
-      ) : !assembly.leader ? (
+      ) : !assembly.leader && catchUps.length === 0 ? (
         <Card variant="paper2" style={styles.empty}>
           <Ionicons name="book-outline" size={26} color={colors.ink3} />
           <Text style={styles.emptyTitle}>{t('study.home.noCurrent')}</Text>
           <Text style={styles.emptyText}>{t('study.home.noCurrentHint')}</Text>
         </Card>
       ) : null}
+
+      {catchUps.length > 0 && (
+        <>
+          <Label style={styles.blockLabel}>{t('study.home.catchUpTitle')}</Label>
+          <Text style={styles.muted}>{t('study.home.catchUpHint')}</Text>
+          {catchUps.map((c) => (
+            <CatchUpRow key={c.sessionId} item={c} onPress={() => onOpenSession(c.sessionId)} />
+          ))}
+        </>
+      )}
 
       {assembly.leader && (
         <>
@@ -333,29 +658,45 @@ function AssemblySection({
                       {!!u.unit.bookTitle && <Text style={styles.book}>{u.unit.bookTitle}</Text>}
                       {u.unit.lessons.map((l) => {
                         const isDone = u.doneChapterIds.includes(l.chapterId);
+                        // D-ETU-38/42 (JP 23/10) : leçon commencée, pas encore entièrement couverte.
+                        const covered = isDone ? [] : rangesOf(pastOfLesson(sessions, l.chapterId), t);
+                        // D-ETU-49 (JP 23/10) : suite de la leçon (« questions 21 à 57 ») avant *Commencer*.
+                        const nextStart = isDone ? null : defaultStartOf(l);
+                        const resumeAt = nextStart && nextStart !== topLevelOf(l)[0] ? nextStart : null;
+                        const started = covered.length > 0 || !!resumeAt;
                         return (
                           <Pressable
                             key={l.chapterId}
                             disabled={u.locked || !!opening}
-                            onPress={() => onStart(l)}
+                            onPress={() => onStart(u, l)}
                             style={({ pressed }) => [
                               styles.lessonRow,
                               { opacity: u.locked ? 0.5 : pressed ? 0.85 : 1 },
                             ]}
                           >
                             <Ionicons
-                              name={isDone ? 'checkmark-circle' : 'ellipse-outline'}
+                              name={isDone ? 'checkmark-circle' : started ? 'time-outline' : 'ellipse-outline'}
                               size={20}
-                              color={isDone ? colors.moss : colors.ink3}
+                              color={isDone || started ? colors.moss : colors.ink3}
                             />
                             <View style={{ flex: 1 }}>
                               <Text style={styles.lessonTitle}>{lessonLabelOf(t, l.number, l.title)}</Text>
                               {!!l.portion && <Text style={styles.rowMeta}>{l.portion}</Text>}
+                              {covered.length > 0 && (
+                                <Text style={styles.rowMeta}>{t('study.home.covered', { ranges: covered.join(' · ') })}</Text>
+                              )}
+                              {!!resumeAt && (
+                                <Text style={styles.rowMeta}>
+                                  {t('study.home.nextRange', { range: previewRangeOf(l, resumeAt, t) })}
+                                </Text>
+                              )}
                             </View>
                             {opening === l.chapterId ? (
                               <ActivityIndicator color={colors.moss} />
                             ) : (
-                              <Text style={styles.lessonAction}>{isDone ? t('study.home.redo') : t('study.home.start')}</Text>
+                              <Text style={styles.lessonAction}>
+                                {isDone ? t('study.home.redo') : started ? t('study.home.continue') : t('study.home.start')}
+                              </Text>
                             )}
                           </Pressable>
                         );
@@ -388,7 +729,12 @@ function AssemblySection({
                       )}
                     </View>
                     <Text style={styles.rowMeta} numberOfLines={1}>
-                      {[s.moduleCode, fmtInstantDay(s.finishedAt ?? s.openedAt, t), t('study.home.copies', { count: s.copyCount })]
+                      {[
+                        s.moduleCode,
+                        rangeLabel(s, t),
+                        fmtInstantDay(s.finishedAt ?? s.openedAt, t),
+                        t('study.home.copies', { count: s.copyCount }),
+                      ]
                         .filter(Boolean)
                         .join(' · ')}
                     </Text>
@@ -417,6 +763,29 @@ function AssemblySection({
         </>
       )}
     </View>
+  );
+}
+
+/** D-ETU-44 (JP 23/10) — une séance à rattraper : leçon, plage, date ; ouvre l'écran de séance. */
+function CatchUpRow({ item, onPress }: { item: StudyCatchUp; onPress: () => void }) {
+  const { t } = useLanguage();
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, { opacity: pressed ? 0.9 : 1 }]}>
+      <View style={styles.rowIcon}>
+        <Ionicons name="home-outline" size={19} color={colors.moss} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.rowTitle} numberOfLines={2}>
+          {lessonLabelOf(t, item.lessonNumber, item.lessonTitle ?? null)}
+        </Text>
+        <Text style={styles.rowMeta} numberOfLines={1}>
+          {[item.moduleCode ?? item.moduleName, rangeLabel(item, t), fmtInstantDay(item.finishedAt, t)]
+            .filter(Boolean)
+            .join(' · ')}
+        </Text>
+      </View>
+      <Text style={styles.lessonAction}>{t('study.home.catchUpAction')}</Text>
+    </Pressable>
   );
 }
 
@@ -537,4 +906,49 @@ const styles = StyleSheet.create({
   },
   lessonTitle: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink },
   lessonAction: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.moss },
+  backdrop: { flex: 1, backgroundColor: colors.mossDeep + 'B3', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 48 },
+  modalCard: {
+    maxHeight: '100%',
+    backgroundColor: colors.paper,
+    borderRadius: radii.lg,
+    paddingHorizontal: 20,
+    paddingTop: 22,
+    paddingBottom: 18,
+    borderWidth: 1,
+    borderColor: colors.hair,
+  },
+  modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink, letterSpacing: -0.3 },
+  modalHint: { marginTop: 4, marginBottom: 14, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2, lineHeight: 19 },
+  modalScroll: { flexGrow: 0, flexShrink: 1 },
+  modalFoot: { marginTop: 14, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, lineHeight: 18 },
+  startTitle: { fontFamily: fonts.serif, fontSize: 16, color: colors.ink, letterSpacing: -0.1 },
+  choiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.hair,
+    backgroundColor: colors.paper2,
+  },
+  choiceRowOn: { borderColor: colors.moss, backgroundColor: colors.mossTint },
+  choiceText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, color: colors.ink },
+  previewRange: { fontFamily: fonts.mono, fontSize: 12.5, color: colors.moss, letterSpacing: 0.4 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  chip: {
+    minWidth: 44,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.hair,
+    backgroundColor: colors.paper2,
+    alignItems: 'center',
+  },
+  chipDefault: { borderColor: colors.mossSoft },
+  chipOn: { borderColor: colors.moss, backgroundColor: colors.moss },
+  chipText: { fontFamily: fonts.mono, fontSize: 12.5, color: colors.ink2 },
+  chipTextOn: { color: colors.white },
 });

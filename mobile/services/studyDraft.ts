@@ -19,6 +19,10 @@ import type { StudyAnswerInput, StudySessionDetail } from '@/services/assemblyAp
  * séance reçu du serveur (`session`, jamais `TERMINEE`). Un membre dont l'OS a tué l'app, qui rouvre
  * la séance sans réseau, retrouve ainsi les questions et continue à répondre ; la séance relue au
  * retour du réseau le remplace. Purgé avec le brouillon.
+ *
+ * <p>D-ETU-44 (JP 23/10) : RATTRAPAGE à la maison — la même clé sert à la copie de rattrapage d'une
+ * séance `TERMINEE` (seule exception au « jamais `TERMINEE` » ci-dessus) : brouillon et séance
+ * gardés jusqu'à « Envoyer ma copie » (ou la fermeture de la fenêtre, D-ETU-45), puis purgés.
  */
 
 export interface StudyDraftAnswer {

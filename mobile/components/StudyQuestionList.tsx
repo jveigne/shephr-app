@@ -7,7 +7,13 @@ import Button from '@/components/Button';
 import { colors, fonts, radii } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { fmtPoints } from '@/utils/format';
-import type { StudyAnswerView, StudyCopyDetail, StudyQuestionView, StudyVerdict } from '@/services/assemblyApi';
+import type {
+  StudyAnswerView,
+  StudyCopyDetail,
+  StudyQuestionView,
+  StudySessionSummary,
+  StudyVerdict,
+} from '@/services/assemblyApi';
 import type { Language } from '@/services/authApi';
 
 /**
@@ -21,7 +27,9 @@ import type { Language } from '@/services/authApi';
  *       préciser* / *À revoir* (RG-ETU-07) ;</li>
  *   <li>`read` — copie corrigée, en lecture ;</li>
  *   <li>`adjust` — dirigeant (D-ETU-07) : ajustement des points de toute question notée, même sans
- *       réponse, même séance terminée (D-ETU-12, RG-ETU-07b).</li>
+ *       réponse, même séance terminée (D-ETU-12, RG-ETU-07b). D-ETU-46 (JP 23/10) : avec `onVerdict`
+ *       (copie de rattrapage envoyée), *Juste* / *À préciser* / *À revoir* sur les ouvertes
+ *       répondues — l'avis passe par l'ajustement, le SERVEUR en déduit les points.</li>
  * </ul>
  * `maskPersonal` : RG-ETU-08 — une `PERSONNELLE` n'est JAMAIS montrée pendant l'échange des
  * téléphones (« Question personnelle — répondu ✓ ») ; seuls l'auteur et le dirigeant la lisent
@@ -54,6 +62,25 @@ export function isStudyAnswered(q: StudyQuestionView, a: StudyAnswerValue | unde
   return !!a.valueOptions && a.valueOptions.length > 0;
 }
 
+/** D-ETU-38 (JP 23/10) : questions de premier niveau (bornes possibles d'une plage). */
+export function topLevelOf(questions: StudyQuestionView[]): StudyQuestionView[] {
+  return questions.filter((q) => !q.parentId && !!q.number);
+}
+
+/**
+ * D-ETU-38/40 (JP 23/10) — plage affichée : bornes du serveur, sinon première / dernière question de
+ * premier niveau reçue (avant la correction, la fin de la leçon). Null si rien n'est connu.
+ */
+export function studyRangeOf(
+  s: Pick<StudySessionSummary, 'firstQuestionNumber' | 'lastQuestionNumber'>,
+  questions: StudyQuestionView[],
+): { first: string; last: string } | null {
+  const top = topLevelOf(questions);
+  const first = s.firstQuestionNumber || top[0]?.number;
+  const last = s.lastQuestionNumber || top[top.length - 1]?.number;
+  return first && last ? { first, last } : null;
+}
+
 /** Choix proposés : Vrai/Faux, Oui/Non, ou les options « a. … » du manuel. */
 function choicesOf(q: StudyQuestionView, t: Translate): { key: string; label: string }[] {
   if (q.type === 'VRAI_FAUX') return ['VRAI', 'FAUX'].map((k) => ({ key: k, label: t(`study.values.${k}`) }));
@@ -84,6 +111,7 @@ export default function StudyQuestionList({
   onAnswer,
   onReview,
   onAdjust,
+  onVerdict,
 }: {
   questions: StudyQuestionView[];
   answers: Record<string, StudyAnswerValue | undefined>;
@@ -96,6 +124,8 @@ export default function StudyQuestionList({
   onAnswer?: (q: StudyQuestionView, value: Pick<StudyAnswerView, 'valueText' | 'valueOptions' | 'done'>) => void;
   onReview?: (q: StudyQuestionView, verdict: StudyVerdict) => void;
   onAdjust?: (q: StudyQuestionView, points: number) => Promise<boolean>;
+  /** Mode `adjust`, D-ETU-46 (JP 23/10) : avis du dirigeant sur une ouverte d'un rattrapage. */
+  onVerdict?: (q: StudyQuestionView, verdict: StudyVerdict) => void;
 }) {
   return (
     <View style={styles.list}>
@@ -112,6 +142,7 @@ export default function StudyQuestionList({
           onAnswer={onAnswer}
           onReview={onReview}
           onAdjust={onAdjust}
+          onVerdict={onVerdict}
         />
       ))}
     </View>
@@ -130,15 +161,35 @@ export default function StudyQuestionList({
 export function StudyCopySheet({
   copy,
   onAdjust,
+  onVerdict,
   onClose,
 }: {
   copy: StudyCopyDetail | null;
   onAdjust?: (q: StudyQuestionView, points: number) => Promise<boolean>;
+  /**
+   * D-ETU-46 (JP 23/10) : avis du dirigeant sur les ouvertes — proposé seulement pour une copie
+   * RATTRAPAGE envoyée (`submittedAt`), avec l'ajustement.
+   */
+  onVerdict?: (q: StudyQuestionView, verdict: StudyVerdict) => Promise<boolean>;
   onClose: () => void;
 }) {
   const { t, language } = useLanguage();
   const insets = useSafeAreaInsets();
+  const [busyId, setBusyId] = useState<string | null>(null);
   if (!copy) return null;
+  // D-ETU-47 (JP 23/10) : une copie reportée envoyée en rattrapage porte `submittedAt`, même si le
+  // serveur lui laisse la source APP (« ou est traitée comme telle », avenant 05 §8).
+  const catchUp = copy.copy.source === 'RATTRAPAGE' || !!copy.copy.submittedAt;
+  const verdictable = !!onAdjust && !!onVerdict && catchUp && !!copy.copy.submittedAt;
+  const giveVerdict = async (q: StudyQuestionView, v: StudyVerdict) => {
+    if (!onVerdict || busyId) return;
+    setBusyId(q.id);
+    try {
+      await onVerdict(q, v);
+    } finally {
+      setBusyId(null);
+    }
+  };
   const answers = Object.fromEntries(copy.copy.answers.map((a) => [a.questionId, a]));
   const s = copy.session;
   const maskPersonal = s.status !== 'TERMINEE';
@@ -160,6 +211,13 @@ export function StudyCopySheet({
               : t('study.lesson', { number: s.lessonNumber })}
           </Text>
           <Text style={styles.sheetTitle}>{copy.copy.displayName}</Text>
+          {catchUp && (
+            <View style={{ flexDirection: 'row', marginTop: 6 }}>
+              <Text style={styles.catchUpPill}>
+                {copy.copy.submittedAt ? t('study.results.catchUp') : t('study.results.catchUpNotSent')}
+              </Text>
+            </View>
+          )}
           <Text style={styles.sheetScore}>
             {t('study.score', { score: fmtPoints(copy.copy.score, language), max: fmtPoints(copy.copy.maxScore, language) })}
           </Text>
@@ -170,6 +228,8 @@ export function StudyCopySheet({
               mode={onAdjust ? 'adjust' : 'read'}
               maskPersonal={maskPersonal}
               onAdjust={onAdjust}
+              onVerdict={verdictable ? (q, v) => void giveVerdict(q, v) : undefined}
+              busyQuestionId={busyId}
             />
           </View>
         </ScrollView>
@@ -189,6 +249,7 @@ function QuestionBlock({
   onAnswer,
   onReview,
   onAdjust,
+  onVerdict,
 }: {
   q: StudyQuestionView;
   a: StudyAnswerValue | undefined;
@@ -200,6 +261,7 @@ function QuestionBlock({
   onAnswer?: (q: StudyQuestionView, value: Pick<StudyAnswerView, 'valueText' | 'valueOptions' | 'done'>) => void;
   onReview?: (q: StudyQuestionView, verdict: StudyVerdict) => void;
   onAdjust?: (q: StudyQuestionView, points: number) => Promise<boolean>;
+  onVerdict?: (q: StudyQuestionView, verdict: StudyVerdict) => void;
 }) {
   const { t, language } = useLanguage();
   const answered = isStudyAnswered(q, a);
@@ -238,6 +300,9 @@ function QuestionBlock({
   const graded = isGraded(q);
   const corrected = mode !== 'answer';
   const keyKnown = q.answerKey != null || q.expectedAnswer != null;
+  // RG-ETU-07 en correction ; D-ETU-46 (JP 23/10) : avis du dirigeant sur un rattrapage (`adjust`).
+  const verdictButtons =
+    q.type === 'OUVERTE' && answered && (mode === 'review' || (mode === 'adjust' && !!onVerdict));
 
   return (
     <View style={[styles.card, sub && styles.sub]}>
@@ -270,7 +335,7 @@ function QuestionBlock({
       {/* Réponse du manuel : correction (RG-ETU-12), ou dirigeant qui l'a demandée en séance. */}
       {(corrected || showKey) && keyKnown && <ManualAnswer q={q} corrected={corrected} />}
 
-      {mode === 'review' && q.type === 'OUVERTE' && answered && (
+      {verdictButtons && (
         <View style={styles.verdictRow}>
           {VERDICTS.map((v) => {
             const selected = a?.verdict === v;
@@ -279,7 +344,7 @@ function QuestionBlock({
               <Pressable
                 key={v}
                 disabled={busy || disabled}
-                onPress={() => onReview?.(q, v)}
+                onPress={() => (mode === 'review' ? onReview?.(q, v) : onVerdict?.(q, v))}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 style={({ pressed }) => [
@@ -296,7 +361,7 @@ function QuestionBlock({
           })}
         </View>
       )}
-      {mode !== 'review' && mode !== 'answer' && q.type === 'OUVERTE' && answered && (
+      {!verdictButtons && mode !== 'answer' && q.type === 'OUVERTE' && answered && (
         <Text style={[styles.verdictLabel, a?.verdict ? { color: VERDICT_TONE[a.verdict] } : null]}>
           {a?.verdict ? t(`study.verdict.${a.verdict}`) : t('study.question.noVerdict')}
         </Text>
@@ -595,7 +660,51 @@ export function StudyLanguagePill({ language }: { language: Language }) {
   );
 }
 
+/**
+ * D-ETU-37 (JP 23/10) : recommandations au dirigeant en TEXTE BRUT — pas de Markdown, retours à la
+ * ligne conservés (un `<Text>` React Native garde les `\n`). Rien si le texte est vide.
+ */
+export function StudyNotesText({ title, text }: { title?: string; text: string | null | undefined }) {
+  if (!text || !text.trim()) return null;
+  return (
+    <View style={styles.notesBlock}>
+      {!!title && <Text style={styles.notesTitle}>{title}</Text>}
+      <Text style={styles.notesText} selectable>
+        {text}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * D-ETU-36 (JP 23/10) : « Cette semaine, chaque membre doit : » — liste à puces des
+ * `memberActions` (texte brut, D-ETU-37). Rien si la liste est vide.
+ */
+export function StudyMemberActions({ actions, title }: { actions: string[] | null | undefined; title?: string }) {
+  const { t } = useLanguage();
+  const list = (actions ?? []).filter((a) => a && a.trim());
+  if (list.length === 0) return null;
+  return (
+    <View style={styles.notesBlock}>
+      <Text style={styles.notesTitle}>{title ?? t('study.memberActions.title')}</Text>
+      {list.map((a, i) => (
+        <View key={i} style={styles.actionRow}>
+          <Text style={styles.actionBullet}>•</Text>
+          <Text style={[styles.notesText, { flex: 1 }]} selectable>
+            {a}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  notesBlock: { gap: 6 },
+  notesTitle: { fontFamily: fonts.serif, fontSize: 16, color: colors.ink, letterSpacing: -0.1 },
+  notesText: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 21, color: colors.ink2 },
+  actionRow: { flexDirection: 'row', gap: 8 },
+  actionBullet: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 21, color: colors.moss },
   list: { gap: 10 },
   card: {
     paddingHorizontal: 14,
@@ -691,6 +800,19 @@ const styles = StyleSheet.create({
   },
   sheetTitle: { fontFamily: fonts.serif, fontSize: 26, color: colors.ink, letterSpacing: -0.4, marginTop: 4 },
   sheetScore: { marginTop: 6, fontFamily: fonts.serif, fontSize: 30, color: colors.moss },
+  catchUpPill: {
+    fontFamily: fonts.mono,
+    fontSize: 9.5,
+    color: colors.moss,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 99,
+    borderWidth: 1,
+    borderColor: colors.moss,
+    overflow: 'hidden',
+  },
   languagePill: {
     alignSelf: 'flex-start',
     fontFamily: fonts.mono,
