@@ -22,11 +22,14 @@ import { isAttachedAccount } from '@/services/authApi';
 import {
   categoryLabel,
   documentErrorCode,
+  downloadOpenDocumentPdfWeb,
   getDocumentFile,
   getDocumentPreview,
   getPublicDocument,
+  isDocumentDownloadable,
   isDocumentGone,
   logDocumentEvent,
+  shareDocumentPdf,
   type PublicDocument,
 } from '@/services/documentsApi';
 import {
@@ -39,6 +42,7 @@ import {
 import { clearReturnTarget, rememberReturnTarget } from '@/services/returnTarget';
 import { webReaderUrl } from '@/constants/links';
 import { goBack } from '@/utils/navigation';
+import { notify } from '@/utils/dialogs';
 
 /**
  * Plan 18/10 (§6.3, lot D5) — LECTEUR d'un document partagé par lien universel
@@ -63,7 +67,13 @@ import { goBack } from '@/utils/navigation';
  * <p>Journal (RG-DOC-10, contrat §4.4) : `OPEN` une fois par ouverture, `WALL` une fois quand le mur
  * s'affiche, `SHARE` avant la feuille de partage — tous en `surface = APP`, avec le `?r=` reçu.
  *
- * <p>Expo web (démos, D-DOC-13) : pas de lecteur natif → la page web du lecteur en `iframe`.
+ * <p>D-DOC-17 (JP 26/10) — « Enregistrer / Envoyer le PDF » : seulement quand le document COMPLET est
+ * affiché (rattaché ou `open`) et `downloadable` (D-DOC-16) ; le fichier du cache, nommé d'après le
+ * titre, part à la feuille de partage du système ; `DOWNLOAD` est journalisé ensuite (D-DOC-18).
+ * Jamais sur un aperçu.
+ *
+ * <p>Expo web (démos, D-DOC-13) : pas de lecteur natif → la page web du lecteur en `iframe` (+ lien de
+ * téléchargement d'un document `open`, D-DOC-17).
  */
 export default function DocumentLinkScreen() {
   const params = useLocalSearchParams<{ slug?: string | string[]; r?: string | string[] }>();
@@ -126,6 +136,7 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
   const [pages, setPages] = useState<number | null>(null);
   const [wallOpen, setWallOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   // Journal : une fois par OUVERTURE de l'écran (et par slug), pas à chaque rechargement dû à un
   // changement de session.
@@ -336,6 +347,32 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
     }
   };
 
+  /**
+   * D-DOC-17 (JP 26/10) — PDF complet → feuille de partage ; `DOWNLOAD` (D-DOC-18) une fois la
+   * feuille refermée sans erreur (le système ne dit pas si l'on a réellement envoyé).
+   */
+  const onDownload = async () => {
+    if (!doc || downloading || phase.kind !== 'ready' || phase.mode !== 'full') return;
+    setDownloading(true);
+    try {
+      const res = await shareDocumentPdf(
+        doc,
+        phase.source.cacheFileName ?? null,
+        t('documents.reader.download'),
+      );
+      if (res === 'unavailable') {
+        notify(t('documents.reader.download'), t('documents.reader.downloadUnavailable'));
+        return;
+      }
+      void logDocumentEvent(slug, 'DOWNLOAD', refParam);
+    } catch (e) {
+      console.warn('[documents] téléchargement', errorDetail(e));
+      notify(t('documents.reader.download'), t('documents.reader.downloadFailed'));
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const goToAuth = (target: '/(auth)/login' | '/(auth)/signup' | '/(auth)/join') => {
     void rememberReturnTarget(linkPath(slug, refParam)).then(() => router.push(target));
   };
@@ -389,6 +426,8 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
         ? t('documents.reader.pageIndicator', { page, count: pages })
         : null;
   const nativeMissing = ready_ && !isPdfReaderAvailable();
+  // D-DOC-17 : document complet effectivement affiché (lecteur natif présent), jamais l'aperçu.
+  const canDownload = ready_ && phase.mode === 'full' && !nativeMissing && isDocumentDownloadable(doc);
 
   return (
     <View style={styles.root}>
@@ -556,17 +595,32 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
         )}
       </View>
 
-      {/* Barre du bas : « D'autres documents » — l'espace Documents, si le compte y a accès. */}
-      {showMore && !wallOpen && (
+      {/* Barre du bas : « Enregistrer / Envoyer le PDF » (D-DOC-17) et « D'autres documents » —
+          l'espace Documents, si le compte y a accès. */}
+      {(showMore || canDownload) && !wallOpen && (
         <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 10 }]}>
-          <Button
-            label={t('documents.reader.more')}
-            variant="soft"
-            onPress={() => router.push('/documents')}
-            fullWidth
-            height={46}
-            iconLeft={<Ionicons name="library-outline" size={17} color={colors.mossDeep} />}
-          />
+          {canDownload && (
+            <Button
+              label={t('documents.reader.download')}
+              variant="soft"
+              onPress={() => void onDownload()}
+              loading={downloading}
+              fullWidth
+              height={46}
+              iconLeft={<Ionicons name="download-outline" size={17} color={colors.mossDeep} />}
+            />
+          )}
+          {showMore && (
+            <Button
+              label={t('documents.reader.more')}
+              variant="soft"
+              onPress={() => router.push('/documents')}
+              fullWidth
+              height={46}
+              style={canDownload ? { marginTop: 8 } : undefined}
+              iconLeft={<Ionicons name="library-outline" size={17} color={colors.mossDeep} />}
+            />
+          )}
         </View>
       )}
     </View>
@@ -587,14 +641,64 @@ function HeaderBack({ onPress }: { onPress: () => void }) {
 /**
  * D-DOC-13 — Expo web (démos) : `react-native-pdf` n'existe pas ; on affiche la page web du lecteur
  * (`shephr-app/web`, `/d/:slug`) en `iframe`. Elle journalise elle-même en `WEB` : rien ici.
+ *
+ * <p>D-DOC-17 (JP 26/10) — lien de téléchargement du fichier complet si la lecture complète y est
+ * déjà permise : la page web n'affiche que l'aperçu (D-DOC-05), sauf un document `open` (D-DOC-06).
+ * Donc lien pour `open` + téléchargeable seulement, sinon rien. Pas de `DOWNLOAD` : Expo web ne
+ * journalise pas (`appPlatform()` nul, contrat §2.1).
  */
 function DocumentWebFrame({ slug, refParam }: { slug: string; refParam: string | null }) {
   const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
+  const [doc, setDoc] = useState<PublicDocument | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    if (slug) {
+      getPublicDocument(slug)
+        .then((d) => alive && setDoc(d))
+        .catch(() => undefined); // la page web affiche elle-même l'erreur
+    }
+    return () => {
+      alive = false;
+    };
+  }, [slug]);
+  // La fiche d'un autre slug (navigation dans le même écran) ne compte pas.
+  const canDownload = doc?.slug === slug && doc.open && isDocumentDownloadable(doc);
+  const onDownload = async () => {
+    if (!doc || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadOpenDocumentPdfWeb(doc);
+    } catch {
+      notify(t('documents.reader.download'), t('documents.reader.downloadFailed'));
+    } finally {
+      setDownloading(false);
+    }
+  };
   const src = webReaderUrl(slug) + (refParam ? `?r=${encodeURIComponent(refParam)}` : '');
   return (
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: 12 }]}>
-        <HeaderBack onPress={() => goBack(isAuthenticated ? '/(tabs)/home' : '/(auth)/login')} />
+        <View style={{ flex: 1 }}>
+          <HeaderBack onPress={() => goBack(isAuthenticated ? '/(tabs)/home' : '/(auth)/login')} />
+        </View>
+        {canDownload && (
+          <Pressable
+            onPress={() => void onDownload()}
+            hitSlop={10}
+            style={styles.webDownload}
+            accessibilityRole="link"
+            accessibilityLabel={t('documents.reader.download')}
+          >
+            {downloading ? (
+              <ActivityIndicator size="small" color={colors.moss} />
+            ) : (
+              <Ionicons name="download-outline" size={17} color={colors.moss} />
+            )}
+            <Text style={styles.webDownloadText}>{t('documents.reader.download')}</Text>
+          </Pressable>
+        )}
       </View>
       {React.createElement('iframe', {
         src,
@@ -617,6 +721,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.hair,
   },
+  webDownload: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 6 },
+  webDownloadText: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.moss },
   headerIcon: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   title: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink, letterSpacing: -0.2 },
   subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 1 },

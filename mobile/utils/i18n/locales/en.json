@@ -1481,7 +1481,10 @@
       "unavailableBody": "The link may have been replaced or removed. Ask the person who sent it to share it again.",
       "updateTitle": "Update Shephr",
       "updateBody": "This version of the app can't display documents yet. Install the latest version from the store.",
-      "openInBrowser": "Open the PDF in the browser"
+      "openInBrowser": "Open the PDF in the browser",
+      "download": "Save / Send the PDF",
+      "downloadUnavailable": "File sharing is not available on this device.",
+      "downloadFailed": "The PDF could not be prepared. Please try again."
     },
     "wall": {
       "title": "You've read the preview of “{{title}}”",

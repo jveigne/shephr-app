@@ -15,8 +15,11 @@ const BASE = '/api/public/documents';
 /** Mirrors com.excellence.back.documents.DocumentLanguage — affichage seulement. */
 export type DocumentLanguage = 'FR' | 'EN';
 
-/** Mirrors com.excellence.back.documents.DocumentLinkEventType — RG-DOC-10. */
-export type DocumentLinkEventType = 'OPEN' | 'WALL' | 'INSTALL_CLICK' | 'OPEN_APP' | 'SHARE';
+/**
+ * Mirrors com.excellence.back.documents.DocumentLinkEventType — RG-DOC-10.
+ * D-DOC-18 (JP 26/10) : `DOWNLOAD` n'est envoyé que par l'app mobile (le web reste à l'aperçu, D-DOC-19).
+ */
+export type DocumentLinkEventType = 'OPEN' | 'WALL' | 'INSTALL_CLICK' | 'OPEN_APP' | 'SHARE' | 'DOWNLOAD';
 
 /** Mirrors com.excellence.back.documents.DocumentSurface — le web journalise toujours `WEB`. */
 export type DocumentSurface = 'WEB' | 'APP';
@@ -44,6 +47,11 @@ export interface PublicDocument {
   /** D-DOC-06 : true → pas de mur, nulle part ; `/preview` sert alors le document complet. */
   open: boolean;
   version: number;
+  /**
+   * D-DOC-16 (JP 26/10) — miroir facultatif, lu nulle part : le lecteur web reste à l'aperçu
+   * (D-DOC-05, D-DOC-19) ; seule l'app propose « Enregistrer / Envoyer le PDF » (D-DOC-17).
+   */
+  downloadable?: boolean;
   updatedAt: string;
   /** [AJOUT] "https://<SHARE_DOMAIN>/d/{slug}" — repli de partage sans `?r` (D-DOC-11). */
   shareUrl: string;

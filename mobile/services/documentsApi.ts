@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Sharing from 'expo-sharing';
+import { Directory, File, Paths } from 'expo-file-system';
 import { apiClient } from '@/services/apiClient';
 import { newEventClientId } from '@/services/eventQueue';
 
@@ -19,8 +21,11 @@ export type DocumentScopeLevel = 'MINISTRY' | 'COUNTRY' | 'ZONE' | 'LOCALITY' | 
 /** Mirrors com.excellence.back.documents.DocumentLanguage — affichage seulement. */
 export type DocumentLanguage = 'FR' | 'EN';
 
-/** Mirrors com.excellence.back.documents.DocumentLinkEventType — RG-DOC-10. */
-export type DocumentLinkEventType = 'OPEN' | 'WALL' | 'INSTALL_CLICK' | 'OPEN_APP' | 'SHARE';
+/**
+ * Mirrors com.excellence.back.documents.DocumentLinkEventType — RG-DOC-10.
+ * D-DOC-18 (JP 26/10) : `DOWNLOAD`, envoyé après la remise du PDF complet à la feuille de partage.
+ */
+export type DocumentLinkEventType = 'OPEN' | 'WALL' | 'INSTALL_CLICK' | 'OPEN_APP' | 'SHARE' | 'DOWNLOAD';
 
 /** Mirrors com.excellence.back.documents.DocumentSurface — l'app envoie toujours `APP`. */
 export type DocumentSurface = 'WEB' | 'APP';
@@ -46,6 +51,13 @@ export interface PublicDocument {
   open: boolean;
   /** Clé du cache disque du PDF complet (RG-DOC-08). */
   version: number;
+  /**
+   * D-DOC-16 (JP 26/10) : vrai par défaut (tous les documents existants le sont). Vrai + PDF complet
+   * affiché → « Enregistrer / Envoyer le PDF » (D-DOC-17). N'ouvre aucun accès (RG-DOC-01b).
+   * Lire avec `isDocumentDownloadable` : absent (serveur pas encore migré, fiche hors ligne d'avant
+   * le 26/10) = vrai, comme le back-office (JP : « tous les documents sont téléchargeables »).
+   */
+  downloadable: boolean;
   updatedAt: string;
   /** [AJOUT] « https://<SHARE_DOMAIN>/d/{slug} » — repli de partage sans `?r`. */
   shareUrl: string;
@@ -99,6 +111,8 @@ export interface DocumentListItem {
   scopeName: string | null;
   pageCount: number;
   version: number;
+  /** D-DOC-16 (JP 26/10) — miroir de `DocumentListItem.downloadable` (toujours présent) ; non lu : le lecteur se fie à `PublicDocument.downloadable`. */
+  downloadable: boolean;
   publishedAt: string;
 }
 
@@ -212,6 +226,119 @@ export async function listDocuments(params?: { categoryId?: string; q?: string }
 export async function getDocumentCategories(): Promise<DocumentCategoryItem[]> {
   const { data } = await apiClient.get<DocumentCategoryItem[]>('/api/church/documents/categories');
   return data ?? [];
+}
+
+// ─── Enregistrer / Envoyer le PDF (D-DOC-17, JP 26/10) ────────────────────────────────────────
+
+/** D-DOC-16 (JP 26/10) : seul un `false` explicite retire le bouton ; absent = téléchargeable. */
+export function isDocumentDownloadable(doc: Pick<PublicDocument, 'downloadable'> | null | undefined): boolean {
+  return !!doc && doc.downloadable !== false;
+}
+
+/** Sous-dossier du cache où l'on dépose la copie nommée d'après le titre, remise au partage. */
+const SHARE_DIR = 'documents-share';
+
+/**
+ * D-DOC-17 (JP 26/10) — nom du fichier remis : `{titre}.pdf`, caractères interdits (Windows / iOS /
+ * Android : `\ / : * ? " < > |`, caractères de contrôle) remplacés par `_`, espaces resserrés,
+ * longueur bornée ; titre vide → le slug.
+ */
+export function documentPdfFileName(title: string, fallback: string): string {
+  const base = (title ?? '')
+    .replace(/[\\/:*?"<>|\u0000-\u001F\u007F]/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^\.+|\.+$/g, '')
+    .slice(0, 120)
+    .trim();
+  return `${base || fallback}.pdf`;
+}
+
+/**
+ * D-DOC-17 (JP 26/10) — remet le PDF COMPLET à la feuille de partage du système (`expo-sharing` :
+ * Fichiers, Mail, WhatsApp…). L'écran n'appelle ceci que lorsqu'il affiche déjà le document complet
+ * (compte rattaché, ou document `open`) et que `downloadable` est vrai : jamais sur un aperçu.
+ *
+ * <p>Source : le fichier du cache disque du lecteur (`cacheFileName`, `${slug}-v${version}.pdf` —
+ * même dossier `CacheDir` que `react-native-pdf`), copié sous `{titre}.pdf` ; s'il manque (lecture
+ * pas encore terminée, cache purgé), le PDF est téléchargé comme la lecture le fait : `/file` pour un
+ * compte rattaché, `/preview` pour un document `open` (dont l'aperçu EST le complet, contrat §4.2).
+ * Le cache du lecteur n'est jamais réécrit ici (il peut être en cours d'écriture par le lecteur).
+ *
+ * @returns 'shared' quand la feuille a été présentée puis refermée sans erreur (le système ne dit
+ *   pas si l'on a réellement envoyé), 'unavailable' quand le partage n'existe pas sur l'appareil.
+ */
+export async function shareDocumentPdf(
+  doc: PublicDocument,
+  cacheFileName: string | null,
+  dialogTitle: string,
+): Promise<'shared' | 'unavailable'> {
+  if (!(await Sharing.isAvailableAsync())) return 'unavailable';
+  const dir = new Directory(Paths.cache, SHARE_DIR);
+  // D-DOC-17 (JP 26/10) — on ne garde aucune copie nommée d'un partage précédent (appareil partagé,
+  // changement de compte) : le dossier est vidé avant chaque partage, puis la copie est supprimée
+  // une fois la feuille refermée. Seul `documents-share` est touché, jamais le cache du lecteur.
+  purgeShareDir(dir);
+  dir.create({ idempotent: true, intermediates: true });
+  const dest = new File(dir, documentPdfFileName(doc.title, doc.slug));
+
+  const cached = cacheFileName ? new File(Paths.cache, cacheFileName) : null;
+  if (cached?.exists && cached.size > 0) {
+    // SDK 57 : `copy` est asynchrone.
+    await cached.copy(dest, { overwrite: true });
+  } else {
+    const url = doc.open ? (await getDocumentPreview(doc.slug)).url : (await getDocumentFile(doc.slug)).url;
+    await File.downloadFileAsync(url, dest, { idempotent: true });
+  }
+  try {
+    if (!dest.exists || dest.size === 0) throw new Error('DOCUMENT_FILE_MISSING');
+    await Sharing.shareAsync(dest.uri, {
+      mimeType: 'application/pdf',
+      UTI: 'com.adobe.pdf',
+      dialogTitle,
+    });
+    return 'shared';
+  } finally {
+    try {
+      if (dest.exists) dest.delete();
+    } catch {
+      // Sans effet : le dossier sera vidé au prochain partage.
+    }
+  }
+}
+
+/** Vide `CacheDir/documents-share` (copies nommées des partages) ; toute erreur est ignorée. */
+function purgeShareDir(dir: Directory): void {
+  try {
+    if (dir.exists) dir.delete();
+  } catch {
+    // Sans effet : la copie du partage courant écrase le fichier de même nom.
+  }
+}
+
+/**
+ * D-DOC-17 (JP 26/10) — Expo web (démos) : l'écran y affiche la page web du lecteur, qui ne montre le
+ * document complet que s'il est `open` (D-DOC-05 / D-DOC-06) ; c'est donc le seul cas où un lien de
+ * téléchargement est proposé. Fichier récupéré en `blob` pour lui donner le nom du titre ; si
+ * l'hébergeur du PDF refuse la lecture croisée (CORS), repli sur l'ouverture de l'URL signée.
+ */
+export async function downloadOpenDocumentPdfWeb(doc: PublicDocument): Promise<void> {
+  const { url } = await getDocumentPreview(doc.slug);
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const href = URL.createObjectURL(await res.blob());
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = documentPdfFileName(doc.title, doc.slug);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // Libérer l'objet tout de suite couperait le téléchargement dans certains navigateurs.
+    setTimeout(() => URL.revokeObjectURL(href), 10_000);
+  } catch {
+    window.open(url, '_blank', 'noopener');
+  }
 }
 
 // ─── Aides ────────────────────────────────────────────────────────────────────────────────────

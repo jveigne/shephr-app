@@ -1481,7 +1481,10 @@
       "unavailableBody": "Le lien a peut-être été remplacé ou retiré. Demandez à la personne qui vous l'a envoyé de vous le partager à nouveau.",
       "updateTitle": "Mettez Shephr à jour",
       "updateBody": "Cette version de l'application ne sait pas encore afficher les documents. Installez la dernière version depuis le store.",
-      "openInBrowser": "Ouvrir le PDF dans le navigateur"
+      "openInBrowser": "Ouvrir le PDF dans le navigateur",
+      "download": "Enregistrer / Envoyer le PDF",
+      "downloadUnavailable": "Le partage de fichiers n'est pas disponible sur cet appareil.",
+      "downloadFailed": "Le PDF n'a pas pu être préparé. Réessayez."
     },
     "wall": {
       "title": "Vous avez lu l'aperçu de « {{title}} »",
