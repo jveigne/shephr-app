@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist';
@@ -8,9 +8,15 @@ import { LangSwitch } from '../components/LangSwitch';
 import { useToast } from '../components/Toast';
 import { SHARE_BASE_URL } from '../config/links';
 import { APP_SCHEME, APP_STORE_URL, PLAY_STORE_URL, isStoreUrlConfigured } from '../config/stores';
+import { useAuth } from '../hooks/useAuth';
+import { getAccessibleModules, hasMemberSpace, hasMinistryAccess, isAttachedAccount } from '../services/authApi';
 import {
+  documentPdfFileName,
+  downloadPdfFromUrl,
+  getDocumentFile,
   getDocumentPreview,
   getPublicDocument,
+  isDocumentDownloadable,
   isValidSlug,
   logDocumentEvent,
   logDocumentShare,
@@ -25,9 +31,20 @@ import { apiErrorInfo, detectPlatform, getVisitorId, isDocumentGone } from '../u
 // ---------------------------------------------------------------------------------------------
 //  Lecteur public `/d/:slug` — plan Documents du 18/10, lot D4 (§6.2), contrat §4.
 //  Route PUBLIQUE (aucune garde, comme /privacy) : c'est la page d'arrivée d'un lien partagé.
-//  D-DOC-05 (JP 18/10) : le web n'affiche JAMAIS que l'aperçu, même connecté, même sur ordinateur
-//  (« il peut lire le texte, mais je veux que les gens partent dans l'app ») — on ne lit que
-//  `/preview`, qui sert `preview.pdf` (ou le complet si `open`, D-DOC-06).
+//  D-DOC-05 levée (JP 27/10, D-WEB-04) : lecture complète sur le web pour un compte connecté et
+//  rattaché, aperçu pour les autres. Choix de la source (RG-DOC-01, D-DOC-04/06), une fois la session
+//  connue (`ready`) :
+//   - document `open` → `/preview`, qui sert le complet, pour tous (D-DOC-06, inchangé) ;
+//   - compte connecté ET rattaché (`isAttachedAccount`) → `/api/church/documents/{slug}/file` (URL
+//     signée 10 min), même rendu PDF.js, aucun mur ni WALL ; 403 `DOCUMENT_JOIN_REQUIRED` → repli sur
+//     l'aperçu + mur « Rejoindre » (le serveur reste juge) ;
+//   - sinon → `/preview` + mur : non connecté « Se connecter / Créer un compte » (retour ici par
+//     `?next=`), connecté non rattaché « Rejoindre mon assemblée » (`/join?next=`), + stores / QR / app.
+//  `/file` n'est appelée qu'avec `me` chargé : sans session, l'intercepteur 401 renverrait à /login.
+//  « Télécharger le PDF » (D-DOC-16/17/18 ; D-DOC-19 levée par conséquence) : document COMPLET affiché
+//  et `downloadable`, jamais sur un aperçu ; journal `DOWNLOAD` surface `WEB`.
+//  D-WEB-04 (plan 27/10) parle d'un `iframe` du PDF signé : le lecteur garde PDF.js (même rendu que
+//  l'aperçu, pas de dépendance au `Content-Disposition` de l'hébergeur) — écart noté.
 //  D-DOC-02 : PDF.js lit le PDF tel quel ; pages rendues à la demande (IntersectionObserver),
 //  défilement vertical continu, largeur = largeur d'écran (mobile d'abord).
 // ---------------------------------------------------------------------------------------------
@@ -341,6 +358,9 @@ function CenteredScreen({ children }: { children: ReactNode }) {
 //  Page
 // ---------------------------------------------------------------------------------------------
 
+/** Source du PDF affiché : `/preview` (aperçu, ou complet si `open`) ou `/file` (complet, rattaché). */
+type PdfSource = 'preview' | 'file';
+
 type PdfState =
   | { status: 'loading' }
   | { status: 'ready'; pdf: PDFDocumentProxy }
@@ -351,6 +371,19 @@ export function DocumentReaderPage() {
   const [searchParams] = useSearchParams();
   const { t, i18n } = useTranslation();
   const toast = useToast();
+  const location = useLocation();
+  const { ready: authReady, isAuthenticated, me } = useAuth();
+  // D-WEB-04 (JP 27/10) : compte connecté ET rattaché (D-DOC-04) — `me` chargé, jamais le seul jeton.
+  const attached = isAuthenticated && !!me && isAttachedAccount(me);
+  // 403 `DOCUMENT_JOIN_REQUIRED` reçu de `/file` : le serveur a tranché, on revient à l'aperçu.
+  const [joinRefused, setJoinRefused] = useState(false);
+  // Retour après connexion / inscription / rattachement : ce lecteur, `?r=` compris (D-DOC-11).
+  const returnPath = `${location.pathname}${location.search}`;
+  const nextParam = `?next=${encodeURIComponent(returnPath)}`;
+  // Autre document ou autre compte : le refus précédent ne vaut plus.
+  useEffect(() => {
+    setJoinRefused(false);
+  }, [slug, me?.id]);
 
   // `?r=` de l'URL d'arrivée, renvoyé sur TOUS les événements de cette session de lecture (contrat §4.4).
   const [ref] = useState(() => sanitizeRef(searchParams.get('r')));
@@ -398,23 +431,42 @@ export function DocumentReaderPage() {
     };
   }, [doc]);
 
-  // --- Aperçu PDF ----------------------------------------------------------------------------
+  // --- PDF (aperçu ou complet) ----------------------------------------------------------------
   const [pdfState, setPdfState] = useState<PdfState>({ status: 'loading' });
   const [pdfAttempt, setPdfAttempt] = useState(0);
   const [defaultRatio, setDefaultRatio] = useState(1.414);
+  const source: PdfSource = doc && !doc.open && attached && !joinRefused ? 'file' : 'preview';
+  // Dernière URL signée reçue (10 min), réutilisée par « Télécharger » tant qu'elle est valide.
+  const signedRef = useRef<{ source: PdfSource; url: string; expiresAt: number } | null>(null);
 
   useEffect(() => {
-    if (!doc) return;
+    // Session pas encore connue : on attend pour ne pas charger l'aperçu d'un compte rattaché.
+    if (!doc || !authReady) return;
     let cancelled = false;
     let loaded: PDFDocumentProxy | null = null;
     setPdfState({ status: 'loading' });
     (async () => {
       try {
-        const [pdfjs, preview] = await Promise.all([loadPdfjs(), getDocumentPreview(doc.slug)]);
+        const signedP =
+          source === 'file'
+            ? getDocumentFile(doc.slug).catch((err) => {
+                // Le serveur reste juge du rattachement (contrat §2.3) : repli sur l'aperçu + mur.
+                if (apiErrorInfo(err).code === 'DOCUMENT_JOIN_REQUIRED') return null;
+                throw err;
+              })
+            : getDocumentPreview(doc.slug);
+        const [pdfjs, signed] = await Promise.all([loadPdfjs(), signedP]);
         if (cancelled) return;
+        if (!signed) {
+          setJoinRefused(true); // l'effet repart sur `/preview`
+          return;
+        }
+        const expiresAt = Date.parse(signed.expiresAt);
+        signedRef.current = { source, url: signed.url, expiresAt: Number.isNaN(expiresAt) ? 0 : expiresAt };
         // URL signée 10 min (contrat §6.2) : PDF.js charge le fichier entier en tâche de fond
-        // (auto-fetch par défaut), bien avant l'échéance ; un échec se relance par « Réessayer ».
-        const pdf = await pdfjs.getDocument({ url: preview.url, isEvalSupported: false }).promise;
+        // (auto-fetch par défaut), bien avant l'échéance ; un échec se relance par « Réessayer », qui
+        // redemande une URL neuve (`/preview` ou `/file`).
+        const pdf = await pdfjs.getDocument({ url: signed.url, isEvalSupported: false }).promise;
         loaded = pdf;
         if (cancelled) {
           void pdf.destroy();
@@ -439,8 +491,8 @@ export function DocumentReaderPage() {
       cancelled = true;
       if (loaded) void loaded.destroy();
     };
-    // Dépendances volontairement réduites : on ne recharge le PDF que si l'aperçu servi change.
-  }, [doc?.slug, doc?.version, doc?.open, doc?.freePages, pdfAttempt]);
+    // Dépendances volontairement réduites : on ne recharge le PDF que si le fichier servi change.
+  }, [doc?.slug, doc?.version, doc?.open, doc?.freePages, pdfAttempt, authReady, source]);
 
   // --- Largeur de colonne = largeur d'écran (mobile d'abord) ---------------------------------
   const columnRef = useRef<HTMLDivElement | null>(null);
@@ -494,7 +546,9 @@ export function DocumentReaderPage() {
   }, [pdfState.status]);
 
   // --- Mur de fin d'aperçu (RG-DOC-01c) : WALL une fois, quand il devient visible -------------
-  const hasWall = !!doc && !doc.open && doc.freePages < doc.pageCount;
+  // Jamais de mur sur le document complet d'un compte rattaché (D-WEB-04).
+  const hasWall = !!doc && !doc.open && source === 'preview' && doc.freePages < doc.pageCount;
+  const wallKind: 'login' | 'join' = isAuthenticated ? 'join' : 'login';
   const laidOut = width > 0;
   const wallRef = useRef<HTMLElement | null>(null);
   const wallLogged = useRef<string | null>(null);
@@ -565,6 +619,46 @@ export function DocumentReaderPage() {
     }
   };
 
+  // --- Télécharger le PDF (D-DOC-16/17/18, D-WEB-04 JP 27/10) ------------------------------------
+  // Seulement sur le document COMPLET affiché (`open`, ou `/file` d'un compte rattaché) et
+  // `downloadable` ; jamais sur un aperçu. N'ouvre aucun accès (RG-DOC-01b).
+  const fullShown = !!doc && pdfState.status === 'ready' && (doc.open || source === 'file');
+  const canDownload = fullShown && isDocumentDownloadable(doc);
+  const [downloading, setDownloading] = useState(false);
+  const onDownload = async () => {
+    if (!doc || !slug || downloading || !canDownload) return;
+    setDownloading(true);
+    try {
+      const cached = signedRef.current;
+      // Marge d'une minute sur l'échéance de l'URL signée ; sinon une URL neuve.
+      const url =
+        cached && cached.source === source && cached.expiresAt - Date.now() > 60_000
+          ? cached.url
+          : (source === 'file' ? await getDocumentFile(doc.slug) : await getDocumentPreview(doc.slug)).url;
+      await downloadPdfFromUrl(url, documentPdfFileName(doc.title, doc.slug));
+      log('DOWNLOAD');
+    } catch {
+      toast.push({ kind: 'error', title: t('documents.reader.downloadFailed') });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  // --- « D'autres documents » : l'espace Documents, si le compte y a accès (D-WEB-03) ------------
+  const modulesQ = useQuery({
+    queryKey: ['accessible-modules'],
+    queryFn: getAccessibleModules,
+    enabled: attached,
+  });
+  const spacePath = !attached
+    ? null
+    : hasMinistryAccess(me)
+      ? '/documents'
+      : hasMemberSpace(me)
+        ? '/my-documents'
+        : null;
+  const moreDocsPath = spacePath && (modulesQ.data ?? []).includes('DOCUMENTS') ? spacePath : null;
+
   const appUrl = doc
     ? `${APP_SCHEME}://d/${encodeURIComponent(doc.slug)}${ref ? `?r=${encodeURIComponent(ref)}` : ''}`
     : undefined;
@@ -619,7 +713,7 @@ export function DocumentReaderPage() {
 
   const lang = i18n.language.startsWith('en') ? 'en' : 'fr';
   const category = lang === 'en' ? doc.categoryNameEn ?? doc.categoryName : doc.categoryName;
-  const loadedPages = pdfState.status === 'ready' ? pdfState.pdf.numPages : doc.open ? doc.pageCount : Math.min(doc.freePages, doc.pageCount);
+  const loadedPages = pdfState.status === 'ready' ? pdfState.pdf.numPages : doc.open || source === 'file' ? doc.pageCount : Math.min(doc.freePages, doc.pageCount);
   const remaining = Math.max(0, doc.pageCount - doc.freePages);
   const indicator = hasWall
     ? t('documents.reader.previewIndicator', { page: Math.min(currentPage, loadedPages), total: loadedPages })
@@ -645,13 +739,27 @@ export function DocumentReaderPage() {
             {t('documents.share.button')}
           </Button>
         </div>
-        <div style={{ maxWidth: COLUMN_MAX + 32, margin: '0 auto', padding: '0 16px 8px' }}>
+        <div style={{ maxWidth: COLUMN_MAX + 32, margin: '0 auto', padding: '0 16px 8px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
           <span
             aria-live="polite"
             style={{ display: 'inline-block', fontSize: 12, fontWeight: 600, color: 'var(--green-800)', background: 'var(--green-50)', borderRadius: 999, padding: '3px 10px' }}
           >
             {indicator}
           </span>
+          {source === 'file' && pdfState.status === 'ready' && (
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--earth-700)' }}>{t('documents.reader.full')}</span>
+          )}
+          <span style={{ flex: 1 }} />
+          {moreDocsPath && (
+            <Link to={moreDocsPath} style={{ fontSize: 13, fontWeight: 600, color: 'var(--green-700)', textDecoration: 'none' }}>
+              {t('documents.reader.otherDocuments')}
+            </Link>
+          )}
+          {canDownload && (
+            <Button size="sm" onClick={() => void onDownload()} disabled={downloading}>
+              {t('documents.reader.download')}
+            </Button>
+          )}
         </div>
       </header>
 
@@ -695,6 +803,26 @@ export function DocumentReaderPage() {
             <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--earth-700)', margin: '0 0 22px' }}>
               {t('documents.wall.remaining', { count: remaining })}
             </p>
+            {/* D-WEB-04 (JP 27/10) : la suite se lit aussi sur le web — connexion / inscription pour un
+                visiteur, rattachement pour un compte connecté non rattaché ; retour ici par `?next=`. */}
+            {wallKind === 'login' ? (
+              <div style={{ margin: '0 0 22px' }}>
+                <p style={{ fontSize: 14, lineHeight: 1.55, color: 'var(--ink-700)', margin: '0 0 14px' }}>{t('documents.wall.signInHint')}</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
+                  <Link to={`/login${nextParam}`} className="btn primary" style={{ textDecoration: 'none' }}>{t('documents.wall.signIn')}</Link>
+                  <Link to={`/signup${nextParam}`} className="btn secondary" style={{ textDecoration: 'none' }}>{t('documents.wall.signUp')}</Link>
+                </div>
+              </div>
+            ) : (
+              <div style={{ margin: '0 0 22px' }}>
+                <h3 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 18, color: 'var(--green-900)', margin: '0 0 6px' }}>
+                  {t('documents.wall.joinTitle')}
+                </h3>
+                <p style={{ fontSize: 14, lineHeight: 1.55, color: 'var(--ink-700)', margin: '0 0 14px' }}>{t('documents.wall.joinBody')}</p>
+                <Link to={`/join${nextParam}`} className="btn primary" style={{ textDecoration: 'none' }}>{t('documents.wall.join')}</Link>
+              </div>
+            )}
+            <p style={{ fontSize: 13, color: 'var(--ink-500)', margin: '0 0 14px' }}>{t('documents.wall.orApp')}</p>
             <AppButtons
               platform={platform}
               qrValue={qrUrl}

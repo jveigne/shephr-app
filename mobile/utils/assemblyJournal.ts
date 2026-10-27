@@ -14,9 +14,11 @@
  * - D-ASM-14 appliqué au journal : la liste nominative des présents est optionnelle, le nombre
  *   reste toujours.
  * - D-ASM-18 (JP 08/10) : journal CONSOLIDÉ de plusieurs assemblées (`buildConsolidatedJournalHtml`),
- *   généré depuis la Hiérarchie — que des nombres, JAMAIS la liste des présents.
+ *   généré depuis la Hiérarchie — que des nombres, JAMAIS la liste des présents. Depuis O6 (plan
+ *   27/10 `05_Plan_Offres_Caleb_Nehemie.md`, P-03), le serveur ne renvoie d'ailleurs plus que le
+ *   nombre (`MeetingSummaryLite.attendeeCount`) : aucun nom n'arrive jusqu'ici.
  */
-import type { MeetingDetail, UnitMeetingStats } from '@/services/assemblyApi';
+import type { MeetingDetail, MeetingSummaryLite, UnitMeetingStats } from '@/services/assemblyApi';
 import { colors } from '@/theme/colors';
 import { aggregate, averageAttendance, isAlert } from '@/utils/assemblyHierarchyStats';
 import { fmtIsoDay, formatChapters, formatReportDate, type Translate } from '@/utils/meetingReport';
@@ -228,8 +230,8 @@ export interface ConsolidatedJournalInput {
   period: Period;
   /** Lignes `GET /assembly/stats` des assemblées du périmètre (dédoublonnées par l'agrégat). */
   stats: UnitMeetingStats[];
-  /** Détails `GET /assembly/meetings` de la période, dans n'importe quel ordre. */
-  meetings: MeetingDetail[];
+  /** Réunions `GET /assembly/meetings?unitIds=` de la période (O6 : nombre de présents seul), dans n'importe quel ordre. */
+  meetings: MeetingSummaryLite[];
   /** Date d'édition, 'yyyy-MM-dd' — sert aussi de « aujourd'hui » pour l'alerte des 21 jours. */
   generatedOn: string;
   locale?: string;
@@ -258,7 +260,7 @@ const CONSOLIDATED_CSS = `
  * Journal PDF CONSOLIDÉ — D-ASM-18 (JP 08/10) : plusieurs assemblées sur une période, généré depuis
  * la Hiérarchie. En-tête, synthèse (mêmes indicateurs que le bloc de la Hiérarchie), tableau par
  * assemblée, puis les CR de chaque assemblée qui en a, dans l'ordre chronologique.
- * AUCUN NOM de personne : le nombre de présents seulement (jamais `attendees[].displayName`).
+ * AUCUN NOM de personne : le nombre de présents seulement (`attendeeCount`, O6 — JP 27/10).
  */
 export function buildConsolidatedJournalHtml(input: ConsolidatedJournalInput, t: Translate): string {
   const tj = (k: string, o?: Record<string, unknown>) => t(`assemblyLife.journal.${k}`, o);
@@ -267,7 +269,7 @@ export function buildConsolidatedJournalHtml(input: ConsolidatedJournalInput, t:
   const agg = aggregate(input.stats.map((r) => r.unitId), new Map(input.stats.map((r) => [r.unitId, r])), today);
   const fmtAvg = (v: number | null) => (v == null ? '—' : v.toLocaleString(input.locale));
 
-  const byUnit = new Map<string, MeetingDetail[]>();
+  const byUnit = new Map<string, MeetingSummaryLite[]>();
   for (const m of input.meetings) byUnit.set(m.unitId, [...(byUnit.get(m.unitId) ?? []), m]);
 
   const alertList =
@@ -307,7 +309,7 @@ export function buildConsolidatedJournalHtml(input: ConsolidatedJournalInput, t:
         <section class="meeting">
           <h4>${esc(fmtIsoDay(m.meetingDate, t))}</h4>
           <table>
-            <tr><th>${esc(tj('attendees'))}</th><td>${m.attendees.length}</td></tr>
+            <tr><th>${esc(tj('attendees'))}</th><td>${m.attendeeCount}</td></tr>
             <tr><th>${esc(tj('breadBreaking'))}</th><td>${esc(
               t(m.breadBreaking ? 'assemblyLife.report.yes' : 'assemblyLife.report.no'),
             )}</td></tr>

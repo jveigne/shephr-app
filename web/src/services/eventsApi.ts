@@ -262,8 +262,18 @@ export interface EventStats {
   byType: TypeStats[];
   /** Un élément par mois de la période, mois vides à 0. */
   byMonth: MonthStats[];
-  /** Triés par nom, à 0 compris ; [] pour une assemblée. */
-  children: ChildStats[];
+  /**
+   * Triés par nom, à 0 compris ; [] pour une assemblée. D-OFF-12 (JP 27/10, plan 05 §3.5) : null sur
+   * une VILLE sans `EVENEMENTS_SUIVI` (offre Néhémie) — le total reste gratuit, la ventilation par
+   * assemblée non (`childrenLocked`).
+   */
+  children: ChildStats[] | null;
+  /**
+   * D-OFF-12 (JP 27/10) : vrai quand le serveur retient la descente sous la ville faute de
+   * `EVENEMENTS_SUIVI` — le front affiche le verrou Néhémie à la place des enfants. Facultatif : un
+   * serveur antérieur au lot ne l'envoie pas.
+   */
+  childrenLocked?: boolean;
   ownLevelCount: number;
   plannedUpcoming: number;
   toCloseCount: number;
@@ -311,7 +321,12 @@ export async function listEvents(params: EventListParams): Promise<Page<EventRes
   return data;
 }
 
-/** `from` / `to` REQUIS ; nœud absent = mon périmètre le plus large (nation, ou ministère). */
+/**
+ * `from` / `to` REQUIS ; nœud absent = mon périmètre le plus large (nation, ou ministère).
+ * D-OFF-12 (JP 27/10) : gratuit jusqu'à la ville (toutes les villes comptées) et sur sa propre
+ * assemblée ; l'intérieur d'une ville (descente, assemblée d'autrui) exige `EVENEMENTS_SUIVI` —
+ * 403 `MODULE_ACCESS_DENIED` enrichi (`cityEventsAccessDenied`) sur une `UNIT` sans droit.
+ */
 export async function getEventStats(params: {
   from: string;
   to: string;
@@ -353,4 +368,67 @@ export async function setEventToVerify(id: string, toVerify: boolean): Promise<E
 /** Soft delete (204) : l'évènement disparaît des listes, du détail et des statistiques. */
 export async function deleteEvent(id: string): Promise<void> {
   await apiClient.delete(`${BASE}/${id}`);
+}
+
+// ---------------------------------------------------------------------------------------------
+//  Évènements de la CHAÎNE (lot HIE, D-HIE-09, JP 28/10) — offre Caleb (`HIERARCHIE_SUIVI`, droit
+//  personnel). Comptage D-EVT-03 (DONE, non supprimés, type évangélique) sur les assemblées de
+//  `scopeOf(appelant)` (supervisor_id récursif, jamais la géographie) ; un évènement de ville / région
+//  / nation n'est jamais compté (D-EVT-04). Sans droit : 403 `MODULE_ACCESS_DENIED` `details {
+//  moduleCode: 'HIERARCHIE_SUIVI', nodeId: null, canSubscribe }` (`hierarchyAccessDenied`) → verrou.
+//  `GET /stats` (géographie, D-OFF-12) n'est pas touché.
+// ---------------------------------------------------------------------------------------------
+
+/** Mirrors com.excellence.back.events.EventDtos.EventHierarchyUnitStats — une ligne par assemblée, même à 0. */
+export interface EventHierarchyUnitStats extends StatsTotals {
+  unitId: string;
+  unitName: string;
+  cityName: string | null;
+  /** Dirigeant propriétaire de l'assemblée dans l'arbre de la hiérarchie. */
+  leaderId: string | null;
+  leaderName: string | null;
+  /** Dirigeants entre l'appelant et l'assemblée (du plus haut au plus bas). */
+  supervisorChain: string[];
+  /** Dernier évènement COMPTÉ de la période (« yyyy-MM-dd »), null sinon. */
+  lastEventDate: string | null;
+}
+
+/** Mirrors com.excellence.back.events.EventDtos.EventHierarchyLeaderStats — somme par dirigeant (RG-HIE-39). */
+export interface EventHierarchyLeaderStats extends StatsTotals {
+  leaderId: string | null;
+  leaderName: string | null;
+  unitCount: number;
+}
+
+/** Mirrors com.excellence.back.events.EventDtos.EventHierarchyStats */
+export interface EventHierarchyStats {
+  /** `CHAIN` (compte membre qui détiendrait le droit) : listes vides, aucune erreur — écart B6 du plan. */
+  mode: 'SUBTREE' | 'MINISTRY' | 'CHAIN';
+  from: string;
+  to: string;
+  /** Somme des assemblées. */
+  total: StatsTotals;
+  byType: TypeStats[];
+  byMonth: MonthStats[];
+  /** Ordre de `scopeOf.unitIds`. */
+  units: EventHierarchyUnitStats[];
+  /** Tri : nombre décroissant puis nom. */
+  byLeader: EventHierarchyLeaderStats[];
+}
+
+/**
+ * `from` / `to` REQUIS (400 INVALID_PERIOD) ; `unitIds` facultatif, intersecté avec la chaîne (ids
+ * hors chaîne ignorés sans erreur, RG-HIE-37), envoyé répété (`unitIds=a&unitIds=b`).
+ */
+export async function getEventHierarchyStats(from: string, to: string, unitIds?: string[]): Promise<EventHierarchyStats> {
+  const params = new URLSearchParams({ from, to });
+  for (const id of unitIds ?? []) params.append('unitIds', id);
+  const { data } = await apiClient.get<EventHierarchyStats>(`${BASE}/hierarchy/stats`, { params });
+  return {
+    ...data,
+    byType: data?.byType ?? [],
+    byMonth: data?.byMonth ?? [],
+    units: data?.units ?? [],
+    byLeader: data?.byLeader ?? [],
+  };
 }

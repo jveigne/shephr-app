@@ -13,6 +13,14 @@ import {
   type UserNotification,
 } from '@/services/notificationsApi';
 import { getCampaigns, type CampaignNotification } from '@/services/appNotificationsApi';
+import {
+  SOURCE_SUPERVISION_REQUEST,
+  acceptSupervisionRequest,
+  fetchSupervisionOverview,
+  refuseSupervisionRequest,
+  type SupervisionOverview,
+} from '@/services/leadersApi';
+import { confirmDialog, notify } from '@/utils/dialogs';
 import { abonnerRechargement, declarerGateOuverte } from '@/components/push/fileNotifications';
 import { useConduireParSource } from '@/components/push/routagePush';
 
@@ -22,6 +30,12 @@ import { useConduireParSource } from '@/components/push/routagePush';
  *    liens stores), INFO, PROMO — snooze 3 jours à la fermeture, re-check au premier plan ;
  * 2) RAPPELS personnels (UC-MBR-09, Lot 4.4) : non-lus empilés, « OK » = lu,
  *    « Plus tard » = réapparaît à la prochaine session.
+ *    Lot HIE (D-HIE-06, JP 28/10) : une notification `SUPERVISION_REQUEST` (un dirigeant demande à
+ *    me suivre) ouvre une modale Valider / Refuser / Plus tard (RG-HIE-27). Elle n'est JAMAIS
+ *    acquittée par `POST /read` : le serveur la marque lue quand la demande quitte PENDING
+ *    (RG-HIE-25) — sauf si la demande n'est plus dans `incoming` (déjà traitée) : lue en silence,
+ *    modale suivante. « Plus tard » la masque pour la session seulement. Valider REMPLACE mon
+ *    superviseur actuel : confirmation explicite si j'en ai un autre (RG-HIE-28).
  */
 const CAMPAIGN_STORAGE_KEY = 'shephr.campaigns.state';
 const CAMPAIGN_SNOOZE_MS = 3 * 24 * 60 * 60 * 1000; // 3 jours
@@ -40,6 +54,11 @@ export default function NotificationGate() {
   const [queue, setQueue] = useState<UserNotification[]>([]);
   const [dismissed, setDismissed] = useState(false);
   const appStateRef = useRef(AppState.currentState);
+  // D-HIE-06 : aperçu de supervision lu pour la notification affichée (clé = id de notification).
+  const [supervision, setSupervision] = useState<{ notificationId: string; overview: SupervisionOverview } | null>(
+    null,
+  );
+  const [supervisionBusy, setSupervisionBusy] = useState(false);
 
   const loadCampaigns = useCallback(async () => {
     try {
@@ -117,6 +136,33 @@ export default function NotificationGate() {
     [],
   );
 
+  // ---- D-HIE-06 / RG-HIE-27 : demande de supervision en tête de file ----
+  const head = queue[0] ?? null;
+  const headIsSupervision = !!head && head.source === SOURCE_SUPERVISION_REQUEST;
+  useEffect(() => {
+    if (!head || !headIsSupervision || dismissed || campaign) return;
+    let active = true;
+    fetchSupervisionOverview()
+      .then((overview) => {
+        if (!active) return;
+        const pending = overview.incoming.some((r) => r.id === head.refEntityId);
+        if (!pending) {
+          // Demande déjà traitée (ou annulée par le demandeur) : lue en silence, modale suivante.
+          markNotificationRead(head.id).catch(() => undefined);
+          setQueue((q) => q.filter((n) => n.id !== head.id));
+          return;
+        }
+        setSupervision({ notificationId: head.id, overview });
+      })
+      .catch(() => {
+        // Panne : on n'acquitte rien ; la notification reviendra à la prochaine session.
+        if (active) setQueue((q) => q.filter((n) => n.id !== head.id));
+      });
+    return () => {
+      active = false;
+    };
+  }, [head, headIsSupervision, dismissed, campaign]);
+
   // L'invitation d'activation du push (N4b) attend que cette porte soit libre : deux `Modal`
   // affichées en même temps ne laissent voir que la dernière, et le message déjà écrit passe
   // avant la demande de permission.
@@ -193,8 +239,103 @@ export default function NotificationGate() {
   }
 
   // ---- 2) Rappels personnels (Lot 4.4, comportement inchangé) ----
-  const current = queue[0] ?? null;
+  const current = head;
   if (!current || dismissed) return null;
+
+  // ---- 2 bis) Demande de supervision (D-HIE-06, RG-HIE-27 / 28) ----
+  if (headIsSupervision) {
+    const overview = supervision?.notificationId === current.id ? supervision.overview : null;
+    const request = overview?.incoming.find((r) => r.id === current.refEntityId) ?? null;
+    if (!overview || !request) return null; // aperçu en cours de lecture
+    const requesterName = request.requester.fullName;
+    const currentSupervisor = overview.supervisor;
+    const replacing = currentSupervisor != null && currentSupervisor.id !== request.requester.id;
+    const next = () => {
+      setSupervision(null);
+      setQueue((q) => q.filter((n) => n.id !== current.id));
+    };
+    const decide = async (accept: boolean) => {
+      if (supervisionBusy) return;
+      if (accept && replacing) {
+        const ok = await confirmDialog(
+          t('hierarchy.leadership.acceptReplaceTitle'),
+          t('hierarchy.leadership.acceptReplace', { name: currentSupervisor!.fullName }),
+          t('notifications.supervision.accept'),
+        );
+        if (!ok) return;
+      }
+      setSupervisionBusy(true);
+      try {
+        await (accept ? acceptSupervisionRequest(request.id) : refuseSupervisionRequest(request.id));
+        // Le serveur a marqué la notification lue (RG-HIE-25) : aucun POST /read ici.
+        notify(
+          t('common.appName'),
+          accept
+            ? t('hierarchy.leadership.accepted', { name: requesterName })
+            : t('hierarchy.leadership.refused'),
+        );
+        next();
+      } catch (e: any) {
+        const code: string | null = e?.response?.data?.error ?? null;
+        const key = `hierarchy.leadership.errors.${code}`;
+        const translated = t(key);
+        notify(
+          t('hierarchy.leadership.actionFailed'),
+          translated !== key ? translated : (e?.response?.data?.message ?? t('errors.saveFailed')),
+        );
+        if (code === 'SUPERVISION_REQUEST_NOT_PENDING') next();
+      } finally {
+        setSupervisionBusy(false);
+      }
+    };
+    // « Plus tard » : masquée pour la session (non lue, elle reviendra à la prochaine ouverture).
+    const later = () => next();
+
+    return (
+      <Modal visible transparent animationType="fade" onRequestClose={later}>
+        <View style={styles.backdrop}>
+          <Card style={styles.card}>
+            <View style={styles.iconBubble}>
+              <Ionicons name="people-circle-outline" size={26} color={colors.moss} />
+            </View>
+            <Text style={styles.title}>{t('notifications.supervision.title')}</Text>
+            <Text style={styles.message}>{t('notifications.supervision.message', { name: requesterName })}</Text>
+            {replacing && (
+              <Text style={styles.warning}>
+                {t('notifications.supervision.replaceWarning', { name: currentSupervisor!.fullName })}
+              </Text>
+            )}
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
+              <Button
+                label={t('notifications.supervision.refuse')}
+                variant="ghost"
+                onPress={() => void decide(false)}
+                disabled={supervisionBusy}
+                style={{ flex: 1 }}
+                height={48}
+              />
+              <Button
+                label={t('notifications.supervision.accept')}
+                onPress={() => void decide(true)}
+                loading={supervisionBusy}
+                style={{ flex: 1 }}
+                height={48}
+              />
+            </View>
+            <Button
+              label={t('notifications.supervision.later')}
+              variant="ghost"
+              onPress={later}
+              disabled={supervisionBusy}
+              fullWidth
+              height={42}
+              style={{ marginTop: 8 }}
+            />
+          </Card>
+        </View>
+      </Modal>
+    );
+  }
 
   const actionnable = estActionnable(current.source);
 
@@ -278,6 +419,14 @@ const styles = StyleSheet.create({
     marginTop: 10,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  warning: {
+    fontFamily: fonts.sans,
+    fontSize: 12.5,
+    color: colors.clay,
+    marginTop: 10,
+    textAlign: 'center',
+    lineHeight: 18,
   },
   counter: {
     fontFamily: fonts.mono,

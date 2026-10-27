@@ -15,7 +15,10 @@ import {
 } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { useToast } from '../components/Toast';
-import { getAccessibleModules } from '../services/authApi';
+import { HierarchyLockedCompact, useCalebLockedAssemblies } from '../components/LockedFeature';
+import { useAuth } from '../hooks/useAuth';
+import { getAccessibleModules, hasMinistryAccess } from '../services/authApi';
+import { hierarchyAccessDenied } from '../services/entitlementsApi';
 import {
   changeStatus,
   getOverview,
@@ -40,6 +43,12 @@ import { formatMeetingDate } from '../utils/meetingReport';
 //  D-ASM-05 (JP 23/09) : écriture (statut, note) seulement si le serveur renvoie `canEdit` — jamais
 //  recalculé ici ; le superviseur et le superAdmin sont en lecture seule.
 //  D-ASM-09 (JP 23/09) : l'onglet Redevabilité reste tel quel (gelé).
+//  D-OFF-06 (JP 27/10, plan 05 §3.4 — ticket O3) : Member Care est GRATUIT pour le DIRIGEANT_UNITE
+//  sur SON assemblée (l'assemblée gratuite) ; les fiches des assemblées de sa CHAÎNE de supervision
+//  relèvent de l'offre Caleb (`HIERARCHIE_SUIVI`). D-OFF-07 : l'offre Néhémie (ville) n'ouvre plus
+//  Member Care. `GET /units` ne renvoie donc que l'assemblée gratuite et, avec Caleb, la chaîne ;
+//  verrou Caleb COMPACT d'avance pour une assemblée dirigée absente de la liste, et sur tout 403
+//  `MODULE_ACCESS_DENIED` `HIERARCHIE_SUIVI` — jamais un toast.
 // ---------------------------------------------------------------------------------------------
 
 const errMsg = (err: unknown, fallback: string) =>
@@ -79,6 +88,7 @@ function EmptyState({ title, text }: { title: string; text?: string }) {
 
 export function MemberCarePage() {
   const { t } = useTranslation();
+  const { me } = useAuth();
   const { push } = useToast();
   const [tab, setTab] = useState<'suivi' | 'redevabilite'>('suivi');
   const [unitId, setUnitId] = useState('');
@@ -103,17 +113,28 @@ export function MemberCarePage() {
   const units = useMemo(() => unitsQ.data ?? [], [unitsQ.data]);
   const statuses = statusesQ.data ?? [];
 
+  // D-OFF-06 (JP 27/10) : assemblées que le compte DIRIGE (`DIRIGEANT_UNITE`, jamais un simple
+  // rattachement de `me.assemblies`) mais dont `/units` ne renvoie pas les fiches (sans Caleb, la
+  // seconde d'un dirigeant d'unité) — cadenas dans le sélecteur. Vide si Caleb est déjà ouvert.
+  const unitIds = useMemo(() => unitsQ.data?.map((u) => u.id), [unitsQ.data]);
+  const lockedLed = useCalebLockedAssemblies(unitIds);
+
   // Assemblée par défaut : la première renvoyée (le serveur trie celles où j'écris en tête).
   useEffect(() => {
-    if (units.length > 0 && !units.some((u) => u.id === unitId)) setUnitId(units[0].id);
-  }, [units, unitId]);
+    if (units.some((u) => u.id === unitId) || lockedLed.some((a) => a.id === unitId)) return;
+    if (units.length > 0) setUnitId(units[0].id);
+    else if (lockedLed.length > 0) setUnitId(lockedLed[0].id);
+  }, [units, lockedLed, unitId]);
   const unit = units.find((u) => u.id === unitId) ?? null;
+  const lockedSel = unit ? null : lockedLed.find((a) => a.id === unitId) ?? null;
 
   const recordsQ = useQuery({
     queryKey: ['mc-records', unitId, fStatus, search],
     queryFn: () => listRecords({ unitId, statusId: fStatus || undefined, search: search.trim() || undefined }),
-    enabled: hasMemberCare && !!unitId,
+    enabled: hasMemberCare && !!unit,
   });
+  // D-OFF-06 : 403 Caleb (droit expiré entre-temps) → verrou à la place de la liste.
+  const recordsDenied = hierarchyAccessDenied(recordsQ.error);
 
   const reminderM = useMutation({
     mutationFn: (id: string) => sendReminder(id),
@@ -170,22 +191,40 @@ export function MemberCarePage() {
     if (!hasMemberCare) {
       return <EmptyState title={t('memberCare.moduleOff')} text={t('memberCare.moduleOffHint')} />;
     }
-    if (units.length === 0 || !unit) {
-      return <EmptyState title={t('memberCare.noUnitInScope')} text={t('memberCare.noUnitHint')} />;
+    if (!unit && !lockedSel) {
+      return (
+        <>
+          <EmptyState title={t('memberCare.noUnitInScope')} text={t('memberCare.noUnitHint')} />
+          {/* D-OFF-06 (JP 27/10) : les fiches de la chaîne relèvent de l'offre Caleb ; rien si elle est déjà ouverte. */}
+          {me && !me.superAdmin && hasMinistryAccess(me) && (
+            <div style={{ maxWidth: 640, margin: '0 auto' }}>
+              <HierarchyLockedCompact context="memberCare" hideWhenEntitled />
+            </div>
+          )}
+        </>
+      );
+    }
+    const options = [
+      ...units.map((u) => ({ id: u.id, label: u.name, sub: u.cityName ?? undefined })),
+      ...lockedLed.map((a) => ({ id: a.id, label: a.name, sub: [a.cityName, t('assembly.lockedUnit')].filter(Boolean).join(' · ') })),
+    ];
+    const unitPicker = options.length > 1 && (
+      <Field label={t('memberCare.filterUnit')} style={{ minWidth: 260 }}>
+        <Picker value={unitId} onChange={setUnitId} options={options} placeholder={t('memberCare.chooseUnit')} />
+      </Field>
+    );
+    if (!unit || recordsDenied) {
+      return (
+        <>
+          {unitPicker && <div className="filters" style={{ display: 'flex', gap: 12, marginBottom: 14 }}>{unitPicker}</div>}
+          <HierarchyLockedCompact context="memberCare" canSubscribe={recordsDenied?.canSubscribe} />
+        </>
+      );
     }
     return (
       <>
         <div className="filters" style={{ display: 'flex', gap: 12, marginBottom: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          {units.length > 1 && (
-            <Field label={t('memberCare.filterUnit')} style={{ minWidth: 260 }}>
-              <Picker
-                value={unitId}
-                onChange={setUnitId}
-                options={units.map((u) => ({ id: u.id, label: u.name, sub: u.cityName ?? undefined }))}
-                placeholder={t('memberCare.chooseUnit')}
-              />
-            </Field>
-          )}
+          {unitPicker}
           <Field label={t('memberCare.filterStatus')}>
             <Select value={fStatus} onChange={(e) => setFStatus(e.target.value)}>
               <option value="">{t('common.all')}</option>
@@ -275,6 +314,15 @@ function RecordModal({ userId, statuses, onClose }: {
     qc.invalidateQueries({ queryKey: ['mc-overview'] });
   };
 
+  // D-OFF-06 (JP 27/10) : écriture refusée faute de Caleb → la fiche est relue et le verrou s'affiche, sans toast.
+  const onWriteError = (e: unknown) => {
+    if (hierarchyAccessDenied(e)) {
+      void qc.invalidateQueries({ queryKey: ['mc-record', userId] });
+      return;
+    }
+    push({ kind: 'error', title: t('memberCare.failed'), msg: errMsg(e, t('common.error')) });
+  };
+
   const statusM = useMutation({
     mutationFn: () => changeStatus(userId, { statusId: newStatusId, note: statusNote.trim() || undefined }),
     onSuccess: () => {
@@ -283,7 +331,7 @@ function RecordModal({ userId, statuses, onClose }: {
       setStatusNote('');
       push({ kind: 'ok', title: t('memberCare.statusUpdated'), msg: '' });
     },
-    onError: (e: unknown) => push({ kind: 'error', title: t('memberCare.failed'), msg: errMsg(e, t('common.error')) }),
+    onError: onWriteError,
   });
 
   const noteM = useMutation({
@@ -294,7 +342,7 @@ function RecordModal({ userId, statuses, onClose }: {
       setEditingNote(false);
       push({ kind: 'ok', title: t('memberCare.noteSaved'), msg: '' });
     },
-    onError: (e: unknown) => push({ kind: 'error', title: t('memberCare.failed'), msg: errMsg(e, t('common.error')) }),
+    onError: onWriteError,
   });
 
   const section = { borderTop: '1px solid var(--line,#eee)', paddingTop: 12 } as const;
@@ -309,7 +357,10 @@ function RecordModal({ userId, statuses, onClose }: {
       sub={record ? <StatusPill label={record.currentStatusLabel} color={record.currentStatusColor} /> : undefined}
       footer={<Button variant="ghost" onClick={onClose}>{t('common.close')}</Button>}
     >
-      {detailQ.isError ? (
+      {hierarchyAccessDenied(detailQ.error) ? (
+        // D-OFF-06 (JP 27/10) : fiche d'une assemblée de la chaîne sans Caleb — verrou, pas d'erreur.
+        <HierarchyLockedCompact context="memberCare" canSubscribe={hierarchyAccessDenied(detailQ.error)?.canSubscribe} />
+      ) : detailQ.isError ? (
         <div style={{ color: 'var(--ink-500)' }}>{errMsg(detailQ.error, t('common.error'))}</div>
       ) : !detail || !record ? (
         <div style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</div>

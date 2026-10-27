@@ -11,6 +11,7 @@ import {
   canManageUnits,
   canManageZones,
   getAccessibleModules,
+  isAttachedAccount,
   isSecretariat,
   primaryRoleKey,
 } from '../services/authApi';
@@ -18,6 +19,9 @@ import { listUnits, listLocalities } from '../services/adminApi';
 import { FEATURES } from '../config/features';
 import { setLanguage } from '../i18n';
 import { MySubscriptionsLink } from './MySubscriptionsLink';
+import { StudyLiveBadge } from './StudyLiveBadge';
+import { useStudyAccess, useStudyMenuVisible } from '../utils/studyAccess';
+import { listAssemblyLocalities, listStudyLocalities } from '../services/assemblyApi';
 
 interface NavChild {
   id: string;
@@ -31,6 +35,8 @@ interface NavItem {
   to?: string;
   icon: string;
   children?: NavChild[];
+  /** Cadenas à droite du libellé (contrat 27/10 §9.3). */
+  locked?: boolean;
 }
 
 // Livraison « Member Care only » (décision JP 2026-06-27) : les entrées Dons
@@ -67,6 +73,7 @@ const NAV: { sectionKey: string; items: NavItem[] }[] = [
         ],
       },
       { id: 'users', labelKey: 'nav.users', icon: 'users', to: '/users' },
+      // D-HIE-01 (JP 28/10) : NavLink sans `end` — l'entrée reste allumée sur /hierarchy/leadership et /hierarchy/vie.
       { id: 'hierarchy', labelKey: 'nav.hierarchy', icon: 'hierarchy', to: '/hierarchy' },
     ],
   },
@@ -76,6 +83,9 @@ const NAV: { sectionKey: string; items: NavItem[] }[] = [
       ...(FEATURES.donations
         ? [{ id: 'exports', labelKey: 'nav.exports', icon: 'export', to: '/exports' }]
         : []),
+      // O10 (JP 27/10, plan 05 §3.8) : « Offres » (Caleb, Néhémie) — AppShell SEULEMENT, jamais dans le
+      // MemberShell (un simple membre ne voit aucun prix). Page publique hors shell (/offres).
+      { id: 'offers', labelKey: 'nav.offers', icon: 'tag', to: '/offres' },
       { id: 'settings', labelKey: 'nav.settings', icon: 'settings', to: '/settings' },
     ],
   },
@@ -104,9 +114,36 @@ export function Sidebar() {
   const hasAssembly = FEATURES.assembly && (modulesQ.data ?? []).includes('ASSEMBLY');
   // D-EVT-05 (JP 14/10) : « Évènements » = abonnement EVENTS + flag de livraison FEATURES.events.
   const hasEvents = FEATURES.events && (modulesQ.data ?? []).includes('EVENTS');
-  // D-ETU-28 / D-ETU-31 (JP 23/10) : « Le Message de Bertoua » = abonnement STUDY (indépendant
-  // d'ASSEMBLY) + flag de livraison FEATURES.study. Libellé fixe, comme la tuile mobile (D-ETU-04).
-  const hasStudy = FEATURES.study && (modulesQ.data ?? []).includes('STUDY');
+  // D-ETU-31 (JP 23/10) : « Le Message de Bertoua », libellé fixe comme la tuile mobile (D-ETU-04).
+  // D-ETU-50 (JP 27/10) : Étude GRATUITE — flag de livraison FEATURES.study + compte rattaché, plus
+  // l'abonnement STUDY (D-ETU-28 levée) ; décision centralisée dans `useStudyAccess` (D-WEB-02).
+  const { hasStudy } = useStudyAccess();
+  // D-ETU-54 (JP 27/10) : l'entrée « Le Message de Bertoua » attend un catalogue non vide.
+  const showStudy = useStudyMenuVisible(hasStudy);
+  // D-WEB-07 / §9.3 du contrat 27/10 : « Suivi de la ville » si `GET /study/localities` est non vide
+  // (vide pour un membre ou un dirigeant d'unité, RG-ABO-22) ; cadenas si aucune ville n'ouvre droit.
+  const studyCitiesQ = useQuery({
+    queryKey: ['assembly', 'study', 'localities'],
+    queryFn: listStudyLocalities,
+    enabled: hasStudy,
+    retry: false,
+  });
+  // P-08 (JP 27/10, plan 05 — offre Néhémie) : la page devient « Suivi de la ville » (Bertoua +
+  // Journal de la ville + statistiques d'Évènements), UNE seule entrée : villes de `/study/localities`
+  // ∪ `/assembly/localities` (même règle de visibilité, D-ABO-21) ; cadenas si aucune n'ouvre droit.
+  const journalCitiesQ = useQuery({
+    queryKey: ['assembly', 'localities'],
+    queryFn: listAssemblyLocalities,
+    enabled: hasAssembly,
+    retry: false,
+  });
+  const studyCities = hasStudy ? studyCitiesQ.data ?? [] : [];
+  const journalCities = hasAssembly ? journalCitiesQ.data ?? [] : [];
+  const hasStudyCity = studyCities.length > 0 || journalCities.length > 0;
+  const studyCityLocked = !studyCities.some((c) => c.entitled) && !journalCities.some((c) => c.entitled);
+  // D-DOC-14 levée (JP 27/10, D-WEB-03) : « Documents » = abonnement DOCUMENTS (RG-06) ET compte
+  // rattaché (D-DOC-04), comme la tuile d'accueil mobile. Aucun flag de livraison.
+  const hasDocuments = (modulesQ.data ?? []).includes('DOCUMENTS') && isAttachedAccount(me);
 
   // Le /me ne porte ni la localité, ni — pour un DIRIGEANT_UNITE — la zone (zoneNames
   // n'est renseigné que pour le DIRIGEANT_SENIOR). On les résout par ID depuis l'unité du
@@ -166,8 +203,14 @@ export function Sidebar() {
       if (hasAssembly && sec.sectionKey === 'nav.section.pilotage') {
         items = [...items, { id: 'assembly', labelKey: 'nav.assembly', icon: 'calendar', to: '/assembly' }];
       }
-      if (hasStudy && sec.sectionKey === 'nav.section.pilotage') {
+      if (showStudy && sec.sectionKey === 'nav.section.pilotage') {
         items = [...items, { id: 'study', labelKey: 'nav.study', icon: 'edit', to: '/study' }];
+      }
+      if (hasStudyCity && sec.sectionKey === 'nav.section.pilotage') {
+        items = [
+          ...items,
+          { id: 'study-city', labelKey: 'nav.studyCity', icon: 'locality', to: '/study/city', locked: studyCityLocked },
+        ];
       }
       if (hasEvents && sec.sectionKey === 'nav.section.pilotage') {
         items = [...items, { id: 'events', labelKey: 'nav.events', icon: 'megaphone', to: '/events' }];
@@ -175,9 +218,12 @@ export function Sidebar() {
       if (hasMemberCare && sec.sectionKey === 'nav.section.pilotage') {
         items = [...items, { id: 'member-care', labelKey: 'nav.memberCare', icon: 'users', to: '/member-care' }];
       }
+      if (hasDocuments && sec.sectionKey === 'nav.section.pilotage') {
+        items = [...items, { id: 'documents', labelKey: 'nav.documents', icon: 'fileText', to: '/documents' }];
+      }
       return { ...sec, items };
     });
-  }, [hasMemberCare, hasAssembly, hasStudy, hasEvents, canSeeStructureChild]);
+  }, [hasMemberCare, hasAssembly, showStudy, hasStudyCity, studyCityLocked, hasEvents, hasDocuments, canSeeStructureChild]);
 
   const initials = (me?.fullName ?? 'A·')
     .split(' ')
@@ -258,10 +304,21 @@ export function Sidebar() {
                   <NavLink
                     key={item.id}
                     to={item.to!}
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                    className={({ isActive }) => {
+                      // `/study/city` est sous `/study` : seule l'entrée « Suivi de la ville » s'allume.
+                      const on = isActive && !(item.id === 'study' && location.pathname.startsWith('/study/city'));
+                      return `nav-item ${on ? 'active' : ''}`;
+                    }}
                   >
                     <Icon name={item.icon} size={18} />
                     <span>{t(item.labelKey)}</span>
+                    {/* D-WEB-02 (JP 27/10) : pastille « En cours », comme la tuile mobile. */}
+                    {item.id === 'study' && <StudyLiveBadge enabled={showStudy} />}
+                    {item.locked && (
+                      <span title={t('cityStudy.lockedCity')} style={{ marginLeft: 'auto', display: 'inline-flex', opacity: 0.8 }}>
+                        <Icon name="lock" size={13} />
+                      </span>
+                    )}
                   </NavLink>
                 );
               })}

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -10,6 +10,7 @@ import { FEATURES } from '../config/features';
 import { getAccessibleModules, hasMinistryAccess } from '../services/authApi';
 import { getAssemblyStats, listMeetingsInRange, type UnitMeetingStats } from '../services/assemblyApi';
 import type { LeaderHierarchyNode } from '../services/leadersApi';
+import { hierarchyAccessDenied } from '../services/entitlementsApi';
 import {
   ALERT_DAYS,
   aggregate,
@@ -43,13 +44,26 @@ import type { Translate } from '../utils/meetingReport';
 //  - alerte « sans CR depuis 3 semaines » : AFFICHAGE SEUL, aucune relance (D-ASM-09 gelé) ;
 //  - AUCUN NOM de personne : que des nombres et des noms d'assemblée (stats ET journal) ;
 //  - journal PDF consolidé (tout le périmètre, ou le sous-arbre d'un dirigeant).
-//  Droits : ceux de RG-ASM-05, appliqués par le serveur — aucune nouvelle règle d'accès.
 //  Visible seulement avec l'abonnement ASSEMBLY (RG-06) et pour un non-MEMBRE.
+//
+//  Suite du lot « pro-plan » (JP 27/10, D-ABO-31 et suivantes) : ce bloc devient PAYANT — code
+//  personnel `HIERARCHIE_SUIVI` (plan « Suivi de ma hiérarchie », un abonnement par dirigeant, pour
+//  LUI-MÊME). Périmètre = la CHAÎNE de leadership de l'appelant (supervisor_id récursif), plus la
+//  géographie de RG-ASM-05. `entitled` vient de `GET /entitlements/personal` ; un 403
+//  `MODULE_ACCESS_DENIED` `HIERARCHIE_SUIVI` (droit expiré entre-temps) remonte par `onLocked` →
+//  la page affiche le verrou, jamais un toast. Les CR, le journal et les réunions de SA propre
+//  assemblée restent gratuits (Vie d'assemblée, `listMeetings(unitId)`).
+//  D-OFF-04 / P-03 (JP 27/10, plan 05 — offre Caleb) : périmètre = la CHAÎNE seule (plus aucune
+//  géographie) ; le journal consolidé ne reçoit plus que le nombre de présents (`attendeeCount`).
+//  D-HIE-01 / D-HIE-10 (JP 28/10, lot HIE) : le bloc quitte la page 1 (« But quinquennal ») pour la
+//  page 3 « Vie de mon leadership » (`pages/HierarchyLife.tsx`). La période est REMONTÉE dans la page
+//  (un sélecteur unique pour tous les blocs) ; les résumés de CR des lignes de l'arbre en sortent et
+//  deviennent la liste « Assemblées et dernier CR » (`AssemblyLastReportList`) ; le journal PDF de
+//  toute la hiérarchie est un bouton de la page (`HierarchyJournalButton`).
 // ---------------------------------------------------------------------------------------------
 
 interface StatsContextValue {
   period: Period;
-  setPeriod: (p: Period) => void;
   today: string;
   statsById: Map<string, UnitMeetingStats>;
   /** Agrégat de toute la hiérarchie affichée. */
@@ -67,11 +81,20 @@ const useStats = () => useContext(StatsContext);
 export function AssemblyStatsProvider({
   roots,
   isChain,
+  entitled,
+  onLocked,
+  period,
   children,
 }: {
   roots: LeaderHierarchyNode[];
   /** Mode CHAIN = vue d'un membre (sa chaîne de rattachement) : pas de statistiques. */
   isChain: boolean;
+  /** Code personnel `HIERARCHIE_SUIVI` ouvert (serveur) — sinon aucun appel, aucun rendu. */
+  entitled: boolean;
+  /** 403 `HIERARCHIE_SUIVI` reçu malgré tout : la page bascule sur le verrou. */
+  onLocked: () => void;
+  /** D-HIE-01 (JP 28/10) : période choisie par la page (sélecteur unique de « Vie de mon leadership »). */
+  period: Period;
   children: ReactNode;
 }) {
   const { t, i18n } = useTranslation();
@@ -81,9 +104,8 @@ export function AssemblyStatsProvider({
   // RG-06 : même gating que Sidebar.tsx (abonnement ASSEMBLY + flag de livraison).
   const modulesQ = useQuery({ queryKey: ['accessible-modules'], queryFn: getAccessibleModules });
   const hasAssembly = FEATURES.assembly && (modulesQ.data ?? []).includes('ASSEMBLY');
-  const enabled = hasAssembly && hasMinistryAccess(me) && !isChain && roots.length > 0;
+  const enabled = entitled && hasAssembly && hasMinistryAccess(me) && !isChain && roots.length > 0;
 
-  const [period, setPeriod] = useState<Period>(() => currentPeriod('month'));
   const { from, to } = periodRange(period);
   const today = todayIso();
 
@@ -91,7 +113,14 @@ export function AssemblyStatsProvider({
     queryKey: ['assembly', 'stats', from, to],
     queryFn: () => getAssemblyStats(from, to),
     enabled,
+    retry: false,
   });
+
+  // JP 27/10 : un 403 `HIERARCHIE_SUIVI` est un verrou, jamais une erreur affichée.
+  const statsLocked = !!hierarchyAccessDenied(statsQ.error);
+  useEffect(() => {
+    if (statsLocked) onLocked();
+  }, [statsLocked, onLocked]);
 
   const statsById = useMemo(
     () => new Map((statsQ.data ?? []).map((r) => [r.unitId, r] as const)),
@@ -127,27 +156,30 @@ export function AssemblyStatsProvider({
             ),
           ),
         )
-        .catch(() => push({ kind: 'error', title: t('assembly.journal.failed') }))
+        .catch((err) => (hierarchyAccessDenied(err) ? onLocked() : push({ kind: 'error', title: t('assembly.journal.failed') })))
         .finally(() => setBusy(false));
     },
-    [all, statsById, today, from, to, period, t, i18n.language, push],
+    [all, statsById, today, from, to, period, t, i18n.language, push, onLocked],
   );
 
   const value = useMemo<StatsContextValue | null>(
-    () => (enabled && statsQ.data ? { period, setPeriod, today, statsById, all, busy, printJournal } : null),
+    () => (enabled && statsQ.data ? { period, today, statsById, all, busy, printJournal } : null),
     [enabled, statsQ.data, period, today, statsById, all, busy, printJournal],
   );
 
   return (
     <StatsContext.Provider value={value}>
-      {enabled && <StatsBlock loading={statsQ.isLoading} error={statsQ.isError} period={period} setPeriod={setPeriod} />}
+      {enabled && !statsLocked && <StatsBlock loading={statsQ.isLoading} error={statsQ.isError} />}
       {children}
     </StatsContext.Provider>
   );
 }
 
-/** Sélecteur de période : identique au journal mobile (Mois / Trimestre / Semestre / Année + ‹ ›). */
-function PeriodPicker({ period, setPeriod }: { period: Period; setPeriod: (p: Period) => void }) {
+/**
+ * Sélecteur de période : identique au journal mobile (Mois / Trimestre / Semestre / Année + ‹ ›).
+ * Exporté pour le journal de la ville (offre Néhémie, D-OFF-05 — pages/CityStudy.tsx).
+ */
+export function PeriodPicker({ period, setPeriod }: { period: Period; setPeriod: (p: Period) => void }) {
   const { t } = useTranslation();
   const next = shiftPeriod(period, 1);
   return (
@@ -184,17 +216,7 @@ function PeriodPicker({ period, setPeriod }: { period: Period; setPeriod: (p: Pe
   );
 }
 
-function StatsBlock({
-  loading,
-  error,
-  period,
-  setPeriod,
-}: {
-  loading: boolean;
-  error: boolean;
-  period: Period;
-  setPeriod: (p: Period) => void;
-}) {
+function StatsBlock({ loading, error }: { loading: boolean; error: boolean }) {
   const { t, i18n } = useTranslation();
   const ctx = useStats();
   const agg = ctx?.all;
@@ -210,21 +232,8 @@ function StatsBlock({
 
   return (
     <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <strong style={{ fontSize: 14 }}>{t('hierarchy.stats.title')}</strong>
-        <Button
-          size="sm"
-          iconL={<Icon name="download" size={14} />}
-          disabled={!agg || agg.meetings === 0 || ctx.busy}
-          title={agg && agg.meetings === 0 ? t('hierarchy.stats.journalEmpty') : undefined}
-          onClick={() => ctx?.printJournal(null)}
-        >
-          {ctx?.busy ? t('hierarchy.stats.journalBusy') : t('hierarchy.stats.journal')}
-        </Button>
-      </div>
-      <div style={{ marginTop: 10 }}>
-        <PeriodPicker period={period} setPeriod={setPeriod} />
-      </div>
+      {/* D-HIE-01 (JP 28/10) : période et journal PDF sont portés par la page (sélecteur unique). */}
+      <strong style={{ fontSize: 14 }}>{t('hierarchy.stats.title')}</strong>
 
       {loading ? (
         <p style={{ margin: '12px 0 0', color: 'var(--ink-500)', fontSize: 13 }}>{t('common.loading')}</p>
@@ -262,82 +271,109 @@ function StatsBlock({
 }
 
 /**
- * Résumé court d'un dirigeant dans l'arbre : « N assemblées · k ⚠ » (son sous-arbre). Sans
- * statistiques (module absent, membre, chargement), rend `children` (l'affichage d'avant).
+ * D-HIE-01 (JP 28/10) — bouton « Journal PDF de ma hiérarchie » (toutes les assemblées de l'arbre,
+ * sur la période de la page). Désactivé sans réunion ; rien hors périmètre (pas de statistiques).
  */
-export function LeaderAssemblySummary({ node, children }: { node: LeaderHierarchyNode; children?: ReactNode }) {
+export function HierarchyJournalButton() {
   const { t } = useTranslation();
   const ctx = useStats();
-  if (!ctx) return <>{children}</>;
-  const agg = aggregate(subtreeUnitIds(node), ctx.statsById, ctx.today);
-  if (agg.total === 0) return <>{children}</>;
+  if (!ctx || ctx.all.total === 0) return null;
+  const empty = ctx.all.meetings === 0;
   return (
-    <span style={{ color: agg.alertRows.length > 0 ? 'var(--earth-700)' : 'var(--ink-500)' }}>
-      {t('hierarchy.unitsCount', { count: agg.total })}
-      {agg.alertRows.length > 0 && <> · {agg.alertRows.length} ⚠</>}
-    </span>
-  );
-}
-
-/** Bouton « Journal PDF » du sous-arbre d'un dirigeant ; désactivé sans réunion sur la période. */
-export function LeaderJournalButton({ node }: { node: LeaderHierarchyNode }) {
-  const { t } = useTranslation();
-  const ctx = useStats();
-  if (!ctx) return null;
-  const agg = aggregate(subtreeUnitIds(node), ctx.statsById, ctx.today);
-  if (agg.total === 0) return null;
-  // D-ASM-18 (JP 08/10) : pas de nom de personne dans les libellés des stats.
-  const label = t('hierarchy.stats.leaderJournal');
-  return (
-    <IconButton
-      icon={<Icon name="download" size={14} />}
-      aria-label={label}
-      title={agg.meetings === 0 ? t('hierarchy.stats.journalEmpty') : label}
-      disabled={agg.meetings === 0 || ctx.busy}
-      onClick={() => ctx.printJournal(node)}
-      style={{ marginRight: 10 }}
-    />
+    <Button
+      iconL={<Icon name="download" size={14} />}
+      disabled={empty || ctx.busy}
+      title={empty ? t('hierarchy.stats.journalEmpty') : undefined}
+      onClick={() => ctx.printJournal(null)}
+    >
+      {ctx.busy ? t('hierarchy.stats.journalBusy') : t('hierarchy.life.journal')}
+    </Button>
   );
 }
 
 /**
- * Ligne d'une assemblée dans l'arbre : « Dernier CR il y a N j · X présents en moyenne » ou
- * « Aucun CR depuis 3 semaines » (⚠, terre). Clic → Vie d'assemblée présélectionnée sur elle.
+ * D-HIE-01 (JP 28/10) — « Assemblées et dernier CR » : ce qui sortait des lignes d'assemblée de
+ * l'arbre (payant). Une ligne par assemblée de l'arbre présente dans `/assembly/stats` : assemblée,
+ * ville, dirigeant (nom de DIRIGEANT tiré de l'arbre, jamais un membre), dernier CR, réunions de la
+ * période, alerte « sans CR depuis 3 semaines » (affichage seul, D-ASM-09). Clic → Vie d'assemblée.
  */
-export function UnitAssemblyLine({ unitId, depth }: { unitId: string; depth: number }) {
+export function AssemblyLastReportList({ roots }: { roots: LeaderHierarchyNode[] }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const ctx = useStats();
-  const row = ctx?.statsById.get(unitId);
-  if (!ctx || !row) return null;
-
-  const alert = isAlert(row, ctx.today);
-  const avg = averageAttendance(row.meetingCount, row.attendanceTotal);
-  let text: string;
-  if (alert) {
-    text = t('hierarchy.stats.unitAlert', { days: ALERT_DAYS });
-  } else {
-    // Un CR daté dans le futur (saisie anticipée) ne doit pas afficher « il y a -N j ».
-    const days = Math.max(0, daysBetween(row.lastMeetingDate!, ctx.today));
-    text = days === 0 ? t('hierarchy.stats.lastToday') : t('hierarchy.stats.lastDays', { count: days });
-    if (avg != null) text += ` · ${t('hierarchy.stats.unitAverage', { value: avg.toLocaleString(i18n.language) })}`;
-  }
+  const leaderByUnit = useMemo(() => {
+    const map = new Map<string, string>();
+    const walk = (n: LeaderHierarchyNode) => {
+      for (const u of n.units) if (!map.has(u.id)) map.set(u.id, n.fullName);
+      n.children.forEach(walk);
+    };
+    roots.forEach(walk);
+    return map;
+  }, [roots]);
+  if (!ctx) return null;
+  const rows = ctx.all.rows;
 
   return (
-    <button
-      type="button"
-      onClick={() => navigate(`/assembly?unit=${encodeURIComponent(unitId)}`)}
-      title={t('hierarchy.stats.openAssembly')}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 6, width: '100%',
-        padding: '0 14px 6px', paddingLeft: 14 + depth * 22 + 24,
-        background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', font: 'inherit',
-        fontSize: 12, color: alert ? 'var(--earth-700)' : 'var(--ink-500)',
-      }}
-    >
-      {alert ? <Icon name="warning" size={12} /> : <Icon name="calendar" size={12} />}
-      <span>{text}</span>
-      <Icon name="arrowRight" size={12} />
-    </button>
+    <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
+      <strong style={{ fontSize: 14 }}>{t('hierarchy.life.unitsTitle')}</strong>
+      {rows.length === 0 ? (
+        <p style={{ margin: '10px 0 0', color: 'var(--ink-500)', fontSize: 13 }}>{t('hierarchy.life.unitsEmpty')}</p>
+      ) : (
+        <div style={{ marginTop: 8 }}>
+          {rows.map((row) => {
+            const alert = isAlert(row, ctx.today);
+            const avg = averageAttendance(row.meetingCount, row.attendanceTotal);
+            let last: string;
+            if (row.lastMeetingDate == null) {
+              last = t('hierarchy.life.noReport');
+            } else {
+              // Un CR daté dans le futur (saisie anticipée) ne doit pas afficher « il y a -N j ».
+              const days = Math.max(0, daysBetween(row.lastMeetingDate, ctx.today));
+              last = days === 0 ? t('hierarchy.stats.lastToday') : t('hierarchy.stats.lastDays', { count: days });
+            }
+            const leader = leaderByUnit.get(row.unitId);
+            return (
+              <button
+                key={row.unitId}
+                type="button"
+                onClick={() => navigate(`/assembly?unit=${encodeURIComponent(row.unitId)}`)}
+                title={t('hierarchy.stats.openAssembly')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, width: '100%', flexWrap: 'wrap',
+                  padding: '9px 0', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                  font: 'inherit', borderTop: '1px solid var(--line-soft, rgba(42,38,32,0.08))',
+                }}
+              >
+                <Icon name="unit" size={15} />
+                <span style={{ flex: '1 1 200px', minWidth: 0 }}>
+                  <span style={{ fontWeight: 600 }}>{row.unitName}</span>
+                  {row.cityName && <span style={{ color: 'var(--ink-500)', fontSize: 12 }}> · {row.cityName}</span>}
+                  {leader && (
+                    <span style={{ display: 'block', color: 'var(--ink-500)', fontSize: 12 }}>
+                      {t('hierarchy.life.leader', { name: leader })}
+                    </span>
+                  )}
+                </span>
+                <span style={{ fontSize: 12.5, color: 'var(--ink-600)' }}>
+                  {t('hierarchy.life.meetings', { count: row.meetingCount })}
+                  {avg != null && ` · ${t('hierarchy.stats.unitAverage', { value: avg.toLocaleString(i18n.language) })}`}
+                </span>
+                <span
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12.5,
+                    color: alert ? 'var(--earth-700)' : 'var(--ink-500)',
+                  }}
+                >
+                  {alert ? <Icon name="warning" size={12} /> : <Icon name="calendar" size={12} />}
+                  {last}
+                  {alert && row.lastMeetingDate != null && <> · {t('hierarchy.stats.unitAlert')}</>}
+                </span>
+                <Icon name="arrowRight" size={12} />
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

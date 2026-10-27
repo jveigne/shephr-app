@@ -77,6 +77,19 @@ export function isAssemblyLeaderOnly(me: MeResponse | null): boolean {
   return managerRank(me) <= ROLE_RANK.DIRIGEANT_UNITE;
 }
 
+/**
+ * D-OFF-02 / D-OFF-06 (JP 27/10, plan `05_Plan_Offres_Caleb_Nehemie.md` §3.2-§3.4) — compte qui
+ * peut avoir une CHAÎNE de supervision dont les assemblées relèvent de l'offre Caleb
+ * (`HIERARCHIE_SUIVI`) : un rôle MANAGER (rang ≥ DIRIGEANT_UNITE), hors superAdmin (il lit tout en
+ * lecture seule) et hors LEADER / SECRETARIAT (viewers, jamais de souscription — P-06). Filtre
+ * d'AFFICHAGE du verrou Caleb seulement : le droit reste jugé par le serveur. Propre au mobile (le
+ * web garde `hasMinistryAccess` dans `pages/Assembly.tsx` / `MemberCare.tsx`).
+ */
+export function isChainManager(me: MeResponse | null): boolean {
+  if (!me || me.superAdmin) return false;
+  return managerRank(me) >= ROLE_RANK.DIRIGEANT_UNITE;
+}
+
 /** Peut gérer les zones (créer une zone) : COORDINATEUR (ses pays) ou superAdmin. */
 export function canManageZones(me: MeResponse | null): boolean {
   if (!me) return false;

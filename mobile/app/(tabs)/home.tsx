@@ -13,9 +13,11 @@ import { colors, fonts, radii } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { canDeclareEvents, hasMemberGoals, isAttachedAccount } from '@/services/authApi';
 import { getSummary, type CurrencyTotal, type DonationSummary } from '@/services/statsApi';
-import { getStudyMe } from '@/services/assemblyApi';
+import { getStudyCatalog, getStudyMe } from '@/services/assemblyApi';
 import { fmtAmount, monthLabel } from '@/utils/format';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCityFollowUp } from '@/hooks/useCityFollowUp';
+import { cityOpen } from '@/utils/cityFollowUp';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 type ComingKind = 'cantique' | 'priere' | 'compte-rendu';
@@ -30,8 +32,21 @@ export default function HomeScreen() {
   // Plan 21/10 (§6.3) — pastille « En cours » de la tuile d'étude : une séance non terminée dans
   // une assemblée du compte (`GET /study/me`). Un échec la masque, sans plus.
   const [studyLive, setStudyLive] = useState(false);
-  // D-ETU-28 (JP 23/10) : module STUDY à part — plus gaté par ASSEMBLY (D-ETU-05 remplacée).
-  const hasStudy = hasStudyModule && isAttachedAccount(me);
+  // D-ETU-54 (JP 27/10) : la tuile n'apparaît que si `/study/catalog` est non vide. null = pas
+  // encore lu (tuile masquée). Une panne RÉSEAU garde la dernière valeur connue (ou montre la tuile
+  // au premier lancement hors ligne : l'étude a son brouillon hors ligne) ; un refus du serveur
+  // (ex. 403 MODULE_ACCESS_DENIED si la plateforme coupe STUDY) la masque.
+  const [studyCatalog, setStudyCatalog] = useState<boolean | null>(null);
+  // D-ETU-50 (JP 27/10) : étude gratuite — `hasStudy` ne dépend plus de l'abonnement STUDY
+  // (tout compte rattaché, voir AuthContext) ; D-ETU-28 levée pour la tuile.
+  const studyAllowed = hasStudyModule && isAttachedAccount(me);
+  const hasStudy = studyAllowed && studyCatalog === true;
+  // JP 28/10 — tuile « Suivi de la ville » (offre Néhémie, axe GÉOGRAPHIQUE) : villes de
+  // `/study/localities` ∪ `/assembly/localities`, indépendante de la tuile Bertoua et du catalogue
+  // d'étude (un LEADER / SECRETARIAT qui n'a que JOURNAL, un ministère sans étude la voient aussi).
+  const { cities, reload: reloadCities } = useCityFollowUp();
+  const onlyCity = cities.length === 1 ? cities[0] : null;
+  const citiesLocked = cities.length > 0 && !cities.some(cityOpen);
 
   // `hasDonations` arrive après coup (les modules accessibles sont chargés en asynchrone après le
   // token) : il DOIT être en dépendance, sinon `load` reste figé sur la valeur `false` du 1er rendu
@@ -50,14 +65,16 @@ export default function HomeScreen() {
   }, [hasDonations]);
 
   const loadStudy = useCallback(async () => {
-    if (!hasStudy) return;
-    try {
-      const { assemblies } = await getStudyMe();
-      setStudyLive(assemblies.some((a) => a.currentSession != null));
-    } catch {
-      setStudyLive(false);
+    if (!studyAllowed) return;
+    const [catalog, mine] = await Promise.allSettled([getStudyCatalog(), getStudyMe()]);
+    if (catalog.status === 'fulfilled') {
+      setStudyCatalog(catalog.value.length > 0);
+    } else {
+      const offline = !(catalog.reason as any)?.response;
+      setStudyCatalog((cur) => (offline ? (cur ?? true) : false));
     }
-  }, [hasStudy]);
+    setStudyLive(mine.status === 'fulfilled' && mine.value.assemblies.some((a) => a.currentSession != null));
+  }, [studyAllowed]);
 
   useEffect(() => {
     load();
@@ -73,7 +90,7 @@ export default function HomeScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([load(), loadStudy()]);
+      await Promise.all([load(), loadStudy(), reloadCities()]);
     } finally {
       setRefreshing(false);
     }
@@ -250,9 +267,10 @@ export default function HomeScreen() {
         />
         )}
         {/* Plan 21/10 (§6.3) — Étude de l'assemblée, programme « Le Message de Bertoua ».
-            D-ETU-04 : libellé i18n fixe (pas de nom de programme en base en V1). D-ETU-28 (JP
-            23/10, remplace D-ETU-05) : visible de tout compte rattaché ou dirigeant
-            (`isAttachedAccount`) si le ministère a l'abonnement STUDY ; l'écran s'adapte au rôle.
+            D-ETU-04 : libellé i18n fixe (pas de nom de programme en base en V1). D-ETU-50 (JP
+            27/10, lève D-ETU-28) : visible de tout compte rattaché ou dirigeant
+            (`isAttachedAccount`), SANS abonnement STUDY, dès que le catalogue est non vide
+            (D-ETU-54) ; l'écran s'adapte au rôle.
             Pastille « En cours » tant qu'une séance de son assemblée est ouverte. */}
         {hasStudy && (
         <Tile
@@ -262,6 +280,21 @@ export default function HomeScreen() {
           tone={colors.moss}
           badge={studyLive ? t('study.tile.live') : undefined}
           onPress={() => router.push('/study')}
+        />
+        )}
+        {/* JP 28/10 — « Suivi de la ville » : Bertoua, Journal de la ville et Évènements des villes
+            dont le compte est responsable (liste vide pour un membre / dirigeant d'unité, D-ABO-21).
+            Pastille « Offre Néhémie » si aucune ville n'ouvre de suivi ; aucun prix (D-OFF-09). */}
+        {cities.length > 0 && (
+        <Tile
+          label={t('study.city.entry')}
+          hint={onlyCity ? onlyCity.localityName : t('study.city.cityCount', { count: cities.length })}
+          icon="business-outline"
+          tone={colors.mossDeep}
+          badge={citiesLocked ? t('dashboard.tiles.cityLocked') : undefined}
+          onPress={() =>
+            router.push(onlyCity ? { pathname: '/study/city', params: { localityId: onlyCity.localityId } } : '/study/city')
+          }
         />
         )}
 {/* Lot S1 (21/07) : briques visibles de TOUS — le contenu des écrans s'adapte au rôle

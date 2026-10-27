@@ -1,29 +1,33 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import { Badge, TopBar } from '../components/ui';
-import { SupervisorCard } from '../components/SupervisorCard';
 import { useAuth } from '../hooks/useAuth';
 import {
   fetchLeaderHierarchy,
+  fetchSupervisionOverview,
   type HierarchyUnitView,
   type LeaderHierarchyNode,
 } from '../services/leadersApi';
-import { canManageUsers, type ModuleRole } from '../services/authApi';
+import type { ModuleRole } from '../services/authApi';
+import { ENTITLEMENT_HIERARCHIE_SUIVI, getPersonalEntitlements } from '../services/entitlementsApi';
 import { getActiveGoal, getMyPerimeterAggregate } from '../services/goalsApi';
 import { goalName } from '../utils/goalName';
 import { fmtAmount } from '../utils/format';
 import { FEATURES } from '../config/features';
-import {
-  AssemblyStatsProvider,
-  LeaderAssemblySummary,
-  LeaderJournalButton,
-  UnitAssemblyLine,
-} from '../components/AssemblyHierarchyStats';
 
 // Hiérarchie des dirigeants (21/07) — arbre du leadership renvoyé par le backend, déjà scopé
 // par rôle (SUBTREE dirigeant / CHAIN membre / MINISTRY leader-secrétariat-superadmin).
+//
+// D-HIE-01 (JP 28/10, lot HIE) : la Hiérarchie devient TROIS SOUS-PAGES (pas des onglets). Ici la
+// page 1 « But quinquennal », GRATUITE, page d'arrivée du menu : « Je rends compte à … », « Ce que
+// porte mon leadership », deux cartes d'accès — « Mon leadership » (`/hierarchy/leadership`, pastille
+// = demandes reçues en attente, RG-HIE-29) et « Vie de mon leadership » (`/hierarchy/vie`, cadenas
+// sans `HIERARCHIE_SUIVI`) — puis l'arbre avec SEULEMENT les pastilles d'objectifs. Les résumés de CR,
+// le journal, les blocs payants, le verrou et la déclaration du superviseur ont quitté cette page
+// (pages 2 et 3). Axe de la CHAÎNE de supervision, jamais la géographie.
 
 const ROLE_TONE: Partial<Record<ModuleRole, 'green' | 'earth' | 'gray'>> = {
   DIRIGEANT_COORDINATEUR: 'green',
@@ -145,11 +149,29 @@ const countMembers = (n: LeaderHierarchyNode): number =>
 export function HierarchyPage() {
   const { t } = useTranslation();
   const { me } = useAuth();
+  const location = useLocation();
 
   const hierarchyQ = useQuery({
     queryKey: ['leaders', 'hierarchy'],
     queryFn: () => fetchLeaderHierarchy(),
   });
+  // RG-HIE-29 : pastille « Mon leadership » ; `canDesignate` (P-HIE-a) décide de l'affichage de la carte.
+  const supervisionQ = useQuery({
+    queryKey: ['leaders', 'supervision'],
+    queryFn: fetchSupervisionOverview,
+    retry: false,
+  });
+  // Cadenas de « Vie de mon leadership » : affichage seul, le serveur reste le seul juge (403).
+  const personalQ = useQuery({
+    queryKey: ['entitlements', 'personal'],
+    queryFn: getPersonalEntitlements,
+    retry: false,
+  });
+
+  // D-HIE-01 (JP 28/10) : un ancien lien d'annulation Stripe (`/hierarchy?annule=1`) mène à la page 3.
+  if (new URLSearchParams(location.search).get('annule') === '1') {
+    return <Navigate to="/hierarchy/vie?annule=1" replace />;
+  }
 
   const data = hierarchyQ.data;
   const roots = data?.roots ?? [];
@@ -161,6 +183,13 @@ export function HierarchyPage() {
     }),
     { leaders: 0, units: 0, members: 0 },
   );
+  const overview = supervisionQ.data;
+  // + un ancien dirigeant encore suivi par désignation (écart B4 : il doit pouvoir « Retirer »).
+  const showLeadershipCard = !!overview && (overview.canDesignate || overview.followedBy != null);
+  const pending = overview?.pendingIncomingCount ?? 0;
+  // La page 3 n'a pas de sens pour la vue d'un membre (mode CHAIN).
+  const showLifeCard = !!data && data.mode !== 'CHAIN';
+  const lifeLocked = !!personalQ.data && !personalQ.data.codes.includes(ENTITLEMENT_HIERARCHIE_SUIVI);
 
   const intro =
     data?.mode === 'CHAIN'
@@ -173,10 +202,6 @@ export function HierarchyPage() {
     <>
       <TopBar title={t('hierarchy.title')} crumbs={[t('common.brand'), t('nav.hierarchy')]} />
       <div className="content">
-        {/* JP 30/07 : SEUL un dirigeant déclare son superviseur. Un membre ne le voit jamais —
-            son rattachement à une assemblée détermine implicitement son dirigeant. */}
-        {canManageUsers(me) && <SupervisorCard />}
-
         {/* « À qui je rends compte » : une mention AU-DESSUS de la vue — l'arbre, lui, ne
             contient que ce qui est en dessous du dirigeant (JP 30/07). */}
         {data?.supervisor && (
@@ -201,10 +226,50 @@ export function HierarchyPage() {
             « Mon périmètre » — le serveur scope l'agrégat au sous-arbre de personnes. */}
         <LeadershipTotals unitCount={totals.units} memberCount={totals.members} />
 
-        {/* D-ASM-18 (JP 08/10) : statistiques de Vie d'assemblée des assemblées de l'arbre +
-            journal PDF consolidé. Aucun nom de personne ; alerte 3 semaines en affichage seul.
-            Le provider porte la période, partagée par le bloc et par les lignes de l'arbre. */}
-        <AssemblyStatsProvider roots={roots} isChain={data?.mode === 'CHAIN'}>
+        {/* D-HIE-01 (JP 28/10) : cartes d'accès aux pages 2 et 3. */}
+        {(showLeadershipCard || showLifeCard) && (
+          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', marginBottom: 16 }}>
+            {showLeadershipCard && (
+              <AccessCard
+                to="/hierarchy/leadership"
+                icon="users"
+                title={t('hierarchy.home.leadershipCard')}
+                text={t('hierarchy.home.leadershipCardHint')}
+                badge={
+                  pending > 0 ? (
+                    <span
+                      aria-label={t('hierarchy.home.pendingBadge', { count: pending })}
+                      title={t('hierarchy.home.pendingBadge', { count: pending })}
+                      style={{
+                        minWidth: 22, height: 22, padding: '0 7px', borderRadius: 11, display: 'inline-grid',
+                        placeItems: 'center', background: 'var(--earth-700)', color: 'var(--parchment, #fff)',
+                        fontSize: 12, fontWeight: 700,
+                      }}
+                    >
+                      {pending}
+                    </span>
+                  ) : null
+                }
+              />
+            )}
+            {showLifeCard && (
+              <AccessCard
+                to="/hierarchy/vie"
+                icon="calendar"
+                title={t('hierarchy.home.lifeCard')}
+                text={t('hierarchy.home.lifeCardHint')}
+                badge={
+                  lifeLocked ? (
+                    <span title={t('hierarchy.home.lifeLocked')} aria-label={t('hierarchy.home.lifeLocked')} style={{ display: 'inline-flex', color: 'var(--earth-700)' }}>
+                      <Icon name="lock" size={15} />
+                    </span>
+                  ) : null
+                }
+              />
+            )}
+          </div>
+        )}
+
         <p className="section-sub">{intro}</p>
 
         {data && roots.length > 0 && (
@@ -243,7 +308,6 @@ export function HierarchyPage() {
             ))
           )}
         </div>
-        </AssemblyStatsProvider>
 
         {(data?.unassignedUnits.length ?? 0) > 0 && (
           <>
@@ -275,6 +339,34 @@ export function HierarchyPage() {
   );
 }
 
+/** Carte d'accès à une sous-page (D-HIE-01, JP 28/10) — un lien, pas un onglet. */
+function AccessCard({
+  to, icon, title, text, badge,
+}: { to: string; icon: string; title: string; text: string; badge: ReactNode }) {
+  return (
+    <Link
+      to={to}
+      className="card"
+      style={{
+        display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
+        textDecoration: 'none', color: 'inherit',
+      }}
+    >
+      <span style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--parchment)', display: 'grid', placeItems: 'center', color: 'var(--green-700)', flexShrink: 0 }}>
+        <Icon name={icon} size={17} />
+      </span>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <strong style={{ fontSize: 14.5, color: 'var(--green-800)' }}>{title}</strong>
+          {badge}
+        </span>
+        <span style={{ display: 'block', fontSize: 12.5, color: 'var(--ink-500)', marginTop: 2 }}>{text}</span>
+      </span>
+      <Icon name="chevRight" size={14} />
+    </Link>
+  );
+}
+
 function LeaderNode({ node, depth, meId }: { node: LeaderHierarchyNode; depth: number; meId: string | null }) {
   const { t } = useTranslation();
   // Les deux premiers niveaux sont dépliés par défaut ; le reste à la demande.
@@ -284,8 +376,6 @@ function LeaderNode({ node, depth, meId }: { node: LeaderHierarchyNode; depth: n
 
   return (
     <div>
-      {/* D-ASM-18 : le bouton « Journal PDF » du dirigeant est à côté de la ligne (pas dedans :
-          pas de bouton imbriqué). */}
       <div style={{ display: 'flex', alignItems: 'center' }}>
       <button
         type="button"
@@ -308,15 +398,12 @@ function LeaderNode({ node, depth, meId }: { node: LeaderHierarchyNode; depth: n
         )}
         {meId === node.id && <Badge tone="ok">{t('hierarchy.you')}</Badge>}
         <GoalPastille hasPledges={node.goalHasPledges} submitted={node.goalSubmitted} late={node.goalLate} />
-        {/* D-ASM-18 : avec les stats de Vie d'assemblée, le compte devient celui du sous-arbre
-            (« N assemblées · k ⚠ ») ; sans elles, le compte des assemblées directes, comme avant. */}
+        {/* D-HIE-01 (JP 28/10) : seulement le compte des assemblées directes — les résumés de CR
+            et le journal PDF du sous-arbre sont payants et vivent en page 3. */}
         <span style={{ marginLeft: 'auto', color: 'var(--ink-500)', fontSize: 12 }}>
-          <LeaderAssemblySummary node={node}>
-            {node.units.length > 0 && t('hierarchy.unitsCount', { count: node.units.length })}
-          </LeaderAssemblySummary>
+          {node.units.length > 0 && t('hierarchy.unitsCount', { count: node.units.length })}
         </span>
       </button>
-      <LeaderJournalButton node={node} />
       </div>
 
       {open && (
@@ -365,7 +452,6 @@ function UnitRow({ unit, depth }: { unit: HierarchyUnitView; depth: number }) {
             : t('hierarchy.unitNoMembers')}
         </span>
       </button>
-      <UnitAssemblyLine unitId={unit.id} depth={depth} />
 
       {open &&
         unit.members.map((m) => (

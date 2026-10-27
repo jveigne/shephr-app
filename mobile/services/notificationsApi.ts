@@ -8,6 +8,11 @@ export interface UserNotification {
   message: string;
   source: string;
   createdAt: string;
+  /**
+   * Lot HIE (JP 28/10, RG-HIE-24) : identifiant de l'objet visé — pour `SUPERVISION_REQUEST`, l'id
+   * de la demande de supervision. Additif, toutes sources ; absent d'un serveur antérieur.
+   */
+  refEntityId?: string | null;
 }
 
 export async function getUnreadNotifications(): Promise<UserNotification[]> {

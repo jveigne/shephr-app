@@ -8,9 +8,11 @@ import Chip from '@/components/Chip';
 import Label from '@/components/Label';
 import Button from '@/components/Button';
 import ErrorBanner from '@/components/ErrorBanner';
+import CalebAssemblyLock from '@/components/CalebAssemblyLock';
 import { colors, fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getMeeting, listMeetings, type MeetingDetail, type MeetingSummary } from '@/services/assemblyApi';
+import { hierarchyAccessDenied } from '@/services/entitlementsApi';
 import { toLocalDate } from '@/utils/format';
 import { notify } from '@/utils/dialogs';
 import { printAndSharePdf } from '@/utils/pdfShare';
@@ -48,6 +50,8 @@ async function loadDetails(ids: string[]): Promise<MeetingDetail[]> {
  * Fichiers, envoyer par WhatsApp ou e-mail. Sur le web, `printAsync` ouvre la boîte d'impression
  * du navigateur (« Enregistrer en PDF »).
  * Lecture seule : mêmes données et mêmes gardes que la liste des réunions (RG-ASM-05).
+ * D-OFF-02 (JP 27/10) : gratuit pour l'assemblée gratuite du compte ; sur une autre assemblée, un
+ * 403 `MODULE_ACCESS_DENIED` / `HIERARCHIE_SUIVI` affiche le verrou Caleb à la place de l'écran.
  */
 export default function AssemblyJournalScreen() {
   const { t, language } = useLanguage();
@@ -63,6 +67,7 @@ export default function AssemblyJournalScreen() {
   const [reloadKey, setReloadKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [locked, setLocked] = useState(false);
 
   // Une période tient toujours dans une année : la liste de l'année suffit, filtrée ici.
   // Tant que l'année affichée n'est pas celle chargée, on considère la liste en cours.
@@ -76,7 +81,9 @@ export default function AssemblyJournalScreen() {
         setError(null);
       })
       .catch((e: any) => {
-        if (active) setError(e?.response?.data?.message ?? t('assemblyLife.loadFailed'));
+        if (!active) return;
+        if (hierarchyAccessDenied(e)) setLocked(true);
+        else setError(e?.response?.data?.message ?? t('assemblyLife.loadFailed'));
       });
     return () => {
       active = false;
@@ -128,11 +135,35 @@ export default function AssemblyJournalScreen() {
         notify(t('common.appName'), t('assemblyLife.journal.shareUnavailable'));
       }
     } catch (e: any) {
+      if (hierarchyAccessDenied(e)) {
+        setLocked(true);
+        return;
+      }
       notify(t('common.appName'), e?.response?.data?.message ?? t('assemblyLife.journal.failed'));
     } finally {
       setGenerating(false);
     }
   };
+
+  if (locked) {
+    return (
+      <ScreenShell>
+        <View style={styles.headerRow}>
+          <Pressable onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+          </Pressable>
+        </View>
+        <Text style={styles.title}>{t('assemblyLife.journal.title')}</Text>
+        {!!unitName && (
+          <Text style={styles.subtitle}>
+            {unitName}
+            {cityName ? ` · ${cityName}` : ''}
+          </Text>
+        )}
+        <CalebAssemblyLock />
+      </ScreenShell>
+    );
+  }
 
   return (
     <ScreenShell>

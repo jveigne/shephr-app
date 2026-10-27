@@ -7,9 +7,11 @@ import Card from '@/components/Card';
 import Label from '@/components/Label';
 import ErrorBanner from '@/components/ErrorBanner';
 import MeetingReportCard from '@/components/MeetingReportCard';
+import CalebAssemblyLock from '@/components/CalebAssemblyLock';
 import { colors, fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { deleteMeeting, getMeeting, type MeetingDetail } from '@/services/assemblyApi';
+import { hierarchyAccessDenied } from '@/services/entitlementsApi';
 import { fmtIsoDay, formatChapters, type MeetingReportInput } from '@/utils/meetingReport';
 import { confirmDialog, notify } from '@/utils/dialogs';
 
@@ -17,6 +19,8 @@ import { confirmDialog, notify } from '@/utils/dialogs';
  * Détail d'un compte rendu — §6.3 plan 23/09 (lot L5).
  * Lecture : public RG-ASM-05 (CR complet, présents inclus — [HYPOTHÈSE] du plan).
  * Modifier / supprimer (soft delete) : seulement si `canWrite` (RG-ASM-04, D-ASM-03).
+ * D-OFF-02 (JP 27/10) : le CR d'une autre assemblée que l'assemblée gratuite relève de l'offre Caleb
+ * — 403 `MODULE_ACCESS_DENIED` / `HIERARCHIE_SUIVI` → verrou Caleb à la place du CR.
  */
 export default function MeetingDetailScreen() {
   const { t } = useLanguage();
@@ -24,13 +28,20 @@ export default function MeetingDetailScreen() {
   const [detail, setDetail] = useState<MeetingDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [locked, setLocked] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
     setError(null);
     try {
       setDetail(await getMeeting(id));
+      setLocked(false);
     } catch (e: any) {
+      if (hierarchyAccessDenied(e)) {
+        setDetail(null);
+        setLocked(true);
+        return;
+      }
       setError(
         e?.response?.status === 404
           ? t('assemblyLife.detail.notFound')
@@ -79,6 +90,11 @@ export default function MeetingDetailScreen() {
       await deleteMeeting(detail.id);
       router.back();
     } catch (e: any) {
+      if (hierarchyAccessDenied(e)) {
+        setDetail(null);
+        setLocked(true);
+        return;
+      }
       notify(t('common.appName'), e?.response?.data?.message ?? t('errors.deleteFailed'));
     }
   };
@@ -122,6 +138,7 @@ export default function MeetingDetailScreen() {
       </View>
 
       {!!error && <ErrorBanner message={error} onRetry={load} />}
+      {locked && <CalebAssemblyLock />}
 
       {detail && reportInput && (
         <>

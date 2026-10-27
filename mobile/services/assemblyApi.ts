@@ -4,15 +4,34 @@ import type { Language } from '@/services/authApi';
 // Vie d'assemblée (plan 23/09, §5.2 — lot L5) : réunions, comptes rendus, modules d'enseignement,
 // avancement. Tous les endpoints sont sous /api/church/assembly et gatés @RequiresModule("ASSEMBLY")
 // (D-ASM-12) : sans abonnement, 403 MODULE_ACCESS_DENIED — l'onglet est de toute façon masqué.
+// D-OFF-01 (JP 27/10) : ASSEMBLY est désormais GRATUIT et ouvert par défaut (désactivable par
+// ministère par le SUPER_ADMIN) ; au-delà de l'assemblée gratuite, les routes d'une autre assemblée
+// répondent 403 `MODULE_ACCESS_DENIED` / `HIERARCHIE_SUIVI` (offre Caleb, D-OFF-02 / D-OFF-04).
 // Dates LocalDate = 'yyyy-MM-dd' ; Instant = ISO.
 
-/** Mirrors com.excellence.back.assembly.AssemblyDtos.AssemblyUnitResponse */
+/**
+ * Mirrors com.excellence.back.assembly.AssemblyDtos.AssemblyUnitResponse
+ *
+ * D-OFF-02 (JP 27/10, plan `05_Plan_Offres_Caleb_Nehemie.md` §3.2-§3.3) : `GET /units` ne suit plus
+ * la géographie — il renvoie l'« assemblée gratuite » du compte (`free = true` : rattachement, à
+ * défaut sa plus ancienne affectation de DIRIGEANT_UNITE) puis, avec l'offre Caleb
+ * (HIERARCHIE_SUIVI), les assemblées de sa CHAÎNE de supervision (`free = false`). Toute autre
+ * assemblée répond 403 `MODULE_ACCESS_DENIED` / `HIERARCHIE_SUIVI` (verrou Caleb, jamais un toast).
+ */
 export interface AssemblyUnit {
   id: string;
   name: string;
   cityId: string | null;
   cityName: string | null;
-  /** D-ASM-03 / RG-ASM-04 : le caller est l'un des DIRIGEANT_UNITE de l'assemblée. */
+  /**
+   * D-OFF-02 (JP 27/10) : assemblée gratuite du compte (CR, journal, réunions, présences, avancement
+   * et Member Care sans abonnement). Facultatif : absent d'un serveur antérieur au lot (traité vrai).
+   */
+  free?: boolean;
+  /**
+   * D-ASM-03 / RG-ASM-04 : le caller est l'un des DIRIGEANT_UNITE de l'assemblée — et, depuis
+   * D-OFF-02 (JP 27/10), l'assemblée est sa gratuite ou il a l'offre Caleb. Calculé PAR LE SERVEUR.
+   */
   canWrite: boolean;
   /** D-ASM-17 : le caller en est MEMBRE — lecture seule + avancement personnel. */
   member: boolean;
@@ -254,28 +273,104 @@ export async function getAssemblyStats(from: string, to: string): Promise<UnitMe
   return data;
 }
 
+/**
+ * Mirrors com.excellence.back.assembly.AssemblyDtos.MeetingSummaryLite — O6 (plan 27/10
+ * `05_Plan_Offres_Caleb_Nehemie.md` §4, D-OFF-05 par analogie, P-03) : comme `MeetingDetail`, mais
+ * le NOMBRE de présents (`attendeeCount`) à la place de la liste nommée `attendees`. Renvoyé par
+ * `GET /meetings?unitIds=` (journal consolidé Caleb) : aucun nom de personne n'y transite ; les noms
+ * restent dans le détail d'un CR que l'on a le droit de lire.
+ */
+export interface MeetingSummaryLite {
+  id: string;
+  unitId: string;
+  unitName: string | null;
+  meetingDate: string;
+  breadBreaking: boolean;
+  attendeeCount: number;
+  moduleId: string | null;
+  moduleName: string | null;
+  bookTitle: string | null;
+  chapters: TeachingChapter[];
+  canWrite: boolean;
+  createdById: string | null;
+  createdAt: string | null;
+  updatedById: string | null;
+  updatedAt: string | null;
+}
+
 /** Le backend refuse plus de 200 assemblées par appel ; on découpe par 100 (D-ASM-18). */
 const MEETINGS_RANGE_CHUNK = 100;
 
 /**
- * D-ASM-18 — réunions (détail, présents et chapitres compris) de plusieurs assemblées sur une
- * plage, pour le journal consolidé. Un appel par paquet de 100 assemblées, en séquence ; l'ordre
- * global n'est pas garanti d'un paquet à l'autre (le journal regroupe et trie lui-même).
+ * D-ASM-18 — réunions (chapitres et NOMBRE de présents, O6) de plusieurs assemblées sur une plage,
+ * pour le journal consolidé. Un appel par paquet de 100 assemblées, en séquence ; l'ordre global
+ * n'est pas garanti d'un paquet à l'autre (le journal regroupe et trie lui-même).
+ * Serveur antérieur au lot (liste `attendees` encore présente) : seul son nombre est gardé, les
+ * noms sont jetés ici et ne vont jamais plus loin.
  */
 export async function listMeetingsInRange(
   unitIds: string[],
   from: string,
   to: string,
-): Promise<MeetingDetail[]> {
-  const out: MeetingDetail[] = [];
+): Promise<MeetingSummaryLite[]> {
+  const out: MeetingSummaryLite[] = [];
   for (let i = 0; i < unitIds.length; i += MEETINGS_RANGE_CHUNK) {
     const chunk = unitIds.slice(i, i + MEETINGS_RANGE_CHUNK);
-    const { data } = await apiClient.get<MeetingDetail[]>(`${BASE}/meetings`, {
+    const { data } = await apiClient.get<any[]>(`${BASE}/meetings`, {
       params: { from, to, unitIds: chunk.join(',') },
     });
-    out.push(...data);
+    for (const m of data ?? []) out.push(toMeetingLite(m));
   }
   return out;
+}
+
+/** Réunion consolidée : seul le NOMBRE de présents est gardé (O6) — les noms d'un serveur ancien sont jetés ici. */
+function toMeetingLite(m: any): MeetingSummaryLite {
+  const { attendees, ...rest } = m ?? {};
+  return {
+    ...rest,
+    attendeeCount:
+      typeof m?.attendeeCount === 'number' ? m.attendeeCount : Array.isArray(attendees) ? attendees.length : 0,
+    chapters: m?.chapters ?? [],
+  } as MeetingSummaryLite;
+}
+
+// ─── Journal de la ville — offre Néhémie, code `JOURNAL` (D-OFF-05, JP 27/10 ; lève M-01, JP 28/10) ───
+//
+// Axe GÉOGRAPHIQUE (`getAllVisibleLocalityIds`, D-ABO-21), lecture seule. Sans `JOURNAL` actif sur la
+// ville, `/locality/{id}/**` répond 403 `MODULE_ACCESS_DENIED` enrichi `details { moduleCode: 'JOURNAL',
+// nodeId: ville, canSubscribe }` (`cityJournalAccessDenied`) → verrou, jamais un toast. AUCUN nom de
+// personne : nombres et noms d'assemblées seulement. Miroirs identiques au web (`web/src/services/assemblyApi.ts`).
+
+/** Mirrors com.excellence.back.assembly.AssemblyDtos.AssemblyLocality — même forme que `StudyLocalitySummary`. */
+export interface AssemblyLocality {
+  localityId: string;
+  localityName: string;
+  assemblyCount: number;
+  /** `JOURNAL` actif sur la ville (cadenas sinon) — affichage seulement, le serveur reste juge. */
+  entitled: boolean;
+  /** RG-ABO-22 — le compte peut souscrire pour cette ville (web seulement : jamais lu pour un paiement ici). */
+  canSubscribe: boolean;
+}
+
+/** Villes visibles du compte pour le journal de ville (D-ABO-21) ; vide pour un membre ou un dirigeant d'unité. */
+export async function listAssemblyLocalities(): Promise<AssemblyLocality[]> {
+  const { data } = await apiClient.get<AssemblyLocality[]>(`${BASE}/localities`);
+  return data ?? [];
+}
+
+/** Une ligne par assemblée de la ville (compteurs bornés à [from, to], ≤ 366 jours) — `JOURNAL`. */
+export async function getLocalityMeetingStats(localityId: string, from: string, to: string): Promise<UnitMeetingStats[]> {
+  const { data } = await apiClient.get<UnitMeetingStats[]>(`${BASE}/locality/${localityId}/stats`, {
+    params: { from, to },
+  });
+  return data ?? [];
+}
+
+/** Réunions de la ville sur [from, to] pour le journal PDF consolidé — `attendeeCount` seulement (D-OFF-05). */
+export async function listLocalityMeetings(localityId: string, from: string, to: string): Promise<MeetingSummaryLite[]> {
+  const { data } = await apiClient.get<any[]>(`${BASE}/locality/${localityId}/meetings`, { params: { from, to } });
+  return (data ?? []).map(toMeetingLite);
 }
 
 // ─── Étude de l'assemblée (plan 21/10, contrat 02_Contrat_API_Etude.md §4 et §8) ─────────────────
@@ -920,4 +1015,254 @@ export async function getMyStudyProgress(): Promise<StudyPersonProgress> {
 export async function getMemberStudyProgress(userId: string): Promise<StudyPersonProgress> {
   const { data } = await apiClient.get<StudyPersonProgress>(`${STUDY}/members/${userId}/progress`);
   return data;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Suivi de l'étude à l'échelle de la VILLE — lot « pro-plan » (contrat 27/10 §7.2 → §7.6, §10.4).
+// D-ETU-53 (JP 27/10) : lecture seule, pour les responsables de la ville (D-ABO-21) ; le code de
+// droit ETUDE_SUIVI est vérifié PAR VILLE par le serveur (403 MODULE_ACCESS_DENIED enrichi, §3).
+// D-ETU-55 : aucune de ces routes ne porte le texte d'une réponse (jamais de PERSONNELLE).
+// Pas d'export sur l'app (contrat §12.2 : CSV / PDF sur le web seulement).
+// ---------------------------------------------------------------------------------------------
+
+// Mirrors com.excellence.back.assembly.AssemblyDtos.StudyLocality* (contrat 27/10 §7)
+/** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyMemberStatus */
+export type StudyMemberStatus = 'TAUGHT' | 'NOT_TAUGHT' | 'MISSED';
+
+/** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyLocalitySummary */
+export interface StudyLocalitySummary {
+  localityId: string;
+  localityName: string;
+  /** ETUDE_SUIVI actif sur la ville (cadenas sinon, contrat §9.3). */
+  entitled: boolean;
+  /** RG-ABO-22 — ne sert sur l'app qu'à choisir le texte du verrou (aucun paiement, D-ABO-13). */
+  canSubscribe: boolean;
+  assemblyCount: number;
+}
+
+/** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyLocalityLesson */
+export interface StudyLocalityLesson {
+  number: number;
+  title: string;
+}
+
+/** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyLocalityModule */
+export interface StudyLocalityModule {
+  moduleId: string;
+  code: string | null;
+  name: string;
+  totalLessons: number;
+  lessons: StudyLocalityLesson[];
+}
+
+/** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyLocalityAssemblyModule */
+export interface StudyLocalityAssemblyModule {
+  moduleId: string;
+  /** D-ETU-42 — leçons faites par l'assemblée. */
+  lessonsDone: number;
+  doneLessonNumbers: number[];
+  lastSessionAt: string | null;
+}
+
+/** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyLocalityAssembly */
+export interface StudyLocalityAssembly {
+  unitId: string;
+  unitName: string;
+  memberCount: number;
+  lastSessionAt: string | null;
+  modules: StudyLocalityAssemblyModule[];
+}
+
+/** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyLocalityOverview */
+export interface StudyLocalityOverview {
+  localityId: string;
+  localityName: string;
+  modules: StudyLocalityModule[];
+  assemblies: StudyLocalityAssembly[];
+}
+
+/** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyMissedLesson */
+export interface StudyMissedLesson {
+  moduleId: string;
+  number: number;
+  title: string;
+}
+
+/** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyLocalityMember */
+export interface StudyLocalityMember {
+  userId: string;
+  fullName: string;
+  unitId: string;
+  unitName: string;
+  /** Au moins une copie comptée dans une séance TERMINEE (D-ETU-53). */
+  taught: boolean;
+  lessonsDone: number;
+  totalLessons: number;
+  /** Leçons faites par son assemblée (D-ETU-42) qu'il n'a pas faites (D-ETU-43). */
+  missedLessons: StudyMissedLesson[];
+  /** RG-ETU-17 / D-ETU-43 — calculées par le serveur, null si aucune leçon faite. */
+  score: number | null;
+  maxScore: number | null;
+  lastDoneAt: string | null;
+}
+
+/** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyLocalityMonth */
+export interface StudyLocalityMonth {
+  /** "YYYY-MM" */
+  month: string;
+  sessionCount: number;
+  copyCount: number;
+  taughtMemberCount: number;
+  averagePercent: number | null;
+}
+
+/** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyLocalityStats */
+export interface StudyLocalityStats {
+  localityId: string;
+  localityName: string;
+  from: string;
+  to: string;
+  assemblyCount: number;
+  activeAssemblyCount: number;
+  memberCount: number;
+  taughtMemberCount: number;
+  sessionCount: number;
+  lessonsDoneCount: number;
+  copyCount: number;
+  averagePercent: number | null;
+  months: StudyLocalityMonth[];
+}
+
+/**
+ * §7.2 — villes dont l'appelant est lecteur (D-ABO-21). `[]` pour un membre ou un dirigeant d'unité :
+ * c'est le signal qui masque l'entrée « Suivi de la ville » (RG-ABO-22).
+ */
+export async function listStudyLocalities(): Promise<StudyLocalitySummary[]> {
+  const { data } = await apiClient.get<StudyLocalitySummary[]>(`${STUDY}/localities`);
+  return data ?? [];
+}
+
+/** §7.4 — avancement des assemblées de la ville, par unité × leçon. */
+export async function getStudyLocalityOverview(localityId: string, moduleId?: string): Promise<StudyLocalityOverview> {
+  const { data } = await apiClient.get<StudyLocalityOverview>(`${STUDY}/locality/${localityId}/overview`, {
+    params: moduleId ? { moduleId } : undefined,
+  });
+  return { ...data, modules: data?.modules ?? [], assemblies: data?.assemblies ?? [] };
+}
+
+/** §7.5 — membres de la ville (enseignés / non enseignés / leçons manquées). */
+export async function listStudyLocalityMembers(
+  localityId: string,
+  params?: { status?: StudyMemberStatus; moduleId?: string; unitId?: string },
+): Promise<StudyLocalityMember[]> {
+  const query: Record<string, string> = {};
+  if (params?.status) query.status = params.status;
+  if (params?.moduleId) query.moduleId = params.moduleId;
+  if (params?.unitId) query.unitId = params.unitId;
+  const { data } = await apiClient.get<StudyLocalityMember[]>(`${STUDY}/locality/${localityId}/members`, {
+    params: query,
+  });
+  return data ?? [];
+}
+
+/** §7.6 — statistiques de la ville sur une période (`YYYY-MM-DD`, défauts du serveur). */
+export async function getStudyLocalityStats(
+  localityId: string,
+  params?: { from?: string; to?: string; moduleId?: string },
+): Promise<StudyLocalityStats> {
+  const query: Record<string, string> = {};
+  if (params?.from) query.from = params.from;
+  if (params?.to) query.to = params.to;
+  if (params?.moduleId) query.moduleId = params.moduleId;
+  const { data } = await apiClient.get<StudyLocalityStats>(`${STUDY}/locality/${localityId}/stats`, {
+    params: query,
+  });
+  return { ...data, months: data?.months ?? [] };
+}
+
+// ---------------------------------------------------------------------------------------------
+// « Le Message de Bertoua » dans la HIÉRARCHIE — plan personnel `DIRIGEANT_HIERARCHIE` (JP 27/10).
+// Périmètre = la CHAÎNE de leadership de l'appelant (même calcul que `GET /leaders/hierarchy` :
+// SUBTREE pour un dirigeant, MINISTRY pour superAdmin / LEADER / SECRETARIAT), jamais la géographie.
+// Code de droit HIERARCHIE_SUIVI vérifié par le serveur (403 MODULE_ACCESS_DENIED enrichi sinon).
+// Mêmes définitions que la vue de ville (D-ETU-53, D-ETU-42, D-ETU-43) ; aucune réponse, aucun nom
+// de membre, aucun contenu PERSONNELLE (D-ETU-55).
+// ---------------------------------------------------------------------------------------------
+
+/** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyHierarchyUnit */
+export interface StudyHierarchyUnit {
+  unitId: string;
+  unitName: string;
+  cityName: string | null;
+  leaderName: string | null;
+  /** Dirigeants de la chaîne entre l'appelant et l'assemblée, du plus haut au plus bas. */
+  supervisorChain: string[];
+  memberCount: number;
+  /** D-ETU-53 — au moins une copie comptée dans une séance TERMINEE. */
+  taughtCount: number;
+  notTaughtCount: number;
+  /** D-ETU-42 — leçons faites par l'assemblée (tous modules du `modules` de la réponse). */
+  doneLessonIds: string[];
+  /** D-ETU-43 — moyenne des notes en %, calculée par le serveur ; null sans note. */
+  averageScorePercent: number | null;
+  lastSessionDate: string | null;
+}
+
+/** Leçon d'un module de `StudyHierarchyOverview.modules`. */
+export interface StudyHierarchyLesson {
+  id: string;
+  number: number | null;
+  title: string;
+}
+
+/** Module de `StudyHierarchyOverview.modules`. */
+export interface StudyHierarchyModule {
+  id: string;
+  code: string | null;
+  name: string;
+  lessons: StudyHierarchyLesson[];
+}
+
+/** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyHierarchyOverview */
+export interface StudyHierarchyOverview {
+  units: StudyHierarchyUnit[];
+  modules: StudyHierarchyModule[];
+}
+
+/** Mois de `StudyHierarchyStats.monthly`. */
+export interface StudyHierarchyMonth {
+  /** "yyyy-MM" */
+  month: string;
+  sessionsFinished: number;
+  membersTaught: number;
+}
+
+/** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyHierarchyStats */
+export interface StudyHierarchyStats {
+  sessionsFinished: number;
+  lessonsDone: number;
+  membersTaught: number;
+  averageScorePercent: number | null;
+  monthly: StudyHierarchyMonth[];
+}
+
+/** `GET /study/hierarchy/overview[?moduleId]` — avancement des assemblées de ma chaîne. */
+export async function getStudyHierarchyOverview(moduleId?: string): Promise<StudyHierarchyOverview> {
+  const { data } = await apiClient.get<StudyHierarchyOverview>(`${STUDY}/hierarchy/overview`, {
+    params: moduleId ? { moduleId } : undefined,
+  });
+  return {
+    units: (data?.units ?? []).map((u) => ({
+      ...u,
+      supervisorChain: u.supervisorChain ?? [],
+      doneLessonIds: u.doneLessonIds ?? [],
+    })),
+    modules: (data?.modules ?? []).map((m) => ({ ...m, lessons: m.lessons ?? [] })),
+  };
+}
+
+/** `GET /study/hierarchy/stats?from&to` — séances TERMINEE de la période (Europe/Paris, ≤ 731 j). */
+export async function getStudyHierarchyStats(from: string, to: string): Promise<StudyHierarchyStats> {
+  const { data } = await apiClient.get<StudyHierarchyStats>(`${STUDY}/hierarchy/stats`, { params: { from, to } });
+  return { ...data, monthly: data?.monthly ?? [] };
 }

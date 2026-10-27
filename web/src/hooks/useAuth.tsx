@@ -71,6 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Lot ABO4 (23/10) : même règle pour la page PUBLIQUE des offres (/abonnements) — le visiteur
       // y reste, déconnecté ; les pages authentifiées (/abonnements/…) renvoient, elles, à /login.
       if (from === '/abonnements' || from.startsWith('/abonnements?')) return;
+      // O10 (JP 27/10, plan 05) : /offres, page publique qui remplace /abonnements — même règle.
+      if (from === '/offres' || from.startsWith('/offres?')) return;
       const next = from && !from.startsWith('/login') ? `?next=${encodeURIComponent(from)}` : '';
       navigate(`/login${next}`, { replace: true });
     });

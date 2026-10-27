@@ -126,7 +126,9 @@ export function hasMemberSpace(me: MeResponse | null): boolean {
  * > MEMBRE, ou une assemblée principale (`goalUnitId`). Plus large que `hasMemberSpace` (pas de
  * condition sur `goalRole`) ; le ministère du compte n'entre pas en compte (D-DOC-12). Même nom et
  * même corps que `mobile/services/authApi.ts`. Le serveur reste juge (403 `DOCUMENT_JOIN_REQUIRED`).
- * ⚠ D-DOC-05 : sur le web, être rattaché n'ouvre PAS le document complet — le lecteur n'en a pas besoin.
+ * D-WEB-04 (JP 27/10, D-DOC-05 levée) : sur le web aussi, un compte connecté ET rattaché lit le document
+ * complet (`GET /api/church/documents/{slug}/file`) ; les autres gardent l'aperçu. Garde aussi l'Étude
+ * (`utils/studyAccess`, D-ETU-50) et l'espace Documents (D-WEB-03), comme sur le mobile.
  */
 export function isAttachedAccount(me: MeResponse | null): boolean {
   if (!me) return false;
@@ -349,6 +351,25 @@ export function canManageUsers(me: MeResponse | null): boolean {
  * il valide les rattachements de SES membres, et la structure (création d'assemblée dans sa
  * ville) ne le concerne pas — ni en dépôt, ni en suivi, ni en validation.
  */
+/**
+ * D-OFF-02 / D-OFF-06 (JP 27/10, plan 05) — assemblées que le compte DIRIGE (`DIRIGEANT_UNITE`).
+ * Miroir de `AssemblyServiceImpl.isAssemblyLeader` : rôle Goals `DIRIGEANT_UNITE` → `goalUnitId` ∪
+ * `goalUnitIds` ; rôle Dons `DIRIGEANT_UNITE` → `donationUnitId` (`donationUnitIds` n'est pas servi par
+ * `/me` : une assemblée dirigée par ce seul biais n'a pas de cadenas d'avance, le 403 du serveur suffit).
+ * ⚠ `me.assemblies` n'est PAS cette liste : il mêle rattachements et multi-unités de tous rôles
+ * (`ChurchAuthServiceImpl.resolveAssemblies`) — ne jamais en déduire un verrou Caleb sans ce filtre.
+ */
+export function ledAssemblyIds(me: MeResponse | null): Set<string> {
+  const ids = new Set<string>();
+  if (!me) return ids;
+  if (me.goalRole === 'DIRIGEANT_UNITE') {
+    if (me.goalUnitId) ids.add(me.goalUnitId);
+    (me.goalUnitIds ?? []).forEach((id) => ids.add(id));
+  }
+  if (me.donationRole === 'DIRIGEANT_UNITE' && me.donationUnitId) ids.add(me.donationUnitId);
+  return ids;
+}
+
 export function isAssemblyLeaderOnly(me: MeResponse | null): boolean {
   if (!me || me.superAdmin || isSecretariat(me)) return false;
   if (me.donationRole === 'LEADER' || me.goalRole === 'LEADER') return false;

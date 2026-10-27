@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -19,7 +19,10 @@ import {
 import { Icon } from '../components/Icon';
 import { useToast } from '../components/Toast';
 import { YearPicker } from '../components/YearPicker';
-import { getAccessibleModules } from '../services/authApi';
+import { HierarchyLockedCompact, useCalebLockedAssemblies } from '../components/LockedFeature';
+import { useAuth } from '../hooks/useAuth';
+import { getAccessibleModules, hasMinistryAccess } from '../services/authApi';
+import { hierarchyAccessDenied, type ModuleAccessDeniedDetails } from '../services/entitlementsApi';
 import {
   createMeeting,
   deleteMeeting,
@@ -36,6 +39,7 @@ import {
   updateMeeting,
   type AssemblyUnit,
   type Chapter,
+  type MeetingDetail,
   type MeetingSummary,
   type ModuleProgress,
   type Part,
@@ -45,6 +49,17 @@ import {
 import { FEATURES } from '../config/features';
 import { toLocalDate } from '../utils/format';
 import { buildMeetingReport, formatChapters, formatMeetingDate, type Translate } from '../utils/meetingReport';
+import {
+  PERIODICITIES,
+  buildJournalHtml,
+  currentPeriod,
+  isFuturePeriod,
+  periodLabel,
+  periodRange,
+  shiftPeriod,
+  type Period,
+} from '../utils/assemblyJournal';
+import { printHtml } from '../utils/printHtml';
 
 /** Parties portées par des chapitres (module désactivé reconstitué à partir d'un CR), dans l'ordre. */
 function partsOf(chapters: Chapter[]): Part[] {
@@ -69,7 +84,27 @@ function partsOf(chapters: Chapter[]): Part[] {
 //  (« Le Message de Bertoua », module STUDY) — « une Vie d'assemblée, c'est le compte rendu ».
 //  D-ETU-29 : le lien entre les deux modules est le catalogue partagé (chapitres lus du CR ↔ leçon
 //  d'une séance) ; D-ETU-30 : suggestion du chapitre étudié dans le formulaire de CR (ci-dessous).
+//  D-OFF-02 / P-02 (JP 27/10, plan 05 — ticket O2) : est gratuit tout ce qui touche UNE seule
+//  assemblée, l'assemblée gratuite du compte (`unit.free`, choisie par le serveur). Toute autre
+//  assemblée — lecture ET écriture — relève de l'offre Caleb (`HIERARCHIE_SUIVI`, chaîne de
+//  supervision, jamais la géographie). `GET /units` ne renvoie donc que l'assemblée gratuite et, avec
+//  Caleb, celles de la chaîne. Verrou Caleb COMPACT (`HierarchyLockedCompact`) à la place du contenu :
+//  d'avance pour une assemblée que le compte dirige (`DIRIGEANT_UNITE`, `useCalebLockedAssemblies`)
+//  mais que `/units` ne renvoie pas, et sur tout 403 `MODULE_ACCESS_DENIED` `HIERARCHIE_SUIVI` (droit expiré entre-temps) — jamais
+//  un toast.
 // ---------------------------------------------------------------------------------------------
+
+/** D-OFF-02 (JP 27/10) : remonte un 403 `HIERARCHIE_SUIVI` d'une assemblée vers la page (verrou Caleb). */
+type OnLocked = (unitId: string, denied: ModuleAccessDeniedDetails) => void;
+
+/** Premier 403 `HIERARCHIE_SUIVI` parmi des erreurs de requêtes → `onLocked`, une fois par erreur. */
+function useCalebLock(unitId: string, errors: unknown[], onLocked: OnLocked) {
+  const denied = errors.map(hierarchyAccessDenied).find((d) => d != null) ?? null;
+  useEffect(() => {
+    if (denied) onLocked(unitId, denied);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `denied` change avec l'erreur reçue
+  }, [denied?.moduleCode, unitId, onLocked]);
+}
 
 export const errCode = (err: unknown): string | null =>
   (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? null;
@@ -97,6 +132,7 @@ export function ProgressBar({ percent, height = 8 }: { percent: number; height?:
 
 export function AssemblyPage() {
   const { t } = useTranslation();
+  const { me } = useAuth();
   const [tab, setTab] = useState<'meetings' | 'progress'>('meetings');
   // D-ASM-18 (JP 08/10) : `?unit=<id>` (lien depuis la Hiérarchie) présélectionne l'assemblée ;
   // un id hors de la liste visible retombe sur la sélection par défaut ci-dessous.
@@ -119,12 +155,30 @@ export function AssemblyPage() {
   });
   const units = useMemo(() => unitsQ.data ?? [], [unitsQ.data]);
 
+  // D-OFF-02 / P-02 (JP 27/10) : assemblées que le compte DIRIGE (`DIRIGEANT_UNITE` — `ledAssemblyIds`,
+  // jamais un simple rattachement de `me.assemblies`, ni la `donationUnitId` d'un rôle Dons MEMBRE /
+  // trésorier) mais que `/units` ne renvoie pas — sans Caleb, la seconde d'un dirigeant d'unité qui en
+  // dirige deux. Proposées dans le sélecteur avec un cadenas ; les choisir montre le verrou Caleb
+  // (jamais pour un simple membre, ni pour le superAdmin, ni si Caleb est déjà ouvert).
+  const unitIds = useMemo(() => unitsQ.data?.map((u) => u.id), [unitsQ.data]);
+  const lockedLed = useCalebLockedAssemblies(unitIds);
+  /** 403 `HIERARCHIE_SUIVI` reçus par assemblée (droit Caleb expiré entre-temps). */
+  const [serverLocked, setServerLocked] = useState<Record<string, ModuleAccessDeniedDetails>>({});
+  const onLocked = useCallback<OnLocked>((id, denied) => {
+    setEditing(null);
+    setServerLocked((prev) => (prev[id] ? prev : { ...prev, [id]: denied }));
+  }, []);
+
   // Assemblée par défaut : la première renvoyée (le serveur trie celles où j'écris en tête).
   useEffect(() => {
-    if (units.length > 0 && !units.some((u) => u.id === unitId)) setUnitId(units[0].id);
-  }, [units, unitId]);
+    if (units.some((u) => u.id === unitId) || lockedLed.some((a) => a.id === unitId)) return;
+    if (units.length > 0) setUnitId(units[0].id);
+    else if (lockedLed.length > 0) setUnitId(lockedLed[0].id);
+  }, [units, lockedLed, unitId]);
 
   const unit = units.find((u) => u.id === unitId) ?? null;
+  const lockedSel = unit ? null : lockedLed.find((a) => a.id === unitId) ?? null;
+  const locked = lockedSel != null || (unit != null && serverLocked[unit.id] != null);
 
   const activeTab = tab;
 
@@ -135,21 +189,50 @@ export function AssemblyPage() {
     if (!hasAssembly) {
       return <EmptyState title={t('assembly.moduleOff')} text={t('assembly.moduleOffHint')} />;
     }
-    if (units.length === 0 || !unit) {
-      return <EmptyState title={t('assembly.noUnit')} text={t('assembly.noUnitHint')} />;
+    if (!unit && !lockedSel) {
+      return (
+        <>
+          <EmptyState title={t('assembly.noUnit')} text={t('assembly.noUnitHint')} />
+          {/* D-OFF-02 (JP 27/10) : un dirigeant sans assemblée gratuite (ville, région…) ne lit plus
+              aucun CR par la géographie — les assemblées de sa chaîne relèvent de l'offre Caleb.
+              Rien si le droit Caleb est déjà ouvert (chaîne vide). */}
+          {me && !me.superAdmin && hasMinistryAccess(me) && (
+            <div style={{ maxWidth: 640, margin: '0 auto' }}>
+              <HierarchyLockedCompact context="assembly" hideWhenEntitled />
+            </div>
+          )}
+        </>
+      );
     }
+    const options = [
+      ...units.map((u) => ({
+        id: u.id,
+        label: u.name,
+        // D-OFF-02 : l'assemblée gratuite ou une assemblée de la chaîne (offre Caleb).
+        sub: [u.cityName, u.free === false ? t('assembly.chainUnit') : t('assembly.freeUnit')].filter(Boolean).join(' · '),
+      })),
+      ...lockedLed.map((a) => ({
+        id: a.id,
+        label: a.name,
+        sub: [a.cityName, t('assembly.lockedUnit')].filter(Boolean).join(' · '),
+      })),
+    ];
     return (
       <>
-        {units.length > 1 && (
+        {options.length > 1 && (
           <Field label={t('assembly.unit')} style={{ maxWidth: 360, marginBottom: 16 }}>
             <Picker
               value={unitId}
               onChange={setUnitId}
-              options={units.map((u) => ({ id: u.id, label: u.name, sub: u.cityName ?? undefined }))}
+              options={options}
               placeholder={t('assembly.chooseUnit')}
             />
           </Field>
         )}
+        {locked || !unit ? (
+          <HierarchyLockedCompact context="assembly" canSubscribe={unit ? serverLocked[unit.id]?.canSubscribe : undefined} />
+        ) : (
+        <>
         <div className="tabs">
           <button className={`tab ${activeTab === 'meetings' ? 'active' : ''}`} onClick={() => setTab('meetings')}>
             <Icon name="calendar" size={15} />
@@ -161,9 +244,11 @@ export function AssemblyPage() {
           </button>
         </div>
         {activeTab === 'meetings' ? (
-          <MeetingsTab unit={unit} onOpen={setEditing} />
+          <MeetingsTab unit={unit} onOpen={setEditing} onLocked={onLocked} />
         ) : (
-          <ProgressTab unit={unit} showOverview={units.length > 1} />
+          <ProgressTab unit={unit} showOverview={units.length > 1} onLocked={onLocked} />
+        )}
+        </>
         )}
       </>
     );
@@ -175,7 +260,7 @@ export function AssemblyPage() {
         title={t('assembly.title')}
         crumbs={[t('common.brand'), t('assembly.title')]}
         actions={
-          unit?.canWrite && activeTab === 'meetings' ? (
+          unit?.canWrite && !locked && activeTab === 'meetings' ? (
             <Button variant="primary" iconL={<Icon name="plus" size={14} />} onClick={() => setEditing('new')}>
               {t('assembly.newReport')}
             </Button>
@@ -183,13 +268,14 @@ export function AssemblyPage() {
         }
       />
       <div className="content">{body}</div>
-      {unit && editing && (
+      {unit && !locked && editing && (
         <MeetingEditor
           key={`${unit.id}-${editing}`}
           unit={unit}
           meetingId={editing === 'new' ? null : editing}
           hasStudy={hasStudy}
           onClose={() => setEditing(null)}
+          onLocked={onLocked}
         />
       )}
     </>
@@ -213,7 +299,7 @@ export function EmptyState({ title, text }: { title: string; text: string }) {
 //  donne la liste des années sans second appel).
 // ---------------------------------------------------------------------------------------------
 
-function MeetingsTab({ unit, onOpen }: { unit: AssemblyUnit; onOpen: (id: string) => void }) {
+function MeetingsTab({ unit, onOpen, onLocked }: { unit: AssemblyUnit; onOpen: (id: string) => void; onLocked: OnLocked }) {
   const { t } = useTranslation();
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
@@ -223,6 +309,7 @@ function MeetingsTab({ unit, onOpen }: { unit: AssemblyUnit; onOpen: (id: string
     queryFn: () => listMeetings(unit.id),
   });
   const meetings = useMemo(() => meetingsQ.data ?? [], [meetingsQ.data]);
+  useCalebLock(unit.id, [meetingsQ.error], onLocked);
 
   const years = useMemo(() => {
     const set = new Set<number>([currentYear]);
@@ -232,6 +319,10 @@ function MeetingsTab({ unit, onOpen }: { unit: AssemblyUnit; onOpen: (id: string
 
   const rows = meetings.filter((m) => m.meetingDate.startsWith(`${year}-`));
   const tr = t as unknown as Translate;
+  // Journal PDF de l'assemblée (JP 08/10, D-ASM-14) — parité mobile → web (JP 27/10, décision
+  // n°3 — D-WEB-01) : même règle que le mobile (`!isMember`), donc jamais pour le simple membre
+  // qui lit son assemblée (/my-assembly, D-ASM-17).
+  const [journalOpen, setJournalOpen] = useState(false);
 
   // D-ASM-17 : CR des réunions suivies dans une assemblée quittée depuis.
   const myMeetingsQ = useQuery({
@@ -285,7 +376,18 @@ function MeetingsTab({ unit, onOpen }: { unit: AssemblyUnit; onOpen: (id: string
         <span style={{ color: 'var(--ink-500)', fontSize: 13 }}>
           {t('assembly.meetingCount', { count: rows.length })}
         </span>
+        {!unit.member && (
+          <Button
+            size="sm"
+            iconL={<Icon name="fileText" size={14} />}
+            onClick={() => setJournalOpen(true)}
+            style={{ marginLeft: 'auto' }}
+          >
+            {t('assembly.journal.open')}
+          </Button>
+        )}
       </div>
+      {!unit.member && journalOpen && <UnitJournalModal unit={unit} onClose={() => setJournalOpen(false)} onLocked={onLocked} />}
       {meetingsQ.isLoading ? (
         <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>
       ) : (
@@ -315,6 +417,171 @@ function MeetingsTab({ unit, onOpen }: { unit: AssemblyUnit; onOpen: (id: string
 }
 
 // ---------------------------------------------------------------------------------------------
+//  Journal PDF d'UNE assemblée (JP 08/10, D-ASM-14) — parité mobile → web (JP 27/10, décision
+//  n°3 — D-WEB-01), pendant de `mobile/app/(tabs)/assembly/journal.tsx`.
+//  Périodicité (mois / trimestre / semestre / année), période ‹ › sans période future, liste
+//  nominative des présents FACULTATIVE (D-ASM-14 : le nombre reste toujours), puis « Générer » :
+//  liste de l'année filtrée sur la période, détails par paquets de 4, HTML A4 imprimé via
+//  utils/printHtml (« Enregistrer en PDF »). Lecture seule : mêmes données et mêmes gardes que la
+//  liste des réunions (RG-ASM-05). Le journal consolidé de la Hiérarchie (D-ASM-18) reste sans noms.
+// ---------------------------------------------------------------------------------------------
+
+/** Détails chargés par paquets : un journal annuel compte ~50 réunions, inutile de tout lancer d'un coup. */
+const JOURNAL_DETAIL_BATCH = 4;
+
+async function loadMeetingDetails(ids: string[]): Promise<MeetingDetail[]> {
+  const out: MeetingDetail[] = [];
+  for (let i = 0; i < ids.length; i += JOURNAL_DETAIL_BATCH) {
+    out.push(...(await Promise.all(ids.slice(i, i + JOURNAL_DETAIL_BATCH).map(getMeeting))));
+  }
+  return out;
+}
+
+function UnitJournalModal({ unit, onClose, onLocked }: { unit: AssemblyUnit; onClose: () => void; onLocked: OnLocked }) {
+  const { t, i18n } = useTranslation();
+  const { push } = useToast();
+  const tr = t as unknown as Translate;
+  const [period, setPeriod] = useState<Period>(() => currentPeriod('month'));
+  const [includeAttendees, setIncludeAttendees] = useState(true);
+  const [generating, setGenerating] = useState(false);
+
+  // Une période tient toujours dans une année : la liste de l'année suffit, filtrée ici.
+  const yearQ = useQuery({
+    queryKey: ['assembly', 'meetings', unit.id, 'year', period.year],
+    queryFn: () => listMeetings(unit.id, period.year),
+  });
+  useCalebLock(unit.id, [yearQ.error], onLocked);
+
+  const inPeriod = useMemo(() => {
+    const { from, to } = periodRange(period);
+    return (yearQ.data ?? []).filter((m) => m.meetingDate >= from && m.meetingDate <= to);
+  }, [yearQ.data, period]);
+
+  const next = shiftPeriod(period, 1);
+  const canGoNext = !isFuturePeriod(next);
+
+  const generate = async () => {
+    if (inPeriod.length === 0) return;
+    setGenerating(true);
+    try {
+      const details = await loadMeetingDetails(inPeriod.map((m) => m.id));
+      await printHtml(
+        buildJournalHtml(
+          {
+            unitName: unit.name || details[0]?.unitName || '',
+            cityName: unit.cityName,
+            period,
+            meetings: details,
+            includeAttendees,
+            generatedOn: toLocalDate(new Date()),
+            locale: i18n.language,
+          },
+          tr,
+        ),
+      );
+    } catch (err) {
+      // D-OFF-02 (JP 27/10) : un 403 Caleb est un verrou, jamais un toast.
+      const denied = hierarchyAccessDenied(err);
+      if (denied) onLocked(unit.id, denied);
+      else push({ kind: 'error', title: t('assembly.journal.failed'), msg: errMsg(err, '') || undefined });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={t('assembly.journal.unitTitle')}
+      sub={unit.cityName ? `${unit.name} · ${unit.cityName}` : unit.name}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            {t('common.close')}
+          </Button>
+          <Button
+            variant="primary"
+            iconL={<Icon name="download" size={14} />}
+            disabled={generating || inPeriod.length === 0}
+            onClick={generate}
+          >
+            {generating ? t('assembly.journal.generating') : t('assembly.journal.generate')}
+          </Button>
+        </>
+      }
+    >
+      <Field label={t('assembly.journal.periodicity')}>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {PERIODICITIES.map((kind) => (
+            <Button
+              key={kind}
+              size="sm"
+              variant={period.kind === kind ? 'primary' : 'ghost'}
+              onClick={() => period.kind !== kind && setPeriod(currentPeriod(kind))}
+            >
+              {t(`assembly.journal.kind.${kind}`)}
+            </Button>
+          ))}
+        </div>
+      </Field>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginTop: 6 }}>
+        <IconButton
+          icon={<Icon name="chevLeft" size={14} />}
+          aria-label={t('assembly.journal.previous')}
+          title={t('assembly.journal.previous')}
+          onClick={() => setPeriod(shiftPeriod(period, -1))}
+        />
+        <strong
+          style={{
+            minWidth: 170,
+            textAlign: 'center',
+            fontFamily: 'var(--font-serif)',
+            fontWeight: 500,
+            fontSize: 18,
+            color: 'var(--ink-900)',
+          }}
+        >
+          {capitalize(periodLabel(period, tr))}
+        </strong>
+        <IconButton
+          icon={<Icon name="chevRight" size={14} />}
+          aria-label={t('assembly.journal.next')}
+          title={t('assembly.journal.next')}
+          disabled={!canGoNext}
+          onClick={() => canGoNext && setPeriod(next)}
+        />
+      </div>
+
+      <p style={{ textAlign: 'center', margin: '12px 0 0', fontSize: 13.5, color: 'var(--ink-700)', minHeight: 20 }}>
+        {yearQ.isLoading
+          ? t('common.loading')
+          : yearQ.isError
+            ? errMsg(yearQ.error, t('assembly.journal.loadFailed'))
+            : t('assembly.journal.unitReportCount', { count: inPeriod.length })}
+      </p>
+
+      <div className="card" style={{ padding: '12px 14px', marginTop: 16 }}>
+        <Toggle
+          checked={includeAttendees}
+          onChange={setIncludeAttendees}
+          label={t('assembly.journal.includeAttendees')}
+        />
+        <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--ink-500)', lineHeight: 1.45 }}>
+          {t('assembly.journal.includeAttendeesHint')}
+        </p>
+      </div>
+      <p style={{ margin: '12px 0 0', fontSize: 12, color: 'var(--ink-500)', lineHeight: 1.5 }}>
+        {t('assembly.journal.contentHint')}
+      </p>
+    </Modal>
+  );
+}
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+// ---------------------------------------------------------------------------------------------
 //  Formulaire CR — présents cochables, fraction de pain, module + chapitres (déjà lus signalés),
 //  aperçu du texte §5.4 en direct, option « inclure la liste des présents » (D-ASM-14), Copier.
 //  Lecture seule (même rendu, sans saisie) quand le serveur ne donne pas `canWrite`.
@@ -325,12 +592,15 @@ function MeetingEditor({
   meetingId,
   hasStudy,
   onClose,
+  onLocked,
 }: {
   unit: AssemblyUnit;
   meetingId: string | null;
   /** Abonnement STUDY accessible : suggestion D-ETU-30 du chapitre étudié le jour du CR. */
   hasStudy: boolean;
   onClose: () => void;
+  /** D-OFF-02 (JP 27/10) : 403 `HIERARCHIE_SUIVI` → la page ferme la modale et montre le verrou Caleb. */
+  onLocked: OnLocked;
 }) {
   const { t } = useTranslation();
   const { push } = useToast();
@@ -355,6 +625,7 @@ function MeetingEditor({
     queryKey: ['assembly', 'progress', unit.id],
     queryFn: () => getUnitProgress(unit.id),
   });
+  useCalebLock(unit.id, [detailQ.error, rosterQ.error, progressQ.error], onLocked);
 
   const [date, setDate] = useState(todayIso());
   const [attendeeIds, setAttendeeIds] = useState<string[]>([]);
@@ -495,6 +766,12 @@ function MeetingEditor({
   };
 
   const onError = (err: unknown) => {
+    // D-OFF-02 (JP 27/10) : écrire dans une autre assemblée que la gratuite exige Caleb — verrou, pas de toast.
+    const denied = hierarchyAccessDenied(err);
+    if (denied) {
+      onLocked(unit.id, denied);
+      return;
+    }
     const code = errCode(err);
     push({
       kind: 'error',
@@ -531,8 +808,11 @@ function MeetingEditor({
       push({ kind: 'ok', title: t('assembly.deleted') });
       onClose();
     },
-    onError: (err) =>
-      push({ kind: 'error', title: t('assembly.deleteFailed'), msg: errMsg(err, t('common.error')) }),
+    onError: (err) => {
+      const denied = hierarchyAccessDenied(err);
+      if (denied) onLocked(unit.id, denied);
+      else push({ kind: 'error', title: t('assembly.deleteFailed'), msg: errMsg(err, t('common.error')) });
+    },
   });
 
   const copy = async () => {
@@ -828,7 +1108,7 @@ function ModuleProgressCard({ p }: { p: ModuleProgress }) {
   );
 }
 
-function ProgressTab({ unit, showOverview }: { unit: AssemblyUnit; showOverview: boolean }) {
+function ProgressTab({ unit, showOverview, onLocked }: { unit: AssemblyUnit; showOverview: boolean; onLocked: OnLocked }) {
   const { t } = useTranslation();
   const [filterModuleId, setFilterModuleId] = useState('');
 
@@ -836,6 +1116,7 @@ function ProgressTab({ unit, showOverview }: { unit: AssemblyUnit; showOverview:
     queryKey: ['assembly', 'progress', unit.id],
     queryFn: () => getUnitProgress(unit.id),
   });
+  useCalebLock(unit.id, [unitQ.error], onLocked);
   const modulesQ = useQuery({ queryKey: ['assembly', 'teaching-modules'], queryFn: listTeachingModules });
   const allQ = useQuery({
     queryKey: ['assembly', 'progress-all', filterModuleId],

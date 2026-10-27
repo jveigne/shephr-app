@@ -72,3 +72,12 @@ export const isDocumentGone = (err: unknown) => {
   const { status } = apiErrorInfo(err);
   return status === 404 || status === 410;
 };
+
+/**
+ * D-WEB-04 (JP 27/10) — retour après connexion vers le lecteur (`next=/d/{slug}?r=…`, comme
+ * `services/returnTarget` du mobile) : seul un chemin interne commençant par `/d/` est accepté ici
+ * (jamais une URL absolue ni `//ailleurs`, qui ferait une redirection ouverte).
+ */
+export function safeDocumentNext(raw: string | null | undefined): string | null {
+  return raw && raw.startsWith('/d/') ? raw : null;
+}

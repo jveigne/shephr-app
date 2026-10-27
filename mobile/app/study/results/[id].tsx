@@ -19,6 +19,7 @@ import Button from '@/components/Button';
 import Field from '@/components/Field';
 import SelectField from '@/components/SelectField';
 import ErrorBanner from '@/components/ErrorBanner';
+import StudyCityLock from '@/components/StudyCityLock';
 import { StudyCopySheet } from '@/components/StudyQuestionList';
 import { colors, fonts, radii } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,6 +38,7 @@ import {
   type StudySessionResults,
   type StudyVerdict,
 } from '@/services/assemblyApi';
+import { studyCityAccessDenied } from '@/services/entitlementsApi';
 import { fmtPoints, toLocalDate } from '@/utils/format';
 import { fmtIsoDay } from '@/utils/meetingReport';
 import { confirmDialog, notify } from '@/utils/dialogs';
@@ -62,6 +64,10 @@ import { goBack } from '@/utils/navigation';
  * avis (`pendingReview` du serveur) et donne *Juste* / *À préciser* / *À revoir* sur leurs ouvertes
  * depuis la copie (ajustement `PATCH …/answers/{questionId}` avec `verdict`, points calculés par le
  * serveur). D-ETU-38 : la plage de la séance est rappelée sous le titre.
+ *
+ * <p>D-ETU-51 (JP 27/10) : lus par la hiérarchie au-dessus de l'assemblée, les résultats exigent
+ * ETUDE_SUIVI sur sa ville — sur 403 `MODULE_ACCESS_DENIED` / `ETUDE_SUIVI`, `StudyCityLock`
+ * remplace l'erreur (contrat 27/10 §9.1), sans aucun paiement (D-ABO-13).
  */
 export default function StudyResultsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -78,14 +84,23 @@ export default function StudyResultsScreen() {
   const [copyLoading, setCopyLoading] = useState<string | null>(null);
   const [paperOpen, setPaperOpen] = useState(false);
   const [editing, setEditing] = useState<StudyCopyResult | null>(null);
+  // Contrat 27/10 §9.1 : 403 ETUDE_SUIVI → verrou à la place du contenu, jamais un message d'erreur.
+  const [locked, setLocked] = useState<{ canSubscribe: boolean } | null>(null);
 
   const load = useCallback(async () => {
     if (!sessionId) return;
     try {
       setResults(await getStudyResults(sessionId));
       setError(null);
+      setLocked(null);
     } catch (e: any) {
-      setError(studyErrorMessage(e, t));
+      const denied = studyCityAccessDenied(e);
+      if (denied) {
+        setLocked({ canSubscribe: denied.canSubscribe });
+        setError(null);
+      } else {
+        setError(studyErrorMessage(e, t));
+      }
     } finally {
       setLoading(false);
     }
@@ -158,6 +173,16 @@ export default function StudyResultsScreen() {
         <View style={styles.loadingBox}>
           <ActivityIndicator color={colors.moss} />
         </View>
+      </ScreenShell>
+    );
+  }
+
+  if (locked) {
+    return (
+      <ScreenShell withTabBar={false}>
+        {header}
+        <Text style={styles.kicker}>{t('study.results.kicker')}</Text>
+        <StudyCityLock />
       </ScreenShell>
     );
   }

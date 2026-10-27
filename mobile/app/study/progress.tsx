@@ -6,6 +6,7 @@ import ScreenShell from '@/components/ScreenShell';
 import Card from '@/components/Card';
 import Label from '@/components/Label';
 import ErrorBanner from '@/components/ErrorBanner';
+import StudyCityLock from '@/components/StudyCityLock';
 import { StudyCopySheet, StudyLanguagePill, studyLanguagesToMark } from '@/components/StudyQuestionList';
 import { colors, fonts, radii } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,6 +22,7 @@ import {
   type StudyPersonProgress,
   type StudyUnitProgress,
 } from '@/services/assemblyApi';
+import { studyCityAccessDenied } from '@/services/entitlementsApi';
 import { fmtPoints, toLocalDate } from '@/utils/format';
 import { fmtIsoDay } from '@/utils/meetingReport';
 import { notify } from '@/utils/dialogs';
@@ -41,6 +43,11 @@ import { goBack } from '@/utils/navigation';
  * <p>D-ETU-42/43 (JP 23/10) : une leçon faite en plusieurs séances (ou en partie) affiche « 20 / 57
  * questions » (`coveredQuestions` / `totalQuestions`, questions de premier niveau) et sa note en
  * cours (`bestScore`, Σ des meilleurs points par question, calculée par le serveur).
+ *
+ * <p>D-ETU-51 / D-ETU-52 (JP 27/10) : lue par la hiérarchie (au-dessus de l'assemblée), une
+ * assemblée ou un membre exige ETUDE_SUIVI sur la ville — sur 403 `MODULE_ACCESS_DENIED` /
+ * `ETUDE_SUIVI`, l'écran affiche `StudyCityLock` à la place de l'erreur (contrat 27/10 §9.1), sans
+ * aucun paiement (D-ABO-13).
  */
 export default function StudyProgressScreen() {
   const params = useLocalSearchParams<{ unitId?: string; mine?: string; userId?: string; leader?: string; lang?: string }>();
@@ -63,14 +70,23 @@ export default function StudyProgressScreen() {
   const [error, setError] = useState<string | null>(null);
   const [copy, setCopy] = useState<StudyCopyDetail | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
+  // Contrat 27/10 §9.1 : 403 ETUDE_SUIVI → verrou à la place du contenu, jamais un message d'erreur.
+  const [locked, setLocked] = useState<{ canSubscribe: boolean } | null>(null);
 
   const load = useCallback(async () => {
     try {
       if (unitId) setUnit(await getStudyUnitProgress(unitId));
       else setPerson(await (userId ? getMemberStudyProgress(userId) : getMyStudyProgress()));
       setError(null);
+      setLocked(null);
     } catch (e: any) {
-      setError(studyErrorMessage(e, t));
+      const denied = studyCityAccessDenied(e);
+      if (denied) {
+        setLocked({ canSubscribe: denied.canSubscribe });
+        setError(null);
+      } else {
+        setError(studyErrorMessage(e, t));
+      }
     } finally {
       setLoading(false);
     }
@@ -132,6 +148,8 @@ export default function StudyProgressScreen() {
         <View style={styles.loadingBox}>
           <ActivityIndicator color={colors.moss} />
         </View>
+      ) : locked ? (
+        <StudyCityLock />
       ) : unitId ? (
         unit && <UnitView unit={unit} refLanguage={refLanguage} />
       ) : (

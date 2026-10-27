@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,6 +6,7 @@ import ScreenShell from '@/components/ScreenShell';
 import Card from '@/components/Card';
 import Field from '@/components/Field';
 import Chip from '@/components/Chip';
+import CalebAssemblyLock from '@/components/CalebAssemblyLock';
 import { colors, fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -19,6 +20,8 @@ import {
   type MemberCareUnit,
   type MemberRecord,
 } from '@/services/memberCareApi';
+import { hierarchyAccessDenied } from '@/services/entitlementsApi';
+import { useCalebAssemblyGate, type LockedAssembly } from '@/hooks/useCalebAssemblyGate';
 import { confirmDialog, notify } from '@/utils/dialogs';
 import { fmtDate } from '@/utils/format';
 import { fmtIsoDay } from '@/utils/meetingReport';
@@ -38,13 +41,20 @@ function lastUpdated(iso: string | null, t: (k: string) => string): string {
  * Suivi pastoral — refonte D-ASM-01/02 (JP 23/09) : la liste = les comptes MEMBRE de l'assemblée
  * choisie (sélecteur alimenté par GET /member-care/units), fiche existante ou non. Plus de
  * « Nouvelle fiche » ni de suppression (RG-MCR-02 v2). L'onglet Redevabilité est gelé (D-ASM-09).
+ * D-OFF-06 (JP 27/10) : gratuit sur l'assemblée gratuite ; une autre assemblée de la chaîne relève
+ * de l'offre Caleb — 403 `MODULE_ACCESS_DENIED` / `HIERARCHIE_SUIVI` → verrou Caleb à la place des
+ * fiches (jamais un toast).
+ * Verrou Caleb D'AVANCE (revue 27/10, recette n°3 / n°4 — `hooks/useCalebAssemblyGate`, comme le
+ * web) : assemblées DIRIGÉES absentes de `/units` proposées avec un cadenas (verrou sans appel
+ * serveur) ; manager sans assemblée listée ni code `HIERARCHIE_SUIVI` → verrou à la place de
+ * « Aucune assemblée suivie ».
  */
 export default function CareIndexScreen() {
   const { t } = useLanguage();
   const [tab, setTab] = useState<Tab>('records');
 
   const [units, setUnits] = useState<MemberCareUnit[]>([]);
-  const [unitId, setUnitId] = useState<string | null>(null);
+  const [pickedUnitId, setUnitId] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<MemberCareStatus[]>([]);
   const [records, setRecords] = useState<MemberRecord[]>([]);
   const [overview, setOverview] = useState<MemberCareOverviewRow[]>([]);
@@ -52,31 +62,58 @@ export default function CareIndexScreen() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // D-OFF-06 : assemblée dont le serveur a refusé les fiches (403 HIERARCHIE_SUIVI).
+  const [lockedUnitId, setLockedUnitId] = useState<string | null>(null);
 
+  // Faux tant que `/units` n'a pas répondu (pas de verrou d'avance sur une liste inconnue).
+  const [unitsLoaded, setUnitsLoaded] = useState(false);
+
+  const listedIds = useMemo(() => (unitsLoaded ? units.map((u) => u.id) : null), [unitsLoaded, units]);
+  const caleb = useCalebAssemblyGate(listedIds);
+  const lockedLed = caleb.lockedLed;
+  // Sélection EFFECTIVE (dérivée, sans effet) : le choix s'il est listé ou verrouillé d'avance
+  // (D-OFF-06), sinon la première assemblée listée (canEdit d'abord côté serveur), à défaut la
+  // première assemblée dirigée verrouillée.
+  const unitId =
+    pickedUnitId &&
+    (units.some((u) => u.id === pickedUnitId) || lockedLed.some((a) => a.id === pickedUnitId))
+      ? pickedUnitId
+      : units[0]?.id ?? lockedLed[0]?.id ?? null;
   const unit = units.find((u) => u.id === unitId) ?? null;
+  const unitListed = !!unit;
+  const lockedSel = unit ? null : lockedLed.find((a) => a.id === unitId) ?? null;
 
   const loadRecords = useCallback(async () => {
     // Sans assemblée visible, rien à lister (GET /records sans unitId = toutes les assemblées
-    // lisibles, mais on reste sur une vue par assemblée, §6.3).
-    if (!unitId) {
+    // lisibles, mais on reste sur une vue par assemblée, §6.3). D-OFF-06 : une assemblée
+    // verrouillée d'avance (hors `/units`) n'est pas lue.
+    if (!unitId || !unitListed) {
       setRecords([]);
       return;
     }
-    const data = await listRecords({
-      unitId,
-      statusId: statusFilter ?? undefined,
-      search: search.trim() || undefined,
-    });
-    setRecords(data);
-  }, [unitId, statusFilter, search]);
+    try {
+      const data = await listRecords({
+        unitId,
+        statusId: statusFilter ?? undefined,
+        search: search.trim() || undefined,
+      });
+      setRecords(data);
+      setLockedUnitId((cur) => (cur === unitId ? null : cur));
+    } catch (e) {
+      if (!hierarchyAccessDenied(e)) throw e;
+      setRecords([]);
+      setLockedUnitId(unitId);
+    }
+  }, [unitId, unitListed, statusFilter, search]);
 
   const loadAll = useCallback(async () => {
     const [un, st, ov] = await Promise.allSettled([listCareUnits(), listStatuses(), getOverview()]);
     if (un.status === 'fulfilled') {
       const list = un.value;
       setUnits(list);
-      // Assemblée conservée si toujours visible, sinon la première (canEdit d'abord côté serveur).
-      setUnitId((cur) => (cur && list.some((u) => u.id === cur) ? cur : list[0]?.id ?? null));
+      setUnitsLoaded(true);
+      // Le choix est conservé ; la sélection effective (`unitId`, dérivée) retombe sur la première
+      // assemblée listée s'il n'est plus visible.
     }
     if (st.status === 'fulfilled') setStatuses(st.value);
     if (ov.status === 'fulfilled') setOverview(ov.value);
@@ -109,7 +146,7 @@ export default function CareIndexScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await loadAll();
+      await Promise.all([loadAll(), caleb.reload()]);
     } finally {
       setRefreshing(false);
     }
@@ -168,6 +205,10 @@ export default function CareIndexScreen() {
           setStatusFilter={setStatusFilter}
           search={search}
           setSearch={setSearch}
+          locked={(!!unitId && lockedUnitId === unitId) || lockedSel != null}
+          lockedLed={lockedLed}
+          lockedSel={lockedSel}
+          showChainLock={caleb.showChainLock}
           t={t}
         />
       ) : (
@@ -187,6 +228,10 @@ function RecordsView({
   setStatusFilter,
   search,
   setSearch,
+  locked,
+  lockedLed,
+  lockedSel,
+  showChainLock,
   t,
 }: {
   units: MemberCareUnit[];
@@ -198,9 +243,17 @@ function RecordsView({
   setStatusFilter: (v: string | null) => void;
   search: string;
   setSearch: (v: string) => void;
+  locked: boolean;
+  /** D-OFF-06 : assemblées dirigées hors de `/units` (cadenas) et celle qui est choisie. */
+  lockedLed: LockedAssembly[];
+  lockedSel: LockedAssembly | null;
+  /** D-OFF-06 : manager sans le code `HIERARCHIE_SUIVI` — verrou à la place de « Aucune assemblée ». */
+  showChainLock: boolean;
   t: (k: string, o?: any) => string;
 }) {
-  if (units.length === 0) {
+  if (units.length === 0 && lockedLed.length === 0) {
+    // D-OFF-06 (JP 27/10, recette n°4) : les fiches de la chaîne relèvent de l'offre Caleb.
+    if (showChainLock) return <CalebAssemblyLock />;
     return (
       <Card style={styles.emptyCard}>
         <Ionicons name="home-outline" size={26} color={colors.ink3} />
@@ -208,9 +261,9 @@ function RecordsView({
       </Card>
     );
   }
-  return (
+  const picker = (
     <>
-      {units.length > 1 && (
+      {units.length + lockedLed.length > 1 && (
         <View style={[styles.filterRow, { marginTop: 16 }]}>
           {units.map((u) => (
             <Chip
@@ -221,14 +274,47 @@ function RecordsView({
               onPress={() => setUnitId(u.id)}
             />
           ))}
+          {/* D-OFF-06 / P-02 (JP 27/10) : assemblée dirigée sans l'offre Caleb — cadenas. */}
+          {lockedLed.map((a) => (
+            <Chip
+              key={a.id}
+              label={a.cityName ? `${a.name} · ${a.cityName}` : a.name}
+              selected={a.id === lockedSel?.id}
+              iconLeft={
+                <Ionicons
+                  name="lock-closed"
+                  size={12}
+                  color={a.id === lockedSel?.id ? colors.white : colors.ink3}
+                  accessibilityLabel={t('assemblyLife.lockedUnit')}
+                />
+              }
+              onPress={() => setUnitId(a.id)}
+            />
+          ))}
         </View>
       )}
-      {units.length === 1 && unit && (
+      {units.length + lockedLed.length === 1 && (unit ?? lockedSel) && (
         <Text style={styles.unitName}>
-          {unit.name}
-          {unit.cityName ? <Text style={styles.unitCity}> · {unit.cityName}</Text> : null}
+          {(unit ?? lockedSel)!.name}
+          {(unit ?? lockedSel)!.cityName ? (
+            <Text style={styles.unitCity}> · {(unit ?? lockedSel)!.cityName}</Text>
+          ) : null}
         </Text>
       )}
+    </>
+  );
+  // D-OFF-06 (JP 27/10) : fiches d'une autre assemblée sans l'offre Caleb → verrou à la place.
+  if (locked) {
+    return (
+      <>
+        {picker}
+        <CalebAssemblyLock />
+      </>
+    );
+  }
+  return (
+    <>
+      {picker}
       {/* D-ASM-05 (JP 23/09) : le superviseur lit, seul le dirigeant d'assemblée écrit. */}
       {unit && !unit.canEdit && (
         <View style={styles.readOnly}>

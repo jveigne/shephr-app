@@ -1,25 +1,13 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../components/Icon';
 import { LangSwitch } from '../components/LangSwitch';
 import { Button, Checkbox, Field, Input } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../components/Toast';
-import { hasMemberSpace, hasMinistryAccess } from '../services/authApi';
-
-/**
- * Destination à reprendre après une session expirée. N'accepte qu'un chemin interne :
- * une URL absolue ou protocol-relative (`//ailleurs`) serait une redirection ouverte.
- * L'accès reste arbitré par les gardes d'AppShell/MemberShell à l'arrivée.
- */
-function safeNext(raw: string | null): string | null {
-  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return null;
-  return raw.startsWith('/login') ? null : raw;
-}
-
-/** Pages d'abonnement (hors shell, lot ABO4) : ouvertes à tout compte connecté. */
-const isBillingPath = (p: string) => p === '/abonnements' || p.startsWith('/abonnements/') || p.startsWith('/abonnements?');
+import { safeDocumentNext } from '../utils/documents';
+import { routeAfterLogin, safeNext } from '../utils/authRouting';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -45,37 +33,13 @@ export function LoginPage() {
     setLoading(true);
     try {
       const me = await login({ identifier: email.trim(), password });
-      // Lot ABO4 (D-ABO-05, JP 23/10) : les pages d'abonnement servent TOUT compte connecté,
-      // rattaché ou non — le retour après connexion n'attend donc aucun rôle.
-      if (nextPath && isBillingPath(nextPath)) {
+      // D-WEB-05 (JP 27/10) : routage extrait dans `utils/authRouting` (partagé avec /reset-password).
+      const outcome = routeAfterLogin(me, nextPath, navigate);
+      if (outcome === 'welcome') {
         push({ kind: 'ok', title: t('login.welcomeToast'), msg: t('login.welcomeToastMsg') });
-        navigate(nextPath, { replace: true });
-        return;
+      } else if (outcome === 'denied') {
+        setError(t('login.memberDenied'));
       }
-      if (hasMinistryAccess(me)) {
-        // Comportement actuel : accès Web Espace ministère.
-        push({ kind: 'ok', title: t('login.welcomeToast'), msg: t('login.welcomeToastMsg') });
-        navigate(nextPath ?? '/dashboard', { replace: true });
-        return;
-      }
-      if (hasMemberSpace(me)) {
-        // Feature A — MEMBRE Goals rattaché : espace minimal « Mes objectifs ».
-        push({ kind: 'ok', title: t('login.welcomeToast'), msg: t('login.welcomeToastMsg') });
-        navigate(nextPath ?? '/my-goals', { replace: true });
-        return;
-      }
-      const noAttachmentAtAll =
-        !me.superAdmin &&
-        me.goalRole == null &&
-        me.donationRole == null &&
-        me.goalUnitId == null &&
-        me.donationUnitId == null;
-      if (noAttachmentAtAll) {
-        // Feature B — aucun rattachement ni rôle : onboarding /join.
-        navigate('/join', { replace: true });
-        return;
-      }
-      setError(t('login.memberDenied'));
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
@@ -216,7 +180,16 @@ export function LoginPage() {
                 <Checkbox checked={remember} onChange={setRemember} />
                 {t('login.rememberMe')}
               </label>
-              <a href="#">{t('login.forgotPassword')}</a>
+              {/* D-WEB-05 (JP 27/10) : « Mot de passe oublié » sur le web, prérempli avec la saisie. */}
+              <Link
+                to={
+                  email.trim()
+                    ? `/forgot-password?identifier=${encodeURIComponent(email.trim())}`
+                    : '/forgot-password'
+                }
+              >
+                {t('login.forgotPassword')}
+              </Link>
             </div>
 
             <Button
@@ -249,7 +222,11 @@ export function LoginPage() {
             {t('login.noAccountQuestion')}{' '}
             <button
               type="button"
-              onClick={() => navigate('/signup')}
+              // D-WEB-04 (JP 27/10) : le retour vers un document survit au détour par l'inscription.
+              onClick={() => {
+                const docNext = safeDocumentNext(nextPath);
+                navigate(docNext ? `/signup?next=${encodeURIComponent(docNext)}` : '/signup');
+              }}
               style={{
                 background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
                 color: 'var(--accent, #1E3A2F)', fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,

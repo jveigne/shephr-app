@@ -9,6 +9,7 @@ import Button from '@/components/Button';
 import Chip from '@/components/Chip';
 import ErrorBanner from '@/components/ErrorBanner';
 import MeetingReportCard from '@/components/MeetingReportCard';
+import CalebAssemblyLock from '@/components/CalebAssemblyLock';
 import { DatePickerModal } from '@/components/DeclarationForm';
 import { colors, fonts, radii } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -29,6 +30,7 @@ import {
   type TeachingModule,
   type TeachingPart,
 } from '@/services/assemblyApi';
+import { hierarchyAccessDenied } from '@/services/entitlementsApi';
 import { fmtIsoDay, type MeetingReportInput } from '@/utils/meetingReport';
 
 /** Parties portées par des chapitres (module désactivé reconstitué à partir d'un CR), dans l'ordre. */
@@ -71,6 +73,9 @@ function assemblyErrorMessage(e: any, t: (k: string) => string, fallback: string
  *   séance d'étude de l'assemblée ouverte le jour du CR (date locale) est pré-coché — tant que le
  *   dirigeant n'a rien coché lui-même ; modifiable. Le lien CR ↔ étude n'est que le catalogue
  *   partagé (D-ETU-29) : rien n'est envoyé au serveur en plus.
+ * - D-OFF-02 (JP 27/10) : écrire le CR d'une autre assemblée que l'assemblée gratuite demande en plus
+ *   l'offre Caleb — 403 `MODULE_ACCESS_DENIED` / `HIERARCHIE_SUIVI` (chargement ou enregistrement)
+ *   → verrou Caleb à la place du formulaire, jamais un toast.
  */
 export default function MeetingFormScreen() {
   const { t } = useLanguage();
@@ -93,6 +98,7 @@ export default function MeetingFormScreen() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [locked, setLocked] = useState(false);
 
   // D-ETU-30 — sélection pré-cochée d'après une séance d'étude (null : aucune). Tant que la
   // sélection lui est identique, le dirigeant n'a « rien coché » : un changement de date la remplace.
@@ -123,6 +129,10 @@ export default function MeetingFormScreen() {
       setModules(m);
       setReadIds(new Set(p.modules.flatMap((mp) => mp.readChapterIds)));
     } catch (e: any) {
+      if (hierarchyAccessDenied(e)) {
+        setLocked(true);
+        return;
+      }
       setLoadError(e?.response?.data?.message ?? t('assemblyLife.loadFailed'));
     }
   }, [editId, params.unitId, t]);
@@ -291,6 +301,10 @@ export default function MeetingFormScreen() {
         router.replace(`/(tabs)/assembly/meeting/${created.id}` as Href);
       }
     } catch (e: any) {
+      if (hierarchyAccessDenied(e)) {
+        setLocked(true);
+        return;
+      }
       notify(t('common.appName'), assemblyErrorMessage(e, t, t('errors.saveFailed')));
     } finally {
       setSaving(false);
@@ -303,6 +317,23 @@ export default function MeetingFormScreen() {
         <View style={{ marginTop: 60, alignItems: 'center' }}>
           <ActivityIndicator color={colors.moss} />
         </View>
+      </ScreenShell>
+    );
+  }
+
+  if (locked) {
+    return (
+      <ScreenShell>
+        <View style={styles.headerRow}>
+          <Pressable onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+          </Pressable>
+        </View>
+        <Text style={styles.title}>
+          {existing ? t('assemblyLife.form.titleEdit') : t('assemblyLife.form.titleNew')}
+        </Text>
+        {!!unitName && <Text style={styles.subtitle}>{unitName}</Text>}
+        <CalebAssemblyLock />
       </ScreenShell>
     );
   }

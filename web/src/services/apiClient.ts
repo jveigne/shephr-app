@@ -17,7 +17,8 @@ export const apiClient = axios.create({
  * avant que le formulaire ait pu redemander le mot de passe.
  * `/auth/me` en est volontairement absent : un 401 là-bas EST une session expirée.
  */
-const CREDENTIAL_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/invitation'];
+// D-WEB-05 (JP 27/10) : '/auth/password/' (mot de passe oublié) — un code refusé n'est pas une session expirée.
+const CREDENTIAL_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/invitation', '/auth/password/'];
 
 const isCredentialRequest = (url: string | undefined) =>
   !!url && CREDENTIAL_ENDPOINTS.some((p) => url.includes(p));

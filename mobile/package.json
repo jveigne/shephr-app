@@ -8,6 +8,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "web:local": "bash scripts/web-local.sh",
     "lint": "expo lint"
   },
   "dependencies": {

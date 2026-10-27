@@ -7,7 +7,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,7 +16,7 @@ import Card from '@/components/Card';
 import { colors, fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { canManageUsers, isSubCoordinatorLeader, MODULE_ROLE_LABELS } from '@/services/authApi';
+import { isSubCoordinatorLeader, MODULE_ROLE_LABELS } from '@/services/authApi';
 import {
   getActiveGoal,
   getMyPerimeterAggregate,
@@ -27,17 +27,13 @@ import { goalName } from '@/utils/goalName';
 import { fmtAmount } from '@/utils/format';
 import {
   fetchLeaderHierarchy,
+  fetchSupervisionOverview,
   type HierarchyUnitView,
   type LeaderHierarchyNode,
   type LeaderHierarchyResponse,
+  type SupervisionOverview,
 } from '@/services/leadersApi';
-import {
-  AssemblyStatsBlock,
-  LeaderAssemblySummary,
-  UnitAssemblyLine,
-  useAssemblyHierarchyStats,
-  type AssemblyStatsState,
-} from '@/components/AssemblyHierarchyStats';
+import { ENTITLEMENT_HIERARCHIE_SUIVI, getPersonalEntitlements } from '@/services/entitlementsApi';
 
 /**
  * Hiérarchie des dirigeants (Lot H3 — 21/07) : arbre du leadership renvoyé par le backend,
@@ -50,7 +46,63 @@ import {
  * réintroduire ici : les deux notions doivent rester séparées.
  * J-5 (14/09) — la chaîne est une chaîne de DIRIGEANTS : un simple fidèle n'y est pas un nœud,
  * et sa propre vue part de son assemblée (côté serveur).
+ *
+ * Lot HIE (D-HIE-01, JP 28/10) — la Hiérarchie devient TROIS SOUS-PAGES (pas des onglets) :
+ *   1. CET ÉCRAN, « But quinquennal », page d'arrivée de la tuile, GRATUIT : « Je rends compte à … »,
+ *      « Ce que porte mon leadership · année », deux cartes d'accès, puis l'arbre Dirigeants |
+ *      Assemblées avec SEULEMENT les pastilles d'objectifs — les résumés de CR des lignes
+ *      d'assemblée ont quitté l'arbre : ils sont payants (page 3) ;
+ *   2. `app/hierarchie/leadership.tsx` « Mon leadership », GRATUIT (remplace `/superviseur`) ;
+ *      pastille = demandes reçues en attente (`pendingIncomingCount`, RG-HIE-29, masquée à 0) ;
+ *   3. `app/hierarchie/vie.tsx` « Vie de mon leadership », offre Caleb (HIERARCHIE_SUIVI) :
+ *      cadenas sur la carte sans le droit (droit PERSONNEL, D-ABO-36 — aucun prix, D-ABO-13).
+ * Axe : la CHAÎNE de supervision (supervisor_id récursif), jamais la géographie (D-ABO-31).
  */
+type HierarchyStatsAccess = 'unknown' | 'open' | 'locked';
+
+/** Carte d'accès à une sous-page (D-HIE-01). */
+function AccessCard({
+  icon,
+  title,
+  hint,
+  onPress,
+  badge,
+  locked,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  title: string;
+  hint: string;
+  onPress: () => void;
+  badge?: number;
+  locked?: boolean;
+}) {
+  const { t } = useLanguage();
+  return (
+    <Card variant="paper2" style={styles.accessCard} onPress={onPress}>
+      <Ionicons name={icon} size={20} color={colors.mossDeep} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <Text style={styles.unitName} numberOfLines={1}>{title}</Text>
+          {!!badge && badge > 0 && (
+            <Text
+              style={styles.badge}
+              accessibilityLabel={t('hierarchy.home.pendingBadge', { count: badge })}
+            >
+              {badge}
+            </Text>
+          )}
+        </View>
+        <Text style={styles.nodeMeta} numberOfLines={2}>{hint}</Text>
+      </View>
+      {locked ? (
+        <Ionicons name="lock-closed" size={16} color={colors.ink3} accessibilityLabel={t('hierarchy.home.lockedA11y')} />
+      ) : (
+        <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+      )}
+    </Card>
+  );
+}
+
 type ViewMode = 'leaders' | 'units';
 
 type UnitEntry = { unit: HierarchyUnitView; leaderName?: string };
@@ -62,12 +114,21 @@ type UnitEntry = { unit: HierarchyUnitView; leaderName?: string };
  * du périmètre sans dirigeant ne sont plus ajoutées ici — elles sont sur l'écran Structure.
  */
 function flattenUnits(nodes: LeaderHierarchyNode[]): UnitEntry[] {
-  const out: UnitEntry[] = [];
+  // Une assemblée dirigée à plusieurs (ex. « Segoulin & Ishimwe ») apparaît sous chacun de ses
+  // dirigeants dans l'arbre : une seule ligne ici, les noms réunis (clé React = id d'assemblée).
+  const byId = new Map<string, UnitEntry>();
   const walk = (node: LeaderHierarchyNode) => {
-    node.units.forEach((unit) => out.push({ unit, leaderName: node.fullName }));
+    node.units.forEach((unit) => {
+      const prev = byId.get(unit.id);
+      if (!prev) byId.set(unit.id, { unit, leaderName: node.fullName });
+      else if (node.fullName && !prev.leaderName?.split(' & ').includes(node.fullName)) {
+        prev.leaderName = prev.leaderName ? `${prev.leaderName} & ${node.fullName}` : node.fullName;
+      }
+    });
     node.children.forEach(walk);
   };
   nodes.forEach(walk);
+  const out = Array.from(byId.values());
   // Regroupement pays → région → ville (22/07) : le tri porte l'ordre des sections.
   return out.sort((a, b) =>
     (a.unit.countryName ?? '').localeCompare(b.unit.countryName ?? '')
@@ -78,19 +139,30 @@ function flattenUnits(nodes: LeaderHierarchyNode[]): UnitEntry[] {
 
 export default function HierarchieScreen() {
   const insets = useSafeAreaInsets();
-  const { me, isLeader, hasAssembly } = useAuth();
+  const { me } = useAuth();
   const { t } = useLanguage();
   const [data, setData] = useState<LeaderHierarchyResponse | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [view, setView] = useState<ViewMode>('leaders');
-  // D-ASM-18 (JP 08/10) : stats de Vie d'assemblée — abonnement ASSEMBLY + rôle au-dessus de MEMBRE
-  // (RG-06 : masqué sinon). `statsRefresh` suit le tirer-pour-rafraîchir de l'écran.
-  const [statsRefresh, setStatsRefresh] = useState(0);
-  const assemblyEnabled = hasAssembly && isLeader;
-  const assemblyStats = useAssemblyHierarchyStats(assemblyEnabled, statsRefresh);
-  const asm = assemblyEnabled ? assemblyStats : null;
+  // D-HIE-01 (JP 28/10) : aperçu de supervision (pastille de « Mon leadership », RG-HIE-29) et droit
+  // Caleb (cadenas de « Vie de mon leadership ») — relus au focus : on revient des sous-pages.
+  const [overview, setOverview] = useState<SupervisionOverview | null>(null);
+  const [access, setAccess] = useState<HierarchyStatsAccess>('unknown');
+  const loadCards = useCallback(async () => {
+    const [o, personal] = await Promise.allSettled([fetchSupervisionOverview(), getPersonalEntitlements()]);
+    if (o.status === 'fulfilled') setOverview(o.value);
+    if (personal.status === 'fulfilled') {
+      setAccess(personal.value.codes.includes(ENTITLEMENT_HIERARCHIE_SUIVI) ? 'open' : 'locked');
+    }
+    // Panne : on garde l'état connu ; la page 3 reste juge (un 403 y affiche le verrou).
+  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      void loadCards();
+    }, [loadCards]),
+  );
 
   const load = useCallback(async () => {
     try {
@@ -106,8 +178,7 @@ export default function HierarchieScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    setStatsRefresh((k) => k + 1);
-    try { await load(); } finally { setRefreshing(false); }
+    try { await Promise.all([load(), loadCards()]); } finally { setRefreshing(false); }
   };
 
   if (loading) {
@@ -177,28 +248,33 @@ export default function HierarchieScreen() {
         <LeadershipTotals unitCount={scope.units} memberCount={scope.members} />
       )}
 
-      {/* Déclaration de SON superviseur (JP 30/07) : réservée aux DIRIGEANTS, et logée ici —
-          jamais dans le parcours de création d'assemblée, qu'elle alourdirait. Un membre ne la
-          voit pas : son rattachement à une assemblée détermine implicitement son dirigeant.
-          J-5 (14/09) : la même règle est désormais gardée CÔTÉ SERVEUR (403) — ce test ne fait
-          plus que masquer un chemin fermé, il ne le ferme plus à lui seul. */}
-      {canManageUsers(me) && (
-        <Card
-          variant="paper2"
-          style={styles.supervisorCard}
-          onPress={() => router.push('/superviseur')}
-        >
-          <Ionicons name="people-circle-outline" size={18} color={colors.mossDeep} />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.unitName} numberOfLines={1}>{t('supervisor.title')}</Text>
-            <Text style={styles.nodeMeta} numberOfLines={2}>{t('supervisor.shortcutHint')}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
-        </Card>
+      {/* D-HIE-01 (JP 28/10) : deux cartes d'accès aux sous-pages.
+          « Mon leadership » (gratuit) : réservée aux dirigeants (P-HIE-a, `canDesignate`) — elle
+          remplace l'ancien raccourci « Mon superviseur » ; pastille = demandes reçues en attente.
+          « Vie de mon leadership » (offre Caleb) : hors vue CHAIN (simple membre) ; cadenas sans le
+          droit personnel HIERARCHIE_SUIVI — la page affiche alors le verrou unique, sans prix. */}
+      {/* Écart M3 (§12) : aussi pour un ancien dirigeant encore suivi par désignation (B4), qui
+          doit pouvoir « Retirer » ce lien. */}
+      {(overview?.canDesignate || overview?.followedBy) && (
+        <AccessCard
+          icon="people-circle-outline"
+          title={t('hierarchy.home.leadershipCard')}
+          hint={t('hierarchy.home.leadershipCardHint')}
+          badge={overview?.pendingIncomingCount}
+          onPress={() => router.push('/hierarchie/leadership')}
+        />
+      )}
+      {data?.mode !== 'CHAIN' && (
+        <AccessCard
+          icon="pulse-outline"
+          title={t('hierarchy.home.lifeCard')}
+          hint={t('hierarchy.home.lifeCardHint')}
+          locked={access === 'locked'}
+          onPress={() => router.push('/hierarchie/vie')}
+        />
       )}
 
-      {/* D-ASM-18 (JP 08/10) : Vie d'assemblée des assemblées de l'arbre — que des nombres. */}
-      {asm && roots.length > 0 && <AssemblyStatsBlock asm={asm} roots={roots} />}
+      <Text style={styles.sectionKicker}>{t('hierarchy.home.goalSection')}</Text>
 
       <View style={styles.segmentRow}>
         {(['leaders', 'units'] as ViewMode[]).map((v) => (
@@ -215,7 +291,7 @@ export default function HierarchieScreen() {
         {!error && roots.length === 0 && <Text style={styles.empty}>{t('hierarchy.empty')}</Text>}
         {view === 'leaders'
           ? roots.map((root) => (
-              <LeaderNodeRow key={root.id} node={root} depth={0} meId={me?.id ?? null} asm={asm} />
+              <LeaderNodeRow key={root.id} node={root} depth={0} meId={me?.id ?? null} />
             ))
           : (() => {
               const units = flattenUnits(roots);
@@ -244,7 +320,7 @@ export default function HierarchieScreen() {
                   prevCity = city;
                 }
                 rows.push(
-                  <UnitRow key={unit.id} unit={unit} depth={1} leaderName={leaderName} hideLocality asm={asm} />,
+                  <UnitRow key={unit.id} unit={unit} depth={1} leaderName={leaderName} hideLocality />,
                 );
               });
               return rows;
@@ -354,8 +430,8 @@ function GoalPill({
   );
 }
 
-function LeaderNodeRow({ node, depth, meId, asm }: {
-  node: LeaderHierarchyNode; depth: number; meId: string | null; asm: AssemblyStatsState | null;
+function LeaderNodeRow({ node, depth, meId }: {
+  node: LeaderHierarchyNode; depth: number; meId: string | null;
 }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(depth < 2);
@@ -387,17 +463,16 @@ function LeaderNodeRow({ node, depth, meId, asm }: {
             {role ? MODULE_ROLE_LABELS[role] : '—'}
             {node.units.length > 0 ? ` · ${t('hierarchy.unitsCount', { count: node.units.length })}` : ''}
           </Text>
-          {asm && <LeaderAssemblySummary asm={asm} node={node} />}
         </View>
       </Card>
 
       {open && (
         <View style={{ gap: 8, marginTop: 8 }}>
           {node.units.map((unit) => (
-            <UnitRow key={unit.id} unit={unit} depth={depth + 1} asm={asm} />
+            <UnitRow key={unit.id} unit={unit} depth={depth + 1} />
           ))}
           {node.children.map((child) => (
-            <LeaderNodeRow key={child.id} node={child} depth={depth + 1} meId={meId} asm={asm} />
+            <LeaderNodeRow key={child.id} node={child} depth={depth + 1} meId={meId} />
           ))}
         </View>
       )}
@@ -405,9 +480,8 @@ function LeaderNodeRow({ node, depth, meId, asm }: {
   );
 }
 
-function UnitRow({ unit, depth, leaderName, hideLocality, asm }: {
+function UnitRow({ unit, depth, leaderName, hideLocality }: {
   unit: HierarchyUnitView; depth: number; leaderName?: string; hideLocality?: boolean;
-  asm: AssemblyStatsState | null;
 }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
@@ -435,7 +509,6 @@ function UnitRow({ unit, depth, leaderName, hideLocality, asm }: {
               ? t('hierarchy.membersCount', { count: unit.members.length })
               : t('hierarchy.unitNoMembers')}
           </Text>
-          {asm && <UnitAssemblyLine asm={asm} unitId={unit.id} />}
         </View>
         {hasMembers && (
           <Ionicons name={open ? 'chevron-down' : 'chevron-forward'} size={14} color={colors.ink3} />
@@ -486,9 +559,18 @@ const styles = StyleSheet.create({
   },
   reportsToText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
   reportsToName: { fontWeight: '700', color: colors.ink },
-  supervisorCard: {
-    marginTop: 14, paddingHorizontal: 14, paddingVertical: 12,
-    flexDirection: 'row', alignItems: 'center', gap: 10,
+  accessCard: {
+    marginTop: 12, paddingHorizontal: 14, paddingVertical: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+  },
+  badge: {
+    fontFamily: fonts.mono, fontSize: 10, fontWeight: '700', color: colors.white,
+    minWidth: 20, textAlign: 'center', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99,
+    backgroundColor: colors.clay, overflow: 'hidden',
+  },
+  sectionKicker: {
+    fontFamily: fonts.mono, fontSize: 10.5, color: colors.ink3, letterSpacing: 1.1,
+    textTransform: 'uppercase', marginTop: 22,
   },
   segmentRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
   segment: { flex: 1, paddingVertical: 9, borderRadius: 99, backgroundColor: 'rgba(42,38,32,0.06)', alignItems: 'center' },

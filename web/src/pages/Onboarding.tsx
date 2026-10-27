@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import { Badge, Button, Field, Input, Picker, type PickerOption } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { hasMemberSpace, hasMinistryAccess } from '../services/authApi';
+import { hasMemberSpace, hasMinistryAccess, isAttachedAccount } from '../services/authApi';
+import { safeDocumentNext } from '../utils/documents';
 import { fetchRequestContext, type RequestNodeOption } from '../services/structureRequestsApi';
 // Contact JExcellence — piloté depuis le back-office, même canal que la landing (JP 31/07).
 import { contactMailto, useContactSettings } from '../services/contactApi';
@@ -57,10 +58,21 @@ export function OnboardingPage() {
   const { push } = useToast();
   const queryClient = useQueryClient();
   const { ready, isAuthenticated, me, refreshMe, logout } = useAuth();
+  // D-WEB-04 (JP 27/10) : arrivée depuis le mur d'un document (`?next=/d/{slug}`) — une fois le
+  // rattachement effectif, retour sur le document (miroir de `routeHomeOrReturn` du mobile).
+  const [searchParams] = useSearchParams();
+  const docNext = safeDocumentNext(searchParams.get('next'));
 
   useEffect(() => {
-    if (ready && !isAuthenticated) navigate('/login', { replace: true });
-  }, [ready, isAuthenticated, navigate]);
+    if (ready && !isAuthenticated) {
+      navigate(docNext ? `/login?next=${encodeURIComponent(docNext)}` : '/login', { replace: true });
+    }
+  }, [ready, isAuthenticated, navigate, docNext]);
+
+  // Compte déjà rattaché arrivé ici avec un document à reprendre : rien à faire sur /join.
+  useEffect(() => {
+    if (ready && docNext && isAttachedAccount(me)) navigate(docNext, { replace: true });
+  }, [ready, me, docNext, navigate]);
 
   const mineQ = useQuery({
     queryKey: ['join-requests', 'mine'],
@@ -91,7 +103,8 @@ export function OnboardingPage() {
     setReloading(true);
     try {
       const fresh = await refreshMe();
-      if (hasMinistryAccess(fresh)) navigate('/dashboard', { replace: true });
+      if (docNext && isAttachedAccount(fresh)) navigate(docNext, { replace: true });
+      else if (hasMinistryAccess(fresh)) navigate('/dashboard', { replace: true });
       else if (hasMemberSpace(fresh)) navigate('/my-goals', { replace: true });
       else push({ kind: 'error', title: t('join.notActiveYet') });
     } catch {

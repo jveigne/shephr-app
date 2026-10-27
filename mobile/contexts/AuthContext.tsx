@@ -5,6 +5,7 @@ import {
   fetchAccessibleModules,
   fetchMe,
   hasGoalsAccess,
+  isAttachedAccount,
   isLeaderRole,
   isTreasurerRole,
   login as loginRequest,
@@ -69,9 +70,12 @@ interface AuthContextValue extends AuthState {
    */
   hasAssembly: boolean;
   /**
-   * Étude « Le Message de Bertoua » : abonnement STUDY actif — D-ETU-28 (JP 23/10), module à part
-   * de Vie d'assemblée (remplace D-ETU-05). Gate la tuile d'accueil et les écrans `app/study/*`,
-   * et la suggestion de chapitre du formulaire de CR (D-ETU-30).
+   * Étude « Le Message de Bertoua » — D-ETU-50 (JP 27/10, lève D-ETU-28 pour ces usages) : l'étude
+   * est GRATUITE, ce drapeau ne dépend plus de l'abonnement STUDY : il vaut pour tout compte
+   * rattaché (`isAttachedAccount`). Gate la tuile d'accueil (masquée en plus si `/study/catalog`
+   * est vide, D-ETU-54 — c'est aussi ce qui la cache si la plateforme coupe STUDY), les écrans
+   * `app/study/*` et la suggestion de chapitre du formulaire de CR (D-ETU-30). Le suivi de la ville
+   * (ETUDE_SUIVI) se vérifie par ville, jamais ici (`GET /study/localities`, 403 enrichi).
    */
   hasStudy: boolean;
   /** Module Dons accessible : abonnement DONATIONS actif couvrant l'utilisateur (RG-06). */
@@ -368,7 +372,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     modules,
     hasMemberCare: modules.includes('MEMBER_CARE'),
     hasAssembly: modules.includes('ASSEMBLY'),
-    hasStudy: modules.includes('STUDY'),
+    // D-ETU-50 (JP 27/10) : étude gratuite — plus de dépendance au module STUDY (voir le type).
+    hasStudy: isAttachedAccount(state.me),
     hasDonations: modules.includes('DONATIONS'),
     hasEvents: modules.includes('EVENTS'),
     hasDocuments: modules.includes('DOCUMENTS'),

@@ -15,8 +15,9 @@ import {
   type Column,
 } from '../components/ui';
 import { useToast } from '../components/Toast';
+import { BulkReminderModal } from '../components/BulkReminderModal';
 import { useAuth } from '../hooks/useAuth';
-import { canReadAssemblyMembers, goalPerimeterNodes, isSecretariat } from '../services/authApi';
+import { canReadAssemblyMembers, goalPerimeterNodes, hasGoalsAccess, isSecretariat } from '../services/authApi';
 import {
   addProgress,
   deleteProgress,
@@ -227,6 +228,12 @@ export function GoalsPage() {
   const [progressOpen, setProgressOpen] = useState(false);
   const [editProgress, setEditProgress] = useState<{ progress: ProgressResponse; line: GoalLine } | null>(null);
   const [toDeleteProgress, setToDeleteProgress] = useState<ProgressResponse | null>(null);
+  // Lot G3 — relance groupée. Parité mobile → web (JP 27/10, décision n°3 — D-WEB-01) : miroir
+  // de `leader` dans mobile/app/(tabs)/goals/member.tsx — tout compte NON simple membre ; les
+  // périmètres sont gardés et proposés par le serveur (un LEADER / SECRETARIAT ne reçoit que
+  // « Mes disciples »). Jamais dans MemberShell (GoalsPage n'y est pas monté).
+  const canBulkRemind = hasGoalsAccess(me);
+  const [bulkRemindOpen, setBulkRemindOpen] = useState(false);
 
   const goal = goalQ.data ?? null;
   const data = unitQ.data ?? null;
@@ -535,6 +542,11 @@ export function GoalsPage() {
                 onChange={setSelectedYear}
               />
             )}
+            {canBulkRemind && (
+              <Button iconL={<Icon name="mail" size={15} />} onClick={() => setBulkRemindOpen(true)}>
+                {t('goals.remind.open')}
+              </Button>
+            )}
             {hasPledges && (
               <>
                 <Button iconL={<Icon name="plus" size={15} />} onClick={() => setProgressOpen(true)}>
@@ -554,6 +566,8 @@ export function GoalsPage() {
           </>
         }
       />
+
+      {canBulkRemind && <BulkReminderModal open={bulkRemindOpen} onClose={() => setBulkRemindOpen(false)} />}
 
       <div className="content">
         {goalQ.isLoading || (hasUnit && unitQ.isLoading) ? (

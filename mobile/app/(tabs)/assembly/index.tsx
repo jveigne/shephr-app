@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import Chip from '@/components/Chip';
 import Label from '@/components/Label';
 import SelectField from '@/components/SelectField';
 import ErrorBanner from '@/components/ErrorBanner';
+import CalebAssemblyLock from '@/components/CalebAssemblyLock';
 import { colors, fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -25,6 +26,8 @@ import {
   type TeachingModule,
   type UnitProgress,
 } from '@/services/assemblyApi';
+import { hierarchyAccessDenied } from '@/services/entitlementsApi';
+import { useCalebAssemblyGate } from '@/hooks/useCalebAssemblyGate';
 import { fmtIsoDay, formatChapters } from '@/utils/meetingReport';
 
 type Tab = 'meetings' | 'progress';
@@ -40,6 +43,18 @@ type Tab = 'meetings' | 'progress';
  * D-ASM-17 (JP 25/09) : un MEMBRE voit son assemblée en lecture seule — ses présences sur chaque
  * réunion, « Mon avancement » (chapitres lus lors des réunions où il était présent) et les CR des
  * réunions suivies dans une assemblée quittée depuis.
+ *
+ * D-OFF-02 / D-OFF-04 (JP 27/10, plan `05_Plan_Offres_Caleb_Nehemie.md` §3.2-§3.3) : `/units` renvoie
+ * l'assemblée gratuite du compte et, avec l'offre Caleb, les assemblées de sa CHAÎNE de supervision
+ * (jamais la géographie). Un 403 `MODULE_ACCESS_DENIED` / `HIERARCHIE_SUIVI` sur une assemblée
+ * (droit échu entre-temps) remplace son contenu par le verrou Caleb (`CalebAssemblyLock`) ; une
+ * assemblée demandée depuis la Hiérarchie mais absente de `/units` l'affiche aussi.
+ *
+ * Verrou Caleb D'AVANCE (revue 27/10, recette n°3 / n°4 — `hooks/useCalebAssemblyGate`, comme le
+ * web) : les assemblées DIRIGÉES absentes de `/units` sont proposées avec un cadenas (sans Caleb,
+ * la seconde d'un dirigeant d'unité, P-02) et ouvrent le verrou sans appeler le serveur ; un
+ * manager sans assemblée listée et sans le code `HIERARCHIE_SUIVI` voit le verrou à la place de
+ * « Aucune assemblée visible » (sa chaîne en contient).
  */
 export default function AssemblyIndexScreen() {
   const { t } = useLanguage();
@@ -52,7 +67,7 @@ export default function AssemblyIndexScreen() {
   const appliedRequest = useRef<string | null>(null);
 
   const [units, setUnits] = useState<AssemblyUnit[]>([]);
-  const [unitId, setUnitId] = useState<string | null>(null);
+  const [pickedUnitId, setUnitId] = useState<string | null>(null);
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [meetings, setMeetings] = useState<MeetingSummary[]>([]);
   const [progress, setProgress] = useState<UnitProgress | null>(null);
@@ -61,19 +76,48 @@ export default function AssemblyIndexScreen() {
   const [overview, setOverview] = useState<UnitProgress[]>([]);
   const [myProgress, setMyProgress] = useState<MyProgress | null>(null);
   const [myMeetings, setMyMeetings] = useState<MeetingSummary[]>([]);
+  // D-OFF-02 (JP 27/10) : assemblée dont le serveur a refusé la lecture (403 HIERARCHIE_SUIVI), et
+  // assemblée demandée par la Hiérarchie hors de `/units` (sans l'offre Caleb).
+  const [lockedUnitId, setLockedUnitId] = useState<string | null>(null);
+  const [requestedLocked, setRequestedLocked] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const listedIds = useMemo(() => (loading ? null : units.map((u) => u.id)), [loading, units]);
+  const caleb = useCalebAssemblyGate(listedIds);
+  const lockedLed = caleb.lockedLed;
+  // Sélection EFFECTIVE (dérivée, sans effet) : le choix s'il est listé par le serveur ou verrouillé
+  // d'avance (D-OFF-02), sinon la première assemblée listée (le serveur trie celles où l'on écrit en
+  // tête), à défaut la première assemblée dirigée verrouillée.
+  const unitId =
+    pickedUnitId &&
+    (units.some((u) => u.id === pickedUnitId) || lockedLed.some((a) => a.id === pickedUnitId))
+      ? pickedUnitId
+      : units[0]?.id ?? lockedLed[0]?.id ?? null;
   const unit = units.find((u) => u.id === unitId) ?? null;
-  const unitOptions = units.map((u) => ({
-    id: u.id,
-    name: u.cityName ? `${u.name} · ${u.cityName}` : u.name,
-  }));
+  const unitListed = !!unit;
+  const lockedSel = unit ? null : lockedLed.find((a) => a.id === unitId) ?? null;
+  const unitOptions = [
+    ...units.map((u) => ({
+      id: u.id,
+      name: u.cityName ? `${u.name} · ${u.cityName}` : u.name,
+    })),
+    // D-OFF-02 / P-02 (JP 27/10) : assemblée dirigée hors de `/units` — cadenas, verrou Caleb.
+    ...lockedLed.map((a) => ({
+      id: a.id,
+      name: [a.name, a.cityName, t('assemblyLife.lockedUnit')].filter(Boolean).join(' · '),
+    })),
+  ];
   // Vue d'ensemble réservée à qui voit plusieurs assemblées (dirigeants au-dessus, §6.2/§6.3).
   const showOverview = units.length > 1;
   const isMember = !!unit?.member;
+  const unitLocked = (!!unitId && lockedUnitId === unitId) || lockedSel != null;
+  const pickUnit = (id: string) => {
+    setRequestedLocked(false);
+    setUnitId(id);
+  };
 
   const loadUnits = useCallback(async () => {
     const list = await listAssemblyUnits();
@@ -81,25 +125,36 @@ export default function AssemblyIndexScreen() {
     const wanted =
       requestedUnit && appliedRequest.current !== requestedUnit ? requestedUnit.split('|')[0] : null;
     appliedRequest.current = requestedUnit;
-    if (wanted && list.some((u) => u.id === wanted)) {
+    if (wanted) {
+      // Hors de `/units` : retenue quand même — si le compte la dirige, elle est proposée avec un
+      // cadenas (verrou Caleb) ; sinon la sélection retombe sur la première assemblée listée.
+      setRequestedLocked(!list.some((u) => u.id === wanted));
       setUnitId(wanted);
       setTab('meetings');
-    } else {
-      setUnitId((cur) => (cur && list.some((u) => u.id === cur) ? cur : list[0]?.id ?? null));
     }
     return list;
   }, [requestedUnit]);
 
   const loadUnitData = useCallback(async () => {
-    if (!unitId) {
+    // D-OFF-02 : une assemblée verrouillée d'avance (hors `/units`) n'est pas lue — verrou direct.
+    if (!unitId || !unitListed) {
       setMeetings([]);
       setProgress(null);
       return;
     }
-    const [m, p] = await Promise.all([listMeetings(unitId, year), getUnitProgress(unitId)]);
-    setMeetings(m);
-    setProgress(p);
-  }, [unitId, year]);
+    try {
+      const [m, p] = await Promise.all([listMeetings(unitId, year), getUnitProgress(unitId)]);
+      setMeetings(m);
+      setProgress(p);
+      setLockedUnitId((cur) => (cur === unitId ? null : cur));
+    } catch (e) {
+      if (!hierarchyAccessDenied(e)) throw e;
+      // Verrou Caleb à la place du contenu, jamais un bandeau d'erreur (D-OFF-02).
+      setMeetings([]);
+      setProgress(null);
+      setLockedUnitId(unitId);
+    }
+  }, [unitId, unitListed, year]);
 
   const loadOverview = useCallback(async () => {
     if (!showOverview) {
@@ -177,7 +232,7 @@ export default function AssemblyIndexScreen() {
     setRefreshing(true);
     try {
       await loadAll();
-      await Promise.all([loadUnitData(), loadOverview(), loadMine()]);
+      await Promise.all([loadUnitData(), loadOverview(), loadMine(), caleb.reload()]);
     } catch {
       // l'erreur est déjà affichée par le bandeau
     } finally {
@@ -216,83 +271,101 @@ export default function AssemblyIndexScreen() {
         <View style={{ marginTop: 50, alignItems: 'center' }}>
           <ActivityIndicator color={colors.moss} />
         </View>
-      ) : units.length === 0 ? (
-        <Card style={styles.emptyCard}>
-          <Ionicons name="home-outline" size={26} color={colors.ink3} />
-          <Text style={styles.emptyText}>{t('assemblyLife.noUnits')}</Text>
-        </Card>
+      ) : units.length === 0 && lockedLed.length === 0 ? (
+        caleb.showChainLock ? (
+          // D-OFF-02 (JP 27/10, recette n°4) : un manager sans assemblée gratuite n'a pas « aucune
+          // assemblée » — celles de sa chaîne relèvent de l'offre Caleb.
+          <CalebAssemblyLock />
+        ) : (
+          <Card style={styles.emptyCard}>
+            <Ionicons name="home-outline" size={26} color={colors.ink3} />
+            <Text style={styles.emptyText}>{t('assemblyLife.noUnits')}</Text>
+          </Card>
+        )
       ) : (
         <>
           {/* Liste déroulante plutôt que des pastilles : un dirigeant de ville/région peut voir
               des dizaines d'assemblées (retour JP 08/10). Le serveur trie déjà les assemblées
               où l'on écrit en tête. */}
-          {units.length > 1 && (
+          {unitOptions.length > 1 && (
             <SelectField
               label={t('assemblyLife.unitPicker')}
               options={unitOptions}
               pick={unitOptions.find((o) => o.id === unitId) ?? null}
-              onChange={(o) => setUnitId(o.id)}
+              onChange={(o) => pickUnit(o.id)}
             />
           )}
-          {units.length === 1 && unit && (
+          {unitOptions.length === 1 && (unit ?? lockedSel) && (
             <Text style={styles.unitName}>
-              {unit.name}
-              {unit.cityName ? <Text style={styles.unitCity}> · {unit.cityName}</Text> : null}
+              {(unit ?? lockedSel)!.name}
+              {(unit ?? lockedSel)!.cityName ? (
+                <Text style={styles.unitCity}> · {(unit ?? lockedSel)!.cityName}</Text>
+              ) : null}
             </Text>
           )}
 
-          <View style={styles.tabRow}>
-            <Pressable
-              style={[styles.tabBtn, tab === 'meetings' && styles.tabBtnOn]}
-              onPress={() => setTab('meetings')}
-            >
-              <Text style={[styles.tabText, tab === 'meetings' && styles.tabTextOn]}>
-                {t('assemblyLife.tabMeetings')}
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[styles.tabBtn, tab === 'progress' && styles.tabBtnOn]}
-              onPress={() => setTab('progress')}
-            >
-              <Text style={[styles.tabText, tab === 'progress' && styles.tabTextOn]}>
-                {t('assemblyLife.tabProgress')}
-              </Text>
-            </Pressable>
-          </View>
+          {/* Assemblée demandée par la Hiérarchie hors de `/units` ; si elle est dirigée par le compte,
+              elle est sélectionnée et le verrou plein suffit. */}
+          {requestedLocked && !lockedSel && <CalebAssemblyLock compact />}
 
-          {tab === 'meetings' ? (
-            <>
-              <MeetingsView
-                meetings={meetings}
-                year={year}
-                setYear={setYear}
-                canWrite={!!unit?.canWrite}
-                isMember={isMember}
-                onNew={openNew}
-                onJournal={openJournal}
-                t={t}
-              />
-              {/* D-ASM-17 : CR des réunions suivies dans une assemblée quittée depuis. */}
-              {isMember && myMeetings.some((m) => m.unitId !== unitId) && (
-                <>
-                  <Text style={styles.sectionTitle}>{t('assemblyLife.otherMeetingsTitle')}</Text>
-                  <MeetingRows meetings={myMeetings.filter((m) => m.unitId !== unitId)} showUnit t={t} />
-                </>
-              )}
-            </>
+          {unitLocked ? (
+            <CalebAssemblyLock />
           ) : (
             <>
-              {isMember && <MyProgressView progress={myProgress} t={t} />}
-              {isMember && <Text style={styles.sectionTitle}>{t('assemblyLife.progress.assemblyTitle')}</Text>}
-              <UnitProgressView progress={progress} t={t} />
-              {showOverview && (
-                <OverviewView
-                  overview={overview}
-                  modules={modules}
-                  moduleId={overviewModule}
-                  setModuleId={setOverviewModule}
-                  t={t}
-                />
+              <View style={styles.tabRow}>
+                <Pressable
+                  style={[styles.tabBtn, tab === 'meetings' && styles.tabBtnOn]}
+                  onPress={() => setTab('meetings')}
+                >
+                  <Text style={[styles.tabText, tab === 'meetings' && styles.tabTextOn]}>
+                    {t('assemblyLife.tabMeetings')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.tabBtn, tab === 'progress' && styles.tabBtnOn]}
+                  onPress={() => setTab('progress')}
+                >
+                  <Text style={[styles.tabText, tab === 'progress' && styles.tabTextOn]}>
+                    {t('assemblyLife.tabProgress')}
+                  </Text>
+                </Pressable>
+              </View>
+
+              {tab === 'meetings' ? (
+                <>
+                  <MeetingsView
+                    meetings={meetings}
+                    year={year}
+                    setYear={setYear}
+                    canWrite={!!unit?.canWrite}
+                    isMember={isMember}
+                    onNew={openNew}
+                    onJournal={openJournal}
+                    t={t}
+                  />
+                  {/* D-ASM-17 : CR des réunions suivies dans une assemblée quittée depuis. */}
+                  {isMember && myMeetings.some((m) => m.unitId !== unitId) && (
+                    <>
+                      <Text style={styles.sectionTitle}>{t('assemblyLife.otherMeetingsTitle')}</Text>
+                      <MeetingRows meetings={myMeetings.filter((m) => m.unitId !== unitId)} showUnit t={t} />
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  {isMember && <MyProgressView progress={myProgress} t={t} />}
+                  {isMember && <Text style={styles.sectionTitle}>{t('assemblyLife.progress.assemblyTitle')}</Text>}
+                  <UnitProgressView progress={progress} t={t} />
+                  {showOverview && (
+                    <OverviewView
+                      overview={overview}
+                      modules={modules}
+                      moduleId={overviewModule}
+                      setModuleId={setOverviewModule}
+                      t={t}
+                    />
+                  )}
+                </>
               )}
             </>
           )}

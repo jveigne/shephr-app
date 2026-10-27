@@ -89,34 +89,6 @@
         "desc": "Tableaux de bord, cartes, évolution dans le temps et exports CSV/PDF pour le pilotage et la consolidation."
       }
     },
-    "pricing": {
-      "title": "Une tarification simple, à votre échelle",
-      "subtitle": "Les modules essentiels sont gratuits. Les modules avancés sont payants à la carte, au prix juste pour la taille de votre église.",
-      "freeBadge": "Inclus & gratuit",
-      "freeTitle": "Objectifs & Recueils",
-      "freeDesc": "Le suivi des objectifs et les recueils de cantiques sont toujours actifs, sans frais, pour tous les ministères.",
-      "donations": {
-        "name": "Dons",
-        "price": "dès 150 €",
-        "unit": "/ an",
-        "desc": "Déclaration et pilotage des dons sur tout votre périmètre. Tarif selon la taille de l'église."
-      },
-      "memberCare": {
-        "name": "Suivi pastoral",
-        "price": "dès 29 €",
-        "unit": "/ mois",
-        "desc": "Fiches de suivi, statuts spirituels et redevabilité. Activable indépendamment des dons."
-      },
-      "factorsTitle": "Le prix s'adapte à votre situation",
-      "factors": {
-        "size": "La taille de votre église (paliers selon le nombre de membres)",
-        "zone": "Votre région géographique",
-        "cmci": "Une remise mission pour les églises CMCI",
-        "bundle": "Un tarif dégressif si vous activez plusieurs modules"
-      },
-      "quoteNote": "Grandes structures ou besoin particulier ? Nous établissons un devis adapté.",
-      "cta": "Demander un devis"
-    },
     "contact": {
       "title": "Portez le But Quinquennal avec Shephr",
       "desc": "Vous rejoignez une assemblée existante ? Créez votre compte, déposez votre demande de rattachement, puis déclarez vos engagements. Pour déployer le But Quinquennal sur un ministère entier, nous vous accompagnons : nous configurons votre structure, créons vos premiers accès et activons les modules dont vous avez besoin.",
@@ -128,7 +100,7 @@
       "tagline": "La plateforme de gestion pour votre ministère.",
       "privacy": "Confidentialité",
       "deleteAccount": "Supprimer mon compte",
-      "subscriptions": "Abonnements"
+      "offers": "Nos offres"
     }
   },
   "privacy": {
@@ -324,7 +296,11 @@
     "contact": "Contactez-nous",
     "contactSubject": "Demande d'assistance Shephr",
     "menu": "Menu",
-    "study": "Le Message de Bertoua"
+    "study": "Le Message de Bertoua",
+    "studyLive": "En cours",
+    "documents": "Documents",
+    "studyCity": "Suivi de la ville",
+    "offers": "Offres"
   },
   "sidebar": {
     "logout": "Déconnexion",
@@ -487,6 +463,170 @@
       "lastDays_other": "Dernier CR il y a {{count}} j",
       "unitAverage": "{{value}} présents en moyenne",
       "openAssembly": "Ouvrir la Vie d'assemblée"
+    },
+    "lock": {
+      "title": "Offre Caleb — le suivi de ma hiérarchie",
+      "intro": "Vie d'assemblée (comptes rendus, journal PDF consolidé) et « Le Message de Bertoua » pour toutes les assemblées de votre chaîne de leadership.",
+      "askShephr": "Demandez l'activation à l'équipe Shephr.",
+      "pending": "Un paiement est en cours pour le suivi de votre hiérarchie.",
+      "pastDue": "Le dernier paiement a échoué : le suivi de votre hiérarchie est suspendu.",
+      "vatIncluded": "{{plan}} · TVA incluse · pour votre compte uniquement",
+      "compactTitle": "Offre Caleb — le suivi de ma hiérarchie",
+      "compactAssembly": "Votre assemblée reste gratuite : comptes rendus, journal, réunions et avancement. Les autres assemblées de votre chaîne de leadership (lecture et rédaction) sont incluses dans l'offre Caleb.",
+      "compactMemberCare": "Le suivi pastoral de votre assemblée reste gratuit. Les fiches des assemblées de votre chaîne de leadership sont incluses dans l'offre Caleb.",
+      "openHierarchy": "Voir l'offre dans la Hiérarchie",
+      "outsideChainTitle": "Assemblée hors de votre chaîne",
+      "outsideChainAssembly": "Votre offre Caleb est active, mais cette assemblée n'est pas dans votre chaîne de leadership : seules les assemblées de votre chaîne de supervision y sont incluses.",
+      "outsideChainMemberCare": "Votre offre Caleb est active, mais les fiches de cette assemblée ne sont pas dans votre chaîne de leadership : seules les assemblées de votre chaîne de supervision y sont incluses."
+    },
+    "plan": {
+      "canceledBanner": "Paiement annulé : aucun abonnement n'a été souscrit.",
+      "manage": "Gérer l'abonnement",
+      "renewsOn": "Renouvellement le {{date}}",
+      "endsOn": "Se termine le {{date}}",
+      "grace": "Paiement en échec — accès maintenu jusqu'au {{date}}",
+      "manualUntil": "Activé jusqu'au {{date}}"
+    },
+    "study": {
+      "title": "Le Message de Bertoua · ma hiérarchie",
+      "tabs": {
+        "overview": "Assemblées",
+        "stats": "Statistiques"
+      },
+      "hint": "Assemblées de votre chaîne de leadership. Notes calculées par le serveur ; aucune réponse ni nom de membre.",
+      "loadError": "Impossible de charger les statistiques d'étude.",
+      "empty": "Aucune assemblée de votre hiérarchie n'a encore étudié.",
+      "module": "Unité",
+      "assembly": "Assemblée",
+      "taught": "Enseignés",
+      "notTaught_one": "{{count}} non enseigné",
+      "notTaught_other": "{{count}} non enseignés",
+      "progress": "Leçons faites",
+      "done": "Leçon faite",
+      "notDone": "Leçon non faite",
+      "average": "Note moyenne",
+      "lastSession": "Dernière séance",
+      "lessons_one": "{{count}} leçon",
+      "lessons_other": "{{count}} leçons",
+      "from": "Du",
+      "to": "Au",
+      "invalidPeriod": "La date de début doit précéder la date de fin.",
+      "periodTooLong": "Choisissez une période de {{days}} jours au plus.",
+      "sessionsFinished": "Séances terminées",
+      "lessonsDone": "Leçons faites",
+      "membersTaught": "Membres enseignés",
+      "monthly": "Évolution mensuelle",
+      "month": "Mois",
+      "noSessions": "Aucune séance terminée sur cette période."
+    },
+    "backToHome": "Retour au But quinquennal",
+    "home": {
+      "leadershipCard": "Mon leadership",
+      "leadershipCardHint": "Mon superviseur, les dirigeants que je suis, les demandes reçues",
+      "pendingBadge_one": "{{count}} demande reçue en attente",
+      "pendingBadge_other": "{{count}} demandes reçues en attente",
+      "lifeCard": "Vie de mon leadership",
+      "lifeCardHint": "Vie d'assemblée, évènements et Message de Bertoua de ma hiérarchie",
+      "lifeLocked": "Offre Caleb — non activée"
+    },
+    "leadership": {
+      "title": "Mon leadership",
+      "intro": "Votre place dans la chaîne de supervision : à qui vous rendez compte, et les dirigeants que vous suivez.",
+      "loadError": "Impossible de charger votre leadership.",
+      "mySupervisor": "Mon superviseur",
+      "actionFailed": "L'action n'a pas abouti",
+      "done": {
+        "accept": "Demande validée",
+        "refuse": "Demande refusée",
+        "cancel": "Demande annulée",
+        "revoke": "Lien retiré",
+        "create": "Demande envoyée — le lien existera après sa validation"
+      },
+      "incomingTitle": "Demandes reçues",
+      "incomingEmpty": "Aucune demande en attente.",
+      "incomingHint": "Ces dirigeants souhaitent vous suivre. Valider remplace votre superviseur actuel.",
+      "sentOn": "envoyée le {{date}}",
+      "accept": "Valider",
+      "refuse": "Refuser",
+      "followedTitle": "Les dirigeants que je suis",
+      "followedEmpty": "Vous ne suivez encore aucun dirigeant.",
+      "designate": "Désigner un dirigeant",
+      "outgoingTitle_one": "{{count}} demande en attente de validation",
+      "outgoingTitle_other": "{{count}} demandes en attente de validation",
+      "pending": "En attente",
+      "cancel": "Annuler",
+      "followedByTitle": "Qui me suit",
+      "followedByEmpty": "Personne ne vous suit par désignation.",
+      "acceptedOn": "validé le {{date}}",
+      "revoke": "Retirer",
+      "confirm": {
+        "acceptTitle": "Valider la demande ?",
+        "acceptBody": "Valider la demande de {{requester}} remplacera votre superviseur actuel, {{current}}.",
+        "acceptOk": "Valider et remplacer",
+        "revokeTitle": "Retirer ce lien ?",
+        "revokeBody": "{{name}} ne sera plus votre superviseur. Vous pourrez en déclarer un autre.",
+        "revokeOk": "Retirer",
+        "cancelTitle": "Annuler la demande ?",
+        "cancelBody": "La demande adressée à {{name}} sera annulée.",
+        "cancelOk": "Annuler la demande"
+      },
+      "designateTitle": "Désigner un dirigeant",
+      "designateHint": "Le dirigeant désigné recevra une demande ; vous deviendrez son superviseur quand il l'aura validée.",
+      "searchLabel": "Rechercher un dirigeant de votre ministère",
+      "searchPlaceholder": "Nom, email…",
+      "searchHint": "Dirigeants seulement. Ceux que vous suivez déjà ou qui vous supervisent ne sont pas proposés.",
+      "searchTooShort": "Saisissez au moins 2 caractères.",
+      "noResult": "Aucun dirigeant trouvé.",
+      "errors": {
+        "QUERY_TOO_SHORT": "Saisissez au moins 2 caractères.",
+        "NO_MINISTRY": "Votre compte n'est rattaché à aucun ministère.",
+        "SUPERVISION_SELF": "Vous ne pouvez pas vous désigner vous-même.",
+        "SUPERVISION_OUT_OF_MINISTRY": "Ce dirigeant n'appartient pas à votre ministère.",
+        "SUPERVISION_DESIGNEE_NOT_A_LEADER": "Seul un dirigeant peut être désigné.",
+        "SUPERVISION_REQUESTER_NOT_A_LEADER": "La personne qui vous a désigné n'est plus dirigeant : la demande ne peut pas être validée.",
+        "SUPERVISION_CYCLE": "Impossible : ce lien créerait une boucle dans la chaîne de supervision.",
+        "SUPERVISION_ALREADY_LINKED": "Vous suivez déjà ce dirigeant.",
+        "SUPERVISION_REQUEST_DUPLICATE": "Une demande est déjà en attente pour ce dirigeant.",
+        "SUPERVISION_REQUEST_NOT_PENDING": "Cette demande n'est plus en attente.",
+        "SUPERVISION_REQUEST_NOT_ACCEPTED": "Ce lien n'est plus actif.",
+        "generic": "L'action n'a pas abouti. Réessayez plus tard."
+      }
+    },
+    "life": {
+      "title": "Vie de mon leadership",
+      "intro": "Les assemblées de votre chaîne de supervision, sur une même période.",
+      "period": "Période",
+      "loadError": "Impossible de charger la vie de votre leadership.",
+      "notApplicable": "La vie du leadership concerne les dirigeants : votre compte n'a pas de hiérarchie à suivre.",
+      "nothing": "Aucun module de suivi n'est activé pour votre ministère.",
+      "journal": "Journal PDF de ma hiérarchie",
+      "unitsTitle": "Assemblées et dernier compte rendu",
+      "unitsEmpty": "Aucune assemblée dans votre hiérarchie.",
+      "noReport": "Aucun compte rendu",
+      "leader": "Dirigeant : {{name}}",
+      "meetings_one": "{{count}} réunion sur la période",
+      "meetings_other": "{{count}} réunions sur la période"
+    },
+    "events": {
+      "title": "Évènements de ma chaîne",
+      "hint": "Actions d'évangélisation réalisées dans les assemblées de votre hiérarchie (les évènements de ville, région ou nation ne sont pas comptés).",
+      "loadError": "Impossible de charger les évènements de votre hiérarchie.",
+      "empty": "Aucune assemblée dans votre hiérarchie.",
+      "count": "Évènements",
+      "participants": "Participants",
+      "participantsWithGuests": "{{count}} dont {{guests}} invités",
+      "guestsSub_one": "dont {{count}} invité",
+      "guestsSub_other": "dont {{count}} invités",
+      "conversions": "Conversions",
+      "restorations": "Restaurations",
+      "baptisms": "Baptêmes",
+      "leader": "Dirigeant",
+      "noLeader": "Sans dirigeant",
+      "units": "Assemblées",
+      "assembly": "Assemblée",
+      "lastEvent": "Dernier évènement",
+      "byLeader": "Par dirigeant",
+      "byUnit": "Par assemblée"
     }
   },
   "dashboard": {
@@ -1079,7 +1219,56 @@
     "deadlinePassedHelp": "Date limite dépassée — contactez le secrétariat.",
     "memberReminderTitle": "Relancer {{name}}",
     "memberReminderSub": "Le rappel apparaîtra in-app pour cette personne (pas d'email). Au plus un rappel par personne toutes les 24 h.",
-    "noMemberInUnit": "Aucun membre rattaché à cette assemblée."
+    "noMemberInUnit": "Aucun membre rattaché à cette assemblée.",
+    "remind": {
+      "title": "Relancer",
+      "intro": "Envoyez un rappel, en un seul geste, aux personnes qui n'ont pas encore soumis leurs engagements.",
+      "geoSection": "Mon périmètre",
+      "geoHint": "Les personnes rattachées aux assemblées du périmètre choisi.",
+      "disciplesSection": "Mon accompagnement",
+      "disciplesHint": "Les personnes qui vous ont déclaré comme faiseur de disciple. Choix distinct du périmètre géographique : les deux ne sont jamais cumulés.",
+      "disciplesCaption": "Celles qui vous ont déclaré",
+      "scope": {
+        "ASSEMBLY": "Mon assemblée",
+        "CITY": "Ma ville",
+        "ZONE": "Ma région",
+        "COUNTRY": "Ma nation",
+        "DISCIPLES": "Mes disciples"
+      },
+      "pendingBadge_one": "{{count}} à relancer",
+      "pendingBadge_other": "{{count}} à relancer",
+      "preview_one": "{{count}} personne sera relancée, sur {{total}} dans ce périmètre.",
+      "preview_other": "{{count}} personnes seront relancées, sur {{total}} dans ce périmètre.",
+      "previewNone": "Personne à relancer ici : tout le monde a soumis.",
+      "messageLabel": "Message (facultatif)",
+      "messagePlaceholder": "Laissez vide pour le message par défaut, avec la date limite.",
+      "messageHint": "Le même message est envoyé à chaque personne du périmètre.",
+      "sendCta": "Envoyer les rappels",
+      "confirmTitle": "Envoyer les rappels",
+      "confirmBody_one": "Relancer {{count}} personne dans « {{scope}} » ?",
+      "confirmBody_other": "Relancer {{count}} personnes dans « {{scope}} » ?",
+      "confirmCta": "Envoyer",
+      "doneTitle": "Rappels envoyés",
+      "resultSent": "Rappels envoyés",
+      "resultSkipped": "Déjà relancées",
+      "resultSubmitted": "Ont déjà soumis",
+      "skippedHint": "Une personne déjà relancée dans les 24 dernières heures est sautée : elle ne reçoit pas deux fois le même rappel.",
+      "sentToLabel": "Destinataires",
+      "backCta": "Terminer",
+      "antispamHint": "Les personnes ayant déjà soumis ne sont jamais relancées, et un rappel au plus est envoyé à chacune par 24 heures.",
+      "loadError": "Impossible de charger les périmètres de relance.",
+      "failed": "L'envoi des rappels a échoué.",
+      "denied": "Ce périmètre n'est pas le vôtre. Seul un dirigeant relance un périmètre géographique ; vous pouvez relancer les personnes que vous accompagnez.",
+      "open": "Relancer",
+      "sending": "Envoi…",
+      "retry": "Réessayer",
+      "empty": "Aucun périmètre à relancer.",
+      "pendingOfTotal": "{{pending}} non soumis sur {{total}}",
+      "errors": {
+        "SCOPE_REQUIRED": "Choisissez le périmètre à relancer.",
+        "SCOPE_ID_REQUIRED": "Vous portez plusieurs périmètres de ce niveau : précisez lequel relancer."
+      }
+    }
   },
   "memberGoals": {
     "title": "Mes objectifs",
@@ -1518,7 +1707,29 @@
       "colAttendees": "Présents",
       "colBread": "Fraction de pain",
       "colReading": "Lecture",
-      "noReading": "Aucune lecture"
+      "noReading": "Aucune lecture",
+      "open": "Journal PDF",
+      "unitTitle": "Journal de l'assemblée",
+      "unitDocTitle": "Journal de l'assemblée",
+      "periodicity": "Périodicité",
+      "previous": "Période précédente",
+      "next": "Période suivante",
+      "unitReportCount_zero": "Aucun compte rendu sur cette période.",
+      "unitReportCount_one": "{{count}} compte rendu sur cette période",
+      "unitReportCount_other": "{{count}} comptes rendus sur cette période",
+      "includeAttendees": "Liste nominative des présents",
+      "includeAttendeesHint": "Facultative (D-ASM-14) : le nombre de présents figure toujours.",
+      "contentHint": "Le journal contient une synthèse de la période (réunions, présence moyenne, fractions de pain, lectures) puis chaque compte rendu dans l'ordre chronologique. Dans la boîte d'impression, choisissez « Enregistrer en PDF ».",
+      "generate": "Générer le PDF",
+      "generating": "Préparation…",
+      "statUnitMeetings": "Réunions",
+      "statUnitBread": "Fractions de pain",
+      "readings": "Lectures",
+      "noReadings": "Aucune lecture sur la période.",
+      "attendees": "Présents",
+      "breadBreaking": "Fraction de pain",
+      "reading": "Lecture",
+      "loadFailed": "Impossible de charger les réunions de l'assemblée."
     },
     "study": {
       "title": "Le Message de Bertoua",
@@ -1652,7 +1863,10 @@
         "STUDY_QUESTION_INVALID": "Cette question ne peut pas borner la séance (question de premier niveau de la leçon attendue).",
         "STUDY_CATCH_UP_CLOSED": "Le rattrapage de cette séance est fermé.",
         "STUDY_CATCH_UP_EMPTY": "Aucune réponse à envoyer.",
-        "STUDY_PAPER_COPY_TOO_EARLY": "Une copie papier se saisit à partir de la correction (la plage de questions est alors fixée)."
+        "STUDY_PAPER_COPY_TOO_EARLY": "Une copie papier se saisit à partir de la correction (la plage de questions est alors fixée).",
+        "RESOURCE_NOT_FOUND": "Cette séance ou cette copie n'existe plus.",
+        "MODULE_ACCESS_DENIED": "L'étude de l'assemblée n'est pas ouverte pour votre ministère.",
+        "offline": "Pas de réseau : réessayez dans un instant."
       },
       "language": {
         "badge": {
@@ -1674,9 +1888,148 @@
       "pendingReviewCount_one": "{{count}} copie de rattrapage attend votre avis sur ses questions ouvertes (comptées 0 d'ici là).",
       "pendingReviewCount_other": "{{count}} copies de rattrapage attendent votre avis sur leurs questions ouvertes (comptées 0 d'ici là).",
       "reviewLabel": "Votre avis :",
-      "submittedAt": "Envoyée le {{date}}"
+      "submittedAt": "Envoyée le {{date}}",
+      "home": {
+        "liveTitle": "Séance en cours",
+        "answer": "Répondre",
+        "correct": "Corriger",
+        "resume": "Reprendre",
+        "noCurrent": "Aucune étude en cours",
+        "noCurrentHint": "Quand votre dirigeant commencera une séance, elle apparaîtra ici.",
+        "catchUpTitle": "À rattraper",
+        "catchUpHint": "Vous n'étiez pas à la séance : répondez seul aux questions, puis envoyez votre copie.",
+        "catchUpStart": "Commencer",
+        "catchUpContinue": "Continuer",
+        "finishedOn": "terminée le {{date}}",
+        "startSession": "Commencer une leçon",
+        "startOther": "Commencer une autre leçon",
+        "startSub": "Choisissez l'unité puis la leçon : la séance s'ouvre aux répondants de l'assemblée.",
+        "noCatalog": "Aucune unité d'étude n'est encore publiée pour cette assemblée.",
+        "locked": "Verrouillée : terminez d'abord l'unité prérequise dans l'assemblée",
+        "lessonsDone": "{{done}} / {{total}} leçons faites",
+        "lessonDone": "Faite",
+        "lessonStarted": "Commencée",
+        "lessonToDo": "À faire",
+        "start": "Commencer",
+        "continue": "Continuer",
+        "redo": "Refaire",
+        "covered": "Déjà traitées : {{ranges}}",
+        "nextRange": "Suite : {{range}}",
+        "wholeLesson": "toute la leçon",
+        "rangeShort": "questions {{first}} à {{last}}",
+        "forgottenTitle": "Une séance est encore ouverte",
+        "forgottenBody": "La séance « {{lesson}} » n'a pas été terminée. La terminer pour commencer celle-ci ?",
+        "finishAndStart": "Terminer et commencer",
+        "started": "Séance ouverte."
+      },
+      "briefing": {
+        "title": "À lire avant la leçon",
+        "unitNotes": "Présentation de l'unité",
+        "lessonNotes": "Recommandations pour la leçon",
+        "memberActions": "Aperçu — chaque membre devra :"
+      },
+      "start": {
+        "title": "Commencer la séance ?",
+        "confirm": "{{lesson}} — les répondants pourront répondre dès maintenant.",
+        "pick": "Question de départ",
+        "sessionRange": "Cette séance : {{range}}",
+        "pickNext": "Par défaut : question {{number}}, la première non encore traitée. Choisissez une autre question pour commencer ailleurs.",
+        "pickFirst": "Par défaut : le début de la leçon. Choisissez une autre question pour commencer ailleurs.",
+        "from": "Point de départ",
+        "default": "À la suite (première question non encore traitée)",
+        "defaultRedo": "Depuis le début (la leçon est reprise)",
+        "beginning": "Reprendre au début (question {{number}})",
+        "custom": "Choisir la question de départ",
+        "customPlaceholder": "Numéro de la question (ex. 21)"
+      },
+      "session": {
+        "back": "Le Message de Bertoua",
+        "rangeLine": "Leçon {{n}} · questions {{first}} à {{last}}",
+        "answered": "{{done}} / {{total}} répondues",
+        "save": {
+          "saving": "Enregistrement…",
+          "saved": "Enregistré ✓",
+          "failed": "Échec de l'enregistrement"
+        },
+        "offline": "Hors ligne — la page se mettra à jour au retour du réseau.",
+        "offlinePending": "Hors ligne — vos réponses sont gardées sur ce poste et partiront au retour du réseau.",
+        "ignored_one": "{{count}} réponse arrivée après la correction n'a pas été prise en compte.",
+        "ignored_other": "{{count}} réponses arrivées après la correction n'ont pas été prises en compte.",
+        "readerHint": "Vous consultez cette séance sans y répondre.",
+        "correctionHint": "Échangez vos écrans : votre voisin corrige votre copie — il lit la réponse donnée et la réponse du manuel, puis choisit un avis.",
+        "writtenLeft_one": "Réponses écrites restant à corriger : {{count}}",
+        "writtenLeft_other": "Réponses écrites restant à corriger : {{count}}",
+        "writtenDone": "Toutes les réponses écrites ont un avis.",
+        "noAnswerCorrection": "Vous n'avez pas répondu en ligne : rien à corriger sur cet écran.",
+        "waitCorrection": "Correction en cours : attendez la fin de la séance.",
+        "myScore": "Ma note",
+        "noCopy": "Pas de copie en ligne pour cette séance.",
+        "awaitingReview": "Vos réponses écrites attendent l'avis du dirigeant.",
+        "myProgress": "Mon avancement",
+        "gone": "Cette séance n'existe plus : elle a été annulée par le dirigeant.",
+        "catchUpTitle": "Rattrapage à la maison",
+        "catchUpHint": "Répondez seul, à votre rythme. Les corrections et les réponses du manuel s'afficheront après l'envoi de votre copie.",
+        "catchUpSubmit": "Envoyer ma copie",
+        "catchUpSubmitTitle": "Envoyer votre copie ?",
+        "catchUpSubmitConfirm": "{{done}} / {{total}} répondues. Vous ne pourrez plus la modifier : les questions fermées seront corrigées tout de suite, les réponses écrites attendront l'avis du dirigeant.",
+        "catchUpNotSent": "Vos réponses ne sont pas encore parties (hors ligne ?). Réessayez au retour du réseau.",
+        "catchUpSent": "Copie envoyée."
+      },
+      "leader": {
+        "panel": "Dirigeant",
+        "results": "Résultats",
+        "respondents_one": "{{count}} répondant",
+        "respondents_other": "{{count}} répondants",
+        "showKey": "Afficher les réponses du manuel",
+        "hideKey": "Masquer les réponses du manuel",
+        "toCorrection": "Passer à la correction",
+        "toCorrectionConfirm": "La saisie sera verrouillée et les questions fermées corrigées.",
+        "stopAfter": "S'arrêter après la question :",
+        "stopLast": "dernière",
+        "stopAfterCut": "Les questions après Q{{number}} seront retirées de cette séance (ni corrigées ni notées) ; les réponses déjà données seront reprises à la prochaine séance de la leçon. La saisie sera verrouillée et les questions fermées corrigées.",
+        "cancel": "Annuler la séance",
+        "cancelTitle": "Annuler la séance ?",
+        "cancelConfirm": "La séance, les copies et toutes les réponses déjà données seront supprimées.",
+        "cancelled": "Séance annulée.",
+        "reviewsLeft_one": "Avis restants : {{count}}",
+        "reviewsLeft_other": "Avis restants : {{count}}",
+        "reviewsDone": "Tous les avis sont donnés.",
+        "finish": "Terminer",
+        "finishTitle": "Terminer la séance ?",
+        "finishConfirm": "Les notes seront arrêtées. Vous pourrez encore ajuster des points depuis les résultats.",
+        "finishConfirmLeft_one": "Encore {{count}} réponse écrite sans avis : elle vaudra 0 point. Vous pourrez ajuster depuis les résultats.",
+        "finishConfirmLeft_other": "Encore {{count}} réponses écrites sans avis : elles vaudront 0 point. Vous pourrez ajuster depuis les résultats.",
+        "finished_one": "Séance terminée · {{count}} copie",
+        "finished_other": "Séance terminée · {{count}} copies",
+        "notes": "Notes du dirigeant"
+      },
+      "answer": {
+        "VRAI": "Vrai",
+        "FAUX": "Faux",
+        "OUI": "Oui",
+        "NON": "Non",
+        "done": "Fait",
+        "doneMark": "Fait ✓",
+        "notDone": "Non fait",
+        "number": "Q{{number}}",
+        "placeholder": "Votre réponse…",
+        "noAnswer": "Sans réponse",
+        "given": "Réponse donnée",
+        "manual": "Réponse du manuel",
+        "wrong": "faux",
+        "expected": "bonne réponse",
+        "noVerdict": "Sans avis — 0 point",
+        "adjusted": "ajusté",
+        "personalAnswered": "Question personnelle — répondu ✓",
+        "personalNotAnswered": "Question personnelle — sans réponse",
+        "points_one": "{{value}} pt",
+        "points_other": "{{value}} pts"
+      }
     },
-    "studySuggested": "Chapitre de l'étude du jour"
+    "studySuggested": "Chapitre de l'étude du jour",
+    "freeUnit": "Votre assemblée",
+    "chainUnit": "Ma hiérarchie (offre Caleb)",
+    "lockedUnit": "Verrouillée — offre Caleb"
   },
   "events": {
     "title": "Évènements",
@@ -1897,7 +2250,8 @@
       "colCount": "Actions",
       "noType": "Aucun type évangélique n'est configuré.",
       "noPerimeter": "Les statistiques portent sur votre périmètre : il faut être rattaché à une assemblée, ou responsable d'une ville, d'une région ou d'une nation.",
-      "nodeGone": "Ce niveau n'est plus accessible"
+      "nodeGone": "Ce niveau n'est plus accessible",
+      "cityLocked": "Le total de la ville reste gratuit. Le détail par assemblée, à l'intérieur de la ville, est inclus dans l'offre Néhémie — le suivi de toute ma ville."
     },
     "errors": {
       "EVENT_DATE_IN_FUTURE": "Une action réalisée ne peut pas être datée dans le futur.",
@@ -1927,7 +2281,11 @@
       "pdfError": "Le document n'a pas pu s'afficher. Vérifiez votre connexion puis réessayez.",
       "loadErrorTitle": "Impossible d'ouvrir le document",
       "loadErrorBody": "Une erreur est survenue. Vérifiez votre connexion puis réessayez.",
-      "retry": "Réessayer"
+      "retry": "Réessayer",
+      "full": "Document complet",
+      "otherDocuments": "D'autres documents",
+      "download": "Télécharger le PDF",
+      "downloadFailed": "Le PDF n'a pas pu être préparé. Réessayez."
     },
     "wall": {
       "title": "Vous avez lu l'aperçu de « {{title}} ».",
@@ -1936,7 +2294,14 @@
       "remaining_other": "Encore {{count}} pages",
       "openInApp": "Ouvrir dans l'app",
       "qrAlt": "QR code du lien de ce document",
-      "qrCaption": "Scannez ce code avec votre téléphone pour continuer la lecture dans l'app Shephr."
+      "qrCaption": "Scannez ce code avec votre téléphone pour continuer la lecture dans l'app Shephr.",
+      "signInHint": "Connectez-vous ou créez votre compte : vous reviendrez directement sur ce document.",
+      "signIn": "Se connecter",
+      "signUp": "Créer un compte",
+      "joinTitle": "Rejoignez votre assemblée",
+      "joinBody": "Rejoignez votre assemblée pour lire le document en entier : vous reviendrez directement ici.",
+      "join": "Rejoindre mon assemblée",
+      "orApp": "Ou continuez dans l'app Shephr :"
     },
     "footer": {
       "body": "Retrouvez ce document et d'autres enseignements dans l'app Shephr."
@@ -1974,6 +2339,38 @@
       "DOC_CATEGORY_IN_USE": "Cette catégorie est utilisée par au moins un document : désactivez-la plutôt.",
       "DOC_CATEGORY_NAME_EXISTS": "Une catégorie porte déjà ce nom dans ce ministère.",
       "DOC_INVALID_TRANSITION": "Cette action n'est pas possible dans l'état actuel du document."
+    },
+    "space": {
+      "kicker": "Enseignements",
+      "title": "Documents",
+      "searchPlaceholder": "Rechercher un titre…",
+      "wholeMinistry": "Tout le ministère",
+      "myAssembly": "Mon assemblée",
+      "pages_one": "{{count}} page",
+      "pages_other": "{{count}} pages",
+      "folders": "Dossiers",
+      "subfolders": "Sous-dossiers",
+      "documents": "Documents",
+      "unfiled": "Sans dossier",
+      "documentCount_one": "{{count}} document",
+      "documentCount_other": "{{count}} documents",
+      "results_one": "{{count}} résultat",
+      "results_other": "{{count}} résultats",
+      "folderEmpty": "Ce dossier ne contient aucun document pour vous.",
+      "backToRoot": "Revenir aux dossiers",
+      "empty": "Aucun document n'est encore publié pour vous.",
+      "noMatch": "Aucun document ne correspond à votre recherche.",
+      "loadFailed": "Les documents n'ont pas pu être chargés.",
+      "network": "Connexion impossible — vérifiez votre réseau puis réessayez.",
+      "moduleUnavailable": "L'espace Documents n'est pas activé pour votre ministère.",
+      "joinRequired": "Rejoignez votre assemblée pour accéder aux documents."
+    },
+    "scope": {
+      "MINISTRY": "Tout le ministère",
+      "COUNTRY": "Nation",
+      "ZONE": "Région",
+      "LOCALITY": "Ville",
+      "UNIT": "Assemblée de maison"
     }
   },
   "billing": {
@@ -1990,16 +2387,8 @@
       "EXPIRED": "Expiré"
     },
     "offers": {
-      "title": "Abonnements",
-      "subtitle": "Soutenez le service Shephr pour votre ministère par un abonnement mensuel. Le paiement est sécurisé par Stripe ; votre facture vous est envoyée par email chaque mois.",
-      "canceled": "Le paiement a été annulé : aucun abonnement n'a été créé. Vous pouvez réessayer quand vous le souhaitez.",
-      "mySubscriptionsLink": "Voir mes abonnements et mes factures",
-      "empty": "Aucune offre n'est proposée pour le moment.",
       "vatIncluded": "TTC, TVA {{rate}} % incluse — sans engagement, résiliable à tout moment.",
-      "subscribe": "S'abonner",
       "redirecting": "Redirection vers le paiement…",
-      "loginRequired": "Pour souscrire, connectez-vous à votre compte Shephr.",
-      "login": "Se connecter",
       "signup": "Créer un compte",
       "stripeNote": "Paiement par carte via Stripe. Shephr ne voit ni ne conserve vos données bancaires."
     },
@@ -2007,9 +2396,7 @@
       "label": "Code promo",
       "placeholder": "Ex. PASTEUR50",
       "apply": "Appliquer",
-      "checking": "Vérification…",
-      "loginHint": "Votre code sera vérifié après connexion.",
-      "applied": "Code {{code}} appliqué : −{{percent}} % chaque mois, pendant toute la durée de l'abonnement."
+      "checking": "Vérification…"
     },
     "return": {
       "title": "Votre abonnement",
@@ -2041,7 +2428,9 @@
       "manage": "Gérer mon abonnement",
       "updateCard": "Mettre à jour ma carte",
       "portalFailed": "Impossible d'ouvrir l'espace de gestion",
-      "downloadFailed": "Téléchargement impossible"
+      "downloadFailed": "Téléchargement impossible",
+      "voucher": "Activé par un code (Mobile Money)",
+      "voucherUntil": "jusqu'au {{date}} inclus"
     },
     "invoice": {
       "date": "Date",
@@ -2067,10 +2456,307 @@
       "BILLING_PORTAL_UNAVAILABLE": "L'espace de gestion n'est pas encore disponible pour cet abonnement.",
       "BILLING_PAYER_INVALID": "Payeur introuvable.",
       "BILLING_SUBSCRIPTION_NOT_ACTIVE": "Cet abonnement n'est plus actif.",
-      "BILLING_PERIOD_UNSUPPORTED": "Cette périodicité n'est pas encore proposée.",
+      "BILLING_PERIOD_UNSUPPORTED": "Cette périodicité n'est pas proposée pour cette offre.",
       "BILLING_CURRENCY_UNSUPPORTED": "Cette devise n'est pas encore proposée.",
       "TOO_MANY_REQUESTS": "Trop de tentatives : patientez une minute avant de réessayer.",
-      "PAYMENT_PROVIDER_UNAVAILABLE": "Le paiement en ligne est momentanément indisponible. Réessayez plus tard."
+      "PAYMENT_PROVIDER_UNAVAILABLE": "Le paiement en ligne est momentanément indisponible. Réessayez plus tard.",
+      "NOT_LOCALITY_LEADER": "Seul un responsable de cette ville peut souscrire l'abonnement.",
+      "SUBSCRIPTION_ALREADY_ACTIVE": "Cette ville a déjà un abonnement en cours.",
+      "SUBSCRIPTION_CHECKOUT_PENDING": "Un paiement est déjà en cours pour cette ville : réessayez dans une demi-heure s'il n'aboutit pas.",
+      "NOT_LEADER": "Seul un dirigeant peut souscrire le suivi de sa hiérarchie.",
+      "PERSONAL_PLAN_LOCALITY_FORBIDDEN": "Cet abonnement est personnel : il ne se rattache à aucune ville.",
+      "BILLING_USER_REQUIRED": "Choisissez le compte bénéficiaire de l'abonnement.",
+      "VOUCHER_NOT_FOUND": "Ce code n'existe pas. Vérifiez-le auprès de votre relais.",
+      "VOUCHER_ALREADY_USED": "Ce code a déjà été utilisé.",
+      "VOUCHER_REVOKED": "Ce code a été annulé par l'équipe Shephr.",
+      "VOUCHER_EXPIRED": "La date limite d'utilisation de ce code est passée.",
+      "VOUCHER_WRONG_MINISTRY": "Ce code a été émis pour un autre ministère.",
+      "BILLING_LOCALITY_REQUIRED": "Choisissez la ville concernée.",
+      "MODULE_EXCLUSION_NOT_FREE": "Seul un module gratuit peut être désactivé pour un ministère."
+    },
+    "plan": {
+      "activated": "Le suivi de la ville est activé pour {{city}}.",
+      "backToCity": "Ouvrir le suivi de la ville",
+      "city": "Ville : {{name}}",
+      "hierarchyActivated": "Le suivi de votre hiérarchie est activé.",
+      "backToHierarchy": "Ouvrir ma hiérarchie",
+      "personal": "Abonnement personnel"
+    }
+  },
+  "forgotPassword": {
+    "backToLogin": "Retour à la connexion",
+    "forgotTitle": "Mot de passe oublié",
+    "forgotHint": "Indiquez l'adresse e-mail avec laquelle vous vous connectez. Nous y enverrons un code à 6 chiffres pour choisir un nouveau mot de passe.",
+    "emailLabel": "Adresse e-mail",
+    "sendCode": "Recevoir un code",
+    "sending": "Envoi…",
+    "rememberPassword": "Vous vous en souvenez ?",
+    "resetTitle": "Nouveau mot de passe",
+    "sentNotice": "Si un compte existe pour cette adresse, un code vient d'y être envoyé.",
+    "resentNotice": "Si un compte existe pour cette adresse, un nouveau code vient d'y être envoyé. Les codes précédents ne sont plus valables.",
+    "validity": "Il est valable {{minutes}} minutes. Pensez à regarder dans les courriers indésirables.",
+    "changeEmail": "Modifier",
+    "codeLabel": "Code reçu par e-mail",
+    "codePlaceholder": "000000",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "confirmPasswordPlaceholder": "Saisissez-le à nouveau",
+    "passwordTooShort": "6 caractères au moins.",
+    "passwordsMismatch": "Les mots de passe ne correspondent pas.",
+    "submit": "Valider et me connecter",
+    "submitting": "Vérification…",
+    "resend": "Renvoyer le code",
+    "resendIn": "Renvoyer le code dans {{seconds}} s",
+    "newCode": "Recevoir un nouveau code",
+    "successToast": "Mot de passe modifié",
+    "successToastMsg": "Vous êtes connecté avec votre nouveau mot de passe.",
+    "signInAgain": "Connectez-vous avec votre nouveau mot de passe.",
+    "errors": {
+      "INVALID_REQUEST": "Vérifiez le code (6 chiffres) et le mot de passe (6 caractères min.).",
+      "INVALID_CODE": "Code incorrect. Vérifiez-le et réessayez.",
+      "CODE_EXPIRED": "Ce code a expiré. Demandez-en un nouveau.",
+      "TOO_MANY_ATTEMPTS": "Trop d'essais. Demandez un nouveau code.",
+      "TOO_MANY_REQUESTS": "Trop de tentatives. Réessayez dans {{minutes}} min.",
+      "NETWORK": "Serveur injoignable. Vérifiez votre connexion et réessayez.",
+      "UNKNOWN": "Une erreur est survenue, réessayez."
+    }
+  },
+  "notifications": {
+    "ok": "OK",
+    "later": "Plus tard",
+    "view": "Voir",
+    "close": "Fermer",
+    "reminderTitle": "Rappel",
+    "campaignTitle": "Message",
+    "campaignInfo": "Information",
+    "campaignPromo": "À découvrir",
+    "morePending": "{{count}} autre(s) rappel(s) en attente",
+    "supervision": {
+      "title": "Demande de supervision",
+      "sub": "Mon leadership",
+      "body": "{{name}} souhaite vous suivre et devenir votre superviseur.",
+      "replaceWarning": "Valider remplacera votre superviseur actuel, {{name}}.",
+      "accept": "Valider",
+      "confirmAccept": "Confirmer la validation",
+      "refuse": "Refuser",
+      "later": "Plus tard"
+    }
+  },
+  "cityStudy": {
+    "title": "Suivi de la ville",
+    "titleCity": "Suivi de la ville — {{city}}",
+    "noCity": "Aucune ville à suivre",
+    "noCityHint": "Le suivi de la ville est réservé aux responsables de ville, de région et de nation.",
+    "lockedCity": "Suivi non activé",
+    "assemblyCount_one": "{{count}} assemblée",
+    "assemblyCount_other": "{{count}} assemblées",
+    "canceledBanner": "Paiement annulé : aucun abonnement n'a été souscrit pour cette ville.",
+    "tabs": {
+      "overview": "Assemblées",
+      "members": "Membres",
+      "stats": "Statistiques",
+      "subscription": "Abonnement",
+      "journal": "Journal de la ville",
+      "events": "Évènements",
+      "studyPrefixed": "Bertoua · {{tab}}"
+    },
+    "filters": {
+      "city": "Ville",
+      "module": "Unité d'étude",
+      "status": "Statut",
+      "allStatuses": "Tous les membres",
+      "assembly": "Assemblée",
+      "allAssemblies": "Toutes les assemblées"
+    },
+    "status": {
+      "TAUGHT": "Enseigné",
+      "NOT_TAUGHT": "Non enseigné",
+      "MISSED": "Leçons manquées"
+    },
+    "overview": {
+      "empty": "Aucune assemblée à suivre",
+      "emptyHint": "Les assemblées de la ville et leur avancement apparaîtront ici dès qu'une unité d'étude sera disponible.",
+      "assembly": "Assemblée",
+      "members_one": "{{count}} membre",
+      "members_other": "{{count}} membres",
+      "progress": "Avancement",
+      "done": "Leçon faite",
+      "notDone": "Leçon non faite",
+      "lastSession": "Dernière séance",
+      "lessons_one": "{{count}} leçon",
+      "lessons_other": "{{count}} leçons"
+    },
+    "members": {
+      "name": "Membre",
+      "assembly": "Assemblée",
+      "taught": "Enseigné",
+      "lessons": "Leçons faites",
+      "missed": "Leçons manquées",
+      "score": "Note",
+      "lastDone": "Dernière leçon",
+      "count_one": "{{count}} membre",
+      "count_other": "{{count}} membres",
+      "empty": "Aucun membre",
+      "emptyHint": "Aucun membre ne correspond à ces filtres."
+    },
+    "stats": {
+      "from": "Du",
+      "to": "Au",
+      "invalidPeriod": "La date de début doit précéder la date de fin.",
+      "periodTooLong": "La période ne peut pas dépasser {{days}} jours.",
+      "assemblies": "Assemblées actives",
+      "taughtMembers": "Membres enseignés",
+      "sessions": "Séances terminées",
+      "lessonsDone": "Leçons faites",
+      "copies": "Copies",
+      "average": "Moyenne",
+      "monthly": "Évolution mensuelle",
+      "month": "Mois"
+    },
+    "export": {
+      "csv": "Exporter CSV",
+      "pdf": "Exporter PDF",
+      "failed": "Export impossible"
+    },
+    "lock": {
+      "title": "Offre Néhémie — le suivi de toute ma ville",
+      "askPastor": "Demandez à votre pasteur d'activer le suivi de la ville.",
+      "compactSubscribe": "Le suivi des assemblées de votre ville est inclus dans l'offre Néhémie, souscrite pour toute la ville.",
+      "openCity": "Voir le suivi de la ville",
+      "subscribeIntro": "{{plan}} pour {{city}} : suivi de l'étude de toutes les assemblées de la ville, statistiques et exports.",
+      "period": "Périodicité",
+      "periods": {
+        "MONTHLY": "Mensuel",
+        "ANNUAL": "Annuel"
+      },
+      "subscribeMonthly": "S'abonner — {{price}}/mois",
+      "subscribeAnnual": "S'abonner — {{price}}/an",
+      "pending": "Un paiement est en cours pour cette ville.",
+      "pastDue": "Le dernier paiement de cette ville a échoué : le suivi est suspendu.",
+      "managedBy": "Abonnement géré par {{name}}.",
+      "updateCard": "Mettre à jour ma carte",
+      "fakeAssembly": "Assemblée {{letter}}"
+    },
+    "subscription": {
+      "open": "Le suivi de la ville est ouvert pour {{city}}.",
+      "closed": "Le suivi de la ville n'est pas activé pour {{city}}.",
+      "agreement": "Le suivi est ouvert par un accord de votre ministère : aucun abonnement de ville à gérer.",
+      "plans": {
+        "EGLISE_VILLE": "Offre Néhémie"
+      },
+      "period": {
+        "MONTHLY": "Mensuel",
+        "ANNUAL": "Annuel"
+      },
+      "source": {
+        "STRIPE": "Paiement en ligne",
+        "MANUEL": "Activation manuelle",
+        "VOUCHER": "Code d'activation"
+      },
+      "entitled": "Suivi ouvert",
+      "notEntitled": "Suivi fermé",
+      "renewsOn": "Prochain renouvellement le {{date}}",
+      "endsOn": "Résiliation demandée — fin le {{date}}",
+      "manualUntil": "Activé jusqu'au {{date}} inclus",
+      "grace": "Délai de grâce jusqu'au {{date}} : mettez à jour le moyen de paiement pour éviter la fermeture du suivi.",
+      "manual": "Activé par l'équipe Shephr.",
+      "unknownPayer": "un autre responsable",
+      "invoices": "Mes factures",
+      "manage": "Gérer l'abonnement"
+    },
+    "unavailable": "Suivi de la ville indisponible",
+    "unavailableHint": "Aucun des modules suivis à l'échelle de la ville (Vie d'assemblée, Le Message de Bertoua) n'est activé pour votre ministère.",
+    "journal": {
+      "scope": "Ville de {{city}}",
+      "pdf": "Journal PDF de la ville",
+      "empty": "Aucune assemblée dans cette ville",
+      "emptyHint": "Les assemblées rattachées à la ville apparaîtront ici avec leurs comptes rendus.",
+      "noNames": "Aucun nom de personne : seulement des nombres et des noms d'assemblées."
+    }
+  },
+  "offers": {
+    "title": "Les offres Shephr",
+    "subtitle": "L'essentiel reste gratuit pour chaque assemblée. Deux offres complètent Shephr pour suivre plus large : votre hiérarchie de dirigeants avec l'offre Caleb, toute votre ville avec l'offre Néhémie.",
+    "seeOffers": "Voir les offres",
+    "leadersOnly": "Ces offres s'adressent aux dirigeants. Votre assemblée, elle, reste entièrement gratuite.",
+    "independent": "Les deux offres sont indépendantes : Caleb suit votre chaîne de leadership, Néhémie suit une ville. L'une n'ouvre rien dans l'autre.",
+    "howToPay": "Deux façons de payer : par carte bancaire, en ligne, ou par Mobile Money auprès de votre relais, qui vous remet un code d'activation à saisir ici (« J'ai un code »).",
+    "bibleVersion": "Louis Segond 1910",
+    "forWhoTitle": "Pour qui",
+    "includedTitle": "Ce qui est inclus",
+    "orAnnual": "ou {{price}} / an",
+    "priceUnavailable": "Prix momentanément indisponible.",
+    "loginToSubscribe": "Se connecter pour souscrire",
+    "noAccount": "Pas encore de compte ?",
+    "caleb": {
+      "name": "Offre Caleb",
+      "tagline": "Le suivi de ma hiérarchie",
+      "verse": "« Donne-moi donc cette montagne »",
+      "verseRef": "Josué 14 : 12",
+      "forWho": "Pour chaque dirigeant, le long de sa chaîne de leadership : les dirigeants qu'il supervise et leurs assemblées, où qu'elles soient. Ce n'est pas la géographie qui compte, mais votre hiérarchie. Chacun s'abonne pour lui-même.",
+      "included": {
+        "reports": "Les comptes rendus et le journal de toutes les assemblées de votre chaîne (rédaction si vous en êtes le dirigeant)",
+        "stats": "Les statistiques de vie d'assemblée : réunions, présences, fraction du pain, alerte « sans compte rendu depuis 3 semaines »",
+        "journal": "Le journal PDF consolidé de votre hiérarchie",
+        "study": "L'avancement du Message de Bertoua, assemblée par assemblée",
+        "memberCare": "Le suivi pastoral (Member Care) des assemblées de votre chaîne"
+      },
+      "priceNote": "TTC · pour votre compte uniquement · sans engagement",
+      "active": "Activée pour votre compte",
+      "notSubscribable": "L'offre Caleb se souscrit par un dirigeant, pour lui-même. Pour votre compte, demandez l'activation à l'équipe Shephr."
+    },
+    "nehemie": {
+      "name": "Offre Néhémie",
+      "tagline": "Le suivi de toute ma ville",
+      "verse": "« Levons-nous, et bâtissons ! »",
+      "verseRef": "Néhémie 2 : 18",
+      "forWho": "Pour le pasteur et les responsables de la ville : toutes les assemblées de la ville, quel que soit leur dirigeant. Un seul abonnement par ville, partagé par tous ses responsables.",
+      "included": {
+        "study": "Le suivi du Message de Bertoua dans toute la ville : assemblées et leçons, membres enseignés ou non, statistiques, exports CSV et PDF",
+        "journal": "Le journal de la ville : statistiques et journal PDF consolidé des comptes rendus, sans aucun nom de personne",
+        "events": "Les statistiques d'Évènements à l'intérieur de la ville, assemblée par assemblée",
+        "shared": "Une ville, tous ses responsables : le suivi est ouvert à chacun d'eux"
+      },
+      "priceNote": "TTC · pour toute la ville · sans engagement",
+      "activeFor": "Activée pour : {{cities}}",
+      "chooseCity": "Choisir ma ville",
+      "notSubscribable": "L'offre Néhémie se souscrit par un responsable de ville, de région ou de nation. Demandez à votre pasteur d'activer le suivi de la ville."
+    },
+    "free": {
+      "title": "Toujours gratuit",
+      "badge": "Gratuit",
+      "subtitle": "Ce qui est et restera gratuit, pour chaque assemblée et chaque membre :",
+      "items": {
+        "study": "Le Message de Bertoua dans votre assemblée : séances, réponses, correction, notes et avancement",
+        "assembly": "La vie de votre assemblée : comptes rendus, journal, réunions et présences",
+        "memberCare": "Le suivi pastoral (Member Care) de votre assemblée",
+        "goals": "Objectifs & reporting (But Quinquennal)",
+        "hierarchy": "L'arbre de la Hiérarchie et l'état de soumission des objectifs",
+        "events": "Créer, déclarer et programmer des évènements, et leurs statistiques jusqu'au niveau de la ville",
+        "documents": "La lecture des documents partagés",
+        "praise": "CMFIPraise : chants et projection"
+      }
+    },
+    "voucher": {
+      "open": "J'ai un code",
+      "extend": "Prolonger avec un code",
+      "titleCaleb": "Offre Caleb — saisir un code d'activation",
+      "titleNehemie": "Offre Néhémie — saisir un code d'activation",
+      "sub": "Le code vous a été remis par votre relais après votre paiement Mobile Money.",
+      "code": "Code d'activation",
+      "codeHint": "12 caractères, avec ou sans tirets.",
+      "city": "Ville",
+      "cityPlaceholder": "Choisir la ville",
+      "forCity": "Pour la ville de {{city}}.",
+      "noCity": "Aucune ville pour laquelle vous pouvez activer l'offre Néhémie.",
+      "submit": "Activer",
+      "checking": "Vérification…",
+      "localPrice": "Mobile Money auprès de votre relais — {{price}}",
+      "localPriceNoLabel": "Mobile Money auprès de votre relais",
+      "receiptTitle": "Code activé",
+      "receiptUntil": "Activée jusqu'au {{date}} inclus.",
+      "receiptNote": "Un email de confirmation vous a été envoyé. Aucune facture n'est émise pour un code d'activation.",
+      "alreadyPaid": "Vous payez déjà cette offre par carte : vous n'avez pas besoin de code."
     }
   }
 }

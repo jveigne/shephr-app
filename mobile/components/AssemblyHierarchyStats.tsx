@@ -3,27 +3,17 @@ import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-nati
 import { router, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '@/components/Card';
-import Button from '@/components/Button';
 import ErrorBanner from '@/components/ErrorBanner';
 import { colors, fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getAssemblyStats, listMeetingsInRange, type UnitMeetingStats } from '@/services/assemblyApi';
 import type { LeaderHierarchyNode } from '@/services/leadersApi';
-import {
-  PERIODICITIES,
-  buildConsolidatedJournalHtml,
-  currentPeriod,
-  isFuturePeriod,
-  journalFileName,
-  periodLabel,
-  periodRange,
-  shiftPeriod,
-  type Period,
-} from '@/utils/assemblyJournal';
-import { aggregate, averageAttendance, daysBetween, isAlert, subtreeUnitIds, treeUnitIds } from '@/utils/assemblyHierarchyStats';
+import { buildConsolidatedJournalHtml, journalFileName, periodRange, type Period } from '@/utils/assemblyJournal';
+import { aggregate, averageAttendance, daysBetween, isAlert, treeUnitIds } from '@/utils/assemblyHierarchyStats';
 import { printAndSharePdf } from '@/utils/pdfShare';
 import { toLocalDate } from '@/utils/format';
 import { notify } from '@/utils/dialogs';
+import { hierarchyAccessDenied } from '@/services/entitlementsApi';
 
 /**
  * Vie d'assemblée dans la Hiérarchie — D-ASM-18 (JP 08/10).
@@ -31,16 +21,26 @@ import { notify } from '@/utils/dialogs';
  * Un dirigeant voit les statistiques des comptes rendus des assemblées sous son leadership et
  * génère un journal PDF consolidé (tout son périmètre, ou le sous-arbre d'un dirigeant).
  * - Visible seulement avec l'abonnement ASSEMBLY et un rôle au-dessus de MEMBRE (RG-06) : c'est
- *   l'appelant (`app/hierarchie.tsx`) qui passe `enabled`.
- * - Aucune nouvelle règle d'accès : `/stats` et `/meetings` appliquent RG-ASM-05 côté serveur.
+ *   l'appelant (`app/hierarchie/vie.tsx`) qui passe `enabled`.
+ * - Bloc PAYANT depuis le 27/10 (plan personnel `DIRIGEANT_HIERARCHIE`, code HIERARCHIE_SUIVI,
+ *   D-ABO-31 et suivantes, JP 27/10) : `/stats` et `/meetings?unitIds=` sont gardés par ce code et
+ *   leur périmètre est la CHAÎNE de leadership de l'appelant (plus la géographie RG-ASM-05) ; un 403
+ *   `MODULE_ACCESS_DENIED` / HIERARCHIE_SUIVI passe `denied` à vrai, l'écran affiche alors le verrou.
+ *   Les CR, le journal et les réunions de SA propre assemblée restent gratuits (autres routes).
  * - AUCUN NOM de personne (D-ASM-18) : que des nombres et des noms d'assemblée.
  * - Alerte « sans CR depuis 3 semaines » : affichage seul, aucune relance (D-ASM-09 gelé).
  * L'agrégat est dans `utils/assemblyHierarchyStats.ts` (pur).
+ *
+ * Lot HIE (D-HIE-01 / D-HIE-10, JP 28/10) : le bloc vit sur la page 3 « Vie de mon leadership »
+ * (`app/hierarchie/vie.tsx`), dont le sélecteur de période est UNIQUE pour toute la page — la période
+ * arrive donc en paramètre (plus de sélecteur ici) ; le bouton « Journal PDF de ma hiérarchie » est
+ * porté par la page. Les résumés par dirigeant et les lignes de CR ont quitté l'arbre de la page 1
+ * (payants) : `UnitAssemblyLine` sert à la liste « Assemblées et dernier CR » de la page 3.
  */
 
 export interface AssemblyStatsState {
+  /** Période de la page (D-HIE-01 : sélecteur unique, porté par l'écran). */
   period: Period;
-  setPeriod: (p: Period) => void;
   /** null = chargement de la période en cours. */
   statsById: ReadonlyMap<string, UnitMeetingStats> | null;
   /** Date du jour au moment du chargement ('yyyy-MM-dd'), référence de l'alerte des 21 jours. */
@@ -50,9 +50,9 @@ export interface AssemblyStatsState {
   /** Clé du périmètre dont le journal est en cours de génération ('all' ou id du dirigeant). */
   generating: string | null;
   generateJournal: (scopeKey: string, scopeLabel: string, unitIds: string[]) => void;
+  /** 403 `MODULE_ACCESS_DENIED` / HIERARCHIE_SUIVI reçu : l'écran remplace le bloc par le verrou. */
+  denied: boolean;
 }
-
-const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
  * Chargement de `/stats` pour la période choisie. Pas de react-query côté mobile ; aucun setState
@@ -60,13 +60,14 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
  * `refreshKey` : incrémenté par le tirer-pour-rafraîchir de l'écran — les chiffres précédents
  * restent affichés jusqu'à la réponse.
  */
-export function useAssemblyHierarchyStats(enabled: boolean, refreshKey: number): AssemblyStatsState {
+export function useAssemblyHierarchyStats(enabled: boolean, refreshKey: number, period: Period): AssemblyStatsState {
   const { t, language } = useLanguage();
-  const [period, setPeriod] = useState<Period>(() => currentPeriod('month'));
   const [loaded, setLoaded] = useState<{ key: string; rows: UnitMeetingStats[]; todayIso: string } | null>(null);
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [generating, setGenerating] = useState<string | null>(null);
+  // Un 403 HIERARCHIE_SUIVI ferme le bloc jusqu'au prochain tirer-pour-rafraîchir (droit revérifié).
+  const [deniedKey, setDeniedKey] = useState<number | null>(null);
 
   const { from, to } = periodRange(period);
   const dataKey = `${from}|${to}`;
@@ -82,12 +83,17 @@ export function useAssemblyHierarchyStats(enabled: boolean, refreshKey: number):
         setFailure(null);
       })
       .catch((e: any) => {
-        if (active) setFailure({ key: requestKey, message: e?.response?.data?.message ?? t('assemblyLife.loadFailed') });
+        if (!active) return;
+        if (hierarchyAccessDenied(e)) {
+          setDeniedKey(refreshKey);
+          return;
+        }
+        setFailure({ key: requestKey, message: e?.response?.data?.message ?? t('assemblyLife.loadFailed') });
       });
     return () => {
       active = false;
     };
-  }, [enabled, from, to, dataKey, requestKey, t]);
+  }, [enabled, from, to, dataKey, requestKey, refreshKey, t]);
 
   const current = loaded?.key === dataKey ? loaded : null;
   const statsById = useMemo(
@@ -125,6 +131,12 @@ export function useAssemblyHierarchyStats(enabled: boolean, refreshKey: number):
         notify(t('common.appName'), t('assemblyLife.journal.shareUnavailable'));
       }
     } catch (e: any) {
+      if (hierarchyAccessDenied(e)) {
+        // Droit retiré entre-temps (fin de période, grâce échue) : verrou, texte neutre (D-ABO-13).
+        setDeniedKey(refreshKey);
+        notify(t('common.appName'), t('hierarchy.lock.notActivated'));
+        return;
+      }
       notify(t('common.appName'), e?.response?.data?.message ?? t('assemblyLife.journal.failed'));
     } finally {
       setGenerating(null);
@@ -133,7 +145,6 @@ export function useAssemblyHierarchyStats(enabled: boolean, refreshKey: number):
 
   return {
     period,
-    setPeriod,
     statsById,
     todayIso,
     error: failure?.key === requestKey ? failure.message : null,
@@ -142,19 +153,17 @@ export function useAssemblyHierarchyStats(enabled: boolean, refreshKey: number):
     generateJournal: (k, l, ids) => {
       void generateJournal(k, l, ids);
     },
+    denied: deniedKey !== null && deniedKey === refreshKey,
   };
 }
 
-/** Bloc de statistiques en haut de la Hiérarchie, sur toutes les assemblées de l'arbre. */
+/** Bloc de statistiques de la page « Vie de mon leadership », sur toutes les assemblées de l'arbre. */
 export function AssemblyStatsBlock({ asm, roots }: { asm: AssemblyStatsState; roots: LeaderHierarchyNode[] }) {
   const { t, language } = useLanguage();
   const th = (k: string, o?: Record<string, unknown>) => t(`assemblyLife.hierarchy.${k}`, o);
-  const { period, setPeriod, statsById, todayIso } = asm;
+  const { statsById, todayIso } = asm;
   const unitIds = useMemo(() => treeUnitIds(roots), [roots]);
   const agg = statsById ? aggregate(unitIds, statsById, todayIso) : null;
-
-  const next = shiftPeriod(period, 1);
-  const canGoNext = !isFuturePeriod(next);
   const fmtAvg = (v: number | null) => (v == null ? '—' : v.toLocaleString(language));
 
   return (
@@ -162,35 +171,6 @@ export function AssemblyStatsBlock({ asm, roots }: { asm: AssemblyStatsState; ro
       <View style={styles.blockHeader}>
         <Ionicons name="book-outline" size={18} color={colors.mossDeep} />
         <Text style={styles.blockTitle}>{th('title')}</Text>
-      </View>
-
-      {/* Version compacte (JP 08/10) : périodicités en segments sur une ligne, période en dessous. */}
-      <View style={styles.segments}>
-        {PERIODICITIES.map((k) => (
-          <Pressable
-            key={k}
-            onPress={() => setPeriod(currentPeriod(k))}
-            style={[styles.segment, period.kind === k && styles.segmentOn]}
-          >
-            <Text style={[styles.segmentText, period.kind === k && styles.segmentTextOn]} numberOfLines={1}>
-              {t(`assemblyLife.journal.kind.${k}`)}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-      <View style={styles.periodRow}>
-        <Pressable onPress={() => setPeriod(shiftPeriod(period, -1))} hitSlop={8} style={styles.navBtn}>
-          <Ionicons name="chevron-back" size={16} color={colors.ink2} />
-        </Pressable>
-        <Text style={styles.periodText}>{capitalize(periodLabel(period, t))}</Text>
-        <Pressable
-          onPress={() => canGoNext && setPeriod(next)}
-          disabled={!canGoNext}
-          hitSlop={8}
-          style={[styles.navBtn, !canGoNext && { opacity: 0.3 }]}
-        >
-          <Ionicons name="chevron-forward" size={16} color={colors.ink2} />
-        </Pressable>
       </View>
 
       {!!asm.error && <ErrorBanner message={asm.error} onRetry={asm.retry} />}
@@ -220,17 +200,6 @@ export function AssemblyStatsBlock({ asm, roots }: { asm: AssemblyStatsState; ro
           )}
 
           <Text style={styles.note}>{th('distinctNote')}</Text>
-
-          <Button
-            label={th('journalAll')}
-            variant="soft"
-            height={38}
-            onPress={() => asm.generateJournal('all', th('scopeAll'), unitIds)}
-            loading={asm.generating === 'all'}
-            disabled={agg.meetingCount === 0 || (asm.generating !== null && asm.generating !== 'all')}
-            style={{ marginTop: 10 }}
-            iconLeft={<Ionicons name="document-text-outline" size={15} color={colors.moss} />}
-          />
         </>
       )}
     </Card>
@@ -242,55 +211,6 @@ function Tile({ value, label, alert }: { value: string | number; label: string; 
     <View style={styles.tile}>
       <Text style={[styles.tileValue, alert && { color: colors.clay }]}>{value}</Text>
       <Text style={styles.tileLabel}>{label}</Text>
-    </View>
-  );
-}
-
-/**
- * Résumé d'un dirigeant dans l'arbre : « N assemblées · k ⚠ » sur son sous-arbre, et son journal
- * PDF consolidé. Rien tant que les statistiques ne sont pas chargées.
- */
-export function LeaderAssemblySummary({ asm, node }: { asm: AssemblyStatsState; node: LeaderHierarchyNode }) {
-  const { t } = useLanguage();
-  const { statsById, todayIso } = asm;
-  const unitIds = useMemo(() => subtreeUnitIds(node), [node]);
-  if (!statsById) return null;
-  const agg = aggregate(unitIds, statsById, todayIso);
-  if (agg.unitCount === 0) return null;
-  const busy = asm.generating === node.id;
-  const disabled = agg.meetingCount === 0 || (asm.generating !== null && !busy);
-
-  return (
-    <View style={styles.leaderRow}>
-      <Text style={styles.leaderText} numberOfLines={1}>
-        {t('assemblyLife.hierarchy.leaderSummary', { count: agg.unitCount })}
-        {agg.alertRows.length > 0 && (
-          <Text style={styles.alertInline}>
-            {' · '}
-            {t('assemblyLife.hierarchy.alertCount', { count: agg.alertRows.length })}
-          </Text>
-        )}
-      </Text>
-      <Pressable
-        // D-ASM-18 (JP 08/10) : AUCUN NOM de personne dans le journal consolidé — ni dans l'en-tête
-        // ni dans le nom du fichier. Le périmètre d'un dirigeant est donc désigné génériquement.
-        onPress={() =>
-          asm.generateJournal(node.id, t('assemblyLife.hierarchy.scopeLeader', { count: agg.unitCount }), unitIds)
-        }
-        disabled={disabled}
-        hitSlop={8}
-        accessibilityLabel={t('assemblyLife.hierarchy.journalLeader')}
-        style={[styles.pdfBtn, disabled && { opacity: 0.35 }]}
-      >
-        {busy ? (
-          <ActivityIndicator size="small" color={colors.moss} />
-        ) : (
-          <>
-            <Ionicons name="document-text-outline" size={14} color={colors.moss} />
-            <Text style={styles.pdfBtnText}>{t('assemblyLife.journal.open')}</Text>
-          </>
-        )}
-      </Pressable>
     </View>
   );
 }
@@ -339,21 +259,6 @@ const styles = StyleSheet.create({
   block: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 12 },
   blockHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   blockTitle: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '700', color: colors.ink },
-  segments: { flexDirection: 'row', gap: 4, padding: 3, borderRadius: 10, backgroundColor: colors.mossTint },
-  segment: { flex: 1, alignItems: 'center', paddingVertical: 6, borderRadius: 8 },
-  segmentOn: { backgroundColor: colors.moss },
-  segmentText: { fontFamily: fonts.sans, fontSize: 12, fontWeight: '600', color: colors.ink2 },
-  segmentTextOn: { color: colors.white },
-  periodRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 8 },
-  navBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.mossTint,
-  },
-  periodText: { fontFamily: fonts.serif, fontSize: 16, color: colors.ink, minWidth: 140, textAlign: 'center' },
   loading: { paddingVertical: 18, alignItems: 'center' },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
   tile: {
@@ -381,20 +286,6 @@ const styles = StyleSheet.create({
   alertNames: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink2, marginTop: 2, lineHeight: 16 },
   alertInline: { color: colors.clay },
   note: { fontFamily: fonts.sans, fontSize: 10.5, color: colors.ink3, lineHeight: 14, marginTop: 8 },
-  leaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  leaderText: { flex: 1, fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink2 },
-  pdfBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 99,
-    backgroundColor: colors.mossTint,
-    minWidth: 40,
-    justifyContent: 'center',
-  },
-  pdfBtnText: { fontFamily: fonts.sans, fontSize: 11, fontWeight: '600', color: colors.moss },
   unitLine: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
   unitLineText: { flex: 1, fontFamily: fonts.sans, fontSize: 11.5, color: colors.mossSoft },
 });

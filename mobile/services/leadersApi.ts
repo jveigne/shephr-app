@@ -141,3 +141,112 @@ export async function declareMySupervisor(supervisorId: string): Promise<MyDisci
   );
   return { supervisor: data?.supervisor ?? null, disciples: data?.disciples ?? [] };
 }
+
+// ---------------- Désignation descendante (lot HIE — D-HIE-02..07, JP 28/10) ----------------
+// Un DIRIGEANT X désigne un dirigeant qu'il suivra : c'est une DEMANDE, le lien (`supervisor_id`
+// du désigné := X) n'existe qu'après validation par le désigné. Valider REMPLACE l'ancien
+// superviseur (D-HIE-03) ; le désigné peut « Retirer » à tout moment (D-HIE-04). GRATUIT, aucun
+// `@RequiresModule`. La déclaration montante (`PUT /me/supervisor`, ci-dessus) reste immédiate.
+// Axe : CHAÎNE de supervision, jamais la géographie. Contrat figé
+// `cmfipraise-backend/docs/shephr/28_10_2026/01_Plan_Hierarchie_3_Pages.md` §5 / §6.
+
+/** Mirrors com.excellence.back.org.leaders.supervision.SupervisionRequestStatus (RG-HIE-09). */
+export type SupervisionRequestStatus = 'PENDING' | 'ACCEPTED' | 'REFUSED' | 'CANCELED' | 'REVOKED' | 'REPLACED';
+
+/** Mirrors com.excellence.back.org.leaders.supervision.SupervisionDtos.SupervisionRequestView */
+export interface SupervisionRequestView {
+  id: string;
+  status: SupervisionRequestStatus;
+  requester: DiscipleshipPerson;
+  designee: DiscipleshipPerson;
+  /** Instant ISO. */
+  createdAt: string;
+  decidedAt: string | null;
+  closedAt: string | null;
+}
+
+/** Mirrors com.excellence.back.org.leaders.supervision.SupervisionDtos.SupervisionOverview */
+export interface SupervisionOverview {
+  /** P-HIE-a : superAdmin ou rôle manager. Faux = « Mon superviseur » seule, en lecture. */
+  canDesignate: boolean;
+  /** Mon `supervisor_id` actuel, quelle que soit l'origine du lien. */
+  supervisor: DiscipleshipPerson | null;
+  /** P-HIE-c : la désignation ACCEPTED qui me lie à mon superviseur actuel, sinon null. */
+  followedBy: SupervisionRequestView | null;
+  /** PENDING dont je suis le désigné, plus anciennes d'abord. */
+  incoming: SupervisionRequestView[];
+  /** PENDING dont je suis le demandeur, plus récentes d'abord. */
+  outgoing: SupervisionRequestView[];
+  /** P-HIE-b : tous les comptes dont `supervisor_id` = moi. */
+  followed: DiscipleshipPerson[];
+  /** RG-HIE-29 — pastille de la carte « Mon leadership » (= incoming.length). */
+  pendingIncomingCount: number;
+}
+
+/** Mirrors com.excellence.back.notification.user.UserNotification#SOURCE_SUPERVISION_REQUEST */
+export const SOURCE_SUPERVISION_REQUEST = 'SUPERVISION_REQUEST';
+
+const SUPERVISION_BASE = '/api/church/leaders/me';
+
+function normalizeOverview(data: Partial<SupervisionOverview> | null | undefined): SupervisionOverview {
+  const incoming = data?.incoming ?? [];
+  return {
+    canDesignate: !!data?.canDesignate,
+    supervisor: data?.supervisor ?? null,
+    followedBy: data?.followedBy ?? null,
+    incoming,
+    outgoing: data?.outgoing ?? [],
+    followed: data?.followed ?? [],
+    pendingIncomingCount: data?.pendingIncomingCount ?? incoming.length,
+  };
+}
+
+/** `GET /api/church/leaders/me/supervision` — tout compte authentifié (RG-HIE-31). */
+export async function fetchSupervisionOverview(): Promise<SupervisionOverview> {
+  const { data } = await apiClient.get<SupervisionOverview>(`${SUPERVISION_BASE}/supervision`);
+  return normalizeOverview(data);
+}
+
+/**
+ * RG-HIE-32 — dirigeants désignables de MON ministère (≤ 20), hors moi, mes ancêtres, ceux que je
+ * suis déjà et ceux qui ont déjà une demande PENDING de ma part. 403 si je ne suis pas dirigeant ;
+ * 422 `QUERY_TOO_SHORT` (< 2 caractères), `NO_MINISTRY`.
+ */
+export async function searchDesigneeCandidates(q: string): Promise<DiscipleshipPerson[]> {
+  const { data } = await apiClient.get<DiscipleshipPerson[]>(`${SUPERVISION_BASE}/designees/candidates`, {
+    params: { q },
+  });
+  return data ?? [];
+}
+
+/**
+ * 201. 422 : NO_MINISTRY, SUPERVISION_SELF, SUPERVISION_OUT_OF_MINISTRY,
+ * SUPERVISION_DESIGNEE_NOT_A_LEADER, SUPERVISION_CYCLE, SUPERVISION_ALREADY_LINKED,
+ * SUPERVISION_REQUEST_DUPLICATE ; 403 ; 404.
+ */
+export async function createSupervisionRequest(designeeId: string): Promise<SupervisionOverview> {
+  const { data } = await apiClient.post<SupervisionOverview>(`${SUPERVISION_BASE}/supervision-requests`, {
+    designeeId,
+  });
+  return normalizeOverview(data);
+}
+
+async function supervisionAction(id: string, action: 'cancel' | 'accept' | 'refuse' | 'revoke') {
+  const { data } = await apiClient.post<SupervisionOverview>(
+    `${SUPERVISION_BASE}/supervision-requests/${id}/${action}`,
+  );
+  return normalizeOverview(data);
+}
+
+/** Demandeur seul (RG-HIE-11) ; 422 SUPERVISION_REQUEST_NOT_PENDING. */
+export const cancelSupervisionRequest = (id: string) => supervisionAction(id, 'cancel');
+/**
+ * Désigné seul (RG-HIE-12). Valider REMPLACE mon superviseur actuel (D-HIE-03) — confirmer avant
+ * (RG-HIE-28). 422 : SUPERVISION_REQUEST_NOT_PENDING, SUPERVISION_REQUESTER_NOT_A_LEADER,
+ * SUPERVISION_OUT_OF_MINISTRY, SUPERVISION_CYCLE ; 403.
+ */
+export const acceptSupervisionRequest = (id: string) => supervisionAction(id, 'accept');
+/** Désigné seul ; 422 SUPERVISION_REQUEST_NOT_PENDING. */
+export const refuseSupervisionRequest = (id: string) => supervisionAction(id, 'refuse');
+/** D-HIE-04 — « Retirer » : désigné seul, demande ACCEPTED ; 422 SUPERVISION_REQUEST_NOT_ACCEPTED. */
+export const revokeSupervisionRequest = (id: string) => supervisionAction(id, 'revoke');

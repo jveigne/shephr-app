@@ -6,6 +6,12 @@ import { apiClient } from '@/services/apiClient';
 // D-ASM-01/02 (JP 23/09) : une fiche = un compte MEMBRE rattaché à une assemblée, présente
 // automatiquement. Les fiches sont identifiées par le **userId** du membre (plus d'id de fiche
 // dans les URLs). Plus de création, de suppression, de liaison ni d'export (RG-MCR-02 v2).
+//
+// D-OFF-01 / D-OFF-06 (JP 27/10, plan `05_Plan_Offres_Caleb_Nehemie.md` §3.4) : MEMBER_CARE est
+// gratuit (désactivable par ministère) ; les assemblées lisibles = l'assemblée gratuite du
+// DIRIGEANT_UNITE + (offre Caleb, HIERARCHIE_SUIVI) celles de sa CHAÎNE de supervision. Une autre
+// assemblée répond 403 `MODULE_ACCESS_DENIED` / `HIERARCHIE_SUIVI` → verrou Caleb. D-OFF-07 :
+// l'offre Néhémie (EGLISE_VILLE, géographie) n'ouvre plus Member Care.
 
 /** Mirrors com.excellence.back.membercare.MemberCareDtos.StatusDto */
 export interface MemberCareStatus {

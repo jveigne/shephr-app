@@ -1,5 +1,6 @@
 // ---------------------------------------------------------------------------------------------
-//  Journal PDF CONSOLIDÉ des assemblées — D-ASM-18 (JP 08/10).
+//  Journal PDF CONSOLIDÉ des assemblées — D-ASM-18 (JP 08/10) ; et, en fin de fichier, journal
+//  d'UNE assemblée (D-ASM-14, parité mobile → web JP 27/10).
 //
 //  Pendant web du journal mobile (`mobile/utils/assemblyJournal.ts`) : mêmes périodes (mois,
 //  trimestre, semestre, année civile), même mise en page A4, mais pour PLUSIEURS assemblées (le
@@ -11,8 +12,12 @@
 //
 //  D-ASM-18 : AUCUN NOM de personne dans le journal consolidé — chaque CR ne porte que le NOMBRE
 //  de présents, jamais la liste (à la différence du journal d'une assemblée, D-ASM-14).
+//  D-OFF-05 / P-03 (JP 27/10, plan 05, ticket O6) : le serveur ne renvoie plus les présents nommés
+//  pour un journal consolidé (`MeetingSummaryLite.attendeeCount`) ; le même document sert au journal
+//  de la Hiérarchie (offre Caleb, chaîne) et au journal de la VILLE (offre Néhémie, `JOURNAL`,
+//  chargé par `pages/CityStudy.tsx`).
 // ---------------------------------------------------------------------------------------------
-import type { MeetingDetail, UnitMeetingStats } from '../services/assemblyApi';
+import type { MeetingDetail, MeetingSummaryLite, UnitMeetingStats } from '../services/assemblyApi';
 import { averageAttendance, isAlert, type HierarchyAggregate } from './assemblyHierarchyStats';
 import { formatChapters, formatMeetingDate, type Translate } from './meetingReport';
 
@@ -110,13 +115,16 @@ const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 export interface ConsolidatedJournalInput {
-  /** Périmètre affiché, sans nom de personne (D-ASM-18) : « Équipe d'un dirigeant · N assemblées » ou « Toute ma hiérarchie ». */
+  /**
+   * Périmètre affiché, sans nom de personne (D-ASM-18) : « Équipe d'un dirigeant · N assemblées »,
+   * « Toute ma hiérarchie » ou, pour le journal de ville (D-OFF-05), « Ville de {nom} ».
+   */
   scopeLabel: string;
   period: Period;
   /** Agrégat du périmètre (mêmes indicateurs que le bloc de la Hiérarchie). */
   aggregate: HierarchyAggregate;
-  /** Réunions de la période (n'importe quel ordre : regroupées et triées ici). */
-  meetings: MeetingDetail[];
+  /** Réunions de la période (n'importe quel ordre : regroupées et triées ici) — nombre de présents seulement (D-OFF-05). */
+  meetings: MeetingSummaryLite[];
   /** Date du jour, 'yyyy-MM-dd' : date d'édition et calcul des alertes. */
   today: string;
   /** Langue de l'app ('fr'/'en'), pour la virgule décimale. */
@@ -156,7 +164,7 @@ export function buildConsolidatedJournalHtml(input: ConsolidatedJournalInput, t:
     .join('');
 
   // Réunions regroupées par assemblée, dans l'ordre du tableau (nom d'assemblée).
-  const byUnit = new Map<string, MeetingDetail[]>();
+  const byUnit = new Map<string, MeetingSummaryLite[]>();
   for (const m of input.meetings) byUnit.set(m.unitId, [...(byUnit.get(m.unitId) ?? []), m]);
 
   const sections = agg.rows
@@ -172,7 +180,7 @@ export function buildConsolidatedJournalHtml(input: ConsolidatedJournalInput, t:
               : `<span class="muted">${esc(tj('noReading'))}</span>`;
           return `<tr>
             <td>${esc(formatMeetingDate(m.meetingDate))}</td>
-            <td class="n">${m.attendees.length}</td>
+            <td class="n">${m.attendeeCount}</td>
             <td>${esc(t(m.breadBreaking ? 'assembly.report.yes' : 'assembly.report.no'))}</td>
             <td>${reading}</td>
           </tr>`;
@@ -263,5 +271,145 @@ export function buildConsolidatedJournalHtml(input: ConsolidatedJournalInput, t:
   </table>
 
   ${sections ? `<h2>${esc(tj('reports'))}</h2>${sections}` : ''}
+</body></html>`;
+}
+
+// ---------------------------------------------------------------------------------------------
+//  Journal PDF d'UNE assemblée — JP 08/10, D-ASM-14.
+//  Parité mobile → web (JP 27/10, décision n°3 — D-WEB-01) : port de `buildJournalHtml` de
+//  `mobile/utils/assemblyJournal.ts`, avec les clés web `assembly.journal.*`. Le chargement
+//  (`listMeetings` + `getMeeting` par paquets) et l'impression (utils/printHtml) sont faits par
+//  `pages/Assembly.tsx` (modale « Journal PDF » de l'onglet Réunions).
+//
+//  D-ASM-14 : la liste nominative des présents est OPTIONNELLE, le nombre reste toujours.
+//  Le journal consolidé (D-ASM-18, ci-dessus) reste, lui, SANS AUCUN NOM — non modifié.
+// ---------------------------------------------------------------------------------------------
+
+export interface UnitJournalInput {
+  unitName: string;
+  cityName: string | null;
+  period: Period;
+  /** Détails des réunions de la période, dans n'importe quel ordre (triés ici par date). */
+  meetings: MeetingDetail[];
+  /** D-ASM-14 : liste nominative des présents (facultative) ; le nombre figure toujours. */
+  includeAttendees: boolean;
+  /** Date d'édition, 'yyyy-MM-dd'. */
+  generatedOn: string;
+  /** Langue de l'app ('fr'/'en'), pour la virgule décimale de la présence moyenne. */
+  locale?: string;
+}
+
+/** « 20 septembre 2026 » (miroir de `fmtIsoDay` du mobile), sans passer par Date. */
+function fmtLongDay(isoDate: string, t: Translate): string {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const months = t('assembly.journal.monthsLong').split(',');
+  if (!y || !m || !d || !months[m - 1]) return isoDate;
+  return `${d} ${months[m - 1]} ${y}`;
+}
+
+/**
+ * Document HTML A4 du journal d'une assemblée : en-tête, synthèse de la période (réunions,
+ * présence moyenne, fractions de pain, lectures par livre), puis chaque CR dans l'ordre
+ * chronologique. Le `<title>` sert de nom de fichier proposé par « Enregistrer en PDF ».
+ */
+export function buildJournalHtml(input: UnitJournalInput, t: Translate): string {
+  const tj = (k: string, o?: Record<string, string | number>) => t(`assembly.journal.${k}`, o);
+  const meetings = [...input.meetings].sort((a, b) => a.meetingDate.localeCompare(b.meetingDate));
+  const count = meetings.length;
+  const totalPresent = meetings.reduce((s, m) => s + m.attendees.length, 0);
+  const avg = count === 0 ? 0 : Math.round((totalPresent / count) * 10) / 10;
+  const bread = meetings.filter((m) => m.breadBreaking).length;
+  const byName = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' });
+  const sortedChapters = (m: MeetingDetail) => [...m.chapters].sort((a, b) => a.orderIndex - b.orderIndex);
+
+  // Lectures de la période, regroupées par livre (un module = un livre).
+  const readings = new Map<string, MeetingDetail['chapters']>();
+  for (const m of meetings) {
+    const book = m.bookTitle || m.moduleName;
+    if (!book || m.chapters.length === 0) continue;
+    readings.set(book, [...(readings.get(book) ?? []), ...sortedChapters(m)]);
+  }
+  const readingRows =
+    readings.size === 0
+      ? `<p class="muted">${esc(tj('noReadings'))}</p>`
+      : `<ul class="readings">${Array.from(readings.entries())
+          .map(([book, chapters]) => `<li><strong>${esc(book)}</strong> — ${esc(formatChapters(chapters, t))}</li>`)
+          .join('')}</ul>`;
+
+  const meetingBlocks = meetings
+    .map((m) => {
+      const names = m.attendees.map((a) => a.displayName).sort(byName);
+      const book = m.bookTitle || m.moduleName;
+      const reading =
+        book && m.chapters.length > 0
+          ? `${esc(book)} — ${esc(formatChapters(sortedChapters(m), t))}`
+          : `<span class="muted">${esc(tj('noReading'))}</span>`;
+      return `
+      <section class="meeting">
+        <h3>${esc(fmtLongDay(m.meetingDate, t))}</h3>
+        <table>
+          <tr><th>${esc(tj('attendees'))}</th><td>${names.length}${
+            input.includeAttendees && names.length > 0
+              ? `<div class="names">${names.map(esc).join(' · ')}</div>`
+              : ''
+          }</td></tr>
+          <tr><th>${esc(tj('breadBreaking'))}</th><td>${esc(
+            t(m.breadBreaking ? 'assembly.report.yes' : 'assembly.report.no'),
+          )}</td></tr>
+          <tr><th>${esc(tj('reading'))}</th><td>${reading}</td></tr>
+        </table>
+      </section>`;
+    })
+    .join('');
+
+  const subtitle = input.cityName ? `${input.unitName} · ${input.cityName}` : input.unitName;
+  const stat = (value: string, label: string) =>
+    `<div class="stat"><div class="stat-value">${esc(value)}</div><div class="stat-label">${esc(label)}</div></div>`;
+
+  return `<!doctype html>
+<html><head><meta charset="utf-8" />
+<title>${esc(journalDocName(input.unitName || 'assemblee', input.period))}</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: ${THEME.ink900}; font-size: 11pt; margin: 0; }
+  h1, h2, h3 { font-family: Georgia, 'Times New Roman', serif; font-weight: normal; margin: 0; }
+  header { border-bottom: 2px solid ${THEME.green800}; padding-bottom: 10px; margin-bottom: 16px; }
+  h1 { font-size: 24pt; color: ${THEME.green800}; }
+  .sub { font-size: 12pt; color: ${THEME.ink700}; margin-top: 4px; }
+  .meta { font-size: 9pt; color: ${THEME.ink500}; margin-top: 6px; }
+  h2 { font-size: 15pt; color: ${THEME.green800}; margin: 18px 0 8px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stat { background: ${THEME.ivoryCard}; border: 1px solid ${THEME.line}; border-radius: 8px; padding: 10px; }
+  .stat-value { font-family: Georgia, serif; font-size: 18pt; color: ${THEME.green800}; }
+  .stat-label { font-size: 8.5pt; color: ${THEME.ink500}; text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
+  .readings { margin: 6px 0 0; padding-left: 18px; }
+  .readings li { margin: 3px 0; }
+  .muted { color: ${THEME.ink500}; }
+  .meeting { page-break-inside: avoid; border-top: 1px solid ${THEME.line}; padding: 10px 0 6px; }
+  h3 { font-size: 13pt; margin-bottom: 6px; }
+  table { border-collapse: collapse; width: 100%; }
+  th { text-align: left; vertical-align: top; width: 32%; font-weight: 600; color: ${THEME.ink700}; padding: 3px 8px 3px 0; font-size: 10pt; }
+  td { vertical-align: top; padding: 3px 0; }
+  .names { font-size: 9.5pt; color: ${THEME.ink700}; margin-top: 2px; line-height: 1.45; }
+</style></head>
+<body>
+  <header>
+    <h1>${esc(tj('unitDocTitle'))}</h1>
+    <div class="sub">${esc(subtitle)} — ${esc(periodLabel(input.period, t))}</div>
+    <div class="meta">${esc(tj('generatedOn', { date: formatMeetingDate(input.generatedOn) }))}</div>
+  </header>
+
+  <h2>${esc(tj('summary'))}</h2>
+  <div class="stats">
+    ${stat(String(count), tj('statUnitMeetings'))}
+    ${stat(avg.toLocaleString(input.locale), tj('statAverage'))}
+    ${stat(`${bread} / ${count}`, tj('statUnitBread'))}
+  </div>
+  <h2>${esc(tj('readings'))}</h2>
+  ${readingRows}
+
+  <h2>${esc(tj('reports'))}</h2>
+  ${meetingBlocks}
 </body></html>`;
 }

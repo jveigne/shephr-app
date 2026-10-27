@@ -89,34 +89,6 @@
         "desc": "Dashboards, maps, trends over time and CSV/PDF exports for oversight and consolidation."
       }
     },
-    "pricing": {
-      "title": "Simple pricing, at your scale",
-      "subtitle": "The essential modules are free. Advanced modules are paid à la carte, priced fairly for your church's size.",
-      "freeBadge": "Included & free",
-      "freeTitle": "Goals & Songbooks",
-      "freeDesc": "Goal tracking and hymn books are always on, at no cost, for every ministry.",
-      "donations": {
-        "name": "Giving",
-        "price": "from €150",
-        "unit": "/ year",
-        "desc": "Record and oversee giving across your whole scope. Price based on church size."
-      },
-      "memberCare": {
-        "name": "Member Care",
-        "price": "from €29",
-        "unit": "/ month",
-        "desc": "Tracking records, spiritual statuses and accountability. Can be enabled independently from giving."
-      },
-      "factorsTitle": "Pricing adapts to your situation",
-      "factors": {
-        "size": "Your church's size (tiers based on member count)",
-        "zone": "Your geographic region",
-        "cmci": "A mission discount for CMCI churches",
-        "bundle": "A decreasing rate when you enable several modules"
-      },
-      "quoteNote": "Large organisations or specific needs? We'll prepare a tailored quote.",
-      "cta": "Request a quote"
-    },
     "contact": {
       "title": "Carry the Five-Year Goal with Shephr",
       "desc": "Joining an existing assembly? Create your account, submit your join request, then declare your commitments. To roll the Five-Year Goal out across a whole ministry, we support you: we set up your structure, create your first accesses and enable the modules you need.",
@@ -128,7 +100,7 @@
       "tagline": "The management platform for your ministry.",
       "privacy": "Privacy",
       "deleteAccount": "Delete my account",
-      "subscriptions": "Subscriptions"
+      "offers": "Our plans"
     }
   },
   "privacy": {
@@ -324,7 +296,11 @@
     "contact": "Contact us",
     "contactSubject": "Shephr support request",
     "menu": "Menu",
-    "study": "Bertoua message"
+    "study": "Bertoua message",
+    "studyLive": "Live",
+    "documents": "Documents",
+    "studyCity": "City tracking",
+    "offers": "Plans"
   },
   "sidebar": {
     "logout": "Log out",
@@ -487,6 +463,170 @@
       "lastDays_other": "Last report {{count}} days ago",
       "unitAverage": "{{value}} present on average",
       "openAssembly": "Open assembly life"
+    },
+    "lock": {
+      "title": "Caleb plan — tracking my hierarchy",
+      "intro": "Assembly life (meeting reports, consolidated PDF journal) and “The Bertoua Message” for every assembly in your leadership chain.",
+      "askShephr": "Ask the Shephr team to activate it.",
+      "pending": "A payment is in progress for your hierarchy tracking.",
+      "pastDue": "The last payment failed: your hierarchy tracking is suspended.",
+      "vatIncluded": "{{plan}} · VAT included · for your account only",
+      "compactTitle": "Caleb plan — tracking my hierarchy",
+      "compactAssembly": "Your own assembly stays free: reports, journal, meetings and progress. The other assemblies of your leadership chain (reading and writing) are included in the Caleb plan.",
+      "compactMemberCare": "Pastoral care for your own assembly stays free. The records of the assemblies in your leadership chain are included in the Caleb plan.",
+      "openHierarchy": "See the plan in Hierarchy",
+      "outsideChainTitle": "Assembly outside your chain",
+      "outsideChainAssembly": "Your Caleb plan is active, but this assembly is not in your leadership chain: only the assemblies of your supervision chain are included.",
+      "outsideChainMemberCare": "Your Caleb plan is active, but the records of this assembly are not in your leadership chain: only the assemblies of your supervision chain are included."
+    },
+    "plan": {
+      "canceledBanner": "Payment canceled: no subscription was taken out.",
+      "manage": "Manage subscription",
+      "renewsOn": "Renews on {{date}}",
+      "endsOn": "Ends on {{date}}",
+      "grace": "Payment failed — access kept until {{date}}",
+      "manualUntil": "Activated until {{date}}"
+    },
+    "study": {
+      "title": "The Bertoua Message · my hierarchy",
+      "tabs": {
+        "overview": "Assemblies",
+        "stats": "Statistics"
+      },
+      "hint": "Assemblies in your leadership chain. Scores computed by the server; no answers or member names.",
+      "loadError": "Unable to load study statistics.",
+      "empty": "No assembly in your hierarchy has studied yet.",
+      "module": "Unit",
+      "assembly": "Assembly",
+      "taught": "Taught",
+      "notTaught_one": "{{count}} not taught",
+      "notTaught_other": "{{count}} not taught",
+      "progress": "Lessons done",
+      "done": "Lesson done",
+      "notDone": "Lesson not done",
+      "average": "Average score",
+      "lastSession": "Last session",
+      "lessons_one": "{{count}} lesson",
+      "lessons_other": "{{count}} lessons",
+      "from": "From",
+      "to": "To",
+      "invalidPeriod": "The start date must be before the end date.",
+      "periodTooLong": "Choose a period of {{days}} days at most.",
+      "sessionsFinished": "Sessions finished",
+      "lessonsDone": "Lessons done",
+      "membersTaught": "Members taught",
+      "monthly": "Monthly trend",
+      "month": "Month",
+      "noSessions": "No session finished in this period."
+    },
+    "backToHome": "Back to the Five-Year Goal",
+    "home": {
+      "leadershipCard": "My leadership",
+      "leadershipCardHint": "My supervisor, the leaders I follow, requests received",
+      "pendingBadge_one": "{{count}} pending request received",
+      "pendingBadge_other": "{{count}} pending requests received",
+      "lifeCard": "Life of my leadership",
+      "lifeCardHint": "Assembly life, events and the Bertoua Message across my hierarchy",
+      "lifeLocked": "Caleb offer — not activated"
+    },
+    "leadership": {
+      "title": "My leadership",
+      "intro": "Your place in the supervision chain: who you report to, and the leaders you follow.",
+      "loadError": "Unable to load your leadership.",
+      "mySupervisor": "My supervisor",
+      "actionFailed": "The action did not go through",
+      "done": {
+        "accept": "Request accepted",
+        "refuse": "Request declined",
+        "cancel": "Request cancelled",
+        "revoke": "Link removed",
+        "create": "Request sent — the link will exist once it is accepted"
+      },
+      "incomingTitle": "Requests received",
+      "incomingEmpty": "No pending request.",
+      "incomingHint": "These leaders would like to follow you. Accepting replaces your current supervisor.",
+      "sentOn": "sent on {{date}}",
+      "accept": "Accept",
+      "refuse": "Decline",
+      "followedTitle": "Leaders I follow",
+      "followedEmpty": "You do not follow any leader yet.",
+      "designate": "Designate a leader",
+      "outgoingTitle_one": "{{count}} request awaiting acceptance",
+      "outgoingTitle_other": "{{count}} requests awaiting acceptance",
+      "pending": "Pending",
+      "cancel": "Cancel",
+      "followedByTitle": "Who follows me",
+      "followedByEmpty": "Nobody follows you by designation.",
+      "acceptedOn": "accepted on {{date}}",
+      "revoke": "Remove",
+      "confirm": {
+        "acceptTitle": "Accept the request?",
+        "acceptBody": "Accepting {{requester}}'s request will replace your current supervisor, {{current}}.",
+        "acceptOk": "Accept and replace",
+        "revokeTitle": "Remove this link?",
+        "revokeBody": "{{name}} will no longer be your supervisor. You can declare another one.",
+        "revokeOk": "Remove",
+        "cancelTitle": "Cancel the request?",
+        "cancelBody": "The request sent to {{name}} will be cancelled.",
+        "cancelOk": "Cancel the request"
+      },
+      "designateTitle": "Designate a leader",
+      "designateHint": "The designated leader will receive a request; you will become their supervisor once they accept it.",
+      "searchLabel": "Search for a leader in your ministry",
+      "searchPlaceholder": "Name, email…",
+      "searchHint": "Leaders only. Those you already follow or who supervise you are not listed.",
+      "searchTooShort": "Type at least 2 characters.",
+      "noResult": "No leader found.",
+      "errors": {
+        "QUERY_TOO_SHORT": "Type at least 2 characters.",
+        "NO_MINISTRY": "Your account is not attached to any ministry.",
+        "SUPERVISION_SELF": "You cannot designate yourself.",
+        "SUPERVISION_OUT_OF_MINISTRY": "This leader does not belong to your ministry.",
+        "SUPERVISION_DESIGNEE_NOT_A_LEADER": "Only a leader can be designated.",
+        "SUPERVISION_REQUESTER_NOT_A_LEADER": "The person who designated you is no longer a leader: the request cannot be accepted.",
+        "SUPERVISION_CYCLE": "Not possible: this link would create a loop in the supervision chain.",
+        "SUPERVISION_ALREADY_LINKED": "You already follow this leader.",
+        "SUPERVISION_REQUEST_DUPLICATE": "A request is already pending for this leader.",
+        "SUPERVISION_REQUEST_NOT_PENDING": "This request is no longer pending.",
+        "SUPERVISION_REQUEST_NOT_ACCEPTED": "This link is no longer active.",
+        "generic": "The action did not go through. Please try again later."
+      }
+    },
+    "life": {
+      "title": "Life of my leadership",
+      "intro": "The assemblies of your supervision chain, over one period.",
+      "period": "Period",
+      "loadError": "Unable to load the life of your leadership.",
+      "notApplicable": "The life of leadership is for leaders: your account has no hierarchy to follow.",
+      "nothing": "No follow-up module is enabled for your ministry.",
+      "journal": "PDF journal of my hierarchy",
+      "unitsTitle": "Assemblies and latest report",
+      "unitsEmpty": "No assembly in your hierarchy.",
+      "noReport": "No report",
+      "leader": "Leader: {{name}}",
+      "meetings_one": "{{count}} meeting in the period",
+      "meetings_other": "{{count}} meetings in the period"
+    },
+    "events": {
+      "title": "Events of my chain",
+      "hint": "Evangelism actions carried out in the assemblies of your hierarchy (city, region or nation events are not counted).",
+      "loadError": "Unable to load the events of your hierarchy.",
+      "empty": "No assembly in your hierarchy.",
+      "count": "Events",
+      "participants": "Participants",
+      "participantsWithGuests": "{{count}} incl. {{guests}} guests",
+      "guestsSub_one": "incl. {{count}} guest",
+      "guestsSub_other": "incl. {{count}} guests",
+      "conversions": "Conversions",
+      "restorations": "Restorations",
+      "baptisms": "Baptisms",
+      "leader": "Leader",
+      "noLeader": "No leader",
+      "units": "Assemblies",
+      "assembly": "Assembly",
+      "lastEvent": "Latest event",
+      "byLeader": "By leader",
+      "byUnit": "By assembly"
     }
   },
   "dashboard": {
@@ -1079,7 +1219,56 @@
     "deadlinePassedHelp": "Deadline passed — contact the secretariat.",
     "memberReminderTitle": "Remind {{name}}",
     "memberReminderSub": "The reminder will appear in-app for this person (no email). At most one reminder per person per 24h.",
-    "noMemberInUnit": "No member attached to this assembly."
+    "noMemberInUnit": "No member attached to this assembly.",
+    "remind": {
+      "title": "Send reminders",
+      "intro": "Remind everyone who has not submitted their pledges yet — in a single step.",
+      "geoSection": "My perimeter",
+      "geoHint": "The people attached to the assemblies of the selected perimeter.",
+      "disciplesSection": "People I disciple",
+      "disciplesHint": "The people who declared you as their discipler. A separate choice from the geographic perimeter: the two are never combined.",
+      "disciplesCaption": "Those who declared you",
+      "scope": {
+        "ASSEMBLY": "My assembly",
+        "CITY": "My city",
+        "ZONE": "My region",
+        "COUNTRY": "My nation",
+        "DISCIPLES": "My disciples"
+      },
+      "pendingBadge_one": "{{count}} to remind",
+      "pendingBadge_other": "{{count}} to remind",
+      "preview_one": "{{count}} person will be reminded, out of {{total}} in this perimeter.",
+      "preview_other": "{{count}} people will be reminded, out of {{total}} in this perimeter.",
+      "previewNone": "Nobody to remind here: everyone has submitted.",
+      "messageLabel": "Message (optional)",
+      "messagePlaceholder": "Leave empty for the default message, with the deadline.",
+      "messageHint": "The same message is sent to every person in the perimeter.",
+      "sendCta": "Send reminders",
+      "confirmTitle": "Send reminders",
+      "confirmBody_one": "Remind {{count}} person in “{{scope}}”?",
+      "confirmBody_other": "Remind {{count}} people in “{{scope}}”?",
+      "confirmCta": "Send",
+      "doneTitle": "Reminders sent",
+      "resultSent": "Reminders sent",
+      "resultSkipped": "Already reminded",
+      "resultSubmitted": "Already submitted",
+      "skippedHint": "Anyone reminded within the last 24 hours is skipped: nobody gets the same reminder twice.",
+      "sentToLabel": "Recipients",
+      "backCta": "Done",
+      "antispamHint": "People who already submitted are never reminded, and each person receives at most one reminder per 24 hours.",
+      "loadError": "Could not load the reminder perimeters.",
+      "failed": "Sending the reminders failed.",
+      "denied": "This perimeter is not yours. Only a leader reminds a geographic perimeter; you can always remind the people you disciple.",
+      "open": "Send reminders",
+      "sending": "Sending…",
+      "retry": "Retry",
+      "empty": "No perimeter to remind.",
+      "pendingOfTotal": "{{pending}} not submitted out of {{total}}",
+      "errors": {
+        "SCOPE_REQUIRED": "Choose the perimeter to remind.",
+        "SCOPE_ID_REQUIRED": "You carry several perimeters at this level: pick the one to remind."
+      }
+    }
   },
   "memberGoals": {
     "title": "My goals",
@@ -1518,7 +1707,29 @@
       "colAttendees": "Present",
       "colBread": "Bread breaking",
       "colReading": "Reading",
-      "noReading": "No reading"
+      "noReading": "No reading",
+      "open": "PDF journal",
+      "unitTitle": "Assembly journal",
+      "unitDocTitle": "Assembly journal",
+      "periodicity": "Period",
+      "previous": "Previous period",
+      "next": "Next period",
+      "unitReportCount_zero": "No report for this period.",
+      "unitReportCount_one": "{{count}} report for this period",
+      "unitReportCount_other": "{{count}} reports for this period",
+      "includeAttendees": "Names of those present",
+      "includeAttendeesHint": "Optional (D-ASM-14): the number of people present is always shown.",
+      "contentHint": "The journal opens with a summary of the period (meetings, average attendance, bread breaking, readings), followed by each report in chronological order. In the print dialog, choose “Save as PDF”.",
+      "generate": "Generate PDF",
+      "generating": "Preparing…",
+      "statUnitMeetings": "Meetings",
+      "statUnitBread": "Bread breaking",
+      "readings": "Readings",
+      "noReadings": "No reading during this period.",
+      "attendees": "Present",
+      "breadBreaking": "Bread breaking",
+      "reading": "Reading",
+      "loadFailed": "Could not load the assembly's meetings."
     },
     "study": {
       "title": "Bertoua message",
@@ -1652,7 +1863,10 @@
         "STUDY_QUESTION_INVALID": "This question cannot bound the session (a top-level question of the lesson is expected).",
         "STUDY_CATCH_UP_CLOSED": "Catch-up for this session is closed.",
         "STUDY_CATCH_UP_EMPTY": "No answer to send.",
-        "STUDY_PAPER_COPY_TOO_EARLY": "A paper copy can be entered from the correction onwards (the question range is then fixed)."
+        "STUDY_PAPER_COPY_TOO_EARLY": "A paper copy can be entered from the correction onwards (the question range is then fixed).",
+        "RESOURCE_NOT_FOUND": "This session or copy no longer exists.",
+        "MODULE_ACCESS_DENIED": "Assembly study is not available for your ministry.",
+        "offline": "No network: try again in a moment."
       },
       "language": {
         "badge": {
@@ -1674,9 +1888,148 @@
       "pendingReviewCount_one": "{{count}} catch-up copy is waiting for your review of its open questions (counted 0 until then).",
       "pendingReviewCount_other": "{{count}} catch-up copies are waiting for your review of their open questions (counted 0 until then).",
       "reviewLabel": "Your review:",
-      "submittedAt": "Sent on {{date}}"
+      "submittedAt": "Sent on {{date}}",
+      "home": {
+        "liveTitle": "Session in progress",
+        "answer": "Answer",
+        "correct": "Correct",
+        "resume": "Resume",
+        "noCurrent": "No study in progress",
+        "noCurrentHint": "When your leader starts a session, it will show up here.",
+        "catchUpTitle": "To catch up",
+        "catchUpHint": "You missed the session: answer the questions on your own, then send your paper.",
+        "catchUpStart": "Start",
+        "catchUpContinue": "Continue",
+        "finishedOn": "finished on {{date}}",
+        "startSession": "Start a lesson",
+        "startOther": "Start another lesson",
+        "startSub": "Pick the unit, then the lesson: the session opens to the assembly's respondents.",
+        "noCatalog": "No study unit has been published for this assembly yet.",
+        "locked": "Locked: finish the prerequisite unit in the assembly first",
+        "lessonsDone": "{{done}} / {{total}} lessons done",
+        "lessonDone": "Done",
+        "lessonStarted": "Started",
+        "lessonToDo": "To do",
+        "start": "Start",
+        "continue": "Continue",
+        "redo": "Redo",
+        "covered": "Already covered: {{ranges}}",
+        "nextRange": "Next: {{range}}",
+        "wholeLesson": "the whole lesson",
+        "rangeShort": "questions {{first}} to {{last}}",
+        "forgottenTitle": "A session is still open",
+        "forgottenBody": "The session \"{{lesson}}\" was not finished. Finish it to start this one?",
+        "finishAndStart": "Finish and start",
+        "started": "Session opened."
+      },
+      "briefing": {
+        "title": "Read before the lesson",
+        "unitNotes": "About this unit",
+        "lessonNotes": "Notes for this lesson",
+        "memberActions": "Preview — each member will have to:"
+      },
+      "start": {
+        "title": "Start the session?",
+        "confirm": "{{lesson}} — respondents can answer right away.",
+        "pick": "Starting question",
+        "sessionRange": "This session: {{range}}",
+        "pickNext": "Default: question {{number}}, the first one not yet covered. Pick another question to start elsewhere.",
+        "pickFirst": "Default: the beginning of the lesson. Pick another question to start elsewhere.",
+        "from": "Starting point",
+        "default": "Carry on (first question not yet covered)",
+        "defaultRedo": "From the beginning (the lesson is taken again)",
+        "beginning": "Start over (question {{number}})",
+        "custom": "Choose the starting question",
+        "customPlaceholder": "Question number (e.g. 21)"
+      },
+      "session": {
+        "back": "Bertoua message",
+        "rangeLine": "Lesson {{n}} · questions {{first}} to {{last}}",
+        "answered": "{{done}} / {{total}} answered",
+        "save": {
+          "saving": "Saving…",
+          "saved": "Saved ✓",
+          "failed": "Not saved"
+        },
+        "offline": "Offline — the page will update when the network is back.",
+        "offlinePending": "Offline — your answers are kept on this computer and will be sent when the network is back.",
+        "ignored_one": "{{count}} answer received after correction started was not taken into account.",
+        "ignored_other": "{{count}} answers received after correction started were not taken into account.",
+        "readerHint": "You are viewing this session without answering it.",
+        "correctionHint": "Swap screens: your neighbour corrects your paper — they read the given answer and the manual's answer, then pick a verdict.",
+        "writtenLeft_one": "Written answers left to correct: {{count}}",
+        "writtenLeft_other": "Written answers left to correct: {{count}}",
+        "writtenDone": "Every written answer has a verdict.",
+        "noAnswerCorrection": "You did not answer online: nothing to correct on this screen.",
+        "waitCorrection": "Correction in progress: wait for the end of the session.",
+        "myScore": "My score",
+        "noCopy": "No online paper for this session.",
+        "awaitingReview": "Your written answers are waiting for the leader's review.",
+        "myProgress": "My progress",
+        "gone": "This session no longer exists: the leader cancelled it.",
+        "catchUpTitle": "Catch-up at home",
+        "catchUpHint": "Answer on your own, at your own pace. Corrections and the manual's answers will show once you have sent your paper.",
+        "catchUpSubmit": "Send my paper",
+        "catchUpSubmitTitle": "Send your paper?",
+        "catchUpSubmitConfirm": "{{done}} / {{total}} answered. You will not be able to change it: closed questions are marked straight away, written answers wait for the leader's review.",
+        "catchUpNotSent": "Your answers have not gone through yet (offline?). Try again once you are back online.",
+        "catchUpSent": "Paper sent."
+      },
+      "leader": {
+        "panel": "Leader",
+        "results": "Results",
+        "respondents_one": "{{count}} respondent",
+        "respondents_other": "{{count}} respondents",
+        "showKey": "Show the manual's answers",
+        "hideKey": "Hide the manual's answers",
+        "toCorrection": "Move to correction",
+        "toCorrectionConfirm": "Answering will be locked and closed questions marked.",
+        "stopAfter": "Stop after question:",
+        "stopLast": "last",
+        "stopAfterCut": "Questions after Q{{number}} will be removed from this session (neither marked nor scored); answers already given will carry over to the next session on this lesson. Answering will be locked and closed questions marked.",
+        "cancel": "Cancel the session",
+        "cancelTitle": "Cancel the session?",
+        "cancelConfirm": "The session, its papers and every answer already given will be deleted.",
+        "cancelled": "Session cancelled.",
+        "reviewsLeft_one": "Verdicts left: {{count}}",
+        "reviewsLeft_other": "Verdicts left: {{count}}",
+        "reviewsDone": "Every verdict is in.",
+        "finish": "Finish",
+        "finishTitle": "Finish the session?",
+        "finishConfirm": "Scores will be closed. You can still adjust points from the results.",
+        "finishConfirmLeft_one": "{{count}} written answer still has no verdict: it will be worth 0 points. You can adjust from the results.",
+        "finishConfirmLeft_other": "{{count}} written answers still have no verdict: they will be worth 0 points. You can adjust from the results.",
+        "finished_one": "Session finished · {{count}} paper",
+        "finished_other": "Session finished · {{count}} papers",
+        "notes": "Leader notes"
+      },
+      "answer": {
+        "VRAI": "True",
+        "FAUX": "False",
+        "OUI": "Yes",
+        "NON": "No",
+        "done": "Done",
+        "doneMark": "Done ✓",
+        "notDone": "Not done",
+        "number": "Q{{number}}",
+        "placeholder": "Your answer…",
+        "noAnswer": "No answer",
+        "given": "Given answer",
+        "manual": "Manual's answer",
+        "wrong": "wrong",
+        "expected": "right answer",
+        "noVerdict": "No verdict — 0 points",
+        "adjusted": "adjusted",
+        "personalAnswered": "Personal question — answered ✓",
+        "personalNotAnswered": "Personal question — no answer",
+        "points_one": "{{value}} pt",
+        "points_other": "{{value}} pts"
+      }
     },
-    "studySuggested": "Today's study chapter"
+    "studySuggested": "Today's study chapter",
+    "freeUnit": "Your assembly",
+    "chainUnit": "My hierarchy (Caleb plan)",
+    "lockedUnit": "Locked — Caleb plan"
   },
   "events": {
     "title": "Events",
@@ -1897,7 +2250,8 @@
       "colCount": "Actions",
       "noType": "No evangelistic type is configured.",
       "noPerimeter": "Statistics cover your perimeter: you must belong to an assembly, or lead a city, a region or a nation.",
-      "nodeGone": "This level is no longer accessible"
+      "nodeGone": "This level is no longer accessible",
+      "cityLocked": "The city total stays free. The breakdown by assembly, inside the city, is included in the Nehemiah plan — tracking my whole city."
     },
     "errors": {
       "EVENT_DATE_IN_FUTURE": "A completed action cannot be dated in the future.",
@@ -1927,7 +2281,11 @@
       "pdfError": "The document could not be displayed. Check your connection and try again.",
       "loadErrorTitle": "Unable to open the document",
       "loadErrorBody": "Something went wrong. Check your connection and try again.",
-      "retry": "Try again"
+      "retry": "Try again",
+      "full": "Full document",
+      "otherDocuments": "More documents",
+      "download": "Download the PDF",
+      "downloadFailed": "The PDF could not be prepared. Please try again."
     },
     "wall": {
       "title": "You've read the preview of “{{title}}”.",
@@ -1936,7 +2294,14 @@
       "remaining_other": "{{count}} more pages",
       "openInApp": "Open in the app",
       "qrAlt": "QR code of this document's link",
-      "qrCaption": "Scan this code with your phone to keep reading in the Shephr app."
+      "qrCaption": "Scan this code with your phone to keep reading in the Shephr app.",
+      "signInHint": "Sign in or create your account: you'll come straight back to this document.",
+      "signIn": "Sign in",
+      "signUp": "Create an account",
+      "joinTitle": "Join your assembly",
+      "joinBody": "Join your assembly to read the whole document: you'll come straight back here.",
+      "join": "Join my assembly",
+      "orApp": "Or keep reading in the Shephr app:"
     },
     "footer": {
       "body": "Find this document and other teachings in the Shephr app."
@@ -1974,6 +2339,38 @@
       "DOC_CATEGORY_IN_USE": "This category is used by at least one document: deactivate it instead.",
       "DOC_CATEGORY_NAME_EXISTS": "A category with this name already exists in this ministry.",
       "DOC_INVALID_TRANSITION": "This action is not possible in the document's current state."
+    },
+    "space": {
+      "kicker": "Teachings",
+      "title": "Documents",
+      "searchPlaceholder": "Search a title…",
+      "wholeMinistry": "Whole ministry",
+      "myAssembly": "My assembly",
+      "pages_one": "{{count}} page",
+      "pages_other": "{{count}} pages",
+      "folders": "Folders",
+      "subfolders": "Subfolders",
+      "documents": "Documents",
+      "unfiled": "No folder",
+      "documentCount_one": "{{count}} document",
+      "documentCount_other": "{{count}} documents",
+      "results_one": "{{count}} result",
+      "results_other": "{{count}} results",
+      "folderEmpty": "This folder holds no document for you.",
+      "backToRoot": "Back to folders",
+      "empty": "No document has been published for you yet.",
+      "noMatch": "No document matches your search.",
+      "loadFailed": "Documents could not be loaded.",
+      "network": "Unable to connect — check your network and try again.",
+      "moduleUnavailable": "The Documents space is not enabled for your ministry.",
+      "joinRequired": "Join your assembly to access documents."
+    },
+    "scope": {
+      "MINISTRY": "Whole ministry",
+      "COUNTRY": "Nation",
+      "ZONE": "Region",
+      "LOCALITY": "City",
+      "UNIT": "House assembly"
     }
   },
   "billing": {
@@ -1990,16 +2387,8 @@
       "EXPIRED": "Expired"
     },
     "offers": {
-      "title": "Subscriptions",
-      "subtitle": "Support the Shephr service for your ministry with a monthly subscription. Payment is secured by Stripe; your invoice is emailed to you every month.",
-      "canceled": "Payment was canceled: no subscription was created. You can try again whenever you like.",
-      "mySubscriptionsLink": "See my subscriptions and invoices",
-      "empty": "No offer is available at the moment.",
       "vatIncluded": "Incl. {{rate}}% VAT — no commitment, cancel anytime.",
-      "subscribe": "Subscribe",
       "redirecting": "Redirecting to payment…",
-      "loginRequired": "To subscribe, sign in to your Shephr account.",
-      "login": "Sign in",
       "signup": "Create an account",
       "stripeNote": "Card payment through Stripe. Shephr never sees or stores your card details."
     },
@@ -2007,9 +2396,7 @@
       "label": "Promo code",
       "placeholder": "e.g. PASTEUR50",
       "apply": "Apply",
-      "checking": "Checking…",
-      "loginHint": "Your code will be checked once you sign in.",
-      "applied": "Code {{code}} applied: −{{percent}}% every month, for the whole life of the subscription."
+      "checking": "Checking…"
     },
     "return": {
       "title": "Your subscription",
@@ -2041,7 +2428,9 @@
       "manage": "Manage my subscription",
       "updateCard": "Update my card",
       "portalFailed": "Could not open the management area",
-      "downloadFailed": "Download failed"
+      "downloadFailed": "Download failed",
+      "voucher": "Activated with a code (Mobile Money)",
+      "voucherUntil": "until {{date}} inclusive"
     },
     "invoice": {
       "date": "Date",
@@ -2067,10 +2456,307 @@
       "BILLING_PORTAL_UNAVAILABLE": "The management area is not available for this subscription yet.",
       "BILLING_PAYER_INVALID": "Payer not found.",
       "BILLING_SUBSCRIPTION_NOT_ACTIVE": "This subscription is no longer active.",
-      "BILLING_PERIOD_UNSUPPORTED": "This billing period is not available yet.",
+      "BILLING_PERIOD_UNSUPPORTED": "This billing period is not available for this offer.",
       "BILLING_CURRENCY_UNSUPPORTED": "This currency is not available yet.",
       "TOO_MANY_REQUESTS": "Too many attempts: please wait a minute before trying again.",
-      "PAYMENT_PROVIDER_UNAVAILABLE": "Online payment is temporarily unavailable. Please try again later."
+      "PAYMENT_PROVIDER_UNAVAILABLE": "Online payment is temporarily unavailable. Please try again later.",
+      "NOT_LOCALITY_LEADER": "Only a leader of this city can take out the subscription.",
+      "SUBSCRIPTION_ALREADY_ACTIVE": "This city already has a subscription in progress.",
+      "SUBSCRIPTION_CHECKOUT_PENDING": "A payment is already in progress for this city: try again in half an hour if it does not go through.",
+      "NOT_LEADER": "Only a leader can subscribe to tracking of their hierarchy.",
+      "PERSONAL_PLAN_LOCALITY_FORBIDDEN": "This subscription is personal: it is not tied to a city.",
+      "BILLING_USER_REQUIRED": "Choose the account that benefits from the subscription.",
+      "VOUCHER_NOT_FOUND": "This code does not exist. Check it with your agent.",
+      "VOUCHER_ALREADY_USED": "This code has already been used.",
+      "VOUCHER_REVOKED": "This code was cancelled by the Shephr team.",
+      "VOUCHER_EXPIRED": "The deadline to use this code has passed.",
+      "VOUCHER_WRONG_MINISTRY": "This code was issued for another ministry.",
+      "BILLING_LOCALITY_REQUIRED": "Choose the city concerned.",
+      "MODULE_EXCLUSION_NOT_FREE": "Only a free module can be disabled for a ministry."
+    },
+    "plan": {
+      "activated": "City tracking is activated for {{city}}.",
+      "backToCity": "Open city tracking",
+      "city": "City: {{name}}",
+      "hierarchyActivated": "Your hierarchy tracking is activated.",
+      "backToHierarchy": "Open my hierarchy",
+      "personal": "Personal subscription"
+    }
+  },
+  "forgotPassword": {
+    "backToLogin": "Back to sign in",
+    "forgotTitle": "Forgot password",
+    "forgotHint": "Enter the email address you sign in with. We will send a 6-digit code to it so you can choose a new password.",
+    "emailLabel": "Email address",
+    "sendCode": "Get a code",
+    "sending": "Sending…",
+    "rememberPassword": "Remember it?",
+    "resetTitle": "New password",
+    "sentNotice": "If an account exists for this address, a code has just been sent to it.",
+    "resentNotice": "If an account exists for this address, a new code has just been sent to it. Previous codes no longer work.",
+    "validity": "It is valid for {{minutes}} minutes. Remember to check your spam folder.",
+    "changeEmail": "Change",
+    "codeLabel": "Code received by email",
+    "codePlaceholder": "000000",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "confirmPasswordPlaceholder": "Type it again",
+    "passwordTooShort": "At least 6 characters.",
+    "passwordsMismatch": "Passwords do not match.",
+    "submit": "Confirm and sign in",
+    "submitting": "Checking…",
+    "resend": "Resend the code",
+    "resendIn": "Resend the code in {{seconds}} s",
+    "newCode": "Get a new code",
+    "successToast": "Password changed",
+    "successToastMsg": "You are signed in with your new password.",
+    "signInAgain": "Sign in with your new password.",
+    "errors": {
+      "INVALID_REQUEST": "Check the code (6 digits) and the password (at least 6 characters).",
+      "INVALID_CODE": "Incorrect code. Check it and try again.",
+      "CODE_EXPIRED": "This code has expired. Request a new one.",
+      "TOO_MANY_ATTEMPTS": "Too many attempts. Request a new code.",
+      "TOO_MANY_REQUESTS": "Too many attempts. Try again in {{minutes}} min.",
+      "NETWORK": "Server unreachable. Check your connection and try again.",
+      "UNKNOWN": "Something went wrong, please try again."
+    }
+  },
+  "notifications": {
+    "ok": "OK",
+    "later": "Later",
+    "view": "View",
+    "close": "Close",
+    "reminderTitle": "Reminder",
+    "campaignTitle": "Message",
+    "campaignInfo": "Information",
+    "campaignPromo": "Featured",
+    "morePending": "{{count}} more reminder(s) pending",
+    "supervision": {
+      "title": "Supervision request",
+      "sub": "My leadership",
+      "body": "{{name}} would like to follow you and become your supervisor.",
+      "replaceWarning": "Accepting will replace your current supervisor, {{name}}.",
+      "accept": "Accept",
+      "confirmAccept": "Confirm acceptance",
+      "refuse": "Decline",
+      "later": "Later"
+    }
+  },
+  "cityStudy": {
+    "title": "City tracking",
+    "titleCity": "City tracking — {{city}}",
+    "noCity": "No city to track",
+    "noCityHint": "City tracking is reserved for city, region and nation leaders.",
+    "lockedCity": "Tracking not activated",
+    "assemblyCount_one": "{{count}} assembly",
+    "assemblyCount_other": "{{count}} assemblies",
+    "canceledBanner": "Payment canceled: no subscription was taken out for this city.",
+    "tabs": {
+      "overview": "Assemblies",
+      "members": "Members",
+      "stats": "Statistics",
+      "subscription": "Subscription",
+      "journal": "City journal",
+      "events": "Events",
+      "studyPrefixed": "Bertoua · {{tab}}"
+    },
+    "filters": {
+      "city": "City",
+      "module": "Study unit",
+      "status": "Status",
+      "allStatuses": "All members",
+      "assembly": "Assembly",
+      "allAssemblies": "All assemblies"
+    },
+    "status": {
+      "TAUGHT": "Taught",
+      "NOT_TAUGHT": "Not taught",
+      "MISSED": "Missed lessons"
+    },
+    "overview": {
+      "empty": "No assembly to track",
+      "emptyHint": "The city's assemblies and their progress will appear here as soon as a study unit is available.",
+      "assembly": "Assembly",
+      "members_one": "{{count}} member",
+      "members_other": "{{count}} members",
+      "progress": "Progress",
+      "done": "Lesson done",
+      "notDone": "Lesson not done",
+      "lastSession": "Last session",
+      "lessons_one": "{{count}} lesson",
+      "lessons_other": "{{count}} lessons"
+    },
+    "members": {
+      "name": "Member",
+      "assembly": "Assembly",
+      "taught": "Taught",
+      "lessons": "Lessons done",
+      "missed": "Missed lessons",
+      "score": "Score",
+      "lastDone": "Last lesson",
+      "count_one": "{{count}} member",
+      "count_other": "{{count}} members",
+      "empty": "No member",
+      "emptyHint": "No member matches these filters."
+    },
+    "stats": {
+      "from": "From",
+      "to": "To",
+      "invalidPeriod": "The start date must be before the end date.",
+      "periodTooLong": "The period cannot exceed {{days}} days.",
+      "assemblies": "Active assemblies",
+      "taughtMembers": "Taught members",
+      "sessions": "Finished sessions",
+      "lessonsDone": "Lessons done",
+      "copies": "Answer sheets",
+      "average": "Average",
+      "monthly": "Monthly trend",
+      "month": "Month"
+    },
+    "export": {
+      "csv": "Export CSV",
+      "pdf": "Export PDF",
+      "failed": "Export failed"
+    },
+    "lock": {
+      "title": "Nehemiah plan — tracking my whole city",
+      "askPastor": "Ask your pastor to activate city tracking.",
+      "compactSubscribe": "Tracking your city's assemblies is included in the Nehemiah plan, subscribed for the whole city.",
+      "openCity": "Open city tracking",
+      "subscribeIntro": "{{plan}} for {{city}}: study tracking for every assembly in the city, statistics and exports.",
+      "period": "Billing period",
+      "periods": {
+        "MONTHLY": "Monthly",
+        "ANNUAL": "Yearly"
+      },
+      "subscribeMonthly": "Subscribe — {{price}}/month",
+      "subscribeAnnual": "Subscribe — {{price}}/year",
+      "pending": "A payment is in progress for this city.",
+      "pastDue": "The city's last payment failed: tracking is suspended.",
+      "managedBy": "Subscription managed by {{name}}.",
+      "updateCard": "Update my card",
+      "fakeAssembly": "Assembly {{letter}}"
+    },
+    "subscription": {
+      "open": "City tracking is open for {{city}}.",
+      "closed": "City tracking is not activated for {{city}}.",
+      "agreement": "Tracking is open through an agreement of your ministry: there is no city subscription to manage.",
+      "plans": {
+        "EGLISE_VILLE": "Nehemiah plan"
+      },
+      "period": {
+        "MONTHLY": "Monthly",
+        "ANNUAL": "Yearly"
+      },
+      "source": {
+        "STRIPE": "Online payment",
+        "MANUEL": "Manual activation",
+        "VOUCHER": "Activation code"
+      },
+      "entitled": "Tracking open",
+      "notEntitled": "Tracking closed",
+      "renewsOn": "Next renewal on {{date}}",
+      "endsOn": "Cancellation requested — ends on {{date}}",
+      "manualUntil": "Activated until {{date}} inclusive",
+      "grace": "Grace period until {{date}}: update your payment method to keep tracking open.",
+      "manual": "Activated by the Shephr team.",
+      "unknownPayer": "another leader",
+      "invoices": "My invoices",
+      "manage": "Manage subscription"
+    },
+    "unavailable": "City tracking unavailable",
+    "unavailableHint": "None of the modules tracked at city level (Assembly life, The Bertoua Message) is enabled for your ministry.",
+    "journal": {
+      "scope": "City of {{city}}",
+      "pdf": "City journal PDF",
+      "empty": "No assembly in this city",
+      "emptyHint": "Assemblies attached to the city will appear here with their reports.",
+      "noNames": "No personal names: only numbers and assembly names."
+    }
+  },
+  "offers": {
+    "title": "Shephr plans",
+    "subtitle": "The essentials stay free for every assembly. Two plans extend Shephr to follow more widely: your hierarchy of leaders with the Caleb plan, your whole city with the Nehemiah plan.",
+    "seeOffers": "See the plans",
+    "leadersOnly": "These plans are meant for leaders. Your own assembly stays entirely free.",
+    "independent": "The two plans are independent: Caleb follows your leadership chain, Nehemiah follows a city. Neither one opens anything in the other.",
+    "howToPay": "Two ways to pay: online by card, or by Mobile Money through your local agent, who gives you an activation code to enter here (“I have a code”).",
+    "bibleVersion": "King James Version",
+    "forWhoTitle": "For whom",
+    "includedTitle": "What's included",
+    "orAnnual": "or {{price}} / year",
+    "priceUnavailable": "Price temporarily unavailable.",
+    "loginToSubscribe": "Sign in to subscribe",
+    "noAccount": "No account yet?",
+    "caleb": {
+      "name": "Caleb plan",
+      "tagline": "Tracking my hierarchy",
+      "verse": "“Now therefore give me this mountain”",
+      "verseRef": "Joshua 14:12",
+      "forWho": "For every leader, along their leadership chain: the leaders they supervise and their assemblies, wherever they are. What counts is not geography but your hierarchy. Each leader subscribes for themselves.",
+      "included": {
+        "reports": "Meeting reports and journal of every assembly in your chain (writing if you lead it)",
+        "stats": "Assembly life statistics: meetings, attendance, breaking of bread, “no report for 3 weeks” alert",
+        "journal": "The consolidated PDF journal of your hierarchy",
+        "study": "Progress in The Bertoua Message, assembly by assembly",
+        "memberCare": "Pastoral care (Member Care) for the assemblies in your chain"
+      },
+      "priceNote": "VAT included · for your account only · no commitment",
+      "active": "Active for your account",
+      "notSubscribable": "The Caleb plan is subscribed by a leader, for themselves. For your account, ask the Shephr team to activate it."
+    },
+    "nehemie": {
+      "name": "Nehemiah plan",
+      "tagline": "Tracking my whole city",
+      "verse": "“Let us rise up and build.”",
+      "verseRef": "Nehemiah 2:18",
+      "forWho": "For the pastor and the city's leaders: every assembly in the city, whoever leads it. One subscription per city, shared by all its leaders.",
+      "included": {
+        "study": "Tracking The Bertoua Message across the city: assemblies and lessons, members taught or not, statistics, CSV and PDF exports",
+        "journal": "The city journal: statistics and consolidated PDF journal of meeting reports, without any person's name",
+        "events": "Event statistics inside the city, assembly by assembly",
+        "shared": "One city, all its leaders: tracking is open to each of them"
+      },
+      "priceNote": "VAT included · for the whole city · no commitment",
+      "activeFor": "Active for: {{cities}}",
+      "chooseCity": "Choose my city",
+      "notSubscribable": "The Nehemiah plan is subscribed by a city, region or nation leader. Ask your pastor to activate city tracking."
+    },
+    "free": {
+      "title": "Always free",
+      "badge": "Free",
+      "subtitle": "What is and will remain free, for every assembly and every member:",
+      "items": {
+        "study": "The Bertoua Message in your assembly: sessions, answers, correction, scores and progress",
+        "assembly": "Your assembly's life: meeting reports, journal, meetings and attendance",
+        "memberCare": "Pastoral care (Member Care) for your assembly",
+        "goals": "Goals & reporting (Five-Year Goal)",
+        "hierarchy": "The Hierarchy tree and goal submission status",
+        "events": "Creating, declaring and scheduling events, and their statistics up to city level",
+        "documents": "Reading shared documents",
+        "praise": "CMFIPraise: songs and projection"
+      }
+    },
+    "voucher": {
+      "open": "I have a code",
+      "extend": "Extend with a code",
+      "titleCaleb": "Caleb plan — enter an activation code",
+      "titleNehemie": "Nehemiah plan — enter an activation code",
+      "sub": "Your agent gave you this code after your Mobile Money payment.",
+      "code": "Activation code",
+      "codeHint": "12 characters, with or without dashes.",
+      "city": "City",
+      "cityPlaceholder": "Choose the city",
+      "forCity": "For the city of {{city}}.",
+      "noCity": "No city for which you can activate the Nehemiah plan.",
+      "submit": "Activate",
+      "checking": "Checking…",
+      "localPrice": "Mobile Money through your local agent — {{price}}",
+      "localPriceNoLabel": "Mobile Money through your local agent",
+      "receiptTitle": "Code activated",
+      "receiptUntil": "Active until {{date}} inclusive.",
+      "receiptNote": "A confirmation email has been sent to you. No invoice is issued for an activation code.",
+      "alreadyPaid": "You already pay for this plan by card: you do not need a code."
     }
   }
 }

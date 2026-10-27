@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Sidebar } from './components/Sidebar';
 import { Icon } from './components/Icon';
 import { useAuth } from './hooks/useAuth';
+import { NotificationGate } from './components/NotificationGate';
 
 export function AppShell() {
   const navigate = useNavigate();
@@ -60,6 +61,8 @@ export function AppShell() {
           <span className="mobile-topbar-title">Shephr</span>
         </div>
         <Outlet />
+        {/* D-WEB-06 (JP 27/10) — Parité mobile → web : rappels et campagnes à l'ouverture. */}
+        <NotificationGate />
       </main>
     </div>
   );

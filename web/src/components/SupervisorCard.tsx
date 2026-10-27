@@ -18,6 +18,11 @@ import {
 //  Réservé aux DIRIGEANTS : un simple membre ne déclare pas de superviseur — son rattachement à
 //  une assemblée détermine implicitement son dirigeant. Le rendu est gardé par l'appelant.
 //  « Faiseur de disciples » est du jargon interne : l'interface dit « superviseur ».
+//  D-HIE-01 / D-HIE-04 (JP 28/10, lot HIE) : la carte vit en page 2 « Mon leadership »
+//  (`pages/HierarchyLeadership.tsx`), section « Mon superviseur » ; la déclaration montante reste
+//  IMMÉDIATE, sans validation. La liste des supervisés y est remplacée par « Les dirigeants que je
+//  suis » (`hideSupervisees`) ; une déclaration relit l'aperçu des demandes (RG-HIE-17 : elle peut
+//  remplacer une désignation acceptée).
 // ---------------------------------------------------------------------------------------------
 
 const errCode = (err: unknown): string | null =>
@@ -27,7 +32,7 @@ function personLine(p: DiscipleshipPerson): string {
   return [p.unitName, p.cityName, p.email].filter(Boolean).join(' · ');
 }
 
-export function SupervisorCard() {
+export function SupervisorCard({ hideSupervisees = false }: { hideSupervisees?: boolean } = {}) {
   const { t } = useTranslation();
   const { push } = useToast();
   const queryClient = useQueryClient();
@@ -55,6 +60,7 @@ export function SupervisorCard() {
       queryClient.setQueryData(['leaders', 'discipleship'], data);
       // L'organigramme affiché juste en dessous vient de changer de forme.
       queryClient.invalidateQueries({ queryKey: ['leaders', 'hierarchy'] });
+      queryClient.invalidateQueries({ queryKey: ['leaders', 'supervision'] });
       setSearchOpen(false);
       setQuery('');
       push({ kind: 'ok', title: t('supervisor.declared') });
@@ -204,7 +210,7 @@ export function SupervisorCard() {
         </div>
       )}
 
-      {disciples.length > 0 && (
+      {!hideSupervisees && disciples.length > 0 && (
         <div style={{ marginTop: 16, borderTop: '1px solid var(--line-soft, rgba(42,38,32,0.08))', paddingTop: 12 }}>
           <div style={{ fontSize: 12.5, color: 'var(--ink-500)', marginBottom: 8 }}>
             {t('supervisor.superviseesTitle', { count: disciples.length })}

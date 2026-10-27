@@ -189,7 +189,8 @@
       "events": "Déclarer une action",
       "eventsHint": "Évangélisation",
       "documents": "Documents",
-      "documentsHint": "Enseignements à lire et partager"
+      "documentsHint": "Enseignements à lire et partager",
+      "cityLocked": "Offre Néhémie"
     },
     "comingSoonBadge": "Bientôt disponible",
     "comingAck": "D'accord",
@@ -684,7 +685,15 @@
     "morePending": "{{count}} autre(s) rappel(s) en attente",
     "later": "Plus tard",
     "updateNow": "Mettre à jour",
-    "see": "Voir"
+    "see": "Voir",
+    "supervision": {
+      "title": "Demande de suivi",
+      "message": "{{name}} souhaite vous suivre comme dirigeant. Si vous validez, {{name}} deviendra votre superviseur.",
+      "replaceWarning": "Valider remplacera votre superviseur actuel, {{name}}.",
+      "accept": "Valider",
+      "refuse": "Refuser",
+      "later": "Plus tard"
+    }
   },
   "membres": {
     "title": "Membres",
@@ -865,7 +874,130 @@
     "goalLate": "En retard",
     "leadershipTitle": "Ce que porte mon leadership · {{year}}",
     "leadershipHint": "Somme des engagements des membres des assemblées que vous supervisez, directement ou via vos dirigeants.",
-    "leadershipEmpty": "Aucun engagement déclaré pour l'instant dans les assemblées que vous supervisez."
+    "leadershipEmpty": "Aucun engagement déclaré pour l'instant dans les assemblées que vous supervisez.",
+    "lock": {
+      "notActivated": "Les statistiques de votre hiérarchie ne sont pas activées pour votre compte."
+    },
+    "study": {
+      "loadFailed": "Impossible de charger les statistiques d'étude.",
+      "yearTitle": "Année {{year}}",
+      "statSessions": "Séances terminées",
+      "statLessons": "Leçons faites",
+      "statTaught": "Membres enseignés",
+      "statAverage": "Note moyenne",
+      "empty": "Aucune assemblée dans votre hiérarchie.",
+      "via": "via {{chain}}",
+      "lessonsDone": "{{done}} / {{total}} leçons faites",
+      "taught_one": "{{taught}} / {{count}} enseigné",
+      "taught_other": "{{taught}} / {{count}} enseignés",
+      "notTaught_one": "{{count}} non enseigné",
+      "notTaught_other": "{{count}} non enseignés",
+      "average": "Moyenne {{value}}",
+      "lastSession": "Dernière séance le {{date}}",
+      "noSession": "Aucune séance terminée",
+      "note": "Enseigné : au moins une copie comptée dans une séance terminée. Aucune réponse ni aucun nom de membre n'est affiché ici."
+    },
+    "home": {
+      "goalSection": "But quinquennal",
+      "leadershipCard": "Mon leadership",
+      "leadershipCardHint": "Mon superviseur, demandes reçues, les dirigeants que je suis.",
+      "pendingBadge_one": "{{count}} demande en attente",
+      "pendingBadge_other": "{{count}} demandes en attente",
+      "lifeCard": "Vie de mon leadership",
+      "lifeCardHint": "Vie d'assemblée, évènements et Message de Bertoua de ma hiérarchie.",
+      "lockedA11y": "Fonctionnalité non activée"
+    },
+    "leadership": {
+      "title": "Mon leadership",
+      "intro": "Déclarez à qui vous rendez compte, désignez les dirigeants que vous suivez et répondez aux demandes reçues.",
+      "loadError": "Impossible de charger votre leadership.",
+      "readOnly": "Seuls les dirigeants peuvent désigner un dirigeant ou être désignés.",
+      "incomingTitle": "Demandes reçues",
+      "incomingHint": "Ces dirigeants souhaitent vous suivre. Si vous validez, ils deviennent votre superviseur.",
+      "incomingHintReplace": "Ces dirigeants souhaitent vous suivre. Valider remplace votre superviseur actuel, {{name}}.",
+      "incomingEmpty": "Aucune demande en attente.",
+      "requestedOn": "Demande du {{date}}",
+      "accept": "Valider",
+      "refuse": "Refuser",
+      "acceptTitle": "Valider la demande ?",
+      "acceptConfirm": "{{name}} deviendra votre superviseur.",
+      "acceptReplaceTitle": "Remplacer votre superviseur ?",
+      "acceptReplace": "Valider remplacera votre superviseur actuel, {{name}}.",
+      "accepted": "{{name}} vous suit désormais.",
+      "refuseTitle": "Refuser la demande ?",
+      "refuseConfirm": "La demande de {{name}} sera refusée.",
+      "refused": "Demande refusée.",
+      "followedTitle": "Les dirigeants que je suis",
+      "followedHint": "Les dirigeants dont vous êtes le superviseur, puis vos demandes en attente de validation.",
+      "followedEmpty": "Vous ne suivez encore aucun dirigeant.",
+      "pendingPill": "En attente",
+      "sentOn": "Demande envoyée le {{date}}",
+      "cancel": "Annuler la demande",
+      "cancelTitle": "Annuler la demande ?",
+      "cancelConfirm": "La demande adressée à {{name}} sera annulée.",
+      "canceled": "Demande annulée.",
+      "designate": "Désigner un dirigeant",
+      "designateHint": "La personne désignée reçoit une demande. Le lien n'existe qu'une fois qu'elle l'a validée : vous devenez alors son superviseur.",
+      "designateTitle": "Envoyer une demande ?",
+      "designateConfirm": "{{name}} recevra votre demande. Une fois validée, vous deviendrez son superviseur.",
+      "send": "Envoyer",
+      "sent": "Demande envoyée à {{name}}.",
+      "searchLabel": "Chercher le dirigeant",
+      "searchHint": "Uniquement les dirigeants de votre ministère.",
+      "noResult": "Aucun dirigeant à désigner pour cette recherche.",
+      "followedByTitle": "Qui me suit",
+      "followedByEmpty": "Personne ne vous suit par désignation.",
+      "followedSince": "Depuis le {{date}}",
+      "revoke": "Retirer",
+      "revokeTitle": "Retirer ce lien ?",
+      "revokeConfirm": "{{name}} ne sera plus votre superviseur.",
+      "revoked": "Lien retiré.",
+      "actionFailed": "Action impossible",
+      "errors": {
+        "QUERY_TOO_SHORT": "Saisissez au moins 2 caractères.",
+        "NO_MINISTRY": "Votre compte n'est rattaché à aucun ministère — contactez le secrétariat.",
+        "SUPERVISION_SELF": "Vous ne pouvez pas vous désigner vous-même.",
+        "SUPERVISION_OUT_OF_MINISTRY": "Cette personne n'appartient pas à votre ministère.",
+        "SUPERVISION_DESIGNEE_NOT_A_LEADER": "Seul un dirigeant peut être désigné : cette personne n'en est pas un.",
+        "SUPERVISION_REQUESTER_NOT_A_LEADER": "La personne qui a fait cette demande n'est plus dirigeant : vous pouvez la refuser.",
+        "SUPERVISION_CYCLE": "Impossible : cette personne fait déjà partie de ceux qui vous suivent dans la chaîne.",
+        "SUPERVISION_ALREADY_LINKED": "Vous suivez déjà ce dirigeant.",
+        "SUPERVISION_REQUEST_DUPLICATE": "Une demande est déjà en attente pour ce dirigeant.",
+        "SUPERVISION_REQUEST_NOT_PENDING": "Cette demande a déjà été traitée.",
+        "SUPERVISION_REQUEST_NOT_ACCEPTED": "Ce lien n'est plus actif."
+      }
+    },
+    "life": {
+      "title": "Vie de mon leadership",
+      "intro": "La vie des assemblées de votre hiérarchie : comptes rendus, évènements et Message de Bertoua.",
+      "noModule": "Aucun module de suivi n'est activé pour votre ministère.",
+      "previousPeriod": "Période précédente",
+      "nextPeriod": "Période suivante",
+      "unitsTitle": "Assemblées et dernier CR",
+      "meetingsInPeriod_zero": "Aucune réunion sur la période",
+      "meetingsInPeriod_one": "{{count}} réunion sur la période",
+      "meetingsInPeriod_other": "{{count}} réunions sur la période"
+    },
+    "events": {
+      "title": "Évènements de ma hiérarchie",
+      "loadFailed": "Impossible de charger les évènements de votre hiérarchie.",
+      "statEvents": "Actions d'évangélisation",
+      "statParticipants": "Participants (dont {{guests}} invités)",
+      "statConversions": "Conversions",
+      "statRestorations": "Restaurations",
+      "statBaptisms": "Baptêmes",
+      "byLeaderTitle": "Par dirigeant",
+      "byUnitTitle": "Par assemblée",
+      "noLeader": "Sans dirigeant",
+      "events_zero": "Aucune action",
+      "events_one": "{{value}} action",
+      "events_other": "{{value}} actions",
+      "participantsLine": "{{participants}} participants dont {{guests}} invités",
+      "lastEvent": "Dernière action le {{date}}",
+      "noEvent": "Aucune action sur la période",
+      "empty": "Aucune assemblée dans votre hiérarchie.",
+      "note": "Actions d'évangélisation réalisées dans les assemblées de votre hiérarchie. Les évènements d'une ville, d'une région ou d'une nation ne sont pas comptés."
+    }
   },
   "care": {
     "title": "Suivi des brebis",
@@ -1215,7 +1347,11 @@
       "averageLine": "{{value}} présents en moyenne",
       "noRecentReport": "Aucun CR depuis 3 semaines",
       "openAssembly": "Ouvrir la Vie d'assemblée de cette assemblée"
-    }
+    },
+    "lock": {
+      "otherAssembly": "Le suivi des autres assemblées de votre hiérarchie n'est pas activé pour votre compte."
+    },
+    "lockedUnit": "verrouillée"
   },
   "events": {
     "levels": {
@@ -1786,49 +1922,81 @@
     },
     "memberActions": {
       "title": "Cette semaine, chaque membre doit :"
+    },
+    "city": {
+      "entry": "Suivi de la ville",
+      "title": "Suivi de la ville",
+      "titleOf": "Suivi de {{city}}",
+      "cityCount_one": "{{count}} ville",
+      "cityCount_other": "{{count}} villes",
+      "lockedCity": "Suivi non activé pour cette ville",
+      "noCity": "Aucune ville à suivre dans votre périmètre.",
+      "noAssembly": "Aucune assemblée dans cette ville.",
+      "noMember": "Aucun membre pour ces filtres.",
+      "noSession": "Aucune séance terminée",
+      "lessonDone": "faite",
+      "allModules": "Toutes les unités",
+      "memberCount_one": "{{count}} membre",
+      "memberCount_other": "{{count}} membres",
+      "missed": "Leçons manquées : {{lessons}}",
+      "lastDone": "Dernière leçon le {{date}}",
+      "tabs": {
+        "overview": "Assemblées",
+        "members": "Membres",
+        "stats": "Statistiques",
+        "journal": "Journal de la ville",
+        "events": "Évènements"
+      },
+      "journal": {
+        "scope": "Ville de {{city}}",
+        "pdf": "Journal PDF de la ville",
+        "noNames": "Aucun nom de personne : seulement des nombres et des noms d'assemblées."
+      },
+      "filters": {
+        "assembly": "Assemblée",
+        "allAssemblies": "Toutes les assemblées"
+      },
+      "status": {
+        "TAUGHT": "Enseigné",
+        "NOT_TAUGHT": "Non enseigné",
+        "MISSED": "Leçons manquées"
+      },
+      "stats": {
+        "periodYear": "Cette année",
+        "periodLast12": "12 derniers mois",
+        "periodLastYear": "Année dernière",
+        "range": "Du {{from}} au {{to}}",
+        "ofTotal": "{{value}} / {{total}}",
+        "assemblies": "Assemblées actives",
+        "taughtMembers": "Membres enseignés",
+        "sessions": "Séances terminées",
+        "lessonsDone": "Leçons faites",
+        "copies": "Copies",
+        "average": "Note moyenne",
+        "byMonth": "Mois par mois",
+        "noData": "Aucune donnée sur cette période.",
+        "sessionsCount_one": "{{count}} séance",
+        "sessionsCount_other": "{{count}} séances",
+        "copiesCount_one": "{{count}} copie",
+        "copiesCount_other": "{{count}} copies",
+        "taughtCount_one": "{{count}} enseigné",
+        "taughtCount_other": "{{count}} enseignés"
+      },
+      "lock": {
+        "title": "Suivi de la ville",
+        "notActivated": "Cette fonctionnalité n'est pas activée pour votre église."
+      }
     }
   },
-  "billing": {
-    "kicker": "Facturation",
-    "title": "Mes factures",
-    "profileValue": "Abonnements · Factures",
-    "loadFailed": "Impossible de charger vos factures.",
-    "offline": "Connexion impossible. Vérifiez votre réseau et réessayez.",
-    "status": {
-      "PENDING": "En attente",
-      "ACTIVE": "Actif",
-      "PAST_DUE": "Paiement en échec",
-      "CANCELED": "Résilié",
-      "EXPIRED": "Expiré"
+  "offers": {
+    "learnMore": "En savoir plus",
+    "caleb": {
+      "name": "Offre Caleb",
+      "subtitle": "Le suivi de ma hiérarchie"
     },
-    "period": {
-      "MONTHLY": "{{amount}} / mois",
-      "ANNUAL": "{{amount}} / an"
-    },
-    "subscriptions": {
-      "title": "Mes abonnements",
-      "empty": "Aucun abonnement.",
-      "discount": "Remise de {{percent}} % sur {{list}}",
-      "nextDue": "Prochaine échéance le {{date}}",
-      "endsOn": "Résiliation demandée : prend fin le {{date}}",
-      "canceledOn": "Résilié le {{date}}"
-    },
-    "invoices": {
-      "title": "Mes factures",
-      "empty": "Aucune facture pour le moment.",
-      "issuedOn": "Émise le {{date}}",
-      "period": "Période du {{from}} au {{to}}",
-      "refunded": "Remboursé : {{amount}}",
-      "download": "Télécharger",
-      "shareTitle": "Facture {{number}}",
-      "sharingUnavailable": "Le partage de fichiers n'est pas disponible sur cet appareil.",
-      "downloadFailed": "Le téléchargement de la facture a échoué."
-    },
-    "errors": {
-      "BILLING_SUBSCRIPTION_NOT_FOUND": "Cet abonnement est introuvable.",
-      "BILLING_INVOICE_NOT_FOUND": "Cette facture est introuvable.",
-      "TOO_MANY_REQUESTS": "Trop de tentatives. Patientez une minute puis réessayez.",
-      "PAYMENT_PROVIDER_UNAVAILABLE": "Le service de facturation est momentanément indisponible."
+    "nehemie": {
+      "name": "Offre Néhémie",
+      "subtitle": "Le suivi de toute ma ville"
     }
   }
 }

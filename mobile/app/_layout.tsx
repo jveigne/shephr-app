@@ -102,8 +102,12 @@ export default function RootLayout() {
               />
               <Stack.Screen name="structure" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="membres" options={{ animation: 'slide_from_right' }} />
-              <Stack.Screen name="hierarchie" options={{ animation: 'slide_from_right' }} />
-              <Stack.Screen name="superviseur" options={{ animation: 'slide_from_right' }} />
+              {/* Lot HIE (D-HIE-01, JP 28/10) : la Hiérarchie en trois sous-pages — « But
+                  quinquennal » (arrivée de la tuile), « Mon leadership » (remplace l'ancien écran
+                  `superviseur`, supprimé) et « Vie de mon leadership » (offre Caleb). */}
+              <Stack.Screen name="hierarchie/index" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="hierarchie/leadership" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="hierarchie/vie" options={{ animation: 'slide_from_right' }} />
               {/* Réglages des notifications — hors onglets : on y vient du Profil, et la
                   catégorie « Rappels » de N4a y a son interrupteur. */}
               <Stack.Screen name="notification-settings" options={{ animation: 'slide_from_right' }} />
@@ -132,8 +136,8 @@ export default function RootLayout() {
               <Stack.Screen name="study/session/[id]" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="study/results/[id]" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="study/progress" options={{ animation: 'slide_from_right' }} />
-              {/* Plan 23/10 (§6.2, lot ABO5) : « Mes factures », consultation seule (D-ABO-13). */}
-              <Stack.Screen name="billing/index" options={{ animation: 'slide_from_right' }} />
+              {/* D-OFF-10 (JP 27/10) : l'écran « Mes factures » (lot ABO5) est retiré — aucun
+                  montant dans l'app ; factures par email (PDF) et sur le web « Mes abonnements ». */}
             </Stack>
           </AuthProvider>
         </LanguageProvider>

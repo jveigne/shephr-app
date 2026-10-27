@@ -49,12 +49,15 @@ import { toLocalDate } from '@/utils/format';
 import { fmtIsoDay } from '@/utils/meetingReport';
 import { confirmDialog, notify } from '@/utils/dialogs';
 import { goBack } from '@/utils/navigation';
+import { cityOpen, type CityEntry as CityFollowUpCity } from '@/utils/cityFollowUp';
+import { useCityFollowUp } from '@/hooks/useCityFollowUp';
 
 /**
  * Étude de l'assemblée (plan 21/10, §6.3) — ACCUEIL de la tuile « Le Message de Bertoua ».
  *
- * <p>D-ETU-28 (JP 23/10, remplace D-ETU-05) : atteint depuis l'accueil si le ministère a le module
- * `STUDY` et que le compte est rattaché (`isAttachedAccount`). Le contenu suit le rôle, tel que le dit `GET /study/me` :
+ * <p>D-ETU-50 (JP 27/10, lève D-ETU-28 pour ces usages) : l'étude est GRATUITE — atteinte depuis
+ * l'accueil par tout compte rattaché (`isAttachedAccount`, porté par `hasStudy`), sans abonnement
+ * STUDY. Le contenu suit le rôle, tel que le dit `GET /study/me` :
  * <ul>
  *   <li>DIRIGEANT de l'assemblée (`leader`, D-ETU-07) — séance en cours (*Reprendre*) ou
  *       *Commencer* : unité → leçon, leçons faites cochées, unité verrouillée si son prérequis
@@ -87,16 +90,26 @@ import { goBack } from '@/utils/navigation';
  * plage annoncée par l'aperçu, même après « Terminer l'oubliée »). Sans ces champs (backend
  * antérieur à ETU11b), le contournement du lot ETU11 reste : plages déjà traitées et choix « à la
  * suite / au début / numéro saisi », pour une leçon déjà commencée seulement.
+ *
+ * <p>Lot « pro-plan » (contrat 27/10 §9.3, §12.2) — entrée « Suivi de la ville » (`app/study/city`)
+ * si `GET /study/localities` ∪ `GET /assembly/localities` est non vide (JP 28/10 : même règle que
+ * l'écran et le menu web, `hooks/useCityFollowUp`) : la liste est vide pour un membre et pour un
+ * dirigeant d'unité (RG-ABO-22), l'entrée ne leur apparaît donc jamais. Cadenas si aucune ville
+ * n'ouvre ni l'étude ni le journal. L'entrée existe aussi en tuile d'accueil (`(tabs)/home`).
  */
 export default function StudyHomeScreen() {
   const { t } = useLanguage();
   const { me, hasStudy } = useAuth();
+  // D-ETU-50 (JP 27/10) : `hasStudy` = compte rattaché (étude gratuite) ; `isAttachedAccount` gardé
+  // pour un binaire dont le contexte serait antérieur.
   const active = hasStudy && isAttachedAccount(me);
 
   const [assemblies, setAssemblies] = useState<StudyAssembly[]>([]);
   const [catalogs, setCatalogs] = useState<Record<string, StudyUnitForAssembly[]>>({});
   const [sessions, setSessions] = useState<Record<string, StudySessionSummary[]>>({});
   const [overview, setOverview] = useState<StudyAssemblyOverview[]>([]);
+  // D-ABO-21 / RG-ABO-22 (JP 27/10) : villes dont le compte est responsable (suivi de la ville).
+  const { cities: localities } = useCityFollowUp();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -251,14 +264,11 @@ export default function StudyHomeScreen() {
       {!active ? (
         <Card variant="paper2" style={styles.empty}>
           <Ionicons name="lock-closed-outline" size={26} color={colors.ink3} />
-          <Text style={styles.emptyText}>
-            {hasStudy ? t('study.home.joinRequired') : t('study.home.moduleUnavailable')}
+          {/* D-ETU-50 (JP 27/10) : l'étude est gratuite — seul le rattachement manque ici. */}
+          <Text style={styles.emptyText}>{t('study.home.joinRequired')}</Text>
+          <Text style={styles.link} onPress={() => router.push('/(auth)/join')}>
+            {t('study.home.join')}
           </Text>
-          {hasStudy && (
-            <Text style={styles.link} onPress={() => router.push('/(auth)/join')}>
-              {t('study.home.join')}
-            </Text>
-          )}
         </Card>
       ) : loading ? (
         <View style={styles.loadingBox}>
@@ -304,6 +314,8 @@ export default function StudyHomeScreen() {
               onPress={() => router.push({ pathname: '/study/progress', params: { mine: '1' } })}
             />
           )}
+
+          {localities.length > 0 && <CityEntry localities={localities} />}
 
           {assemblies.length === 0 && !error && <Overview rows={overview} />}
         </>
@@ -785,6 +797,39 @@ function CatchUpRow({ item, onPress }: { item: StudyCatchUp; onPress: () => void
         </Text>
       </View>
       <Text style={styles.lessonAction}>{t('study.home.catchUpAction')}</Text>
+    </Pressable>
+  );
+}
+
+/**
+ * Contrat 27/10 §9.3 — entrée « Suivi de la ville » : une ville → `?localityId=` directement ;
+ * cadenas si aucune ville n'ouvre droit (`entitled`). Jamais de mention de paiement (D-ABO-13).
+ */
+function CityEntry({ localities }: { localities: CityFollowUpCity[] }) {
+  const { t } = useLanguage();
+  const locked = !localities.some(cityOpen);
+  const only = localities.length === 1 ? localities[0] : null;
+  return (
+    <Pressable
+      onPress={() =>
+        router.push(only ? { pathname: '/study/city', params: { localityId: only.localityId } } : '/study/city')
+      }
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.row, { marginTop: 20, opacity: pressed ? 0.9 : 1 }]}
+    >
+      <View style={styles.rowIcon}>
+        <Ionicons name="business-outline" size={18} color={colors.moss} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.rowTitle}>{t('study.city.entry')}</Text>
+        <Text style={styles.rowMeta} numberOfLines={1}>
+          {only ? only.localityName : t('study.city.cityCount', { count: localities.length })}
+        </Text>
+      </View>
+      {locked && (
+        <Ionicons name="lock-closed" size={16} color={colors.ink3} accessibilityLabel={t('study.city.lockedCity')} />
+      )}
+      <Ionicons name="chevron-forward" size={18} color={colors.ink3} />
     </Pressable>
   );
 }

@@ -7,6 +7,10 @@ import { apiClient } from './apiClient';
 //  D-ASM-02 (JP 23/09) : fiche automatique — pas de création ni de suppression (POST /records,
 //  DELETE /records/{id}, POST /records/{id}/link et GET /export n'existent plus côté backend).
 //  Les fiches sont adressées par le **userId** du membre (RG-MCR-09), pas par un id de fiche.
+//  D-OFF-01 / D-OFF-06 (JP 27/10, plan 05 §3.4) : MEMBER_CARE gratuit (désactivable par ministère) ;
+//  assemblées lisibles = l'assemblée gratuite du DIRIGEANT_UNITE + (offre Caleb, `HIERARCHIE_SUIVI`)
+//  celles de sa CHAÎNE de supervision. Toute autre → 403 `MODULE_ACCESS_DENIED` `HIERARCHIE_SUIVI`
+//  (verrou Caleb, `hierarchyAccessDenied`). D-OFF-07 : l'offre Néhémie (ville) n'ouvre plus Member Care.
 // ---------------------------------------------------------------------------------------------
 
 const BASE = '/api/church/member-care';

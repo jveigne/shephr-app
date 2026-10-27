@@ -5,6 +5,7 @@ import Card from '@/components/Card';
 import Label from '@/components/Label';
 import HandDivider from '@/components/HandDivider';
 import ErrorBanner from '@/components/ErrorBanner';
+import StudyCityLock from '@/components/StudyCityLock';
 import { colors, fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -16,6 +17,7 @@ import {
   type StatsScope,
   type StatsTotals,
 } from '@/services/eventsApi';
+import { cityEventsAccessDenied } from '@/services/entitlementsApi';
 import { eventActionMessage, eventErrorCode } from '@/utils/eventErrors';
 import { counterParts, fmtMonth, isEnglishLang, typeLabel } from '@/utils/events';
 import { notify } from '@/utils/dialogs';
@@ -38,6 +40,12 @@ import type { Translate } from '@/utils/meetingReport';
  *       rattaché — d'où la ligne « dont N rattachées directement à … » (`ownLevelCount`) ;</li>
  *   <li>D-EVT-06 : aucune cible, aucune barre de progression. Par mois : une liste, pas de courbe
  *       (hors V1, spec §8).</li>
+ *   <li>D-OFF-12 (JP 27/10, plan `05_Plan_Offres_Caleb_Nehemie.md` §3.5) : gratuit jusqu'au niveau
+ *       ville ; l'intérieur d'une ville relève de l'offre Néhémie (`EVENEMENTS_SUIVI`) — la
+ *       ventilation par assemblée arrive `children = null` + `childrenLocked` (verrou à la place des
+ *       sous-niveaux, le total reste affiché) et un nœud interdit répond 403 `MODULE_ACCESS_DENIED`
+ *       / `EVENEMENTS_SUIVI` (verrou à la place des chiffres, jamais un toast). Verrou =
+ *       `StudyCityLock` (texte neutre D-OFF-09, « En savoir plus » D-OFF-11).</li>
  * </ul>
  */
 
@@ -72,11 +80,19 @@ export default function EventStatsDrill({
   from,
   to,
   refreshKey,
+  root: anchor,
 }: {
   from: string;
   to: string;
   /** Change à chaque « tirer pour rafraîchir » ou retour sur l'onglet : recharge le niveau courant. */
   refreshKey: number;
+  /**
+   * Nœud de départ de la descente (D-OFF-12, M-01 levée, JP 28/10 — onglet Évènements du « Suivi de
+   * la ville », `app/study/city.tsx`) : la racine est ce nœud au lieu de « mon périmètre le plus
+   * large ». Absent = comportement d'origine (onglet Évènements). Changer d'ancre : remonter le
+   * composant (`key`), le fil d'Ariane n'est pas remis à zéro ici.
+   */
+  root?: { level: OrgLevel; id: string };
 }) {
   const { t } = useLanguage();
   const [path, setPath] = useState<DrillStep[]>([]);
@@ -85,15 +101,21 @@ export default function EventStatsDrill({
   /** Racine du périmètre, gardée pendant la descente : elle ouvre le fil d'Ariane. */
   const [root, setRoot] = useState<StatsScope | null>(null);
   const [error, setError] = useState<{ message: string; noPerimeter: boolean } | null>(null);
+  /** D-OFF-12 : nœud (`level|id`, vide = racine) refusé par un 403 EVENEMENTS_SUIVI. */
+  const [lockedNode, setLockedNode] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
   /** Seule la dernière requête partie a le droit d'écrire : la descente peut aller plus vite que le réseau. */
   const lastRequest = useRef(0);
 
   const level = current?.level;
   const id = current?.id;
+  // Primitives de l'ancre : un objet `root` recréé à chaque rendu ne relance pas la requête.
+  const anchorLevel = anchor?.level;
+  const anchorId = anchor?.id;
   // « En cours » se DÉDUIT de la requête attendue et de la dernière réponse reçue, plutôt que
   // d'être posé au départ de l'effet (setState synchrone dans un effet, cf. react-hooks).
-  const requestKey = `${from}|${to}|${level ?? ''}|${id ?? ''}#${refreshKey}`;
+  const nodeKey = `${level ?? ''}|${id ?? ''}`;
+  const requestKey = `${from}|${to}|${nodeKey}#${refreshKey}`;
   const [settledKey, setSettledKey] = useState<string | null>(null);
   const loading = settledKey !== requestKey || retrying;
 
@@ -103,16 +125,29 @@ export default function EventStatsDrill({
     (key: string) => {
       const request = ++lastRequest.current;
       const latest = () => request === lastRequest.current;
-      return getEventStats(level && id ? { from, to, scopeLevel: level, scopeId: id } : { from, to })
+      const node =
+        level && id
+          ? { scopeLevel: level, scopeId: id }
+          : anchorLevel && anchorId
+            ? { scopeLevel: anchorLevel, scopeId: anchorId }
+            : {};
+      return getEventStats({ from, to, ...node })
         .then(
           (res) => {
             if (!latest()) return;
             setStats(res);
             setError(null);
+            setLockedNode(null);
             if (!level) setRoot(res.scope);
           },
           (e) => {
             if (!latest()) return;
+            // D-OFF-12 : l'intérieur d'une ville sans l'offre Néhémie → verrou, pas une erreur.
+            if (cityEventsAccessDenied(e)) {
+              setError(null);
+              setLockedNode(`${level ?? ''}|${id ?? ''}`);
+              return;
+            }
             const code = eventErrorCode(e);
             // Un nœud devenu illisible (périmètre modifié) ou supprimé : retour à la racine,
             // avec la raison, plutôt qu'un écran bloqué sur une erreur.
@@ -134,7 +169,7 @@ export default function EventStatsDrill({
           setRetrying(false);
         });
     },
-    [from, to, level, id, t],
+    [from, to, level, id, anchorLevel, anchorId, t],
   );
 
   useEffect(() => {
@@ -149,11 +184,14 @@ export default function EventStatsDrill({
   const open = (c: ChildStats) =>
     setPath((p) => [...p, { level: c.level, id: c.id, name: c.name ?? t(`events.levels.${c.level}`) }]);
 
+  const locked = lockedNode === nodeKey;
+
   // Racine pas encore lue : rien à descendre, pas de fil d'Ariane.
   if (!root) {
     if (loading) {
       return <ActivityIndicator color={colors.moss} style={{ marginTop: 40 }} />;
     }
+    if (locked) return <StudyCityLock />;
     if (error?.noPerimeter) {
       return (
         <Card variant="paper2" style={styles.emptyCard}>
@@ -174,7 +212,7 @@ export default function EventStatsDrill({
     (current
       ? stats.scope.level === current.level && stats.scope.id === current.id
       : stats.scope.level === root.level && stats.scope.id === root.id);
-  const shown = stats != null && (matches || loading) ? stats : null;
+  const shown = stats != null && !locked && (matches || loading) ? stats : null;
 
   return (
     <View>
@@ -203,6 +241,7 @@ export default function EventStatsDrill({
       </View>
 
       {!!error && !loading && <ErrorBanner message={error.message} onRetry={retry} />}
+      {locked && !loading && <StudyCityLock />}
 
       {shown && <StatsBody stats={shown} here={here} dimmed={loading} onOpen={open} />}
     </View>
@@ -223,8 +262,10 @@ function StatsBody({
 }) {
   const { t, language } = useLanguage();
   const english = isEnglishLang(language);
-  const childLevel = stats.children[0]?.level;
-  const homogeneous = stats.children.every((c) => c.level === childLevel);
+  // D-OFF-12 : `children` null quand la ventilation sous la ville est verrouillée.
+  const children = stats.children ?? [];
+  const childLevel = children[0]?.level;
+  const homogeneous = children.every((c) => c.level === childLevel);
 
   return (
     <View style={{ opacity: dimmed ? 0.6 : 1 }}>
@@ -249,7 +290,17 @@ function StatsBody({
       <Text style={styles.rule}>{t('events.stats.countingRule')}</Text>
 
       {/* Sous-niveaux : une carte par enfant, touchée = descente */}
-      {stats.children.length > 0 && (
+      {/* D-OFF-12 (JP 27/10) : ventilation par assemblée d'une ville sans l'offre Néhémie. */}
+      {!!stats.childrenLocked && children.length === 0 && (
+        <>
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionTitle}>{t('events.stats.byLevel.UNIT')}</Text>
+          </View>
+          <StudyCityLock compact />
+        </>
+      )}
+
+      {children.length > 0 && (
         <>
           <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>
@@ -258,7 +309,7 @@ function StatsBody({
           </View>
           <Text style={styles.sectionHint}>{t('events.stats.drillHint')}</Text>
           <View style={{ gap: 8, marginTop: 10 }}>
-            {stats.children.map((c) => (
+            {children.map((c) => (
               <Card key={`${c.level}:${c.id}`} style={styles.childCard} onPress={() => onOpen(c)}>
                 <View style={styles.childHead}>
                   <View style={styles.childIcon}>

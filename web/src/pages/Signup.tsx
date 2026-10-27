@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { DIAL_COUNTRIES } from '../constants/dialCodes';
 import { CountryDialPicker } from '../components/CountryDialPicker';
@@ -7,7 +7,8 @@ import { Icon } from '../components/Icon';
 import { LangSwitch } from '../components/LangSwitch';
 import { Button, Field, Input } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
-import { hasMemberSpace, hasMinistryAccess, type MeResponse } from '../services/authApi';
+import { hasMemberSpace, hasMinistryAccess, isAttachedAccount, type MeResponse } from '../services/authApi';
+import { safeDocumentNext } from '../utils/documents';
 
 /**
  * Inscription libre côté Web (miroir de `mobile/app/(auth)/signup.tsx`) : identité, email,
@@ -30,6 +31,11 @@ export function SignupPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { register, login } = useAuth();
+  // D-WEB-04 (JP 27/10) : arrivée depuis le mur d'un document (`?next=/d/{slug}`) — le lien est
+  // propagé à `/join`, qui y renverra une fois le compte rattaché (seul un chemin `/d/` est accepté).
+  const [searchParams] = useSearchParams();
+  const docNext = safeDocumentNext(searchParams.get('next'));
+  const joinPath = docNext ? `/join?next=${encodeURIComponent(docNext)}` : '/join';
 
   const [mode, setMode] = useState<'form' | 'existing'>('form');
   const [firstName, setFirstName] = useState('');
@@ -45,9 +51,10 @@ export function SignupPage() {
 
   /** Un compte déjà rattaché va à son espace ; sinon il finit son inscription. */
   const routeAfterAuth = (me: MeResponse) => {
+    if (docNext && isAttachedAccount(me)) return navigate(docNext, { replace: true });
     if (hasMinistryAccess(me)) return navigate('/dashboard', { replace: true });
     if (hasMemberSpace(me)) return navigate('/my-goals', { replace: true });
-    return navigate('/join', { replace: true });
+    return navigate(joinPath, { replace: true });
   };
 
   const submit = async (e: FormEvent) => {
@@ -93,7 +100,7 @@ export function SignupPage() {
           phoneDigits.length > 0 ? DIAL_COUNTRIES.find((c) => c.iso === countryIso)?.dial : undefined,
       });
       // Compte neuf : aucun rattachement possible → rattachement à une assemblée.
-      navigate('/join', { replace: true });
+      navigate(joinPath, { replace: true });
     } catch (err: unknown) {
       const data = errData(err);
       if (data?.error === 'USERNAME_ALREADY_EXISTS') {
@@ -135,7 +142,11 @@ export function SignupPage() {
       <div className="login-main" style={{ margin: '0 auto', position: 'relative' }}>
         <button
           type="button"
-          onClick={() => (mode === 'existing' ? setMode('form') : navigate('/login'))}
+          onClick={() =>
+            mode === 'existing'
+              ? setMode('form')
+              : navigate(docNext ? `/login?next=${encodeURIComponent(docNext)}` : '/login')
+          }
           style={{
             position: 'absolute', top: 24, left: 24, display: 'inline-flex', alignItems: 'center', gap: 6,
             background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--ink-500)',

@@ -9,6 +9,7 @@ import Label from '@/components/Label';
 import Field from '@/components/Field';
 import Button from '@/components/Button';
 import Chip from '@/components/Chip';
+import CalebAssemblyLock from '@/components/CalebAssemblyLock';
 import { colors, fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -19,6 +20,7 @@ import {
   type MemberCareStatus,
   type MemberRecordDetail,
 } from '@/services/memberCareApi';
+import { hierarchyAccessDenied } from '@/services/entitlementsApi';
 import { notify } from '@/utils/dialogs';
 import { fmtDateLong } from '@/utils/format';
 import { fmtIsoDay } from '@/utils/meetingReport';
@@ -31,6 +33,9 @@ const ATTENDANCE_PREVIEW = 8;
  * membre. Statut + historique + note + présences (RG-MCR-10, si ASSEMBLY actif).
  * Écriture (statut, note) uniquement si `record.canEdit` (RG-MCR-08 v2 : DIRIGEANT_UNITE de
  * l'assemblée courante) ; les superviseurs lisent (D-ASM-05). Plus de suppression (RG-MCR-02 v2).
+ * D-OFF-06 (JP 27/10) : gratuit sur l'assemblée gratuite du DIRIGEANT_UNITE ; la fiche d'un membre
+ * d'une autre assemblée de la chaîne relève de l'offre Caleb — 403 `MODULE_ACCESS_DENIED` /
+ * `HIERARCHIE_SUIVI` (lecture ou écriture) → verrou Caleb à la place de la fiche.
  */
 export default function RecordDetailScreen() {
   const { t } = useLanguage();
@@ -46,17 +51,25 @@ export default function RecordDetailScreen() {
   const [noteDraft, setNoteDraft] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   const [showAllAttendances, setShowAllAttendances] = useState(false);
+  const [locked, setLocked] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
     const [d, st] = await Promise.allSettled([getRecord(id), listStatuses()]);
     if (d.status === 'fulfilled') {
       setError(null);
+      setLocked(false);
       setDetail(d.value);
       setPickStatus(d.value.record.currentStatusId);
       setNoteDraft(d.value.record.note ?? '');
     } else {
       const e: any = d.reason;
+      if (hierarchyAccessDenied(e)) {
+        setDetail(null);
+        setLocked(true);
+        if (st.status === 'fulfilled') setStatuses(st.value);
+        return;
+      }
       const code = e?.response?.status;
       setError(
         code === 404
@@ -93,6 +106,11 @@ export default function RecordDetailScreen() {
       setStatusNote('');
       await load();
     } catch (e: any) {
+      if (hierarchyAccessDenied(e)) {
+        setDetail(null);
+        setLocked(true);
+        return;
+      }
       notify(t('common.appName'), e?.response?.data?.message ?? t('errors.saveFailed'));
     } finally {
       setSavingStatus(false);
@@ -107,6 +125,11 @@ export default function RecordDetailScreen() {
       await updateNote(detail.record.userId, { note: noteDraft.trim() || null });
       await load();
     } catch (e: any) {
+      if (hierarchyAccessDenied(e)) {
+        setDetail(null);
+        setLocked(true);
+        return;
+      }
       notify(t('common.appName'), e?.response?.data?.message ?? t('errors.saveFailed'));
     } finally {
       setSavingNote(false);
@@ -127,6 +150,15 @@ export default function RecordDetailScreen() {
         <View style={{ marginTop: 60, alignItems: 'center' }}>
           <ActivityIndicator color={colors.moss} />
         </View>
+      </ScreenShell>
+    );
+  }
+
+  if (locked) {
+    return (
+      <ScreenShell>
+        {header}
+        <CalebAssemblyLock />
       </ScreenShell>
     );
   }
