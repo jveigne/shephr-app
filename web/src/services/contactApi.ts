@@ -12,12 +12,23 @@ export interface ContactSettings {
   email: string;
   whatsappNumber: string;
   whatsappUrl: string;
+  /**
+   * D-PAY-03, JP 28/10 (RG-PAY-20 / 22) — numéro WhatsApp du relais Mobile Money, distinct du support,
+   * `null` s'il n'est pas configuré au back-office : le bouton « Payer par Mobile Money » est alors masqué.
+   * Facultatifs ici : un serveur antérieur au lot PAY ne les envoie pas (lu comme `null`).
+   */
+  paymentWhatsappNumber?: string | null;
+  /** `https://wa.me/{numéro}` composé par le serveur, `null` sans numéro. */
+  paymentWhatsappUrl?: string | null;
 }
 
 const FALLBACK: ContactSettings = {
   email: DEFAULT_CONTACT_EMAIL,
   whatsappNumber: DEFAULT_CONTACT_WHATSAPP_NUMBER,
   whatsappUrl: `https://wa.me/${DEFAULT_CONTACT_WHATSAPP_NUMBER}`,
+  // D-PAY-03, JP 28/10 : aucun repli pour le relais Mobile Money — sans réponse du serveur, bouton masqué.
+  paymentWhatsappNumber: null,
+  paymentWhatsappUrl: null,
 };
 
 /**

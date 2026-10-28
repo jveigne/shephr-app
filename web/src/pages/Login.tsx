@@ -8,9 +8,11 @@ import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../components/Toast';
 import { safeDocumentNext } from '../utils/documents';
 import { routeAfterLogin, safeNext } from '../utils/authRouting';
+import { SocialSignInButtons } from '../components/SocialSignInButtons';
+import type { AuthResponse, MeResponse } from '../services/authApi';
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, establishSession } = useAuth();
   const { push } = useToast();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -23,6 +25,28 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // D-WEB-05 (JP 27/10) : routage extrait dans `utils/authRouting` (partagé avec /reset-password).
+  // D-PAY-06 / RG-PAY-44 (JP 28/10) : même routage — `next` compris — après Google / Apple.
+  const afterSession = (me: MeResponse) => {
+    const outcome = routeAfterLogin(me, nextPath, navigate);
+    if (outcome === 'welcome') {
+      push({ kind: 'ok', title: t('login.welcomeToast'), msg: t('login.welcomeToastMsg') });
+    } else if (outcome === 'denied') {
+      setError(t('login.memberDenied'));
+    }
+  };
+
+  const onSocialSession = async (res: AuthResponse) => {
+    setLoading(true);
+    try {
+      afterSession(await establishSession(res.token));
+    } catch {
+      setError(t('login.social.errors.generic'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -33,13 +57,7 @@ export function LoginPage() {
     setLoading(true);
     try {
       const me = await login({ identifier: email.trim(), password });
-      // D-WEB-05 (JP 27/10) : routage extrait dans `utils/authRouting` (partagé avec /reset-password).
-      const outcome = routeAfterLogin(me, nextPath, navigate);
-      if (outcome === 'welcome') {
-        push({ kind: 'ok', title: t('login.welcomeToast'), msg: t('login.welcomeToastMsg') });
-      } else if (outcome === 'denied') {
-        setError(t('login.memberDenied'));
-      }
+      afterSession(me);
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
@@ -203,6 +221,9 @@ export function LoginPage() {
 
             {error && <div className="err">{error}</div>}
           </form>
+
+          {/* D-PAY-06 (JP 28/10) : Google / Apple sur le web, chaque bouton masqué sans identifiant configuré. */}
+          <SocialSignInButtons onSession={onSocialSession} onError={setError} disabled={loading} />
 
           <div style={{ marginTop: 16, textAlign: 'center', fontSize: 14, color: 'var(--ink-600)' }}>
             {t('login.invitedQuestion')}{' '}

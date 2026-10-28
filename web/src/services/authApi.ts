@@ -417,6 +417,24 @@ export async function login(payload: { identifier: string; password: string }) {
   return data;
 }
 
+/** Mirrors com.excellence.back.auth.handoff.HandoffCreated — D-PAY-05, JP 28/10 (créé par le mobile seulement). */
+export interface HandoffCreated {
+  handoffToken: string;
+  /** ISO-8601 UTC — 2 minutes après la création (RG-PAY-04). */
+  expiresAt: string;
+}
+
+/**
+ * D-PAY-05, JP 28/10 (contrat 28_10_2026/03 §5.1) — échange un jeton de passage reçu de l'app (fragment
+ * `#handoff=` de `/offres`) contre une session web : réponse = EXACTEMENT celle du login Shephr
+ * (RG-PAY-10), à passer à `establishSession`. Route publique, Bearer ignoré par le serveur ; tout refus =
+ * 410 `HANDOFF_INVALID` (aucun oracle, RG-PAY-08) ou 429. Le jeton ne porte aucune URL (RG-PAY-11).
+ */
+export async function exchangeHandoff(handoffToken: string) {
+  const { data } = await apiClient.post<AuthResponse>('/api/church/auth/handoff/exchange', { handoffToken });
+  return data;
+}
+
 /**
  * Inscription libre (miroir du parcours mobile `(auth)/signup`). Le compte créé n'est rattaché
  * à rien : l'utilisateur enchaîne sur `/join` pour demander son rattachement.

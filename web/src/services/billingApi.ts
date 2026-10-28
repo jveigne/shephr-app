@@ -21,6 +21,12 @@ export type BillingSubscriptionStatus = 'PENDING' | 'ACTIVE' | 'PAST_DUE' | 'CAN
 export type BillingSource = 'STRIPE' | 'MANUEL' | 'VOUCHER';
 /** D-ABO-18 (JP 27/10) — ANNUAL possible pour un plan à prix annuel (D-ABO-03 levée pour les plans). */
 export type BillingPeriod = 'MONTHLY' | 'ANNUAL';
+/**
+ * Mirrors com.excellence.back.billing.BillingDtos.CheckoutOrigin — D-PAY-04 / RG-PAY-36, JP 28/10 :
+ * `OFFERS` = caisse ouverte depuis `/offres` ; le serveur compose alors l'annulation Stripe
+ * `/offres?offer=caleb|nehemie&annule=1` (offre déduite du `planCode`). Absent → retours historiques.
+ */
+export type CheckoutOrigin = 'OFFERS';
 
 /** Mirrors com.excellence.back.billing.BillingDtos.PromoPreview */
 export interface PromoPreview {
@@ -113,7 +119,7 @@ export async function previewPromo(code: string, offerCode: string, period?: Bil
 export async function checkout(
   offerCode: string,
   promoCode?: string | null,
-  plan?: { localityId?: string | null; period: BillingPeriod },
+  plan?: { localityId?: string | null; period: BillingPeriod; origin?: CheckoutOrigin },
 ) {
   // Plan PERSONNEL (`plan_scope = USER`, « Suivi de ma hiérarchie », JP 27/10) : `period` seul, SANS
   // `localityId` (400 `PERSONAL_PLAN_LOCALITY_FORBIDDEN` sinon) ; MONTHLY seulement.
@@ -122,6 +128,7 @@ export async function checkout(
     promoCode: promoCode || null,
     ...(plan ? { period: plan.period } : {}),
     ...(plan?.localityId ? { localityId: plan.localityId } : {}),
+    ...(plan?.origin ? { origin: plan.origin } : {}),
   });
   return data;
 }

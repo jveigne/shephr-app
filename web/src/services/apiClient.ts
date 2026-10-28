@@ -18,7 +18,16 @@ export const apiClient = axios.create({
  * `/auth/me` en est volontairement absent : un 401 là-bas EST une session expirée.
  */
 // D-WEB-05 (JP 27/10) : '/auth/password/' (mot de passe oublié) — un code refusé n'est pas une session expirée.
-const CREDENTIAL_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/invitation', '/auth/password/'];
+// D-PAY-05 / D-PAY-06, JP 28/10 (RG-PAY-46) : '/auth/oauth/' (Google / Apple) et '/auth/handoff' (jeton de
+// passage app → web) — un refus y est un refus d'identité, jamais une session web expirée.
+const CREDENTIAL_ENDPOINTS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/invitation',
+  '/auth/password/',
+  '/auth/oauth/',
+  '/auth/handoff',
+];
 
 const isCredentialRequest = (url: string | undefined) =>
   !!url && CREDENTIAL_ENDPOINTS.some((p) => url.includes(p));

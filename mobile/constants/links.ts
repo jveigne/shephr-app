@@ -38,6 +38,9 @@ export type OfferKey = 'caleb' | 'nehemie';
  * livrée par le web (ticket O10, §3.8) — ne pas publier un build mobile avant elle, sinon le lien
  * tombe sur la garde de l'AppShell (connexion).
  */
-export function offersUrl(offer?: OfferKey | null): string {
-  return offer ? `${SHARE_BASE_URL}/offres?offer=${offer}` : `${SHARE_BASE_URL}/offres`;
+export function offersUrl(offer?: OfferKey | null, handoff?: string | null): string {
+  const base = offer ? `${SHARE_BASE_URL}/offres?offer=${offer}` : `${SHARE_BASE_URL}/offres`;
+  // D-PAY-05 / RG-PAY-12 (JP 28/10) : le jeton de passage voyage dans le FRAGMENT, jamais en query
+  // (le fragment n'est pas envoyé au serveur ni journalisé). Seul point de composition de ce lien.
+  return handoff ? `${base}#handoff=${encodeURIComponent(handoff)}` : base;
 }

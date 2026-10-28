@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Linking } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { colors, fonts, radii } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { offersUrl, type OfferKey } from '@/constants/links';
+import { createHandoff } from '@/services/handoffApi';
 
 /**
  * Verrou générique d'une fonctionnalité soumise à un code de droit — lot « pro-plan » (JP 27/10).
@@ -23,6 +25,13 @@ import { offersUrl, type OfferKey } from '@/constants/links';
  * navigateur (§8). RIEN D'AUTRE : aucun prix, aucun montant, aucune période, aucun bouton
  * « S'abonner », aucun champ de code, aucune mention de paiement — sur iOS comme sur Android.
  * Ce composant n'accepte volontairement ni `onPress` ni enfant — ne pas en ajouter.
+ *
+ * <p>D-PAY-05 (JP 28/10, plan 28/10 `03_Plan_Offres_Paiement_Connexion.md` §7.2) : pour un compte
+ * connecté, « En savoir plus » demande d'abord un jeton de passage (usage unique, 120 s) et l'ajoute
+ * au FRAGMENT (`#handoff=…`, RG-PAY-12) : la page `/offres` s'ouvre alors déjà connectée, pour payer
+ * sans ressaisir ses identifiants. Échec de la demande (réseau, 4xx, 5xx, délai > 3 s) → lien simple,
+ * sans message. Toujours AUCUN prix ni bouton de paiement ici (D-OFF-09 / 10 inchangées). Ne jamais
+ * journaliser l'URL (elle porte le jeton).
  */
 export default function FeatureLock({
   title,
@@ -40,12 +49,26 @@ export default function FeatureLock({
   learnMore?: boolean;
 }) {
   const { t } = useLanguage();
-  const openOffers = () => {
-    const url = offersUrl(offer);
-    // expo-web-browser (déjà dans le binaire, lecteur `/d/*`) ; repli sur le navigateur système.
-    WebBrowser.openBrowserAsync(url).catch(() => {
-      void Linking.openURL(url).catch(() => undefined);
-    });
+  const { token } = useAuth();
+  // Un appui pendant la demande du jeton est ignoré (pas deux jetons, pas deux navigateurs).
+  const opening = useRef(false);
+  const openOffers = async () => {
+    if (opening.current) return;
+    opening.current = true;
+    try {
+      let handoff: string | null = null;
+      if (token) {
+        // D-PAY-05 / RG-PAY-12 (JP 28/10) : délai max 3 s (timeout du client), tout échec → lien simple.
+        handoff = await createHandoff(token)
+          .then((r) => r.handoffToken || null)
+          .catch(() => null);
+      }
+      const url = offersUrl(offer, handoff);
+      // expo-web-browser (déjà dans le binaire, lecteur `/d/*`) ; repli sur le navigateur système.
+      await WebBrowser.openBrowserAsync(url).catch(() => Linking.openURL(url).catch(() => undefined));
+    } finally {
+      opening.current = false;
+    }
   };
   return (
     <View style={[styles.root, compact && styles.rootCompact]}>
@@ -70,7 +93,7 @@ export default function FeatureLock({
           </Text>
         )}
         {learnMore && (
-          <Pressable onPress={openOffers} accessibilityRole="link" hitSlop={8} style={styles.learnMore}>
+          <Pressable onPress={() => void openOffers()} accessibilityRole="link" hitSlop={8} style={styles.learnMore}>
             <Text style={styles.learnMoreText}>{t('offers.learnMore')}</Text>
             <Ionicons name="open-outline" size={14} color={colors.moss} />
           </Pressable>

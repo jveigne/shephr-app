@@ -354,7 +354,20 @@
     "invitedQuestion": "Vous avez reçu une invitation ?",
     "activateCta": "Activer mon compte",
     "noAccountQuestion": "Pas encore de compte ?",
-    "signupCta": "Créer un compte"
+    "signupCta": "Créer un compte",
+    "social": {
+      "or": "ou",
+      "google": "Continuer avec Google",
+      "apple": "Continuer avec Apple",
+      "errors": {
+        "invalidToken": "La connexion n'a pas pu être vérifiée. Veuillez réessayer.",
+        "emailNotVerified": "L'adresse e-mail de ce compte n'est pas vérifiée. Vérifiez-la auprès du fournisseur, ou connectez-vous avec votre mot de passe.",
+        "accountDisabled": "Ce compte est désactivé ou en cours de suppression.",
+        "notConfigured": "Cette méthode de connexion n'est pas encore disponible. Utilisez votre identifiant et votre mot de passe.",
+        "unavailable": "Le service de connexion est momentanément indisponible. Veuillez réessayer.",
+        "generic": "La connexion a échoué. Veuillez réessayer."
+      }
+    }
   },
   "signup": {
     "back": "Retour",
@@ -2678,7 +2691,6 @@
     "title": "Les offres Shephr",
     "subtitle": "L'essentiel reste gratuit pour chaque assemblée. Deux offres complètent Shephr pour suivre plus large : votre hiérarchie de dirigeants avec l'offre Caleb, toute votre ville avec l'offre Néhémie.",
     "seeOffers": "Voir les offres",
-    "leadersOnly": "Ces offres s'adressent aux dirigeants. Votre assemblée, elle, reste entièrement gratuite.",
     "independent": "Les deux offres sont indépendantes : Caleb suit votre chaîne de leadership, Néhémie suit une ville. L'une n'ouvre rien dans l'autre.",
     "howToPay": "Deux façons de payer : par carte bancaire, en ligne, ou par Mobile Money auprès de votre relais, qui vous remet un code d'activation à saisir ici (« J'ai un code »).",
     "bibleVersion": "Louis Segond 1910",
@@ -2686,7 +2698,6 @@
     "includedTitle": "Ce qui est inclus",
     "orAnnual": "ou {{price}} / an",
     "priceUnavailable": "Prix momentanément indisponible.",
-    "loginToSubscribe": "Se connecter pour souscrire",
     "noAccount": "Pas encore de compte ?",
     "caleb": {
       "name": "Offre Caleb",
@@ -2703,7 +2714,8 @@
       },
       "priceNote": "TTC · pour votre compte uniquement · sans engagement",
       "active": "Activée pour votre compte",
-      "notSubscribable": "L'offre Caleb se souscrit par un dirigeant, pour lui-même. Pour votre compte, demandez l'activation à l'équipe Shephr."
+      "short": "Caleb",
+      "reserved": "Cette offre est réservée aux dirigeants."
     },
     "nehemie": {
       "name": "Offre Néhémie",
@@ -2719,8 +2731,13 @@
       },
       "priceNote": "TTC · pour toute la ville · sans engagement",
       "activeFor": "Activée pour : {{cities}}",
-      "chooseCity": "Choisir ma ville",
-      "notSubscribable": "L'offre Néhémie se souscrit par un responsable de ville, de région ou de nation. Demandez à votre pasteur d'activer le suivi de la ville."
+      "short": "Néhémie",
+      "reserved": "Cette offre est réservée aux dirigeants de ville.",
+      "city": "Ville",
+      "period": "Formule",
+      "monthly": "Mensuel",
+      "annual": "Annuel",
+      "alreadyActive": "Déjà actif"
     },
     "free": {
       "title": "Toujours gratuit",
@@ -2757,6 +2774,29 @@
       "receiptUntil": "Activée jusqu'au {{date}} inclus.",
       "receiptNote": "Un email de confirmation vous a été envoyé. Aucune facture n'est émise pour un code d'activation.",
       "alreadyPaid": "Vous payez déjà cette offre par carte : vous n'avez pas besoin de code."
+    },
+    "pay": {
+      "title": "Payer",
+      "loginToPay": "Se connecter pour payer",
+      "cardMonthly": "Payer par carte — {{price}}/mois",
+      "cardAnnual": "Payer par carte — {{price}}/an",
+      "mobileMoney": "Payer par Mobile Money",
+      "mobileMoneyHint": "Vous échangez sur WhatsApp avec notre relais ; il vous remet un code à saisir dans « J'ai un code ».",
+      "message": {
+        "caleb": "Bonjour, je souhaite souscrire l'offre {{offer}} ({{localPrice}}). Mon identifiant Shephr : {{username}}.",
+        "calebNoPrice": "Bonjour, je souhaite souscrire l'offre {{offer}}. Mon identifiant Shephr : {{username}}.",
+        "nehemie": "Bonjour, je souhaite souscrire l'offre {{offer}} ({{localPrice}}) pour la ville de {{city}}, en formule {{period}}. Mon identifiant Shephr : {{username}}.",
+        "nehemieNoPrice": "Bonjour, je souhaite souscrire l'offre {{offer}} pour la ville de {{city}}, en formule {{period}}. Mon identifiant Shephr : {{username}}."
+      },
+      "periodWord": {
+        "MONTHLY": "mensuelle",
+        "ANNUAL": "annuelle"
+      },
+      "cancelled": "Paiement annulé. Vous pouvez reprendre quand vous voulez."
+    },
+    "handoff": {
+      "connectedAs": "Connecté en tant que {{username}}",
+      "notYou": "Ce n'est pas vous ? Se déconnecter"
     }
   }
 }

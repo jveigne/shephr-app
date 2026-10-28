@@ -354,7 +354,20 @@
     "invitedQuestion": "Received an invitation?",
     "activateCta": "Activate my account",
     "noAccountQuestion": "No account yet?",
-    "signupCta": "Create an account"
+    "signupCta": "Create an account",
+    "social": {
+      "or": "or",
+      "google": "Continue with Google",
+      "apple": "Continue with Apple",
+      "errors": {
+        "invalidToken": "The sign-in could not be verified. Please try again.",
+        "emailNotVerified": "The email address of this account is not verified. Verify it with the provider, or sign in with your password.",
+        "accountDisabled": "This account is disabled or being deleted.",
+        "notConfigured": "This sign-in method is not available yet. Use your username and password.",
+        "unavailable": "The sign-in service is temporarily unavailable. Please try again.",
+        "generic": "Sign-in failed. Please try again."
+      }
+    }
   },
   "signup": {
     "back": "Back",
@@ -2678,7 +2691,6 @@
     "title": "Shephr plans",
     "subtitle": "The essentials stay free for every assembly. Two plans extend Shephr to follow more widely: your hierarchy of leaders with the Caleb plan, your whole city with the Nehemiah plan.",
     "seeOffers": "See the plans",
-    "leadersOnly": "These plans are meant for leaders. Your own assembly stays entirely free.",
     "independent": "The two plans are independent: Caleb follows your leadership chain, Nehemiah follows a city. Neither one opens anything in the other.",
     "howToPay": "Two ways to pay: online by card, or by Mobile Money through your local agent, who gives you an activation code to enter here (“I have a code”).",
     "bibleVersion": "King James Version",
@@ -2686,7 +2698,6 @@
     "includedTitle": "What's included",
     "orAnnual": "or {{price}} / year",
     "priceUnavailable": "Price temporarily unavailable.",
-    "loginToSubscribe": "Sign in to subscribe",
     "noAccount": "No account yet?",
     "caleb": {
       "name": "Caleb plan",
@@ -2703,7 +2714,8 @@
       },
       "priceNote": "VAT included · for your account only · no commitment",
       "active": "Active for your account",
-      "notSubscribable": "The Caleb plan is subscribed by a leader, for themselves. For your account, ask the Shephr team to activate it."
+      "short": "Caleb",
+      "reserved": "This offer is reserved for leaders."
     },
     "nehemie": {
       "name": "Nehemiah plan",
@@ -2719,8 +2731,13 @@
       },
       "priceNote": "VAT included · for the whole city · no commitment",
       "activeFor": "Active for: {{cities}}",
-      "chooseCity": "Choose my city",
-      "notSubscribable": "The Nehemiah plan is subscribed by a city, region or nation leader. Ask your pastor to activate city tracking."
+      "short": "Nehemiah",
+      "reserved": "This offer is reserved for city leaders.",
+      "city": "City",
+      "period": "Plan",
+      "monthly": "Monthly",
+      "annual": "Annual",
+      "alreadyActive": "Already active"
     },
     "free": {
       "title": "Always free",
@@ -2757,6 +2774,29 @@
       "receiptUntil": "Active until {{date}} inclusive.",
       "receiptNote": "A confirmation email has been sent to you. No invoice is issued for an activation code.",
       "alreadyPaid": "You already pay for this plan by card: you do not need a code."
+    },
+    "pay": {
+      "title": "Pay",
+      "loginToPay": "Sign in to pay",
+      "cardMonthly": "Pay by card — {{price}}/month",
+      "cardAnnual": "Pay by card — {{price}}/year",
+      "mobileMoney": "Pay with Mobile Money",
+      "mobileMoneyHint": "You chat with our relay on WhatsApp; they give you a code to enter in \"I have a code\".",
+      "message": {
+        "caleb": "Hello, I would like to subscribe to the {{offer}} plan ({{localPrice}}). My Shephr username: {{username}}.",
+        "calebNoPrice": "Hello, I would like to subscribe to the {{offer}} plan. My Shephr username: {{username}}.",
+        "nehemie": "Hello, I would like to subscribe to the {{offer}} plan ({{localPrice}}) for the city of {{city}}, {{period}} billing. My Shephr username: {{username}}.",
+        "nehemieNoPrice": "Hello, I would like to subscribe to the {{offer}} plan for the city of {{city}}, {{period}} billing. My Shephr username: {{username}}."
+      },
+      "periodWord": {
+        "MONTHLY": "monthly",
+        "ANNUAL": "annual"
+      },
+      "cancelled": "Payment cancelled. You can resume whenever you like."
+    },
+    "handoff": {
+      "connectedAs": "Signed in as {{username}}",
+      "notYou": "Not you? Sign out"
     }
   }
 }
