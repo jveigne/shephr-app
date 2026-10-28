@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import type { BillingPeriod, BillingSource, BillingSubscriptionStatus } from './billingApi';
+import type { BillingPeriod, BillingSource, BillingSubscriptionStatus, PlanPrice } from './billingApi';
 
 // ---------------------------------------------------------------------------------------------
 //  Droits d'un nœud — lot « pro-plan » (plan docs/shephr/27_10_2026/01_Plan_Pro_Plan.md, contrat
@@ -60,6 +60,11 @@ export interface PlanOffer {
    * sur le mobile). Facultatif côté serveur antérieur : lire `?? null`.
    */
   localPriceLabel?: string | null;
+  /**
+   * D-CUR-02 (JP 28/10) — prix par devise (EUR en premier, puis USD). Les champs historiques restent le
+   * prix EUR. Facultatif : serveur antérieur = EUR seul (repli `utils/currency.pricesOf`).
+   */
+  prices?: PlanPrice[];
 }
 
 /** Mirrors com.excellence.back.subscription.entitlement.EntitlementDtos.EntitlementsResponse */
@@ -123,12 +128,13 @@ export function studyCityAccessDenied(err: unknown): ModuleAccessDeniedDetails |
 //  hierarchy`), jamais l'axe géographique d'`ETUDE_SUIVI` : les deux offres sont indépendantes.
 //  Plan de portée DIRIGEANT (`plan_scope = USER`) : le bénéficiaire est le payeur ; l'abonnement
 //  d'un dirigeant n'ouvre rien à ceux d'en dessous. Le SERVEUR reste le seul juge (RG-ABO-23).
-//  Web seulement : `monthlyPriceCents` / `currency` (le mobile ne les reprend pas, D-ABO-13).
+//  Web seulement : `monthlyPriceCents` / `annualPriceCents` / `currency` (le mobile ne les reprend pas,
+//  D-ABO-13 ; RG-MKT-31).
 // ---------------------------------------------------------------------------------------------
 
 /** Code de droit du bloc payant de la Hiérarchie (Vie d'assemblée + Message de Bertoua). */
 export const ENTITLEMENT_HIERARCHIE_SUIVI = 'HIERARCHIE_SUIVI';
-/** Plan personnel « Suivi de ma hiérarchie » (offre `dirigeant-hierarchie`, mensuel seulement). */
+/** Plan personnel « Suivi de ma hiérarchie » (offre `dirigeant-hierarchie`, mensuel ou annuel — D-MKT-03, JP 28/10). */
 export const PLAN_DIRIGEANT_HIERARCHIE = 'DIRIGEANT_HIERARCHIE';
 
 /** Mirrors com.excellence.back.subscription.entitlement.EntitlementDtos.PersonalPlanSubscription */
@@ -142,6 +148,8 @@ export interface PersonalPlanSubscription {
   /** D-ABO-20 — fin du délai de grâce (14 j) d'un plan PAST_DUE, sinon null. */
   graceEndsAt: string | null;
   cancelAtPeriodEnd: boolean;
+  /** D-MKT-03, JP 28/10 — période de l'abonnement (Caleb mensuel ou annuel). */
+  billingPeriod?: BillingPeriod;
 }
 
 /** Mirrors com.excellence.back.subscription.entitlement.EntitlementDtos.PersonalPlan */
@@ -152,6 +160,8 @@ export interface PersonalPlan {
   offerName: string;
   /** Centimes TTC — WEB SEULEMENT, formatés côté client, jamais recalculés (RG-ABO-05). */
   monthlyPriceCents: number;
+  /** D-MKT-03, JP 28/10 — prix annuel TTC (centimes), `null` = pas de formule annuelle. WEB SEULEMENT. */
+  annualPriceCents: number | null;
   currency: string;
   /** Droit ouvert pour l'appelant (`entitledAt(now)` du serveur — ne jamais le recalculer). */
   entitled: boolean;
@@ -161,6 +171,8 @@ export interface PersonalPlan {
   subscription: PersonalPlanSubscription | null;
   /** D-OFF-08 (JP 27/10, plan 05 §3.6) — prix local en texte libre, WEB SEULEMENT (cf. `PlanOffer`). */
   localPriceLabel?: string | null;
+  /** D-CUR-02 (JP 28/10) — prix par devise, WEB SEULEMENT (cf. `PlanOffer.prices`). */
+  prices?: PlanPrice[];
 }
 
 /** Mirrors com.excellence.back.subscription.entitlement.EntitlementDtos.PersonalEntitlements */

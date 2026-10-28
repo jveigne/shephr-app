@@ -28,7 +28,14 @@ import {
 import { resetDonationCategoriesCache } from '@/hooks/useDonationCategories';
 import { claimEventCatalog } from '@/hooks/useEventCatalog';
 import { claimEventQueue, isOnline, releaseEventQueue } from '@/services/eventQueue';
-import { loginWithAppleToken, loginWithGoogleToken } from '@/services/socialAuthApi';
+import {
+  confirmFederatedLink as confirmFederatedLinkRequest,
+  isLinkConfirmation,
+  loginWithAppleToken,
+  loginWithGoogleToken,
+  type LinkConfirmationRequired,
+  type SocialLoginResponse,
+} from '@/services/socialAuthApi';
 import {
   resetPassword as resetPasswordRequest,
   type ResetPasswordPayload,
@@ -41,7 +48,10 @@ import { getAppleCredential, getGoogleIdToken, googleSignOut } from '@/services/
  */
 export type SocialLoginResult =
   | { status: 'cancelled' }
-  | { status: 'success'; me: MeResponse | null };
+  | { status: 'success'; me: MeResponse | null }
+  // D-MKT-05, JP 28/10 — compte trouvé par son identifiant jamais prouvé : aucune session,
+  // un code part par e-mail ; l'écran ouvre la saisie du code (`LinkConfirmModal`).
+  | { status: 'confirmation'; challenge: LinkConfirmationRequired };
 
 interface AuthState {
   ready: boolean;
@@ -99,6 +109,11 @@ interface AuthContextValue extends AuthState {
   loginWithGoogle: () => Promise<SocialLoginResult>;
   /** Sign in with Apple (iOS) — `POST /api/auth/oauth/apple`. */
   loginWithApple: () => Promise<SocialLoginResult>;
+  /**
+   * D-MKT-05, JP 28/10 — `POST /api/auth/oauth/link/confirm` : relie Google / Apple au compte
+   * avec le code reçu par e-mail et ouvre la session par `applySession` (même chemin que login).
+   */
+  confirmFederatedLink: (challengeId: string, code: string) => Promise<MeResponse | null>;
   /**
    * Mot de passe oublié (18/10/2026) — `POST /api/auth/password/reset` : change le mot de passe
    * avec le code reçu par e-mail et ouvre la session comme `login` (même réponse, même chemin).
@@ -282,19 +297,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applySession],
   );
 
+  /** D-MKT-05, JP 28/10 — 202 : défi de confirmation, AUCUNE session (pas d'`applySession`). */
+  const socialResult = useCallback(
+    async (res: SocialLoginResponse): Promise<SocialLoginResult> => {
+      if (isLinkConfirmation(res)) return { status: 'confirmation', challenge: res };
+      return { status: 'success', me: await applySession(res) };
+    },
+    [applySession],
+  );
+
   const loginWithGoogle = useCallback(async (): Promise<SocialLoginResult> => {
     const idToken = await getGoogleIdToken();
     if (!idToken) return { status: 'cancelled' };
-    const me = await applySession(await loginWithGoogleToken(idToken));
-    return { status: 'success', me };
-  }, [applySession]);
+    return socialResult(await loginWithGoogleToken(idToken));
+  }, [socialResult]);
 
   const loginWithApple = useCallback(async (): Promise<SocialLoginResult> => {
     const credential = await getAppleCredential();
     if (!credential) return { status: 'cancelled' };
-    const me = await applySession(await loginWithAppleToken(credential));
-    return { status: 'success', me };
-  }, [applySession]);
+    return socialResult(await loginWithAppleToken(credential));
+  }, [socialResult]);
+
+  const confirmFederatedLink = useCallback(
+    async (challengeId: string, code: string) =>
+      applySession(await confirmFederatedLinkRequest(challengeId, code)),
+    [applySession],
+  );
 
   const resetPassword = useCallback(
     async (payload: ResetPasswordPayload) => applySession(await resetPasswordRequest(payload)),
@@ -381,6 +409,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     register,
     loginWithGoogle,
     loginWithApple,
+    confirmFederatedLink,
     resetPassword,
     establishSession,
     refreshMe,

@@ -98,7 +98,27 @@
         "ACCOUNT_DISABLED": "This account is disabled or being deleted.",
         "PROVIDER_NOT_CONFIGURED": "This sign-in method is not available yet. Use your username and password.",
         "PLAY_SERVICES_NOT_AVAILABLE": "Google Play services are unavailable or need updating on this device.",
-        "generic": "Sign-in failed. Please try again."
+        "generic": "Sign-in failed. Please try again.",
+        "ACCOUNT_LINK_AMBIGUOUS": "Several accounts match this address. Sign in with your username and password.",
+        "TOO_MANY_REQUESTS": "Too many attempts. Wait a minute and try again."
+      },
+      "linkConfirm": {
+        "title": "Confirm your address",
+        "intro": "A Shephr account already uses this address as its username. To link it to {{provider}}, enter the code sent to {{email}}.",
+        "code": "6-digit code",
+        "submit": "Confirm",
+        "checking": "Checking…",
+        "resend": "Resend the code",
+        "resendIn": "Resend the code in {{seconds}} s",
+        "resent": "New code sent.",
+        "cancel": "Cancel",
+        "notMine": "Not your account? Don't enter the code and contact support.",
+        "errors": {
+          "LINK_CODE_INVALID": "Incorrect code.",
+          "LINK_CHALLENGE_INVALID": "This code has expired or was entered wrongly too many times. Start again with {{provider}}.",
+          "TOO_MANY_REQUESTS": "Too many attempts. Wait a minute and try again.",
+          "generic": "Verification failed. Please try again."
+        }
       }
     }
   },

@@ -365,7 +365,28 @@
         "accountDisabled": "This account is disabled or being deleted.",
         "notConfigured": "This sign-in method is not available yet. Use your username and password.",
         "unavailable": "The sign-in service is temporarily unavailable. Please try again.",
-        "generic": "Sign-in failed. Please try again."
+        "generic": "Sign-in failed. Please try again.",
+        "linkAmbiguous": "Several accounts match this address. Sign in with your username and password.",
+        "tooManyRequests": "Too many attempts. Wait a minute and try again."
+      },
+      "linkConfirm": {
+        "title": "Confirm your address",
+        "intro": "A Shephr account already uses this address as its username. To link it to {{provider}}, enter the code sent to {{email}}.",
+        "code": "6-digit code",
+        "codeHint": "The code is valid for 10 minutes. Remember to check your spam folder.",
+        "submit": "Confirm",
+        "checking": "Checking…",
+        "resend": "Resend the code",
+        "resendIn": "Resend the code in {{seconds}} s",
+        "resent": "New code sent.",
+        "cancel": "Cancel",
+        "notMine": "Not your account? Do not enter the code and contact support.",
+        "errors": {
+          "codeInvalid": "Incorrect code.",
+          "challengeInvalid": "This code has expired or was entered wrongly too many times. Start again with {{provider}}.",
+          "tooManyRequests": "Too many attempts. Wait a minute and try again.",
+          "generic": "The confirmation failed. Please try again."
+        }
       }
     }
   },
@@ -2688,70 +2709,155 @@
     }
   },
   "offers": {
-    "title": "Shephr plans",
-    "subtitle": "The essentials stay free for every assembly. Two plans extend Shephr to follow more widely: your hierarchy of leaders with the Caleb plan, your whole city with the Nehemiah plan.",
     "seeOffers": "See the plans",
-    "independent": "The two plans are independent: Caleb follows your leadership chain, Nehemiah follows a city. Neither one opens anything in the other.",
-    "howToPay": "Two ways to pay: online by card, or by Mobile Money through your local agent, who gives you an activation code to enter here (“I have a code”).",
-    "bibleVersion": "King James Version",
-    "forWhoTitle": "For whom",
-    "includedTitle": "What's included",
-    "orAnnual": "or {{price}} / year",
     "priceUnavailable": "Price temporarily unavailable.",
     "noAccount": "No account yet?",
     "caleb": {
       "name": "Caleb plan",
-      "tagline": "Tracking my hierarchy",
+      "tagline": "See all your leadership at a glance.",
       "verse": "“Now therefore give me this mountain”",
       "verseRef": "Joshua 14:12",
-      "forWho": "For every leader, along their leadership chain: the leaders they supervise and their assemblies, wherever they are. What counts is not geography but your hierarchy. Each leader subscribes for themselves.",
-      "included": {
-        "reports": "Meeting reports and journal of every assembly in your chain (writing if you lead it)",
-        "stats": "Assembly life statistics: meetings, attendance, breaking of bread, “no report for 3 weeks” alert",
-        "journal": "The consolidated PDF journal of your hierarchy",
-        "study": "Progress in The Bertoua Message, assembly by assembly",
-        "memberCare": "Pastoral care (Member Care) for the assemblies in your chain"
-      },
-      "priceNote": "VAT included · for your account only · no commitment",
       "active": "Active for your account",
       "short": "Caleb",
-      "reserved": "This offer is reserved for leaders."
+      "reserved": "This offer is reserved for leaders.",
+      "audience": "For every leader",
+      "scope": "Follows your <strong>leadership chain</strong>: the leaders you supervise and their assemblies, wherever they are.",
+      "loginHint": "One click with Google or Apple. Then: bank card, Mobile Money or code.",
+      "features": {
+        "dashboard": {
+          "title": "Your hierarchy dashboard",
+          "desc": "meetings, attendance, breaking of bread, period by period"
+        },
+        "alerts": {
+          "title": "Alerts",
+          "desc": "assemblies with no meeting report for 3 weeks surface on their own"
+        },
+        "teaching": {
+          "title": "Teaching progress",
+          "desc": "where each assembly stands, lesson by lesson"
+        },
+        "evangelism": {
+          "title": "Evangelism",
+          "desc": "actions, participants and guests, by leader"
+        },
+        "memberCare": {
+          "title": "Pastoral care",
+          "desc": "the flock of every assembly in your chain"
+        },
+        "pdf": {
+          "title": "PDF report ready to share",
+          "desc": "to print or to send"
+        },
+        "monthlyEmail": {
+          "title": "Monthly email report",
+          "desc": "your month in one minute, every 1st of the month"
+        },
+        "trends": {
+          "title": "Trends",
+          "desc": "compared with the previous month and last year"
+        },
+        "announcements": {
+          "title": "Announcements",
+          "desc": "one message to your whole hierarchy, received in the app"
+        },
+        "documents": {
+          "title": "Your hierarchy document space",
+          "desc": "your documents shared with your leaders"
+        }
+      }
     },
     "nehemie": {
       "name": "Nehemiah plan",
-      "tagline": "Tracking my whole city",
+      "tagline": "Lead your whole city.",
       "verse": "“Let us rise up and build.”",
       "verseRef": "Nehemiah 2:18",
-      "forWho": "For the pastor and the city's leaders: every assembly in the city, whoever leads it. One subscription per city, shared by all its leaders.",
-      "included": {
-        "study": "Tracking The Bertoua Message across the city: assemblies and lessons, members taught or not, statistics, CSV and PDF exports",
-        "journal": "The city journal: statistics and consolidated PDF journal of meeting reports, without any person's name",
-        "events": "Event statistics inside the city, assembly by assembly",
-        "shared": "One city, all its leaders: tracking is open to each of them"
-      },
-      "priceNote": "VAT included · for the whole city · no commitment",
       "activeFor": "Active for: {{cities}}",
       "short": "Nehemiah",
       "reserved": "This offer is reserved for city leaders.",
       "city": "City",
-      "period": "Plan",
-      "monthly": "Monthly",
-      "annual": "Annual",
-      "alreadyActive": "Already active"
+      "alreadyActive": "Already active",
+      "audience": "For the pastor and the city's leaders",
+      "scope": "Every assembly in <strong>the city</strong>, whoever leads it. One subscription, shared by all the leaders.",
+      "loginHint": "One click with Google or Apple. You will then choose your city among those you are responsible for.",
+      "features": {
+        "cityStats": {
+          "title": "City statistics",
+          "desc": "assembly by assembly"
+        },
+        "teaching": {
+          "title": "Teaching progress",
+          "desc": "members taught or not, missed lessons"
+        },
+        "evangelism": {
+          "title": "City evangelism",
+          "desc": "the detail of each assembly, not a single total"
+        },
+        "journal": {
+          "title": "City journal",
+          "desc": "without any person's name: confidentiality is respected"
+        },
+        "exports": {
+          "title": "Excel (CSV) and PDF exports",
+          "desc": "for your meetings and your reports"
+        },
+        "shared": {
+          "title": "One subscription, all the leaders",
+          "desc": "tracking is open to each of them"
+        },
+        "storage": {
+          "title": "Document storage",
+          "desc": "at assembly, city and country level"
+        },
+        "monthlyEmail": {
+          "title": "Monthly email report",
+          "desc": "the city in one minute, every 1st of the month"
+        },
+        "trends": {
+          "title": "Trends",
+          "desc": "compared with the previous month and last year"
+        },
+        "announcements": {
+          "title": "Announcements",
+          "desc": "one message to every assembly in the city"
+        },
+        "coordinatorPack": {
+          "title": "Coordinator pack",
+          "desc": "several cities at a reduced price"
+        }
+      }
     },
     "free": {
-      "title": "Always free",
-      "badge": "Free",
-      "subtitle": "What is and will remain free, for every assembly and every member:",
-      "items": {
-        "study": "The Bertoua Message in your assembly: sessions, answers, correction, scores and progress",
-        "assembly": "Your assembly's life: meeting reports, journal, meetings and attendance",
-        "memberCare": "Pastoral care (Member Care) for your assembly",
-        "goals": "Goals & reporting (Five-Year Goal)",
-        "hierarchy": "The Hierarchy tree and goal submission status",
-        "events": "Creating, declaring and scheduling events, and their statistics up to city level",
-        "documents": "Reading shared documents",
-        "praise": "CMFIPraise: songs and projection"
+      "audience": "For every assembly",
+      "name": "Free",
+      "tagline": "Keep your assembly alive, with no time limit.",
+      "price": "€0",
+      "forever": "· forever",
+      "cta": "Create my assembly",
+      "features": {
+        "study": {
+          "title": "Bible study in meetings",
+          "desc": "questions, correction, scores and catch-up"
+        },
+        "assembly": {
+          "title": "Your assembly's life",
+          "desc": "meeting reports, attendance, breaking of bread"
+        },
+        "memberCare": {
+          "title": "Pastoral care",
+          "desc": "the flock of your assembly"
+        },
+        "goals": {
+          "title": "Goals and commitments",
+          "desc": "the five-year goal and the hierarchy tree"
+        },
+        "events": {
+          "title": "Events and evangelism",
+          "desc": "declare, schedule, totals up to city level"
+        },
+        "documents": {
+          "title": "Document library",
+          "desc": "teachings to read and share"
+        }
       }
     },
     "voucher": {
@@ -2777,14 +2883,13 @@
     },
     "pay": {
       "title": "Pay",
-      "loginToPay": "Sign in to pay",
       "cardMonthly": "Pay by card — {{price}}/month",
       "cardAnnual": "Pay by card — {{price}}/year",
       "mobileMoney": "Pay with Mobile Money",
       "mobileMoneyHint": "You chat with our relay on WhatsApp; they give you a code to enter in \"I have a code\".",
       "message": {
-        "caleb": "Hello, I would like to subscribe to the {{offer}} plan ({{localPrice}}). My Shephr username: {{username}}.",
-        "calebNoPrice": "Hello, I would like to subscribe to the {{offer}} plan. My Shephr username: {{username}}.",
+        "caleb": "Hello, I would like to subscribe to the {{offer}} plan ({{localPrice}}), {{period}} billing. My Shephr username: {{username}}.",
+        "calebNoPrice": "Hello, I would like to subscribe to the {{offer}} plan, {{period}} billing. My Shephr username: {{username}}.",
         "nehemie": "Hello, I would like to subscribe to the {{offer}} plan ({{localPrice}}) for the city of {{city}}, {{period}} billing. My Shephr username: {{username}}.",
         "nehemieNoPrice": "Hello, I would like to subscribe to the {{offer}} plan for the city of {{city}}, {{period}} billing. My Shephr username: {{username}}."
       },
@@ -2792,11 +2897,134 @@
         "MONTHLY": "monthly",
         "ANNUAL": "annual"
       },
-      "cancelled": "Payment cancelled. You can resume whenever you like."
+      "cancelled": "Payment cancelled. You can resume whenever you like.",
+      "loginToSubscribe": "Sign in to subscribe"
     },
     "handoff": {
       "connectedAs": "Signed in as {{username}}",
       "notYou": "Not you? Sign out"
-    }
+    },
+    "nav": {
+      "compare": "Compare",
+      "faq": "Questions",
+      "login": "Sign in",
+      "mySpace": "My space"
+    },
+    "hero": {
+      "eyebrow": "Shephr plans",
+      "title": "Feed the flock. See the whole work.",
+      "lead": "Everything an assembly needs to thrive stays free. When your responsibility grows — a hierarchy of leaders, a whole city —, Shephr gives you the big picture."
+    },
+    "soon": "Coming soon",
+    "annualBadge": "Annual: 2 months free",
+    "currency": {
+      "label": "Currency",
+      "eur": "€",
+      "usd": "$",
+      "eurOnly": "Price in euros only"
+    },
+    "price": {
+      "perMonthTtc": "/ month incl. VAT",
+      "orAnnual": "or {{price}} / year",
+      "local": "or {{label}} with Mobile Money",
+      "localNoLabel": "with Mobile Money through your local agent",
+      "noCommitment": "no commitment",
+      "perCity": "per city"
+    },
+    "period": {
+      "label": "Plan",
+      "MONTHLY": "Monthly",
+      "ANNUAL": "Annual"
+    },
+    "compare": {
+      "title": "Compare the plans",
+      "note": "The two plans are independent: Caleb follows your chain of leaders, Nehemiah follows a city.",
+      "head": {
+        "feature": "Feature",
+        "free": "Free",
+        "caleb": "Caleb",
+        "nehemie": "Nehemiah"
+      },
+      "rows": {
+        "assembly": {
+          "label": "Bible study, life and pastoral care of your assembly",
+          "free": "Yes",
+          "caleb": "Yes",
+          "nehemie": "Yes"
+        },
+        "basics": {
+          "label": "Goals, events, documents",
+          "free": "Yes",
+          "caleb": "Yes",
+          "nehemie": "Yes"
+        },
+        "stats": {
+          "label": "Statistics beyond your assembly",
+          "caleb": "Your chain",
+          "nehemie": "Your city"
+        },
+        "reports": {
+          "label": "Other assemblies' meeting reports",
+          "caleb": "Yes",
+          "nehemie": "Journal without names"
+        },
+        "memberCare": {
+          "label": "Pastoral care of other assemblies",
+          "caleb": "Yes"
+        },
+        "evangelism": {
+          "label": "Detailed evangelism",
+          "free": "Up to city level",
+          "caleb": "By leader",
+          "nehemie": "By assembly"
+        },
+        "exports": {
+          "label": "Exports and PDF reports",
+          "caleb": "PDF",
+          "nehemie": "CSV and PDF"
+        },
+        "shared": {
+          "label": "Shared by all the leaders",
+          "caleb": "Personal",
+          "nehemie": "Yes"
+        },
+        "storage": {
+          "label": "Document storage"
+        },
+        "monthly": {
+          "label": "Monthly report, trends, announcements"
+        }
+      }
+    },
+    "faq": {
+      "title": "Frequently asked questions",
+      "items": {
+        "which": {
+          "q": "Caleb or Nehemiah: which one should I choose?",
+          "a": "Caleb follows the leaders you supervise, wherever they are. Nehemiah follows every assembly in a city, whoever leads it. A city leader can have both."
+        },
+        "mobileMoney": {
+          "q": "How do I pay with Mobile Money?",
+          "a": "Tap “Pay with Mobile Money”: WhatsApp opens with a pre-filled message. Your local agent collects the payment and gives you a code to enter in “I have a code”."
+        },
+        "commitment": {
+          "q": "Am I committed?",
+          "a": "No. You can cancel at any time; tracking stays open until the end of the paid period."
+        },
+        "period": {
+          "q": "Monthly or annual?",
+          "a": "Both plans are available monthly or yearly. Yearly, two months are free, and with Mobile Money you only go through your local agent once a year."
+        },
+        "app": {
+          "q": "Will I find it in the app?",
+          "a": "Yes. The payment is linked to your account: everything is open in the app as soon as it is confirmed."
+        },
+        "study": {
+          "q": "Is Bible study paid?",
+          "a": "No. Doing the study in your assembly is free for everyone. Only tracking beyond your assembly is part of the plans."
+        }
+      }
+    },
+    "footer": "Verses: King James Version · Card payment secured by Stripe · Mobile Money through your local agent"
   }
 }

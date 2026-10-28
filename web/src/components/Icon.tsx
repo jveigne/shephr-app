@@ -65,6 +65,7 @@ const NAME_MAP: Record<string, IconName> = {
   megaphone: 'Megaphone',
   fileText: 'FileText',
   mark: 'Mark',
+  clock: 'Clock',
 };
 
 export function Icon({ name, size = 18, className, style }: IconProps) {

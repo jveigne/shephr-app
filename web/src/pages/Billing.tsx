@@ -33,7 +33,10 @@ import { saveBlob } from '../utils/download';
 
 type TFn = ReturnType<typeof useTranslation>['t'];
 
-/** Montant en centimes → « 99,99 € » selon la langue active (§6.4 : l'API ne formate jamais). */
+/**
+ * Montant en centimes → « 99,99 € » selon la langue active (§6.4 : l'API ne formate jamais).
+ * D-CUR-04 (JP 28/10) : toujours dans la devise de l'abonnement / de la facture (`54,99 $US`, `US$54.99`).
+ */
 export function fmtCents(cents: number, currency: string, lang: string): string {
   return new Intl.NumberFormat(lang.startsWith('en') ? 'en-GB' : 'fr-FR', { style: 'currency', currency }).format(
     cents / 100,

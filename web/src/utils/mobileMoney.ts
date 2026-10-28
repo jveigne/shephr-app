@@ -16,11 +16,12 @@ export function mobileMoneyUrl(baseUrl: string, message: string): string {
 /**
  * RG-PAY-24 : message dans la langue de l'interface — offre, prix local (s'il existe), ville et période
  * pour Néhémie, identifiant Shephr du compte. JAMAIS : jeton, UUID, téléphone, rôle, montant en euros.
+ * D-MKT-03 (JP 28/10, RG-MKT-08) : Caleb existe aussi à l'année — la période est obligatoire pour les deux.
  */
 export function mobileMoneyMessage(
   t: TFunction,
   input:
-    | { offer: 'caleb'; localPrice: string | null; username: string }
+    | { offer: 'caleb'; localPrice: string | null; username: string; period: BillingPeriod }
     | { offer: 'nehemie'; localPrice: string | null; username: string; city: string; period: BillingPeriod },
 ): string {
   const base = input.localPrice ? `offers.pay.message.${input.offer}` : `offers.pay.message.${input.offer}NoPrice`;
@@ -28,6 +29,7 @@ export function mobileMoneyMessage(
     offer: t(`offers.${input.offer}.short`),
     localPrice: input.localPrice ?? '',
     username: input.username,
-    ...(input.offer === 'nehemie' ? { city: input.city, period: t(`offers.pay.periodWord.${input.period}`) } : {}),
+    period: t(`offers.pay.periodWord.${input.period}`),
+    ...(input.offer === 'nehemie' ? { city: input.city } : {}),
   });
 }

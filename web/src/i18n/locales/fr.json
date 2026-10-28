@@ -365,7 +365,28 @@
         "accountDisabled": "Ce compte est désactivé ou en cours de suppression.",
         "notConfigured": "Cette méthode de connexion n'est pas encore disponible. Utilisez votre identifiant et votre mot de passe.",
         "unavailable": "Le service de connexion est momentanément indisponible. Veuillez réessayer.",
-        "generic": "La connexion a échoué. Veuillez réessayer."
+        "generic": "La connexion a échoué. Veuillez réessayer.",
+        "linkAmbiguous": "Plusieurs comptes correspondent à cette adresse. Connectez-vous avec votre identifiant et votre mot de passe.",
+        "tooManyRequests": "Trop de tentatives. Patientez une minute puis réessayez."
+      },
+      "linkConfirm": {
+        "title": "Confirmez votre adresse",
+        "intro": "Un compte Shephr utilise déjà cette adresse comme identifiant. Pour le relier à {{provider}}, saisissez le code envoyé à {{email}}.",
+        "code": "Code à 6 chiffres",
+        "codeHint": "Le code est valable 10 minutes. Pensez à regarder dans vos courriers indésirables.",
+        "submit": "Confirmer",
+        "checking": "Vérification…",
+        "resend": "Renvoyer le code",
+        "resendIn": "Renvoyer le code dans {{seconds}} s",
+        "resent": "Nouveau code envoyé.",
+        "cancel": "Annuler",
+        "notMine": "Ce n'est pas votre compte ? N'entrez pas le code et contactez le support.",
+        "errors": {
+          "codeInvalid": "Code incorrect.",
+          "challengeInvalid": "Ce code a expiré ou a été trop souvent mal saisi. Recommencez avec {{provider}}.",
+          "tooManyRequests": "Trop de tentatives. Patientez une minute puis réessayez.",
+          "generic": "La confirmation n'a pas abouti. Veuillez réessayer."
+        }
       }
     }
   },
@@ -2688,70 +2709,155 @@
     }
   },
   "offers": {
-    "title": "Les offres Shephr",
-    "subtitle": "L'essentiel reste gratuit pour chaque assemblée. Deux offres complètent Shephr pour suivre plus large : votre hiérarchie de dirigeants avec l'offre Caleb, toute votre ville avec l'offre Néhémie.",
     "seeOffers": "Voir les offres",
-    "independent": "Les deux offres sont indépendantes : Caleb suit votre chaîne de leadership, Néhémie suit une ville. L'une n'ouvre rien dans l'autre.",
-    "howToPay": "Deux façons de payer : par carte bancaire, en ligne, ou par Mobile Money auprès de votre relais, qui vous remet un code d'activation à saisir ici (« J'ai un code »).",
-    "bibleVersion": "Louis Segond 1910",
-    "forWhoTitle": "Pour qui",
-    "includedTitle": "Ce qui est inclus",
-    "orAnnual": "ou {{price}} / an",
     "priceUnavailable": "Prix momentanément indisponible.",
     "noAccount": "Pas encore de compte ?",
     "caleb": {
       "name": "Offre Caleb",
-      "tagline": "Le suivi de ma hiérarchie",
+      "tagline": "Voyez tout votre leadership, d'un coup d'œil.",
       "verse": "« Donne-moi donc cette montagne »",
       "verseRef": "Josué 14 : 12",
-      "forWho": "Pour chaque dirigeant, le long de sa chaîne de leadership : les dirigeants qu'il supervise et leurs assemblées, où qu'elles soient. Ce n'est pas la géographie qui compte, mais votre hiérarchie. Chacun s'abonne pour lui-même.",
-      "included": {
-        "reports": "Les comptes rendus et le journal de toutes les assemblées de votre chaîne (rédaction si vous en êtes le dirigeant)",
-        "stats": "Les statistiques de vie d'assemblée : réunions, présences, fraction du pain, alerte « sans compte rendu depuis 3 semaines »",
-        "journal": "Le journal PDF consolidé de votre hiérarchie",
-        "study": "L'avancement du Message de Bertoua, assemblée par assemblée",
-        "memberCare": "Le suivi pastoral (Member Care) des assemblées de votre chaîne"
-      },
-      "priceNote": "TTC · pour votre compte uniquement · sans engagement",
       "active": "Activée pour votre compte",
       "short": "Caleb",
-      "reserved": "Cette offre est réservée aux dirigeants."
+      "reserved": "Cette offre est réservée aux dirigeants.",
+      "audience": "Pour chaque dirigeant",
+      "scope": "Suit votre <strong>chaîne de leadership</strong> : les dirigeants que vous supervisez et leurs assemblées, où qu'elles soient.",
+      "loginHint": "En un clic avec Google ou Apple. Ensuite : carte bancaire, Mobile Money ou code.",
+      "features": {
+        "dashboard": {
+          "title": "Tableau de bord de votre hiérarchie",
+          "desc": "réunions, présences, fraction du pain, période par période"
+        },
+        "alerts": {
+          "title": "Alertes",
+          "desc": "les assemblées sans compte rendu depuis 3 semaines remontent toutes seules"
+        },
+        "teaching": {
+          "title": "Suivi de l'enseignement",
+          "desc": "où en est chaque assemblée, leçon par leçon"
+        },
+        "evangelism": {
+          "title": "Évangélisation",
+          "desc": "actions, participants et invités, par dirigeant"
+        },
+        "memberCare": {
+          "title": "Suivi pastoral",
+          "desc": "les brebis de toutes les assemblées de votre chaîne"
+        },
+        "pdf": {
+          "title": "Rapport PDF prêt à partager",
+          "desc": "à imprimer ou à envoyer"
+        },
+        "monthlyEmail": {
+          "title": "Rapport mensuel par email",
+          "desc": "votre mois en une minute, chaque 1er du mois"
+        },
+        "trends": {
+          "title": "Tendances",
+          "desc": "comparaison avec le mois précédent et l'an dernier"
+        },
+        "announcements": {
+          "title": "Annonces",
+          "desc": "un message à toute votre hiérarchie, reçu dans l'app"
+        },
+        "documents": {
+          "title": "Espace documentaire de votre hiérarchie",
+          "desc": "vos documents partagés avec vos dirigeants"
+        }
+      }
     },
     "nehemie": {
       "name": "Offre Néhémie",
-      "tagline": "Le suivi de toute ma ville",
+      "tagline": "Pilotez toute votre ville.",
       "verse": "« Levons-nous, et bâtissons ! »",
       "verseRef": "Néhémie 2 : 18",
-      "forWho": "Pour le pasteur et les responsables de la ville : toutes les assemblées de la ville, quel que soit leur dirigeant. Un seul abonnement par ville, partagé par tous ses responsables.",
-      "included": {
-        "study": "Le suivi du Message de Bertoua dans toute la ville : assemblées et leçons, membres enseignés ou non, statistiques, exports CSV et PDF",
-        "journal": "Le journal de la ville : statistiques et journal PDF consolidé des comptes rendus, sans aucun nom de personne",
-        "events": "Les statistiques d'Évènements à l'intérieur de la ville, assemblée par assemblée",
-        "shared": "Une ville, tous ses responsables : le suivi est ouvert à chacun d'eux"
-      },
-      "priceNote": "TTC · pour toute la ville · sans engagement",
       "activeFor": "Activée pour : {{cities}}",
       "short": "Néhémie",
       "reserved": "Cette offre est réservée aux dirigeants de ville.",
       "city": "Ville",
-      "period": "Formule",
-      "monthly": "Mensuel",
-      "annual": "Annuel",
-      "alreadyActive": "Déjà actif"
+      "alreadyActive": "Déjà actif",
+      "audience": "Pour le pasteur et les responsables de la ville",
+      "scope": "Toutes les assemblées de <strong>la ville</strong>, quel que soit leur dirigeant. Un abonnement, partagé par tous les responsables.",
+      "loginHint": "En un clic avec Google ou Apple. Vous choisirez ensuite votre ville parmi celles dont vous êtes responsable.",
+      "features": {
+        "cityStats": {
+          "title": "Statistiques de la ville",
+          "desc": "assemblée par assemblée"
+        },
+        "teaching": {
+          "title": "Suivi de l'enseignement",
+          "desc": "membres enseignés ou non, leçons manquées"
+        },
+        "evangelism": {
+          "title": "Évangélisation de la ville",
+          "desc": "le détail de chaque assemblée, pas un seul total"
+        },
+        "journal": {
+          "title": "Journal de la ville",
+          "desc": "sans aucun nom de personne : la confidentialité est respectée"
+        },
+        "exports": {
+          "title": "Exports Excel (CSV) et PDF",
+          "desc": "pour vos réunions et vos rapports"
+        },
+        "shared": {
+          "title": "Un abonnement, tous les responsables",
+          "desc": "le suivi est ouvert à chacun d'eux"
+        },
+        "storage": {
+          "title": "Stockage documentaire",
+          "desc": "à l'échelle de l'assemblée, de la ville et du pays"
+        },
+        "monthlyEmail": {
+          "title": "Rapport mensuel par email",
+          "desc": "la ville en une minute, chaque 1er du mois"
+        },
+        "trends": {
+          "title": "Tendances",
+          "desc": "comparaison avec le mois précédent et l'an dernier"
+        },
+        "announcements": {
+          "title": "Annonces",
+          "desc": "un message à toutes les assemblées de la ville"
+        },
+        "coordinatorPack": {
+          "title": "Pack coordinateur",
+          "desc": "plusieurs villes à prix réduit"
+        }
+      }
     },
     "free": {
-      "title": "Toujours gratuit",
-      "badge": "Gratuit",
-      "subtitle": "Ce qui est et restera gratuit, pour chaque assemblée et chaque membre :",
-      "items": {
-        "study": "Le Message de Bertoua dans votre assemblée : séances, réponses, correction, notes et avancement",
-        "assembly": "La vie de votre assemblée : comptes rendus, journal, réunions et présences",
-        "memberCare": "Le suivi pastoral (Member Care) de votre assemblée",
-        "goals": "Objectifs & reporting (But Quinquennal)",
-        "hierarchy": "L'arbre de la Hiérarchie et l'état de soumission des objectifs",
-        "events": "Créer, déclarer et programmer des évènements, et leurs statistiques jusqu'au niveau de la ville",
-        "documents": "La lecture des documents partagés",
-        "praise": "CMFIPraise : chants et projection"
+      "audience": "Pour toutes les assemblées",
+      "name": "Gratuit",
+      "tagline": "Faire vivre son assemblée, sans limite de temps.",
+      "price": "0 €",
+      "forever": "· pour toujours",
+      "cta": "Créer mon assemblée",
+      "features": {
+        "study": {
+          "title": "L'étude biblique en réunion",
+          "desc": "questions, correction, notes et rattrapage"
+        },
+        "assembly": {
+          "title": "La vie de son assemblée",
+          "desc": "comptes rendus, présences, fraction du pain"
+        },
+        "memberCare": {
+          "title": "Le suivi pastoral",
+          "desc": "les brebis de son assemblée"
+        },
+        "goals": {
+          "title": "Objectifs et engagements",
+          "desc": "le but quinquennal et l'arbre de la hiérarchie"
+        },
+        "events": {
+          "title": "Évènements et évangélisation",
+          "desc": "déclarer, programmer, totaux jusqu'à la ville"
+        },
+        "documents": {
+          "title": "Bibliothèque de documents",
+          "desc": "enseignements à lire et à partager"
+        }
       }
     },
     "voucher": {
@@ -2777,14 +2883,13 @@
     },
     "pay": {
       "title": "Payer",
-      "loginToPay": "Se connecter pour payer",
       "cardMonthly": "Payer par carte — {{price}}/mois",
       "cardAnnual": "Payer par carte — {{price}}/an",
       "mobileMoney": "Payer par Mobile Money",
       "mobileMoneyHint": "Vous échangez sur WhatsApp avec notre relais ; il vous remet un code à saisir dans « J'ai un code ».",
       "message": {
-        "caleb": "Bonjour, je souhaite souscrire l'offre {{offer}} ({{localPrice}}). Mon identifiant Shephr : {{username}}.",
-        "calebNoPrice": "Bonjour, je souhaite souscrire l'offre {{offer}}. Mon identifiant Shephr : {{username}}.",
+        "caleb": "Bonjour, je souhaite souscrire l'offre {{offer}} ({{localPrice}}), en formule {{period}}. Mon identifiant Shephr : {{username}}.",
+        "calebNoPrice": "Bonjour, je souhaite souscrire l'offre {{offer}}, en formule {{period}}. Mon identifiant Shephr : {{username}}.",
         "nehemie": "Bonjour, je souhaite souscrire l'offre {{offer}} ({{localPrice}}) pour la ville de {{city}}, en formule {{period}}. Mon identifiant Shephr : {{username}}.",
         "nehemieNoPrice": "Bonjour, je souhaite souscrire l'offre {{offer}} pour la ville de {{city}}, en formule {{period}}. Mon identifiant Shephr : {{username}}."
       },
@@ -2792,11 +2897,134 @@
         "MONTHLY": "mensuelle",
         "ANNUAL": "annuelle"
       },
-      "cancelled": "Paiement annulé. Vous pouvez reprendre quand vous voulez."
+      "cancelled": "Paiement annulé. Vous pouvez reprendre quand vous voulez.",
+      "loginToSubscribe": "Se connecter pour s'abonner"
     },
     "handoff": {
       "connectedAs": "Connecté en tant que {{username}}",
       "notYou": "Ce n'est pas vous ? Se déconnecter"
-    }
+    },
+    "nav": {
+      "compare": "Comparer",
+      "faq": "Questions",
+      "login": "Se connecter",
+      "mySpace": "Mon espace"
+    },
+    "hero": {
+      "eyebrow": "Offres Shephr",
+      "title": "Paissez le troupeau. Voyez toute l'œuvre.",
+      "lead": "Tout ce qu'il faut pour faire vivre une assemblée reste gratuit. Quand votre responsabilité s'élargit — une hiérarchie de dirigeants, une ville entière —, Shephr vous donne la vue d'ensemble."
+    },
+    "soon": "À venir",
+    "annualBadge": "Annuel : 2 mois offerts",
+    "currency": {
+      "label": "Devise",
+      "eur": "€",
+      "usd": "$",
+      "eurOnly": "Prix en euros uniquement"
+    },
+    "price": {
+      "perMonthTtc": "/ mois TTC",
+      "orAnnual": "ou {{price}} / an",
+      "local": "ou {{label}} en Mobile Money",
+      "localNoLabel": "en Mobile Money auprès de votre relais",
+      "noCommitment": "sans engagement",
+      "perCity": "par ville"
+    },
+    "period": {
+      "label": "Formule",
+      "MONTHLY": "Mensuel",
+      "ANNUAL": "Annuel"
+    },
+    "compare": {
+      "title": "Comparer les offres",
+      "note": "Les deux offres sont indépendantes : Caleb suit votre chaîne de dirigeants, Néhémie suit une ville.",
+      "head": {
+        "feature": "Fonctionnalité",
+        "free": "Gratuit",
+        "caleb": "Caleb",
+        "nehemie": "Néhémie"
+      },
+      "rows": {
+        "assembly": {
+          "label": "Étude biblique, vie et suivi pastoral de son assemblée",
+          "free": "Oui",
+          "caleb": "Oui",
+          "nehemie": "Oui"
+        },
+        "basics": {
+          "label": "Objectifs, évènements, documents",
+          "free": "Oui",
+          "caleb": "Oui",
+          "nehemie": "Oui"
+        },
+        "stats": {
+          "label": "Statistiques au-delà de son assemblée",
+          "caleb": "Votre chaîne",
+          "nehemie": "Votre ville"
+        },
+        "reports": {
+          "label": "Comptes rendus des autres assemblées",
+          "caleb": "Oui",
+          "nehemie": "Journal sans noms"
+        },
+        "memberCare": {
+          "label": "Suivi pastoral des autres assemblées",
+          "caleb": "Oui"
+        },
+        "evangelism": {
+          "label": "Évangélisation détaillée",
+          "free": "Jusqu'à la ville",
+          "caleb": "Par dirigeant",
+          "nehemie": "Par assemblée"
+        },
+        "exports": {
+          "label": "Exports et rapports PDF",
+          "caleb": "PDF",
+          "nehemie": "CSV et PDF"
+        },
+        "shared": {
+          "label": "Partagé par tous les responsables",
+          "caleb": "Personnel",
+          "nehemie": "Oui"
+        },
+        "storage": {
+          "label": "Stockage documentaire"
+        },
+        "monthly": {
+          "label": "Rapport mensuel, tendances, annonces"
+        }
+      }
+    },
+    "faq": {
+      "title": "Questions fréquentes",
+      "items": {
+        "which": {
+          "q": "Caleb ou Néhémie : laquelle choisir ?",
+          "a": "Caleb suit les dirigeants que vous supervisez, où qu'ils soient. Néhémie suit toutes les assemblées d'une ville, quel que soit leur dirigeant. Un dirigeant de ville peut avoir les deux."
+        },
+        "mobileMoney": {
+          "q": "Comment payer par Mobile Money ?",
+          "a": "Touchez « Payer par Mobile Money » : WhatsApp s'ouvre avec un message déjà rempli. Votre relais encaisse et vous remet un code à saisir dans « J'ai un code »."
+        },
+        "commitment": {
+          "q": "Suis-je engagé ?",
+          "a": "Non. L'abonnement se résilie à tout moment ; le suivi reste ouvert jusqu'à la fin de la période payée."
+        },
+        "period": {
+          "q": "Mensuel ou annuel ?",
+          "a": "Les deux offres existent au mois ou à l'année. À l'année, deux mois sont offerts, et en Mobile Money vous ne passez par votre relais qu'une fois par an."
+        },
+        "app": {
+          "q": "Est-ce que je le retrouve dans l'application ?",
+          "a": "Oui. Le paiement est rattaché à votre compte : tout est ouvert dans l'app dès la confirmation."
+        },
+        "study": {
+          "q": "L'étude biblique est-elle payante ?",
+          "a": "Non. Faire l'étude dans son assemblée est gratuit pour tous. Seul le suivi au-delà de son assemblée fait partie des offres."
+        }
+      }
+    },
+    "footer": "Versets : Louis Segond 1910 · Paiement par carte sécurisé par Stripe · Mobile Money auprès de votre relais"
   }
 }

@@ -27,6 +27,23 @@ export type BillingPeriod = 'MONTHLY' | 'ANNUAL';
  * `/offres?offer=caleb|nehemie&annule=1` (offre déduite du `planCode`). Absent → retours historiques.
  */
 export type CheckoutOrigin = 'OFFERS';
+/**
+ * Mirrors com.excellence.back.billing.BillingCurrency — D-CUR-02 / 04, JP 28/10 (lève D-ABO-03 « EUR
+ * seul » pour les plans) : devise de la caisse et de l'aperçu de code. Prix USD FIXES saisis au
+ * back-office, aucune conversion (RG-CUR-04). Absent à l'envoi = EUR (RG-CUR-06).
+ */
+export type BillingCurrency = 'EUR' | 'USD';
+
+/**
+ * Mirrors com.excellence.back.billing.BillingDtos.PlanPrice — D-CUR-02, JP 28/10 : un prix par devise
+ * proposée, EUR toujours présent et en premier, USD seulement si l'offre a un prix USD. Centimes TTC du
+ * serveur, jamais recalculés (RG-ABO-05). `annualPriceCents` null = pas d'annuel dans cette devise.
+ */
+export interface PlanPrice {
+  currency: BillingCurrency;
+  monthlyPriceCents: number;
+  annualPriceCents: number | null;
+}
 
 /** Mirrors com.excellence.back.billing.BillingDtos.PromoPreview */
 export interface PromoPreview {
@@ -103,10 +120,12 @@ const BASE = '/api/church/billing';
  * `period` facultatif (MONTHLY par défaut côté serveur) ; ANNUAL sur une offre sans prix annuel → 422
  * `BILLING_PERIOD_UNSUPPORTED`.
  */
-export async function previewPromo(code: string, offerCode: string, period?: BillingPeriod) {
+export async function previewPromo(code: string, offerCode: string, period?: BillingPeriod, currency?: BillingCurrency) {
+  // D-CUR-04 (JP 28/10, RG-CUR-09) : `currency` facultatif (EUR côté serveur) ; offre sans prix dans
+  // cette devise → 422 `BILLING_CURRENCY_UNSUPPORTED`. `PromoPreview.currency` = devise demandée.
   const { data } = await apiClient.get<PromoPreview>(
     `${BASE}/promo-codes/${encodeURIComponent(code)}/preview`,
-    { params: period ? { offer: offerCode, period } : { offer: offerCode } },
+    { params: { offer: offerCode, ...(period ? { period } : {}), ...(currency ? { currency } : {}) } },
   );
   return data;
 }
@@ -119,7 +138,7 @@ export async function previewPromo(code: string, offerCode: string, period?: Bil
 export async function checkout(
   offerCode: string,
   promoCode?: string | null,
-  plan?: { localityId?: string | null; period: BillingPeriod; origin?: CheckoutOrigin },
+  plan?: { localityId?: string | null; period: BillingPeriod; origin?: CheckoutOrigin; currency?: BillingCurrency },
 ) {
   // Plan PERSONNEL (`plan_scope = USER`, « Suivi de ma hiérarchie », JP 27/10) : `period` seul, SANS
   // `localityId` (400 `PERSONAL_PLAN_LOCALITY_FORBIDDEN` sinon) ; MONTHLY seulement.
@@ -129,6 +148,9 @@ export async function checkout(
     ...(plan ? { period: plan.period } : {}),
     ...(plan?.localityId ? { localityId: plan.localityId } : {}),
     ...(plan?.origin ? { origin: plan.origin } : {}),
+    // D-CUR-04 (JP 28/10, RG-CUR-08 / 10) : devise choisie ; Stripe reçoit `price_data` dans cette
+    // devise et l'abonnement la garde en instantané. Absent = EUR (RG-CUR-06).
+    ...(plan?.currency ? { currency: plan.currency } : {}),
   });
   return data;
 }
@@ -177,7 +199,8 @@ export async function downloadInvoicePdf(number: string) {
  * Mirrors com.excellence.back.billing.BillingDtos.PublicPlan — §3.8 du plan 05 : plans ACTIFS seulement
  * (Caleb `DIRIGEANT_HIERARCHIE`, Néhémie `EGLISE_VILLE` ; jamais `DONS`). Centimes TTC du serveur,
  * formatés côté client, jamais recalculés (RG-ABO-05). `localPriceLabel` = texte libre du back-office
- * (ex. « 1 000 FCFA / mois »), information seulement (D-OFF-08).
+ * (ex. « 1 000 FCFA / mois »), information seulement (D-OFF-08). `annualPriceCents` : renseigné pour
+ * tout plan qui a une formule annuelle, Caleb compris depuis D-MKT-03 (JP 28/10).
  */
 export interface PublicPlan {
   planCode: string;
@@ -191,6 +214,11 @@ export interface PublicPlan {
   currency: string;
   localPriceLabel: string | null;
   entitlementCodes: string[];
+  /**
+   * D-CUR-02 (JP 28/10) — prix par devise (EUR en premier, puis USD si l'offre en a un). Les champs
+   * historiques ci-dessus restent le prix EUR. Facultatif : absent d'un serveur antérieur = EUR seul.
+   */
+  prices?: PlanPrice[];
 }
 
 /** §3.8 — `GET /api/public/billing/plans`, public (jeton ignoré, comme `/api/public/documents/**`). */

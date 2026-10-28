@@ -15,9 +15,11 @@ import {
   type PersonalPlan,
   type PlanOffer,
 } from '../services/entitlementsApi';
-import { checkout, openBillingPortal, previewPromo, type BillingPeriod, type PromoPreview } from '../services/billingApi';
+import { checkout, openBillingPortal, previewPromo, type BillingCurrency, type BillingPeriod, type PromoPreview } from '../services/billingApi';
 import { billingErrMsg, fmtCents, fmtDay } from '../pages/Billing';
 import { LocalPriceLine, VoucherRedeemModal } from './VoucherRedeemModal';
+import { CurrencyToggle, EurOnlyNote } from './CurrencyToggle';
+import { centsFor, currenciesOf, hasAnnualPrice, priceFor, pricesOf, useCurrencyChoice } from '../utils/currency';
 
 // ---------------------------------------------------------------------------------------------
 //  Écran de verrou « Fonctionnalité incluse dans l'abonnement de votre église » — lot « pro-plan »
@@ -248,32 +250,48 @@ function SubscribeForm({ localityId, plan, cityName }: { localityId: string; pla
   const lang = i18n.language;
   const [period, setPeriod] = useState<BillingPeriod>('MONTHLY');
   const [code, setCode] = useState('');
-  const [preview, setPreview] = useState<{ period: BillingPeriod; p: PromoPreview } | null>(null);
+  const [preview, setPreview] = useState<{ period: BillingPeriod; currency: BillingCurrency; p: PromoPreview } | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
   const normalized = code.trim().toUpperCase();
-  const hasAnnual = plan.annualPriceCents != null && plan.annualPriceCents > 0;
+  // D-CUR-03 / RG-CUR-20 (JP 28/10) : ligne `PlanPrice` de la devise choisie, sinon EUR (mention).
+  const [chosen] = useCurrencyChoice();
+  const prices = pricesOf(plan);
+  const sel = priceFor(prices, chosen);
+  const currency: BillingCurrency = sel?.price.currency ?? 'EUR';
+  // RG-CUR-22 : l'annuel doit exister DANS la devise affichée.
+  const hasAnnual = hasAnnualPrice(sel?.price);
+  const effPeriod: BillingPeriod = hasAnnual ? period : 'MONTHLY';
 
-  // RG-ABO-05 : prix TOUJOURS en centimes du serveur — catalogue (`plans[0]`) ou aperçu du code.
-  const listCents = period === 'ANNUAL' && hasAnnual ? (plan.annualPriceCents as number) : plan.monthlyPriceCents;
-  const promo = preview && preview.period === period ? preview.p : null;
+  // RG-ABO-05 : prix TOUJOURS en centimes du serveur — catalogue (`plans[0].prices`) ou aperçu du code.
+  const listCents = sel ? centsFor(sel.price, effPeriod) : plan.monthlyPriceCents;
+  const promo = preview && preview.period === effPeriod && preview.currency === currency ? preview.p : null;
   const priceCents = promo ? promo.priceCents : listCents;
-  const priceLabel = fmtCents(priceCents, promo?.currency ?? plan.currency, lang);
+  const priceLabel = fmtCents(priceCents, promo?.currency ?? currency, lang);
 
   const previewM = useMutation({
-    mutationFn: (forPeriod: BillingPeriod) => previewPromo(normalized, plan.offerCode, forPeriod),
+    mutationFn: (v: { period: BillingPeriod; currency: BillingCurrency }) => previewPromo(normalized, plan.offerCode, v.period, v.currency),
     onMutate: () => {
       setPromoError(null);
       setPreview(null);
     },
-    onSuccess: (p, forPeriod) => setPreview({ period: forPeriod, p }),
+    onSuccess: (p, v) => setPreview({ period: v.period, currency: v.currency, p }),
     onError: (err) => setPromoError(billingErrMsg(err, t)),
   });
+
+  // RG-CUR-21 : changer de devise relance l'aperçu d'un code déjà appliqué (il ne vaut que pour sa devise).
+  const appliedFor = preview ? `${preview.period}/${preview.currency}` : null;
+  useEffect(() => {
+    if (!appliedFor || !normalized || previewM.isPending) return;
+    if (appliedFor !== `${effPeriod}/${currency}`) previewM.mutate({ period: effPeriod, currency });
+    // Seule la devise déclenche ici ; la période relance déjà l'aperçu à son clic.
+  }, [currency]);
 
   // RG-ABO-05 / §14.2 n°6 : le code promo ne part à la caisse QUE s'il a été appliqué (aperçu valide)
   // pour la période affichée — le prix du bouton est alors exactement celui facturé par Stripe. Un code
   // saisi mais non appliqué (ou refusé) ne part pas : la souscription se fait au prix catalogue affiché.
+  // D-CUR-04 (JP 28/10) : la caisse part dans la devise AFFICHÉE (EUR si la devise choisie manque).
   const checkoutM = useMutation({
-    mutationFn: () => checkout(plan.offerCode, promo ? normalized : null, { localityId, period }),
+    mutationFn: () => checkout(plan.offerCode, promo ? normalized : null, { localityId, period: effPeriod, currency }),
     onSuccess: (res) => window.location.assign(res.url),
   });
 
@@ -282,6 +300,8 @@ function SubscribeForm({ localityId, plan, cityName }: { localityId: string; pla
       <p style={{ margin: 0, color: 'var(--ink-600)', fontSize: 14, lineHeight: 1.5 }}>
         {t('cityStudy.lock.subscribeIntro', { plan: plan.name, city: cityName ?? '—' })}
       </p>
+      {/* D-CUR-03 (JP 28/10, RG-CUR-19) : sélecteur € / $ au-dessus de Mensuel / Annuel. */}
+      <CurrencyToggle available={currenciesOf(plan)} />
       {hasAnnual && (
         <div role="radiogroup" aria-label={t('cityStudy.lock.period')} style={{ display: 'flex', gap: 6 }}>
           {(['MONTHLY', 'ANNUAL'] as const).map((p) => (
@@ -289,14 +309,14 @@ function SubscribeForm({ localityId, plan, cityName }: { localityId: string; pla
               key={p}
               type="button"
               role="radio"
-              aria-checked={period === p}
+              aria-checked={effPeriod === p}
               onClick={() => {
-                if (p === period) return;
+                if (p === effPeriod) return;
                 setPeriod(p);
                 // Changement de période : l'aperçu ne vaut que pour sa période, on le refait pour la nouvelle.
-                if (preview && normalized) previewM.mutate(p);
+                if (preview && normalized) previewM.mutate({ period: p, currency });
               }}
-              className={`btn sm ${period === p ? 'primary' : 'secondary'}`}
+              className={`btn sm ${effPeriod === p ? 'primary' : 'secondary'}`}
               style={{ flex: 1, justifyContent: 'center' }}
             >
               {t(`cityStudy.lock.periods.${p}`)}
@@ -306,18 +326,19 @@ function SubscribeForm({ localityId, plan, cityName }: { localityId: string; pla
       )}
       <div>
         <span style={{ fontFamily: 'var(--font-serif)', fontSize: 26, color: 'var(--green-700)' }}>{priceLabel}</span>
-        <span style={{ color: 'var(--ink-500)', fontSize: 13, marginLeft: 6 }}>{t(`billing.period.${period}`)}</span>
+        <span style={{ color: 'var(--ink-500)', fontSize: 13, marginLeft: 6 }}>{t(`billing.period.${effPeriod}`)}</span>
         {promo && (
           <span style={{ marginLeft: 8 }}>
             <Badge tone="earth">-{promo.percentOff} %</Badge>
           </span>
         )}
         <div style={{ color: 'var(--ink-500)', fontSize: 12 }}>{t('billing.offers.vatIncluded', { rate: plan.vatRate })}</div>
+        <EurOnlyNote show={!!sel?.fallback} />
       </div>
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (normalized) previewM.mutate(period);
+          if (normalized) previewM.mutate({ period: effPeriod, currency });
         }}
         style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}
       >
@@ -348,11 +369,11 @@ function SubscribeForm({ localityId, plan, cityName }: { localityId: string; pla
       >
         {checkoutM.isPending
           ? t('billing.offers.redirecting')
-          : t(period === 'ANNUAL' ? 'cityStudy.lock.subscribeAnnual' : 'cityStudy.lock.subscribeMonthly', { price: priceLabel })}
+          : t(effPeriod === 'ANNUAL' ? 'cityStudy.lock.subscribeAnnual' : 'cityStudy.lock.subscribeMonthly', { price: priceLabel })}
       </Button>
       {checkoutM.isError && <p style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>{billingErrMsg(checkoutM.error, t)}</p>}
       <p style={{ margin: 0, color: 'var(--ink-400)', fontSize: 12 }}>{t('billing.offers.stripeNote')}</p>
-      {/* D-OFF-08 (JP 27/10) : le web affiche TOUJOURS les deux voies — carte en € et code Mobile Money. */}
+      {/* D-OFF-08 (JP 27/10) : le web affiche TOUJOURS les deux voies — carte (€ ou $, D-CUR-03) et code Mobile Money. */}
       <VoucherEntry plan="nehemie" localityId={localityId} cityName={cityName} localPriceLabel={plan.localPriceLabel} />
     </div>
   );
@@ -365,8 +386,9 @@ function SubscribeForm({ localityId, plan, cityName }: { localityId: string; pla
 //  ville n'ouvre rien ici, et inversement. Chaque dirigeant paie pour LUI-MÊME.
 //  - UN seul verrou pour les deux blocs payants (Vie d'assemblée + Le Message de Bertoua), aperçu
 //    flouté FICTIF (jamais de vraies données).
-//  - `canSubscribe` (serveur) : « S'abonner — {prix}/mois » → `POST /billing/checkout` SANS
-//    `localityId`, `period: MONTHLY` (mensuel seulement) ; prix = centimes du serveur (RG-ABO-05).
+//  - `canSubscribe` (serveur) : « S'abonner — {prix}/mois|/an » → `POST /billing/checkout` SANS
+//    `localityId` ; Mensuel / Annuel si l'offre a un prix annuel (D-MKT-03, JP 28/10 — lève
+//    « mensuel seulement » de D-ABO-35, RG-MKT-30) ; prix = centimes du serveur (RG-ABO-05).
 //  - Sinon : « Demandez l'activation à l'équipe Shephr. » — aucun bouton.
 //  - Abonné et payeur : statut + « Gérer l'abonnement » (portail Stripe, retour sur /hierarchy/vie —
 //    D-HIE-01, JP 28/10 : page 3 « Vie de mon leadership »).
@@ -430,9 +452,14 @@ function PersonalLockActions({ plan }: { plan: PersonalPlan | null }) {
     mutationFn: (reference: string) => openBillingPortal(reference),
     onSuccess: (res) => window.location.assign(res.url),
   });
-  // Mensuel seulement (JP 27/10) : jamais de `localityId`, jamais d'ANNUAL.
+  // D-MKT-03 (JP 28/10, RG-MKT-30) : Mensuel ou Annuel ; jamais de `localityId`
+  // (400 `PERSONAL_PLAN_LOCALITY_FORBIDDEN`).
+  const [period, setPeriod] = useState<BillingPeriod>('MONTHLY');
+  // D-CUR-03 / 04 (JP 28/10) : devise choisie (partagée avec /offres) envoyée à la caisse.
+  const [chosen] = useCurrencyChoice();
   const checkoutM = useMutation({
-    mutationFn: (offerCode: string) => checkout(offerCode, null, { period: 'MONTHLY' }),
+    mutationFn: (v: { offerCode: string; period: BillingPeriod; currency: BillingCurrency }) =>
+      checkout(v.offerCode, null, { period: v.period, currency: v.currency }),
     onSuccess: (res) => window.location.assign(res.url),
   });
 
@@ -456,22 +483,59 @@ function PersonalLockActions({ plan }: { plan: PersonalPlan | null }) {
   if (!plan || !plan.canSubscribe) {
     return <p style={{ margin: 0, color: 'var(--ink-600)', fontSize: 14 }}>{t('hierarchy.lock.askShephr')}</p>;
   }
-  // RG-ABO-05 : prix TOUJOURS en centimes du serveur, jamais recalculé.
-  const price = fmtCents(plan.monthlyPriceCents, plan.currency, i18n.language);
+  // RG-ABO-05 : prix TOUJOURS en centimes du serveur, jamais recalculé. RG-CUR-20 / 22 (JP 28/10) :
+  // ligne de la devise choisie (sinon EUR, avec mention) ; l'annuel doit exister dans cette devise.
+  const sel = priceFor(pricesOf(plan), chosen);
+  const currency: BillingCurrency = sel?.price.currency ?? 'EUR';
+  const hasAnnual = hasAnnualPrice(sel?.price);
+  const effPeriod: BillingPeriod = hasAnnual ? period : 'MONTHLY';
+  const cents = sel ? centsFor(sel.price, effPeriod) : plan.monthlyPriceCents;
+  const price = fmtCents(cents, currency, i18n.language);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* D-CUR-03 (JP 28/10, RG-CUR-19) : sélecteur € / $ au-dessus de Mensuel / Annuel. */}
+      <CurrencyToggle available={currenciesOf(plan)} />
+      {hasAnnual && (
+        <div role="radiogroup" aria-label={t('cityStudy.lock.period')} style={{ display: 'flex', gap: 6 }}>
+          {(['MONTHLY', 'ANNUAL'] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              role="radio"
+              aria-checked={effPeriod === p}
+              onClick={() => {
+                setPeriod(p);
+                checkoutM.reset();
+              }}
+              className={`btn sm ${effPeriod === p ? 'primary' : 'secondary'}`}
+              style={{ flex: 1, justifyContent: 'center' }}
+            >
+              {t(`cityStudy.lock.periods.${p}`)}
+            </button>
+          ))}
+        </div>
+      )}
       <div>
         <span style={{ fontFamily: 'var(--font-serif)', fontSize: 26, color: 'var(--green-700)' }}>{price}</span>
-        <span style={{ color: 'var(--ink-500)', fontSize: 13, marginLeft: 6 }}>{t('billing.period.MONTHLY')}</span>
+        <span style={{ color: 'var(--ink-500)', fontSize: 13, marginLeft: 6 }}>{t(`billing.period.${effPeriod}`)}</span>
+        {/* D-MKT-04 (JP 28/10) : pastille « Annuel : 2 mois offerts » quand l'annuel existe. */}
+        {hasAnnual && (
+          <span style={{ marginLeft: 8 }}>
+            <Badge tone="earth">{t('offers.annualBadge')}</Badge>
+          </span>
+        )}
         <div style={{ color: 'var(--ink-500)', fontSize: 12 }}>{t('hierarchy.lock.vatIncluded', { plan: plan.offerName })}</div>
+        <EurOnlyNote show={!!sel?.fallback} />
       </div>
       <Button
         variant="primary"
         style={{ justifyContent: 'center' }}
         disabled={checkoutM.isPending}
-        onClick={() => checkoutM.mutate(plan.offerCode)}
+        onClick={() => checkoutM.mutate({ offerCode: plan.offerCode, period: effPeriod, currency })}
       >
-        {checkoutM.isPending ? t('billing.offers.redirecting') : t('cityStudy.lock.subscribeMonthly', { price })}
+        {checkoutM.isPending
+          ? t('billing.offers.redirecting')
+          : t(effPeriod === 'ANNUAL' ? 'cityStudy.lock.subscribeAnnual' : 'cityStudy.lock.subscribeMonthly', { price })}
       </Button>
       {checkoutM.isError && <p style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>{billingErrMsg(checkoutM.error, t)}</p>}
       <p style={{ margin: 0, color: 'var(--ink-400)', fontSize: 12 }}>{t('billing.offers.stripeNote')}</p>
@@ -515,6 +579,8 @@ export function HierarchySubscriptionStatus({ plan }: { plan: PersonalPlan | nul
     <div className="card" style={{ padding: '10px 14px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
       <Icon name="check" size={15} style={{ color: 'var(--ok)' }} />
       <strong style={{ fontSize: 13.5 }}>{plan.offerName}</strong>
+      {/* D-MKT-03 (JP 28/10, RG-MKT-30) : formule de l'abonnement (mensuelle ou annuelle). */}
+      {sub.billingPeriod && <span style={{ fontSize: 13, color: 'var(--ink-600)' }}>{t(`cityStudy.lock.periods.${sub.billingPeriod}`)}</span>}
       <Badge tone={sub.status === 'PAST_DUE' ? 'err' : sub.status === 'ACTIVE' ? 'ok' : 'gray'} dot>{t(`billing.status.${sub.status}`)}</Badge>
       {due && <span style={{ fontSize: 13, color: sub.status === 'PAST_DUE' ? 'var(--err)' : 'var(--ink-600)' }}>{due}</span>}
       {portalM.isError && <span style={{ color: 'var(--err)', fontSize: 13 }}>{billingErrMsg(portalM.error, t)}</span>}

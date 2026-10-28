@@ -98,7 +98,27 @@
         "ACCOUNT_DISABLED": "Ce compte est désactivé ou en cours de suppression.",
         "PROVIDER_NOT_CONFIGURED": "Cette méthode de connexion n'est pas encore disponible. Utilisez votre identifiant et votre mot de passe.",
         "PLAY_SERVICES_NOT_AVAILABLE": "Les services Google Play sont indisponibles ou à mettre à jour sur cet appareil.",
-        "generic": "La connexion a échoué. Veuillez réessayer."
+        "generic": "La connexion a échoué. Veuillez réessayer.",
+        "ACCOUNT_LINK_AMBIGUOUS": "Plusieurs comptes correspondent à cette adresse. Connectez-vous avec votre identifiant et votre mot de passe.",
+        "TOO_MANY_REQUESTS": "Trop de tentatives. Patientez une minute puis réessayez."
+      },
+      "linkConfirm": {
+        "title": "Confirmez votre adresse",
+        "intro": "Un compte Shephr utilise déjà cette adresse comme identifiant. Pour le relier à {{provider}}, saisissez le code envoyé à {{email}}.",
+        "code": "Code à 6 chiffres",
+        "submit": "Confirmer",
+        "checking": "Vérification…",
+        "resend": "Renvoyer le code",
+        "resendIn": "Renvoyer le code dans {{seconds}} s",
+        "resent": "Nouveau code envoyé.",
+        "cancel": "Annuler",
+        "notMine": "Ce n'est pas votre compte ? N'entrez pas le code et contactez le support.",
+        "errors": {
+          "LINK_CODE_INVALID": "Code incorrect.",
+          "LINK_CHALLENGE_INVALID": "Ce code a expiré ou a été trop souvent mal saisi. Recommencez avec {{provider}}.",
+          "TOO_MANY_REQUESTS": "Trop de tentatives. Patientez une minute puis réessayez.",
+          "generic": "La vérification a échoué. Veuillez réessayer."
+        }
       }
     }
   },

@@ -9,6 +9,8 @@ import { googleSignInEnabled, isAppleSignInAvailable } from '@/services/socialSi
 import { useAuth, type SocialLoginResult } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { MeResponse } from '@/services/authApi';
+import type { LinkConfirmationRequired } from '@/services/socialAuthApi';
+import LinkConfirmModal from '@/components/auth/LinkConfirmModal';
 
 interface Props {
   /** Session ouverte : même routage qu'après un login mot de passe. */
@@ -30,6 +32,10 @@ export default function SocialSignInButtons({ onSignedIn, disabled }: Props) {
   const { t } = useLanguage();
   const [appleAvailable, setAppleAvailable] = useState(false);
   const [pending, setPending] = useState<'apple' | 'google' | null>(null);
+  // D-MKT-05, JP 28/10 — défi de confirmation en cours (en mémoire seulement, RG-MKT-55).
+  const [link, setLink] = useState<{ provider: 'apple' | 'google'; challenge: LinkConfirmationRequired } | null>(
+    null,
+  );
 
   useEffect(() => {
     let active = true;
@@ -44,7 +50,7 @@ export default function SocialSignInButtons({ onSignedIn, disabled }: Props) {
   if (Platform.OS === 'web') return null;
   if (!appleAvailable && !googleSignInEnabled) return null;
 
-  const busy = disabled || pending !== null;
+  const busy = disabled || pending !== null || link !== null;
 
   const run = async (provider: 'apple' | 'google', action: () => Promise<SocialLoginResult>) => {
     if (busy) return;
@@ -53,6 +59,11 @@ export default function SocialSignInButtons({ onSignedIn, disabled }: Props) {
       const res = await action();
       // Feuille fermée par la personne : aucune alerte.
       if (res.status === 'cancelled') return;
+      // D-MKT-05 : compte trouvé par identifiant jamais prouvé → saisie du code, pas de session.
+      if (res.status === 'confirmation') {
+        setLink({ provider, challenge: res.challenge });
+        return;
+      }
       onSignedIn(res.me);
     } catch (e) {
       notify(t('auth.loginFailedTitle'), socialAuthErrorMessage(e, t));
@@ -106,6 +117,18 @@ export default function SocialSignInButtons({ onSignedIn, disabled }: Props) {
             </>
           )}
         </Pressable>
+      )}
+
+      {link && (
+        <LinkConfirmModal
+          challenge={link.challenge}
+          providerLabel={link.provider === 'apple' ? 'Apple' : 'Google'}
+          onSignedIn={(me) => {
+            setLink(null);
+            onSignedIn(me);
+          }}
+          onClose={() => setLink(null)}
+        />
       )}
 
       <View style={styles.dividerRow}>

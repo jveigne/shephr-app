@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AuthResponse } from '../services/authApi';
-import { loginWithAppleToken, loginWithGoogleToken } from '../services/socialAuthApi';
+import {
+  isLinkConfirmation,
+  loginWithAppleToken,
+  loginWithGoogleToken,
+  type LinkConfirmationRequired,
+  type SocialLoginResponse,
+} from '../services/socialAuthApi';
+import { LinkConfirmModal } from './LinkConfirmModal';
 import { APPLE_WEB, GOOGLE_WEB_CLIENT_ID } from '../config/oauth';
 import { loadScript } from '../utils/loadScript';
 import { socialAuthErrorMessage } from '../utils/socialAuthErrors';
@@ -13,7 +20,12 @@ import { socialAuthErrorMessage } from '../utils/socialAuthErrors';
 //  identifiant n'est pas configuré (`config/oauth.ts`) ; le SDK du fournisseur n'est chargé que si son
 //  bouton est affiché. Le composant rend l'`AuthResponse` à l'appelant (`/login`), qui ouvre la session
 //  et garde le `next` (RG-PAY-44). Fermer la popup → aucun message.
+//  D-MKT-05 (JP 28/10, RG-MKT-55) : sur une réponse 202 `LINK_CONFIRMATION_REQUIRED` (compte trouvé par
+//  identifiant jamais prouvé), la modale `LinkConfirmModal` s'ouvre au lieu de `onSession` ; le
+//  `challengeId` reste en mémoire (état de ce composant) ; à la confirmation, `onSession(authResponse)`.
 // ---------------------------------------------------------------------------------------------
+
+type Provider = 'Google' | 'Apple';
 
 const GOOGLE_GSI_SRC = 'https://accounts.google.com/gsi/client';
 const APPLE_JS_SRC = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
@@ -70,7 +82,16 @@ export function SocialSignInButtons({
   disabled?: boolean;
 }) {
   const { t } = useTranslation();
+  const [challenge, setChallenge] = useState<{ c: LinkConfirmationRequired; provider: Provider } | null>(null);
   if (!GOOGLE_WEB_CLIENT_ID && !APPLE_WEB) return null;
+  /** 200 → session ; 202 → saisie du code (D-MKT-05). */
+  const onResponse = async (res: SocialLoginResponse, provider: Provider) => {
+    if (isLinkConfirmation(res)) {
+      setChallenge({ c: res, provider });
+      return;
+    }
+    await onSession(res);
+  };
   return (
     <div style={{ marginTop: 18 }}>
       <div
@@ -82,28 +103,44 @@ export function SocialSignInButtons({
         <span style={{ flex: 1, height: 1, background: 'var(--line, #e5e1d8)' }} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'stretch' }}>
-        {GOOGLE_WEB_CLIENT_ID && <GoogleButton clientId={GOOGLE_WEB_CLIENT_ID} onSession={onSession} onError={onError} />}
-        {APPLE_WEB && <AppleButton cfg={APPLE_WEB} onSession={onSession} onError={onError} disabled={disabled} />}
+        {GOOGLE_WEB_CLIENT_ID && <GoogleButton clientId={GOOGLE_WEB_CLIENT_ID} onResponse={onResponse} onError={onError} />}
+        {APPLE_WEB && <AppleButton cfg={APPLE_WEB} onResponse={onResponse} onError={onError} disabled={disabled || !!challenge} />}
       </div>
+      {challenge && (
+        <LinkConfirmModal
+          // Un nouveau défi (nouvelle tentative Google / Apple) repart d'un état neuf.
+          key={challenge.c.challengeId}
+          challenge={challenge.c}
+          provider={challenge.provider}
+          onSession={async (res) => {
+            setChallenge(null);
+            await onSession(res);
+          }}
+          onClose={(message) => {
+            setChallenge(null);
+            onError(message);
+          }}
+        />
+      )}
     </div>
   );
 }
 
 function GoogleButton({
   clientId,
-  onSession,
+  onResponse,
   onError,
 }: {
   clientId: string;
-  onSession: (res: AuthResponse) => Promise<void>;
+  onResponse: (res: SocialLoginResponse, provider: Provider) => Promise<void>;
   onError: (message: string | null) => void;
 }) {
   const { t, i18n } = useTranslation();
   const hostRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
   // Les rappels changent à chaque rendu : on lit toujours la dernière version (le SDK garde le premier).
-  const cbRef = useRef({ onSession, onError, t });
-  cbRef.current = { onSession, onError, t };
+  const cbRef = useRef({ onResponse, onError, t });
+  cbRef.current = { onResponse, onError, t };
 
   useEffect(() => {
     let cancelled = false;
@@ -115,11 +152,11 @@ function GoogleButton({
           client_id: clientId,
           ux_mode: 'popup',
           callback: (r) => {
-            const { onSession: done, onError: fail, t: tr } = cbRef.current;
+            const { onResponse: done, onError: fail, t: tr } = cbRef.current;
             if (!r.credential) return; // annulation : aucun message
             fail(null);
             loginWithGoogleToken(r.credential)
-              .then(done)
+              .then((res) => done(res, 'Google'))
               .catch((e) => fail(socialAuthErrorMessage(e, tr)));
           },
         });
@@ -149,12 +186,12 @@ function GoogleButton({
 
 function AppleButton({
   cfg,
-  onSession,
+  onResponse,
   onError,
   disabled,
 }: {
   cfg: { servicesId: string; redirectUri: string };
-  onSession: (res: AuthResponse) => Promise<void>;
+  onResponse: (res: SocialLoginResponse, provider: Provider) => Promise<void>;
   onError: (message: string | null) => void;
   disabled?: boolean;
 }) {
@@ -229,7 +266,7 @@ function AppleButton({
           ...(resp.user?.name?.lastName ? { familyName: resp.user.name.lastName } : {}),
           ...(resp.user?.email ? { email: resp.user.email } : {}),
         });
-        await onSession(res);
+        await onResponse(res, 'Apple');
       } catch (e) {
         onError(socialAuthErrorMessage(e, t));
       }

@@ -159,6 +159,8 @@ export const Icons = {
   FileText: (p: IconProps) => <I {...p}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" /><path d="M14 3v5h5" /><path d="M9 13h6M9 17h6" /></I>,
   // Lot E8 (JP 14/10) — Évènements / « Déclarer une action » (spec §4.1 : mégaphone), propre à
   // l'espace ministère : absent du jeu porté de shephr-webapp.
+  // D-MKT-01 (JP 28/10) — fonctionnalités « À venir » de la page /offres (maquette : horloge).
+  Clock: (p: IconProps) => <I {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></I>,
   Megaphone: (p: IconProps) => <I {...p}><path d="M4 10v4a1 1 0 0 0 1 1h3l8 4V5L8 9H5a1 1 0 0 0-1 1z" /><path d="M8 15l1.5 5h2.5L11 15.8" /><path d="M19.5 9.5a3.5 3.5 0 0 1 0 5" /></I>,
 };
 
