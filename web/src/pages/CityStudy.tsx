@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge, Button, Field, Input, Picker, Table, TopBar, type Column } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { useToast } from '../components/Toast';
@@ -253,7 +253,34 @@ export function CityStudyPage() {
   const paramId = params.get('localityId') ?? '';
   const rawTab = params.get('tab') as Tab | null;
   const canceled = params.get('annule') === '1';
-  const city = localities.find((l) => l.localityId === paramId) ?? localities[0] ?? null;
+  // W-09 (d) (plan 05 §10.2, JP 29/10) : une ville demandée par l'URL mais absente des deux listes (lien
+  // compact `EVENEMENTS_SUIVI` de /events, ex. dirigeant d'unité) n'est plus remplacée en silence par la
+  // première : `GET /entitlements?nodeId=` donne son nom et `canSubscribe`, la page la garde (onglets
+  // Évènements et Abonnement seulement). Échec ou nœud qui n'est pas une ville → repli sur la première.
+  const listsLoading =
+    accessLoading || modulesQ.isLoading || (hasStudy && studyCitiesQ.isLoading) || (hasAssembly && journalCitiesQ.isLoading);
+  const missingCity = !listsLoading && !!paramId && !localities.some((l) => l.localityId === paramId);
+  const extraCityQ = useQuery({
+    queryKey: ['entitlements', paramId],
+    queryFn: () => getEntitlements(paramId),
+    enabled: missingCity,
+    retry: false,
+  });
+  const extraCity: CityEntry | null =
+    missingCity && extraCityQ.data?.localityId === paramId && extraCityQ.data.localityName
+      ? {
+          localityId: paramId,
+          localityName: extraCityQ.data.localityName,
+          assemblyCount: 0,
+          studyEntitled: null,
+          journalEntitled: null,
+          canSubscribe: extraCityQ.data.canSubscribe,
+        }
+      : null;
+  const extraCityLoading = missingCity && extraCityQ.isLoading;
+  const cities = extraCity ? [...localities, extraCity] : localities;
+  const city =
+    localities.find((l) => l.localityId === paramId) ?? extraCity ?? (extraCityLoading ? null : localities[0] ?? null);
 
   // Onglets de la ville : Bertoua si elle est dans `/study/localities`, Journal si elle est dans
   // `/assembly/localities`, Évènements si le module est accessible ; Abonnement toujours.
@@ -280,6 +307,7 @@ export function CityStudyPage() {
 
   // Ville absente ou inconnue de l'URL : on retient la première (sans perdre `tab` ni `annule`).
   useEffect(() => {
+    if (extraCityLoading) return;
     if (city && city.localityId !== paramId) setParam({ localityId: city.localityId });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [city?.localityId, paramId]);
@@ -321,12 +349,7 @@ export function CityStudyPage() {
     STUDY_TABS.includes(k) ? city?.studyEntitled === false : k === 'journal' ? city?.journalEntitled === false : false;
 
   const body = (() => {
-    if (
-      accessLoading ||
-      modulesQ.isLoading ||
-      (hasStudy && studyCitiesQ.isLoading) ||
-      (hasAssembly && journalCitiesQ.isLoading)
-    ) {
+    if (listsLoading || extraCityLoading) {
       return <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>;
     }
     if (!hasStudy && !hasAssembly) return <EmptyState title={t('cityStudy.unavailable')} text={t('cityStudy.unavailableHint')} />;
@@ -349,13 +372,13 @@ export function CityStudyPage() {
         )}
 
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
-          {localities.length > 1 && (
+          {cities.length > 1 && (
             <Field label={t('cityStudy.filters.city')} style={{ minWidth: 240, margin: 0 }}>
               <Picker
                 value={city.localityId}
                 onChange={(id) => setParam({ localityId: id, annule: null })}
                 // §9.3 : cadenas par ville dans le sélecteur (aucun code de ville de l'offre Néhémie ouvert).
-                options={localities.map((l) => ({
+                options={cities.map((l) => ({
                   id: l.localityId,
                   label: l.localityName,
                   sub:
@@ -453,6 +476,11 @@ function CityJournalTab({ city }: { city: CityEntry }) {
   const tr = t as unknown as Translate;
   const [period, setPeriod] = useState<JournalPeriod>(() => currentPeriod('month'));
   const [printing, setPrinting] = useState(false);
+  // W-09 (b) (plan 05 §10.2, JP 29/10) : un 403 `JOURNAL` pendant la génération du PDF (droit fermé
+  // entre-temps) remplace l'onglet par le verrou, comme le mobile — jamais un toast.
+  const [pdfDenied, setPdfDenied] = useState<ModuleAccessDeniedDetails | null>(null);
+  useEffect(() => setPdfDenied(null), [city.localityId]);
+  const qc = useQueryClient();
   const { from, to } = periodRange(period);
   const today = todayIso();
 
@@ -484,11 +512,19 @@ function CityJournalTab({ city }: { city: CityEntry }) {
       );
     } catch (err) {
       const denied = cityJournalAccessDenied(err);
-      push({ kind: 'error', title: t('assembly.journal.failed'), msg: denied ? t('cityStudy.lock.title') : errMsg(err, '') || undefined });
+      if (denied) {
+        setPdfDenied({ ...denied, nodeId: denied.nodeId ?? city.localityId });
+        // La liste des villes portait encore `entitled = true` : on la relit (cadenas du sélecteur).
+        void qc.invalidateQueries({ queryKey: ['assembly', 'localities'] });
+      } else {
+        push({ kind: 'error', title: t('assembly.journal.failed'), msg: errMsg(err, '') || undefined });
+      }
     } finally {
       setPrinting(false);
     }
   };
+
+  if (pdfDenied) return <LockedFeature denied={pdfDenied} />;
 
   return (
     <>

@@ -20,6 +20,7 @@ import Field from '@/components/Field';
 import SelectField from '@/components/SelectField';
 import ErrorBanner from '@/components/ErrorBanner';
 import StudyCityLock from '@/components/StudyCityLock';
+import CalebAssemblyLock from '@/components/CalebAssemblyLock';
 import { StudyCopySheet } from '@/components/StudyQuestionList';
 import { colors, fonts, radii } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,7 +39,7 @@ import {
   type StudySessionResults,
   type StudyVerdict,
 } from '@/services/assemblyApi';
-import { studyCityAccessDenied } from '@/services/entitlementsApi';
+import { hierarchyAccessDenied, studyCityAccessDenied } from '@/services/entitlementsApi';
 import { fmtPoints, toLocalDate } from '@/utils/format';
 import { fmtIsoDay } from '@/utils/meetingReport';
 import { confirmDialog, notify } from '@/utils/dialogs';
@@ -58,6 +59,13 @@ import { goBack } from '@/utils/navigation';
  *       points de toute question notée, à tout moment (D-ETU-12, RG-ETU-07b).</li>
  * </ul>
  * L'auteur d'une copie peut aussi ouvrir la sienne (RG-ETU-13), en lecture.
+ *
+ * <p>D-BER-06 / RG-BER-26 (JP 29/10) : copie papier (ajout, modification, suppression) et ajustement
+ * (points, avis) sont des ÉCRITURES DE PILOTAGE — gratuites sur l'assemblée gratuite du dirigeant,
+ * offre Caleb (`HIERARCHIE_SUIVI`, droit personnel, axe CHAÎNE) ailleurs. Le droit vient du SERVEUR
+ * (`results.canPilot`, absent = vrai) : sans lui, ces actions sont masquées et un verrou Caleb
+ * compact les remplace ; la lecture des copies reste ouverte au dirigeant. Un 403 `HIERARCHIE_SUIVI`
+ * reçu malgré tout (droit retiré entre-temps, RG-BER-23) → relecture + verrou, jamais un toast.
  *
  * <p>D-ETU-46 (JP 23/10) : les copies de RATTRAPAGE (absents, répondues seuls après la séance)
  * figurent dans la liste avec la pastille « rattrapage » ; le dirigeant voit combien attendent son
@@ -86,11 +94,16 @@ export default function StudyResultsScreen() {
   const [editing, setEditing] = useState<StudyCopyResult | null>(null);
   // Contrat 27/10 §9.1 : 403 ETUDE_SUIVI → verrou à la place du contenu, jamais un message d'erreur.
   const [locked, setLocked] = useState<{ canSubscribe: boolean } | null>(null);
+  // RG-BER-23 (JP 29/10) : 403 HIERARCHIE_SUIVI reçu sur une écriture de pilotage.
+  const [pilotDenied, setPilotDenied] = useState(false);
 
   const load = useCallback(async () => {
     if (!sessionId) return;
     try {
-      setResults(await getStudyResults(sessionId));
+      const r = await getStudyResults(sessionId);
+      setResults(r);
+      // Le serveur fait foi : un droit rouvert (Caleb pris entre-temps) lève le verrou local.
+      if (r.canPilot !== false) setPilotDenied(false);
       setError(null);
       setLocked(null);
     } catch (e: any) {
@@ -133,6 +146,19 @@ export default function StudyResultsScreen() {
     }
   };
 
+  /**
+   * RG-BER-23 (D-BER-02, JP 29/10) : 403 HIERARCHIE_SUIVI sur une écriture de pilotage → verrou Caleb
+   * (relecture des résultats), jamais un toast. Vrai si l'erreur est traitée ici.
+   */
+  const onPilotError = (e: unknown): boolean => {
+    if (!hierarchyAccessDenied(e)) return false;
+    setPilotDenied(true);
+    setPaperOpen(false);
+    setEditing(null);
+    void load();
+    return true;
+  };
+
   const onAdjust = async (q: StudyQuestionView, points: number): Promise<boolean> => {
     if (!copy) return false;
     try {
@@ -140,7 +166,7 @@ export default function StudyResultsScreen() {
       void load();
       return true;
     } catch (e: any) {
-      notify(t('study.tile.title'), studyErrorMessage(e, t));
+      if (!onPilotError(e)) notify(t('study.tile.title'), studyErrorMessage(e, t));
       return false;
     }
   };
@@ -153,7 +179,7 @@ export default function StudyResultsScreen() {
       void load();
       return true;
     } catch (e: any) {
-      notify(t('study.tile.title'), studyErrorMessage(e, t));
+      if (!onPilotError(e)) notify(t('study.tile.title'), studyErrorMessage(e, t));
       return false;
     }
   };
@@ -210,6 +236,8 @@ export default function StudyResultsScreen() {
   // D-ETU-46 (JP 23/10) : copies dont des ouvertes attendent l'avis du dirigeant.
   const toReview = leader ? results.copies.filter((c) => c.pendingReview).length : 0;
   const paperTooEarly = s.status === 'REPONSES_OUVERTES';
+  // D-BER-06 / RG-BER-26 (JP 29/10) : écritures de pilotage selon le SERVEUR (absent = vrai).
+  const pilot = leader && results.canPilot !== false && !pilotDenied;
 
   return (
     <ScreenShell
@@ -238,8 +266,11 @@ export default function StudyResultsScreen() {
 
       {/* D-ETU-48 (JP 23/10, avenant 05 §8) : copie papier à partir de CORRECTION seulement (plage
           fixée) — en REPONSES_OUVERTES le serveur répond STUDY_PAPER_COPY_TOO_EARLY. */}
-      {leader && paperTooEarly && <Text style={styles.muted}>{t('study.results.paperTooEarly')}</Text>}
-      {leader && !paperTooEarly && (
+      {pilot && paperTooEarly && <Text style={styles.muted}>{t('study.results.paperTooEarly')}</Text>}
+      {/* D-BER-02 (JP 29/10) : sans Caleb sur cette assemblée, un verrou neutre (aucun prix, D-OFF-09)
+          remplace la copie papier et l'ajustement. */}
+      {leader && !pilot && <CalebAssemblyLock compact body={t('study.lock.pilotCaleb')} />}
+      {pilot && !paperTooEarly && (
         <Button
           label={t('study.results.addPaper')}
           variant="soft"
@@ -251,7 +282,7 @@ export default function StudyResultsScreen() {
           onPress={() => setPaperOpen(true)}
         />
       )}
-      {leader && !paperTooEarly && results.withoutCopy.length === 0 && (
+      {pilot && !paperTooEarly && results.withoutCopy.length === 0 && (
         <Text style={styles.muted}>{t('study.results.noneWithout')}</Text>
       )}
 
@@ -268,9 +299,12 @@ export default function StudyResultsScreen() {
             const catchUp = c.source === 'RATTRAPAGE';
             const mine = c.userId === me?.id;
             // RG-ETU-13 : le contenu d'une copie APP n'est lisible que par son auteur et le dirigeant.
+            // D-BER-06 (JP 29/10) : modifier une note papier = pilotage ; ouvrir une copie APP = lecture.
             const onPress = leader
               ? paper
-                ? () => setEditing(c)
+                ? pilot
+                  ? () => setEditing(c)
+                  : undefined
                 : () => void openCopy(c)
               : mine && !paper
                 ? () => void openCopy(c)
@@ -313,14 +347,15 @@ export default function StudyResultsScreen() {
 
       <StudyCopySheet
         copy={copy}
-        onAdjust={leader ? onAdjust : undefined}
-        onVerdict={leader ? onVerdict : undefined}
+        onAdjust={pilot ? onAdjust : undefined}
+        onVerdict={pilot ? onVerdict : undefined}
         onClose={() => setCopy(null)}
       />
-      {leader && (
+      {pilot && (
         <PaperModal
           visible={paperOpen}
           results={results}
+          onPilotError={onPilotError}
           onClose={() => setPaperOpen(false)}
           onSaved={() => {
             setPaperOpen(false);
@@ -328,10 +363,11 @@ export default function StudyResultsScreen() {
           }}
         />
       )}
-      {leader && (
+      {pilot && (
         <EditPaperModal
           key={editing?.id ?? 'none'}
           copy={editing}
+          onPilotError={onPilotError}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
@@ -354,11 +390,14 @@ function parseScore(value: string, max: number): number | null {
 function PaperModal({
   visible,
   results,
+  onPilotError,
   onClose,
   onSaved,
 }: {
   visible: boolean;
   results: StudySessionResults;
+  /** RG-BER-23 (JP 29/10) : 403 HIERARCHIE_SUIVI → verrou Caleb, pas de toast. */
+  onPilotError: (e: unknown) => boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -385,7 +424,7 @@ function PaperModal({
       setScore('');
       onSaved();
     } catch (e: any) {
-      notify(t('study.tile.title'), studyErrorMessage(e, t));
+      if (!onPilotError(e)) notify(t('study.tile.title'), studyErrorMessage(e, t));
     } finally {
       setSaving(false);
     }
@@ -423,10 +462,13 @@ function PaperModal({
 /** Modifier / supprimer la note d'une copie PAPIER (une copie APP se règle question par question). */
 function EditPaperModal({
   copy,
+  onPilotError,
   onClose,
   onSaved,
 }: {
   copy: StudyCopyResult | null;
+  /** RG-BER-23 (JP 29/10) : 403 HIERARCHIE_SUIVI → verrou Caleb, pas de toast. */
+  onPilotError: (e: unknown) => boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -444,7 +486,7 @@ function EditPaperModal({
       await updateStudyPaperCopy(copy.id, parsed);
       onSaved();
     } catch (e: any) {
-      notify(t('study.tile.title'), studyErrorMessage(e, t));
+      if (!onPilotError(e)) notify(t('study.tile.title'), studyErrorMessage(e, t));
     } finally {
       setBusy(false);
     }
@@ -463,7 +505,7 @@ function EditPaperModal({
       await deleteStudyPaperCopy(copy.id);
       onSaved();
     } catch (e: any) {
-      notify(t('study.tile.title'), studyErrorMessage(e, t));
+      if (!onPilotError(e)) notify(t('study.tile.title'), studyErrorMessage(e, t));
     } finally {
       setBusy(false);
     }

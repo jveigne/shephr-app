@@ -508,10 +508,12 @@
       "compactTitle": "Caleb plan — tracking my hierarchy",
       "compactAssembly": "Your own assembly stays free: reports, journal, meetings and progress. The other assemblies of your leadership chain (reading and writing) are included in the Caleb plan.",
       "compactMemberCare": "Pastoral care for your own assembly stays free. The records of the assemblies in your leadership chain are included in the Caleb plan.",
-      "openHierarchy": "See the plan in Hierarchy",
       "outsideChainTitle": "Assembly outside your chain",
       "outsideChainAssembly": "Your Caleb plan is active, but this assembly is not in your leadership chain: only the assemblies of your supervision chain are included.",
-      "outsideChainMemberCare": "Your Caleb plan is active, but the records of this assembly are not in your leadership chain: only the assemblies of your supervision chain are included."
+      "outsideChainMemberCare": "Your Caleb plan is active, but the records of this assembly are not in your leadership chain: only the assemblies of your supervision chain are included.",
+      "compactStudy": "Your assembly stays free for the study. Leading “The Bertoua Message” in your other assemblies is included in the Caleb plan.",
+      "discoverCaleb": "Discover the Caleb plan",
+      "learnMore": "Learn more"
     },
     "plan": {
       "canceledBanner": "Payment canceled: no subscription was taken out.",
@@ -1935,15 +1937,11 @@
         "catchUpStart": "Start",
         "catchUpContinue": "Continue",
         "finishedOn": "finished on {{date}}",
-        "startSession": "Start a lesson",
-        "startOther": "Start another lesson",
         "startSub": "Pick the unit, then the lesson: the session opens to the assembly's respondents.",
         "noCatalog": "No study unit has been published for this assembly yet.",
         "locked": "Locked: finish the prerequisite unit in the assembly first",
         "lessonsDone": "{{done}} / {{total}} lessons done",
         "lessonDone": "Done",
-        "lessonStarted": "Started",
-        "lessonToDo": "To do",
         "start": "Start",
         "continue": "Continue",
         "redo": "Redo",
@@ -1954,7 +1952,18 @@
         "forgottenTitle": "A session is still open",
         "forgottenBody": "The session \"{{lesson}}\" was not finished. Finish it to start this one?",
         "finishAndStart": "Finish and start",
-        "started": "Session opened."
+        "started": "Session opened.",
+        "pickAssembly": "Assembly",
+        "freeAssembly": "Your assembly",
+        "lockedAssembly": "Locked — Caleb plan",
+        "lessonInProgress": "In progress",
+        "lessonTodo": "To do",
+        "nextLesson": "Next lesson",
+        "lockedPrereq": "Locked: finish {{module}} in the assembly first",
+        "modulesTitle": "Units and lessons of the assembly",
+        "modulesSub": "Progress of this assembly: lessons done, in progress and to do.",
+        "history": "Session history ({{count}})",
+        "historyEmpty": "No session in this assembly yet."
       },
       "briefing": {
         "title": "Read before the lesson",
@@ -2655,9 +2664,10 @@
     "lock": {
       "title": "Nehemiah plan — tracking my whole city",
       "askPastor": "Ask your pastor to activate city tracking.",
+      "agreementOther": "Your ministry’s agreement for this city does not include this tracking: contact your ministry to add it.",
       "compactSubscribe": "Tracking your city's assemblies is included in the Nehemiah plan, subscribed for the whole city.",
       "openCity": "Open city tracking",
-      "subscribeIntro": "{{plan}} for {{city}}: study tracking for every assembly in the city, statistics and exports.",
+      "subscribeIntro": "{{plan}} for {{city}}: tracking of the whole city — study, meeting journal and events of every assembly, statistics and exports.",
       "period": "Billing period",
       "periods": {
         "MONTHLY": "Monthly",
@@ -2723,6 +2733,7 @@
       "audience": "For every leader",
       "scope": "Follows your <strong>leadership chain</strong>: the leaders you supervise and their assemblies, wherever they are.",
       "loginHint": "One click with Google or Apple. Then: bank card, Mobile Money or code.",
+      "loginHintNoSocial": "Sign in with your Shephr username. Then: bank card, Mobile Money or code.",
       "features": {
         "dashboard": {
           "title": "Your hierarchy dashboard",
@@ -2776,9 +2787,11 @@
       "reserved": "This offer is reserved for city leaders.",
       "city": "City",
       "alreadyActive": "Already active",
+      "alreadyActiveAgreement": "Already active — your ministry’s agreement",
       "audience": "For the pastor and the city's leaders",
       "scope": "Every assembly in <strong>the city</strong>, whoever leads it. One subscription, shared by all the leaders.",
       "loginHint": "One click with Google or Apple. You will then choose your city among those you are responsible for.",
+      "loginHintNoSocial": "Sign in with your Shephr username. You will then choose your city among those you are responsible for.",
       "features": {
         "cityStats": {
           "title": "City statistics",
@@ -2831,6 +2844,7 @@
       "name": "Free",
       "tagline": "Keep your assembly alive, with no time limit.",
       "price": "€0",
+      "priceUsd": "$0",
       "forever": "· forever",
       "cta": "Create my assembly",
       "features": {
@@ -2879,14 +2893,15 @@
       "receiptTitle": "Code activated",
       "receiptUntil": "Active until {{date}} inclusive.",
       "receiptNote": "A confirmation email has been sent to you. No invoice is issued for an activation code.",
-      "alreadyPaid": "You already pay for this plan by card: you do not need a code."
+      "alreadyPaid": "You already pay for this plan by card: you do not need a code.",
+      "cityAlreadyOpen": "Tracking is already open for this city (a leader’s subscription or your ministry’s agreement): no code is needed."
     },
     "pay": {
       "title": "Pay",
       "cardMonthly": "Pay by card — {{price}}/month",
       "cardAnnual": "Pay by card — {{price}}/year",
       "mobileMoney": "Pay with Mobile Money",
-      "mobileMoneyHint": "You chat with our relay on WhatsApp; they give you a code to enter in \"I have a code\".",
+      "mobileMoneyHint": "You chat with your local agent on WhatsApp; they give you a code to enter in \"I have a code\".",
       "message": {
         "caleb": "Hello, I would like to subscribe to the {{offer}} plan ({{localPrice}}), {{period}} billing. My Shephr username: {{username}}.",
         "calebNoPrice": "Hello, I would like to subscribe to the {{offer}} plan, {{period}} billing. My Shephr username: {{username}}.",
@@ -2898,6 +2913,8 @@
         "ANNUAL": "annual"
       },
       "cancelled": "Payment cancelled. You can resume whenever you like.",
+      "loadError": "We could not check your access right now.",
+      "retry": "Try again",
       "loginToSubscribe": "Sign in to subscribe"
     },
     "handoff": {

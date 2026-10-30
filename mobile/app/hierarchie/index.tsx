@@ -158,12 +158,6 @@ export default function HierarchieScreen() {
     }
     // Panne : on garde l'état connu ; la page 3 reste juge (un 403 y affiche le verrou).
   }, []);
-  useFocusEffect(
-    useCallback(() => {
-      void loadCards();
-    }, [loadCards]),
-  );
-
   const load = useCallback(async () => {
     try {
       setData(await fetchLeaderHierarchy());
@@ -174,7 +168,15 @@ export default function HierarchieScreen() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // R6 (RG-HIE-22, JP 29/10) : l'arbre (« Je rends compte à … », dirigeants suivis) est relu au focus
+  // comme les cartes — au retour de « Mon leadership » une désignation / un retrait est déjà visible
+  // (parité avec le web, qui invalide `['leaders','hierarchy']`). Le focus couvre aussi le montage.
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+      void loadCards();
+    }, [load, loadCards]),
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);

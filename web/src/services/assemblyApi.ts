@@ -314,9 +314,9 @@ export interface MeetingSummaryLite {
   bookTitle: string | null;
   chapters: Chapter[];
   canWrite: boolean;
-  createdById: string | null;
+  // D-FIX-2A (JP 29/10, constat E-13) : `createdById` / `updatedById` retirés du DTO (aucun écran ne
+  // les lisait) — un journal consolidé ne porte plus aucun identifiant de personne.
   createdAt: string | null;
-  updatedById: string | null;
   updatedAt: string | null;
 }
 
@@ -340,7 +340,9 @@ export async function listMeetingsInRange(unitIds: string[], from: string, to: s
  * sont jetés ici et ne vont jamais plus loin (D-OFF-05 / P-03) — même garde que le mobile.
  */
 function toMeetingLite(raw: unknown): MeetingSummaryLite {
-  const { attendees, ...rest } = (raw ?? {}) as Record<string, unknown> & { attendees?: unknown };
+  // D-FIX-2A (JP 29/10) : un serveur antérieur envoie encore `createdById` / `updatedById` — jetés ici.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { attendees, createdById: _c, updatedById: _u, ...rest } = (raw ?? {}) as Record<string, unknown> & { attendees?: unknown };
   const count = (rest as { attendeeCount?: unknown }).attendeeCount;
   return {
     ...(rest as unknown as MeetingSummaryLite),
@@ -472,6 +474,25 @@ export interface StudyAssembly {
   currentSession: StudySessionSummary | null;
   /** D-ETU-44 / D-ETU-45 (JP 23/10) : séances à rattraper par l'appelant — absent d'un serveur antérieur. */
   catchUps?: StudyCatchUp[] | null;
+  /**
+   * D-BER-02 (JP 29/10) : assemblée gratuite de l'appelant (`AccessControlService.freeAssemblyId`) —
+   * vrai aussi pour un simple répondant dont c'est le `goalUnitId`. Facultatif (serveur antérieur).
+   */
+  free?: boolean;
+  /**
+   * D-BER-07 (JP 29/10) : écritures de pilotage permises (Commencer, copie papier, ajustement) =
+   * `leader && (free || HIERARCHIE_SUIVI || superAdmin)`. Absent (serveur antérieur) = permis.
+   */
+  canPilot?: boolean;
+  /** D-BER-02 (JP 29/10) : `'HIERARCHIE_SUIVI'` quand le dirigeant n'a pas Caleb sur cette assemblée ; null sinon. */
+  pilotLock?: 'HIERARCHIE_SUIVI' | null;
+  /** RG-BER-05 (JP 29/10) : peut souscrire Caleb (renseigné seulement si `pilotLock`, sinon false). */
+  canSubscribe?: boolean;
+}
+
+/** D-BER-07 (JP 29/10) : pilotage permis — un serveur antérieur au lot BER (champ absent) vaut « permis ». */
+export function studyCanPilot(x: { canPilot?: boolean } | null | undefined): boolean {
+  return x?.canPilot !== false;
 }
 
 /** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyMeResponse */
@@ -596,6 +617,8 @@ export interface StudySessionDetail {
   memberActions?: string[] | null;
   /** D-ETU-44 / D-ETU-45 (JP 23/10) : l'appelant peut rattraper cette séance maintenant. Absent d'un serveur antérieur. */
   catchUpOpen?: boolean;
+  /** RG-BER-13 (JP 29/10) : écritures de pilotage permises sur cette séance (false si non dirigeant). Absent = permis. */
+  canPilot?: boolean;
 }
 
 /** Mirrors com.excellence.back.assembly.AssemblyDtos.StudySessionRequest — `POST /study/sessions`. */
@@ -666,6 +689,8 @@ export interface StudySessionResults {
   copies: StudyCopyResult[];
   /** Dirigeant seulement ; sinon []. */
   withoutCopy: StudyRosterMember[];
+  /** RG-BER-13 (JP 29/10) : copie papier / ajustement permis (false si non dirigeant). Absent = permis. */
+  canPilot?: boolean;
 }
 
 /** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyCopyDetail — réponses du manuel toujours incluses. */
@@ -955,6 +980,13 @@ export interface StudyLocalitySummary {
   /** RG-ABO-22 — le compte peut souscrire pour cette ville (« S'abonner », web seulement). */
   canSubscribe: boolean;
   assemblyCount: number;
+  /**
+   * D-FIX-4A (JP 29/10) : ville ouverte par un accord `sub_subscription` (ministère / nation / région /
+   * ville, D-ABO-28) sur N'IMPORTE QUEL code du plan de ville (`ETUDE_SUIVI`, `JOURNAL`,
+   * `EVENEMENTS_SUIVI`, `DOCUMENTS_PUBLICATION`) — calculé PAR LE SERVEUR, même règle que la caisse
+   * (422 `SUBSCRIPTION_ALREADY_ACTIVE`). Jamais déduit côté front. Toujours false pour le superAdmin.
+   */
+  agreement: boolean;
 }
 
 /** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyLocalityLesson */

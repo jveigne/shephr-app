@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -15,6 +15,7 @@ import {
   type PersonalPlan,
   type PlanOffer,
 } from '../services/entitlementsApi';
+import { listStudyLocalities } from '../services/assemblyApi';
 import { checkout, openBillingPortal, previewPromo, type BillingCurrency, type BillingPeriod, type PromoPreview } from '../services/billingApi';
 import { billingErrMsg, fmtCents, fmtDay } from '../pages/Billing';
 import { LocalPriceLine, VoucherRedeemModal } from './VoucherRedeemModal';
@@ -152,7 +153,7 @@ export function LockedFeature({
         </div>
         <div style={{ flex: '1 1 240px' }}>
           <div style={{ fontWeight: 600, color: 'var(--green-800)', marginBottom: 4 }}>{t('cityStudy.lock.title')}</div>
-          <div style={{ fontSize: 13.5, color: 'var(--ink-600)', lineHeight: 1.5 }}>
+          <div style={{ fontSize: 13.5, color: 'var(--ink-700)', lineHeight: 1.5 }}>
             {denied.canSubscribe ? t('cityStudy.lock.compactSubscribe') : t('cityStudy.lock.askPastor')}
           </div>
         </div>
@@ -177,7 +178,7 @@ export function LockedFeature({
             </h2>
           </div>
           {cityId ? <LockActions localityId={cityId} fallbackCanSubscribe={denied.canSubscribe} /> : (
-            <p style={{ margin: 0, color: 'var(--ink-600)', fontSize: 14 }}>{t('cityStudy.lock.askPastor')}</p>
+            <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>{t('cityStudy.lock.askPastor')}</p>
           )}
           <SeeOffersLink offer="nehemie" />
         </div>
@@ -194,15 +195,19 @@ function LockActions({ localityId, fallbackCanSubscribe }: { localityId: string;
     queryFn: () => getEntitlements(localityId),
     retry: false,
   });
+  // D-FIX-4A (JP 29/10) : l'accord de ministère vient du SERVEUR (`StudyLocalitySummary.agreement`,
+  // même clé que la Sidebar et /offres) — `/entitlements` ne le porte pas.
+  const citiesQ = useQuery({ queryKey: ['assembly', 'study', 'localities'], queryFn: listStudyLocalities, retry: false });
 
   const portalM = useMutation({
     mutationFn: (reference: string) => openBillingPortal(reference),
     onSuccess: (res) => window.location.assign(res.url),
   });
 
-  if (entQ.isLoading) return <p style={{ margin: 0, color: 'var(--ink-500)', fontSize: 14 }}>{t('common.loading')}</p>;
+  if (entQ.isLoading || citiesQ.isLoading) return <p style={{ margin: 0, color: 'var(--ink-500)', fontSize: 14 }}>{t('common.loading')}</p>;
 
   const ent = entQ.data;
+  const byAgreement = !!citiesQ.data?.find((c) => c.localityId === localityId)?.agreement;
   const canSubscribe = ent ? ent.canSubscribe : fallbackCanSubscribe;
   const subs = ent?.subscriptions ?? [];
   const pending = subs.find((s) => s.status === 'PENDING');
@@ -210,7 +215,21 @@ function LockActions({ localityId, fallbackCanSubscribe }: { localityId: string;
   const other = subs.find((s) => s.status !== 'PENDING' && s.status !== 'EXPIRED' && !s.entitled && s !== pastDue);
 
   if (pending) {
-    return <p style={{ margin: 0, color: 'var(--ink-600)', fontSize: 14 }}>{t('cityStudy.lock.pending')}</p>;
+    return <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>{t('cityStudy.lock.pending')}</p>;
+  }
+  // D-FIX-4A (JP 29/10) : ville déjà ouverte par un ACCORD `sub_subscription` (ministère / nation /
+  // région, D-ABO-28) sur un code du plan — `agreement` du serveur, même règle que la caisse, qui la
+  // refuse (422 `SUBSCRIPTION_ALREADY_ACTIVE`) : aucun bouton. Le verrou étant affiché, l'accord ne
+  // couvre pas CE suivi : on le dit, au lieu d'un « Déjà actif » seul qui contredirait l'onglet fermé.
+  if (byAgreement) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div>
+          <Badge tone="ok" dot>{t('offers.nehemie.alreadyActiveAgreement')}</Badge>
+        </div>
+        <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>{t('cityStudy.lock.agreementOther')}</p>
+      </div>
+    );
   }
   if (pastDue) {
     return (
@@ -224,7 +243,7 @@ function LockActions({ localityId, fallbackCanSubscribe }: { localityId: string;
             {portalM.isError && <p style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>{billingErrMsg(portalM.error, t)}</p>}
           </>
         ) : (
-          <p style={{ margin: 0, color: 'var(--ink-600)', fontSize: 14 }}>
+          <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>
             {t('cityStudy.lock.managedBy', { name: pastDue.payerName ?? t('cityStudy.subscription.unknownPayer') })}
           </p>
         )}
@@ -233,14 +252,14 @@ function LockActions({ localityId, fallbackCanSubscribe }: { localityId: string;
   }
   if (other && !other.paidByMe) {
     return (
-      <p style={{ margin: 0, color: 'var(--ink-600)', fontSize: 14 }}>
+      <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>
         {t('cityStudy.lock.managedBy', { name: other.payerName ?? t('cityStudy.subscription.unknownPayer') })}
       </p>
     );
   }
   const plan = ent?.plans?.[0];
   if (!canSubscribe || !plan) {
-    return <p style={{ margin: 0, color: 'var(--ink-600)', fontSize: 14 }}>{t('cityStudy.lock.askPastor')}</p>;
+    return <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>{t('cityStudy.lock.askPastor')}</p>;
   }
   return <SubscribeForm localityId={localityId} plan={plan} cityName={ent?.localityName ?? null} />;
 }
@@ -252,6 +271,10 @@ function SubscribeForm({ localityId, plan, cityName }: { localityId: string; pla
   const [code, setCode] = useState('');
   const [preview, setPreview] = useState<{ period: BillingPeriod; currency: BillingCurrency; p: PromoPreview } | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
+  // R-03 (plan 07 §10.4, JP 29/10) : le visiteur a APPLIQUÉ ce code — il doit suivre la devise et la
+  // période affichées (relancé à chaque changement), jusqu'à ce qu'il modifie le code ou que le serveur
+  // le refuse (message).
+  const [applied, setApplied] = useState(false);
   const normalized = code.trim().toUpperCase();
   // D-CUR-03 / RG-CUR-20 (JP 28/10) : ligne `PlanPrice` de la devise choisie, sinon EUR (mention).
   const [chosen] = useCurrencyChoice();
@@ -268,23 +291,45 @@ function SubscribeForm({ localityId, plan, cityName }: { localityId: string; pla
   const priceCents = promo ? promo.priceCents : listCents;
   const priceLabel = fmtCents(priceCents, promo?.currency ?? currency, lang);
 
+  // R-03 (plan 07 §10.4, JP 29/10) : une réponse d'aperçu ne s'applique que si elle correspond
+  // ENCORE à la devise et à la période affichées (EUR → USD → EUR rapide : la réponse USD arrivée
+  // après coup est ignorée) ; l'effet ci-dessous relance l'aperçu de la combinaison affichée.
+  const shownKey = `${effPeriod}/${currency}`;
+  const shownKeyRef = useRef(shownKey);
+  shownKeyRef.current = shownKey;
+  const inflightKeyRef = useRef<string | null>(null);
   const previewM = useMutation({
     mutationFn: (v: { period: BillingPeriod; currency: BillingCurrency }) => previewPromo(normalized, plan.offerCode, v.period, v.currency),
-    onMutate: () => {
-      setPromoError(null);
-      setPreview(null);
+    onSuccess: (p, v) => {
+      const k = `${v.period}/${v.currency}`;
+      if (inflightKeyRef.current === k) inflightKeyRef.current = null;
+      if (k !== shownKeyRef.current) return; // périmée : la combinaison affichée a sa propre requête
+      setPreview({ period: v.period, currency: v.currency, p });
     },
-    onSuccess: (p, v) => setPreview({ period: v.period, currency: v.currency, p }),
-    onError: (err) => setPromoError(billingErrMsg(err, t)),
+    onError: (err, v) => {
+      const k = `${v.period}/${v.currency}`;
+      if (inflightKeyRef.current === k) inflightKeyRef.current = null;
+      if (k !== shownKeyRef.current) return;
+      setApplied(false);
+      setPromoError(billingErrMsg(err, t));
+    },
   });
+  const runPreview = (v: { period: BillingPeriod; currency: BillingCurrency }) => {
+    inflightKeyRef.current = `${v.period}/${v.currency}`;
+    setPromoError(null);
+    previewM.mutate(v);
+  };
 
-  // RG-CUR-21 : changer de devise relance l'aperçu d'un code déjà appliqué (il ne vaut que pour sa devise).
-  const appliedFor = preview ? `${preview.period}/${preview.currency}` : null;
+  // RG-CUR-21 / R-03 : à chaque changement de devise ou de période, un code appliqué est revérifié pour
+  // la combinaison affichée (sauf si son aperçu est déjà là ou en cours) — jamais de remise perdue en
+  // silence : soit le nouvel aperçu, soit le message du serveur.
   useEffect(() => {
-    if (!appliedFor || !normalized || previewM.isPending) return;
-    if (appliedFor !== `${effPeriod}/${currency}`) previewM.mutate({ period: effPeriod, currency });
-    // Seule la devise déclenche ici ; la période relance déjà l'aperçu à son clic.
-  }, [currency]);
+    if (!applied || !normalized) return;
+    if (preview && `${preview.period}/${preview.currency}` === shownKey) return;
+    if (inflightKeyRef.current === shownKey) return;
+    runPreview({ period: effPeriod, currency });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applied, shownKey]);
 
   // RG-ABO-05 / §14.2 n°6 : le code promo ne part à la caisse QUE s'il a été appliqué (aperçu valide)
   // pour la période affichée — le prix du bouton est alors exactement celui facturé par Stripe. Un code
@@ -294,10 +339,15 @@ function SubscribeForm({ localityId, plan, cityName }: { localityId: string; pla
     mutationFn: () => checkout(plan.offerCode, promo ? normalized : null, { localityId, period: effPeriod, currency }),
     onSuccess: (res) => window.location.assign(res.url),
   });
+  // R-06 (plan 07 §10.4, JP 29/10) : une erreur de caisse ne vaut que pour la devise / période où elle est née.
+  useEffect(() => {
+    checkoutM.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownKey]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <p style={{ margin: 0, color: 'var(--ink-600)', fontSize: 14, lineHeight: 1.5 }}>
+      <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14, lineHeight: 1.5 }}>
         {t('cityStudy.lock.subscribeIntro', { plan: plan.name, city: cityName ?? '—' })}
       </p>
       {/* D-CUR-03 (JP 28/10, RG-CUR-19) : sélecteur € / $ au-dessus de Mensuel / Annuel. */}
@@ -312,9 +362,8 @@ function SubscribeForm({ localityId, plan, cityName }: { localityId: string; pla
               aria-checked={effPeriod === p}
               onClick={() => {
                 if (p === effPeriod) return;
+                // Changement de période : l'aperçu d'un code appliqué est refait par l'effet (R-03).
                 setPeriod(p);
-                // Changement de période : l'aperçu ne vaut que pour sa période, on le refait pour la nouvelle.
-                if (preview && normalized) previewM.mutate({ period: p, currency });
               }}
               className={`btn sm ${effPeriod === p ? 'primary' : 'secondary'}`}
               style={{ flex: 1, justifyContent: 'center' }}
@@ -338,7 +387,9 @@ function SubscribeForm({ localityId, plan, cityName }: { localityId: string; pla
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (normalized) previewM.mutate({ period: effPeriod, currency });
+          if (!normalized) return;
+          setApplied(true);
+          runPreview({ period: effPeriod, currency });
         }}
         style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}
       >
@@ -349,6 +400,7 @@ function SubscribeForm({ localityId, plan, cityName }: { localityId: string; pla
               setCode(e.target.value.toUpperCase());
               setPreview(null);
               setPromoError(null);
+              setApplied(false);
             }}
             placeholder={t('billing.promo.placeholder')}
             icon={<Icon name="tag" size={15} />}
@@ -437,7 +489,7 @@ export function HierarchyLockedFeature({ plan }: { plan: PersonalPlan | null }) 
               {t('hierarchy.lock.title')}
             </h2>
           </div>
-          <p style={{ margin: '0 0 12px', color: 'var(--ink-600)', fontSize: 14, lineHeight: 1.5 }}>{t('hierarchy.lock.intro')}</p>
+          <p style={{ margin: '0 0 12px', color: 'var(--ink-700)', fontSize: 14, lineHeight: 1.5 }}>{t('hierarchy.lock.intro')}</p>
           <PersonalLockActions plan={plan} />
           <SeeOffersLink offer="caleb" />
         </div>
@@ -462,10 +514,15 @@ function PersonalLockActions({ plan }: { plan: PersonalPlan | null }) {
       checkout(v.offerCode, null, { period: v.period, currency: v.currency }),
     onSuccess: (res) => window.location.assign(res.url),
   });
+  // R-06 (plan 07 §10.4, JP 29/10) : changer de devise efface l'erreur de caisse née dans l'autre.
+  useEffect(() => {
+    checkoutM.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chosen]);
 
   const sub = plan?.subscription ?? null;
   if (sub?.status === 'PENDING') {
-    return <p style={{ margin: 0, color: 'var(--ink-600)', fontSize: 14 }}>{t('hierarchy.lock.pending')}</p>;
+    return <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>{t('hierarchy.lock.pending')}</p>;
   }
   if (sub?.status === 'PAST_DUE' && !plan?.entitled) {
     return (
@@ -481,7 +538,7 @@ function PersonalLockActions({ plan }: { plan: PersonalPlan | null }) {
     );
   }
   if (!plan || !plan.canSubscribe) {
-    return <p style={{ margin: 0, color: 'var(--ink-600)', fontSize: 14 }}>{t('hierarchy.lock.askShephr')}</p>;
+    return <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>{t('hierarchy.lock.askShephr')}</p>;
   }
   // RG-ABO-05 : prix TOUJOURS en centimes du serveur, jamais recalculé. RG-CUR-20 / 22 (JP 28/10) :
   // ligne de la devise choisie (sinon EUR, avec mention) ; l'annuel doit exister dans cette devise.
@@ -580,9 +637,9 @@ export function HierarchySubscriptionStatus({ plan }: { plan: PersonalPlan | nul
       <Icon name="check" size={15} style={{ color: 'var(--ok)' }} />
       <strong style={{ fontSize: 13.5 }}>{plan.offerName}</strong>
       {/* D-MKT-03 (JP 28/10, RG-MKT-30) : formule de l'abonnement (mensuelle ou annuelle). */}
-      {sub.billingPeriod && <span style={{ fontSize: 13, color: 'var(--ink-600)' }}>{t(`cityStudy.lock.periods.${sub.billingPeriod}`)}</span>}
+      {sub.billingPeriod && <span style={{ fontSize: 13, color: 'var(--ink-700)' }}>{t(`cityStudy.lock.periods.${sub.billingPeriod}`)}</span>}
       <Badge tone={sub.status === 'PAST_DUE' ? 'err' : sub.status === 'ACTIVE' ? 'ok' : 'gray'} dot>{t(`billing.status.${sub.status}`)}</Badge>
-      {due && <span style={{ fontSize: 13, color: sub.status === 'PAST_DUE' ? 'var(--err)' : 'var(--ink-600)' }}>{due}</span>}
+      {due && <span style={{ fontSize: 13, color: sub.status === 'PAST_DUE' ? 'var(--err)' : 'var(--ink-700)' }}>{due}</span>}
       {portalM.isError && <span style={{ color: 'var(--err)', fontSize: 13 }}>{billingErrMsg(portalM.error, t)}</span>}
       {portal && (
         <Button size="sm" variant={sub.status === 'PAST_DUE' ? 'primary' : 'secondary'} disabled={portalM.isPending} onClick={() => portalM.mutate(sub.reference)} style={{ marginLeft: 'auto' }}>
@@ -609,7 +666,7 @@ export function HierarchySubscriptionStatus({ plan }: { plan: PersonalPlan | nul
 //  fiches Member Care d'une assemblée de la chaîne (pages/MemberCare.tsx), sur un 403
 //  `MODULE_ACCESS_DENIED` `HIERARCHIE_SUIVI` ou d'avance (assemblée dirigée absente de `GET /units`).
 //  Jamais un toast. Axe de la CHAÎNE de supervision, jamais la géographie (offre Néhémie).
-//  Pas de caisse ici : un lien vers la Hiérarchie, où vit le verrou complet (`HierarchyLockedFeature`).
+//  Pas de caisse ici : un lien vers la carte Caleb de /offres (W-02, JP 29/10 — avant : /hierarchy).
 //  `canSubscribe` : celui du 403 quand on l'a (le plus frais), à défaut celui du plan personnel
 //  (`GET /entitlements/personal`, calculé par le serveur) ; sinon « Demandez l'activation à l'équipe
 //  Shephr. » (P-06). Revue web (JP 27/10) : un compte qui a DÉJÀ `HIERARCHIE_SUIVI` n'est jamais invité
@@ -651,8 +708,12 @@ export function HierarchyLockedCompact({
   canSubscribe,
   hideWhenEntitled = false,
 }: {
-  /** Ce qui est verrouillé : une assemblée (CR, journal, avancement) ou des fiches de suivi pastoral. */
-  context: 'assembly' | 'memberCare';
+  /**
+   * Ce qui est verrouillé : une assemblée (CR, journal, avancement), des fiches de suivi pastoral, ou
+   * — D-BER-02 (JP 29/10) — le pilotage de « Le Message de Bertoua » dans une assemblée qui n'est pas
+   * la gratuite du dirigeant (lien vers `/offres?offer=caleb`).
+   */
+  context: 'assembly' | 'memberCare' | 'study';
   /**
    * `details.canSubscribe` du 403 `HIERARCHIE_SUIVI` quand on l'a (il prime : c'est la réponse la plus
    * fraîche) ; `undefined` = affichage d'avance, sans 403 — le plan personnel décide alors.
@@ -691,7 +752,7 @@ export function HierarchyLockedCompact({
         </div>
         <div style={{ flex: '1 1 240px' }}>
           <div style={{ fontWeight: 600, color: 'var(--green-800)', marginBottom: 4 }}>{t('hierarchy.lock.outsideChainTitle')}</div>
-          <div style={{ fontSize: 13.5, color: 'var(--ink-600)', lineHeight: 1.5 }}>
+          <div style={{ fontSize: 13.5, color: 'var(--ink-700)', lineHeight: 1.5 }}>
             {t(context === 'memberCare' ? 'hierarchy.lock.outsideChainMemberCare' : 'hierarchy.lock.outsideChainAssembly')}
           </div>
         </div>
@@ -705,19 +766,25 @@ export function HierarchyLockedCompact({
       </div>
       <div style={{ flex: '1 1 240px' }}>
         <div style={{ fontWeight: 600, color: 'var(--green-800)', marginBottom: 4 }}>{t('hierarchy.lock.compactTitle')}</div>
-        <div style={{ fontSize: 13.5, color: 'var(--ink-600)', lineHeight: 1.5 }}>
-          {t(context === 'memberCare' ? 'hierarchy.lock.compactMemberCare' : 'hierarchy.lock.compactAssembly')}
+        <div style={{ fontSize: 13.5, color: 'var(--ink-700)', lineHeight: 1.5 }}>
+          {t(
+            context === 'memberCare'
+              ? 'hierarchy.lock.compactMemberCare'
+              : context === 'study'
+                ? 'hierarchy.lock.compactStudy'
+                : 'hierarchy.lock.compactAssembly',
+          )}
         </div>
         {!subscribable && (
           <div style={{ fontSize: 13, color: 'var(--ink-500)', marginTop: 6 }}>{t('hierarchy.lock.askShephr')}</div>
         )}
       </div>
-      {subscribable && (
-        // D-HIE-01 (JP 28/10) : le verrou complet vit en page 3 « Vie de mon leadership ».
-        <Link to="/hierarchy/vie" className="btn secondary sm" style={{ alignSelf: 'center' }}>
-          {t('hierarchy.lock.openHierarchy')}
-        </Link>
-      )}
+      {/* W-02 (plan 05 §10.2, JP 29/10) : tous les verrous compacts Caleb renvoient vers la carte de
+          l'offre (/offres?offer=caleb, qui porte la caisse) — plus vers /hierarchy ; sans droit de
+          souscrire, texte neutre ci-dessus + « En savoir plus » vers la même carte. */}
+      <Link to="/offres?offer=caleb" className="btn secondary sm" style={{ alignSelf: 'center' }}>
+        {subscribable ? t('hierarchy.lock.discoverCaleb') : t('hierarchy.lock.learnMore')}
+      </Link>
     </div>
   );
 }

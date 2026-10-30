@@ -14,8 +14,11 @@ import { exchangeHandoff } from '../services/authApi';
  * - Tout échec (410 `HANDOFF_INVALID`, 429, réseau) → page publique inchangée, AUCUN message.
  * Le jeton ne transporte aucune URL (RG-PAY-11) : la page de destination reste celle-ci.
  *
- * Rend `true` après un échange réussi : la page affiche alors « Connecté en tant que … — Ce n'est pas
- * vous ? Se déconnecter » (RG-PAY-14, garde-fou contre un lien de connexion forgé).
+ * Rend `exchanged = true` après un échange réussi : la page affiche alors « Connecté en tant que … — Ce
+ * n'est pas vous ? Se déconnecter » (RG-PAY-14, garde-fou contre un lien de connexion forgé).
+ * `settled` (bug JP 29/10, défilement de /offres) : vrai dès qu'il n'y a plus d'échange à attendre (pas
+ * de jeton, jeton ignoré, échange réussi ou refusé) — la page ne défile vers la carte qu'ensuite, une
+ * seule fois, quand le bandeau de connexion a pris sa place.
  */
 const HANDOFF_RE = /(?:^|&)handoff=([^&]*)/;
 
@@ -39,12 +42,14 @@ function takeHandoffFromHash(): string | null {
   return token && token.length <= 128 ? token : null;
 }
 
-export function useHandoffExchange(): boolean {
+export function useHandoffExchange(): { exchanged: boolean; settled: boolean } {
   const { ready, token, establishSession } = useAuth();
   // Garde contre le double montage de StrictMode : les refs survivent au second passage.
   const pendingRef = useRef<string | null | undefined>(undefined);
   const doneRef = useRef(false);
   const [exchanged, setExchanged] = useState(false);
+  // Lu au premier rendu, avant l'effet qui efface le fragment.
+  const [settled, setSettled] = useState(() => !HANDOFF_RE.test(window.location.hash.replace(/^#/, '')));
 
   // Lecture + effacement du fragment au montage, sans attendre la restauration de session.
   useEffect(() => {
@@ -54,17 +59,24 @@ export function useHandoffExchange(): boolean {
   useEffect(() => {
     if (!ready || doneRef.current) return;
     const handoff = pendingRef.current;
-    if (!handoff) return;
+    if (!handoff) {
+      setSettled(true);
+      return;
+    }
     doneRef.current = true;
     pendingRef.current = null;
-    if (token) return; // RG-PAY-13 : une session web existe déjà — jeton ignoré.
+    if (token) {
+      setSettled(true);
+      return; // RG-PAY-13 : une session web existe déjà — jeton ignoré.
+    }
     exchangeHandoff(handoff)
       .then((res) => establishSession(res.token))
       .then(() => setExchanged(true))
       .catch(() => {
         /* RG-PAY-13 : jeton expiré / déjà utilisé / invalide → page publique, sans erreur affichée. */
-      });
+      })
+      .finally(() => setSettled(true));
   }, [ready, token, establishSession]);
 
-  return exchanged;
+  return { exchanged, settled };
 }

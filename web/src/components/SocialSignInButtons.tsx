@@ -103,7 +103,9 @@ export function SocialSignInButtons({
         <span style={{ flex: 1, height: 1, background: 'var(--line, #e5e1d8)' }} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'stretch' }}>
-        {GOOGLE_WEB_CLIENT_ID && <GoogleButton clientId={GOOGLE_WEB_CLIENT_ID} onResponse={onResponse} onError={onError} />}
+        {GOOGLE_WEB_CLIENT_ID && (
+          <GoogleButton clientId={GOOGLE_WEB_CLIENT_ID} onResponse={onResponse} onError={onError} disabled={disabled || !!challenge} />
+        )}
         {APPLE_WEB && <AppleButton cfg={APPLE_WEB} onResponse={onResponse} onError={onError} disabled={disabled || !!challenge} />}
       </div>
       {challenge && (
@@ -130,14 +132,23 @@ function GoogleButton({
   clientId,
   onResponse,
   onError,
+  disabled,
 }: {
   clientId: string;
   onResponse: (res: SocialLoginResponse, provider: Provider) => Promise<void>;
   onError: (message: string | null) => void;
+  disabled?: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const hostRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
+  // Constat PAY (plan 28_10_2026/03 §12, JP 29/10) : bouton inactif pendant la connexion (POST Google
+  // puis `establishSession` de l'appelant) — un second clic ne relance plus un second `POST`. Le bouton
+  // rendu par Google ne se désactive pas : on bloque les clics sur son conteneur et on ignore un rappel.
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const disabledRef = useRef(!!disabled);
+  disabledRef.current = !!disabled;
   // Les rappels changent à chaque rendu : on lit toujours la dernière version (le SDK garde le premier).
   const cbRef = useRef({ onResponse, onError, t });
   cbRef.current = { onResponse, onError, t };
@@ -154,10 +165,17 @@ function GoogleButton({
           callback: (r) => {
             const { onResponse: done, onError: fail, t: tr } = cbRef.current;
             if (!r.credential) return; // annulation : aucun message
+            if (busyRef.current || disabledRef.current) return; // connexion déjà en cours
+            busyRef.current = true;
+            setBusy(true);
             fail(null);
             loginWithGoogleToken(r.credential)
               .then((res) => done(res, 'Google'))
-              .catch((e) => fail(socialAuthErrorMessage(e, tr)));
+              .catch((e) => fail(socialAuthErrorMessage(e, tr)))
+              .finally(() => {
+                busyRef.current = false;
+                setBusy(false);
+              });
           },
         });
         hostRef.current.innerHTML = '';
@@ -181,7 +199,22 @@ function GoogleButton({
   }, [clientId, i18n.language]);
 
   if (failed) return null; // SDK injoignable (bloqueur, réseau) : le mot de passe reste disponible
-  return <div ref={hostRef} aria-label={t('login.social.google')} style={{ display: 'flex', justifyContent: 'center', minHeight: 44 }} />;
+  const inactive = busy || !!disabled;
+  return (
+    <div
+      ref={hostRef}
+      aria-label={t('login.social.google')}
+      aria-disabled={inactive || undefined}
+      aria-busy={busy || undefined}
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        minHeight: 44,
+        pointerEvents: inactive ? 'none' : undefined,
+        opacity: inactive ? 0.6 : 1,
+      }}
+    />
+  );
 }
 
 function AppleButton({

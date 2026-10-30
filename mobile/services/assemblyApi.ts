@@ -292,9 +292,9 @@ export interface MeetingSummaryLite {
   bookTitle: string | null;
   chapters: TeachingChapter[];
   canWrite: boolean;
-  createdById: string | null;
+  // D-FIX-2A (JP 29/10, constat E-13) : `createdById` / `updatedById` retirés du contrat — aucun
+  // identifiant d'auteur dans une vue consolidée.
   createdAt: string | null;
-  updatedById: string | null;
   updatedAt: string | null;
 }
 
@@ -326,7 +326,9 @@ export async function listMeetingsInRange(
 
 /** Réunion consolidée : seul le NOMBRE de présents est gardé (O6) — les noms d'un serveur ancien sont jetés ici. */
 function toMeetingLite(m: any): MeetingSummaryLite {
-  const { attendees, ...rest } = m ?? {};
+  // D-FIX-2A (E-13) : un serveur antérieur envoie encore les identifiants d'auteur — jetés ici aussi.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { attendees, createdById, updatedById, ...rest } = m ?? {};
   return {
     ...rest,
     attendeeCount:
@@ -462,6 +464,23 @@ export interface StudyAssembly {
   currentSession: StudySessionSummary | null;
   /** D-ETU-44/45 (JP 23/10) : séances à rattraper (« À rattraper ») — absent d'un serveur antérieur. */
   catchUps?: StudyCatchUp[] | null;
+  /**
+   * D-BER-02 (JP 29/10) : assemblée gratuite de l'appelant (AccessControlService.freeAssemblyId) —
+   * vraie aussi pour un simple répondant dont c'est le `goalUnitId`. Absent d'un serveur antérieur.
+   */
+  free?: boolean;
+  /**
+   * D-BER-07 (JP 29/10) : écritures de pilotage permises (Commencer, copie papier, ajustement) —
+   * `leader && (free || HIERARCHIE_SUIVI || superAdmin)`, calculé PAR LE SERVEUR. Absent = vrai.
+   */
+  canPilot?: boolean;
+  /** D-BER-02 (JP 29/10) : 'HIERARCHIE_SUIVI' quand le dirigeant n'a pas Caleb sur cette assemblée ; null sinon. */
+  pilotLock?: 'HIERARCHIE_SUIVI' | null;
+  /**
+   * RG-BER-05 (JP 29/10) : peut souscrire Caleb. Miroir seulement — le mobile l'IGNORE (D-ABO-13,
+   * D-OFF-09 : aucun bouton de paiement).
+   */
+  canSubscribe?: boolean;
 }
 
 /**
@@ -604,6 +623,11 @@ export interface StudySessionDetail {
    * sans copie ou copie RATTRAPAGE non envoyée, fenêtre ouverte). Absent d'un serveur antérieur.
    */
   catchUpOpen?: boolean;
+  /**
+   * RG-BER-13 (D-BER-07, JP 29/10) : l'appelant peut faire les écritures de pilotage de cette séance
+   * (copie papier, ajustement / avis) ; faux s'il n'est pas dirigeant. Absent = vrai (serveur antérieur).
+   */
+  canPilot?: boolean;
 }
 
 /** Mirrors com.excellence.back.assembly.AssemblyDtos.StudySessionRequest — `POST /study/sessions`. */
@@ -674,6 +698,8 @@ export interface StudySessionResults {
   copies: StudyCopyResult[];
   /** Dirigeant seulement (sinon []) — pour « Ajouter une copie papier » (D-ETU-13). */
   withoutCopy: StudyRosterMember[];
+  /** RG-BER-13 (D-BER-07, JP 29/10) : copie papier / ajustement permis ; absent = vrai. */
+  canPilot?: boolean;
 }
 
 /** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyCopyDetail — RG-ETU-13 : auteur ou dirigeant. */

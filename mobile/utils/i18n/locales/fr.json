@@ -984,7 +984,8 @@
         "SUPERVISION_ALREADY_LINKED": "Vous suivez déjà ce dirigeant.",
         "SUPERVISION_REQUEST_DUPLICATE": "Une demande est déjà en attente pour ce dirigeant.",
         "SUPERVISION_REQUEST_NOT_PENDING": "Cette demande a déjà été traitée.",
-        "SUPERVISION_REQUEST_NOT_ACCEPTED": "Ce lien n'est plus actif."
+        "SUPERVISION_REQUEST_NOT_ACCEPTED": "Ce lien n'est plus actif.",
+        "generic": "L'action n'a pas abouti. Réessayez plus tard."
       }
     },
     "life": {
@@ -1748,10 +1749,9 @@
       "correct": "Corriger",
       "noCurrent": "Aucune étude en cours",
       "noCurrentHint": "Quand votre dirigeant commencera une séance, elle apparaîtra ici.",
-      "startSession": "Commencer une séance",
-      "startOther": "Commencer une autre leçon",
       "noCatalog": "Aucune unité d'étude n'est encore publiée.",
       "locked": "Verrouillée : terminez d'abord l'unité prérequise dans l'assemblée",
+      "lockedPrereq": "Verrouillée : terminez d'abord {{module}} dans l'assemblée",
       "lessonsDone": "{{done}} / {{total}} leçons",
       "start": "Commencer",
       "redo": "Refaire",
@@ -1760,8 +1760,7 @@
       "forgottenTitle": "Une séance est encore ouverte",
       "forgottenBody": "La séance de la {{lesson}} n'a pas été terminée. La terminer pour commencer celle-ci ?",
       "finishAndStart": "Terminer et commencer",
-      "sessions": "Séances terminées",
-      "noSessions": "Aucune séance terminée pour l'instant.",
+      "noSessions": "Aucune séance dans cette assemblée pour le moment.",
       "copies_one": "{{count}} copie",
       "copies_other": "{{count}} copies",
       "allSessions_one": "Voir la séance",
@@ -1786,7 +1785,16 @@
       "nextRange": "Suite : {{range}}",
       "startPick": "Question de départ",
       "startPickNext": "Par défaut : question {{number}}, la première non encore traitée. Touchez une autre question pour commencer ailleurs.",
-      "startPickFirst": "Par défaut : le début de la leçon. Touchez une autre question pour commencer ailleurs."
+      "startPickFirst": "Par défaut : le début de la leçon. Touchez une autre question pour commencer ailleurs.",
+      "pickAssembly": "Assemblée",
+      "lessonDone": "Faite",
+      "lessonInProgress": "En cours",
+      "lessonTodo": "À faire",
+      "nextLesson": "Leçon suivante",
+      "history": "Historique des séances ({{count}})",
+      "lockedAssembly": "Verrouillée — offre Caleb",
+      "liveAssembly": "Séance en cours",
+      "modules": "Modules et leçons"
     },
     "session": {
       "answered": "{{done}} / {{total}} répondues",
@@ -2006,6 +2014,9 @@
         "title": "Suivi de la ville",
         "notActivated": "Cette fonctionnalité n'est pas activée pour votre église."
       }
+    },
+    "lock": {
+      "pilotCaleb": "Conduire l'étude dans cette assemblée n'est pas activé pour votre compte."
     }
   },
   "offers": {

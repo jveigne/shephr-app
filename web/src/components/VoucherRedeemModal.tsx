@@ -59,9 +59,11 @@ export function LocalPriceLine({ label, style }: { label: string | null | undefi
  * `SUBSCRIPTION_ALREADY_ACTIVE` qui, ici, veut dire « vous payez déjà par carte : aucun code n'est
  * nécessaire » (D-OFF-08).
  */
-function voucherErrMsg(err: unknown, t: ReturnType<typeof useTranslation>['t']): string {
+function voucherErrMsg(err: unknown, t: ReturnType<typeof useTranslation>['t'], plan: VoucherPlanKind): string {
   const code = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-  if (code === 'SUBSCRIPTION_ALREADY_ACTIVE') return t('offers.voucher.alreadyPaid');
+  // W-09 (a) (plan 05 §10.2, JP 29/10) : pour Néhémie, la ville peut être payée par UN AUTRE responsable
+  // (ou ouverte par un accord de ministère, D-FIX-4A) — on ne dit plus « vous payez déjà par carte ».
+  if (code === 'SUBSCRIPTION_ALREADY_ACTIVE') return t(plan === 'nehemie' ? 'offers.voucher.cityAlreadyOpen' : 'offers.voucher.alreadyPaid');
   return billingErrMsg(err, t);
 }
 
@@ -209,7 +211,7 @@ export function VoucherRedeemModal({
         <LocalPriceLine label={localPriceLabel} />
         {redeemM.isError && (
           <p role="alert" style={{ margin: 0, color: 'var(--err)', fontSize: 13.5 }}>
-            {voucherErrMsg(redeemM.error, t)}
+            {voucherErrMsg(redeemM.error, t, plan)}
           </p>
         )}
       </form>

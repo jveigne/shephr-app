@@ -14,8 +14,12 @@ import { useLanguage } from '@/contexts/LanguageContext';
  *
  * <p>D-OFF-09 (JP 27/10) : texte neutre, sans mention du web, d'un abonnement ni d'un paiement.
  * D-OFF-11 (JP 27/10) : lien « En savoir plus » vers `/offres?offer=caleb` (porté par `FeatureLock`).
+ *
+ * <p>D-BER-02 (JP 29/10) : aussi à la place de « Commencer », de la copie papier et de l'ajustement
+ * du Message de Bertoua sur une assemblée qui n'est pas l'assemblée gratuite du dirigeant — `body`
+ * facultatif (`study.lock.pilotCaleb`), texte par défaut inchangé.
  */
-export default function CalebAssemblyLock({ compact }: { compact?: boolean }) {
+export default function CalebAssemblyLock({ compact, body }: { compact?: boolean; body?: string }) {
   const { t } = useLanguage();
-  return <FeatureLock compact={compact} offer="caleb" body={t('assemblyLife.lock.otherAssembly')} />;
+  return <FeatureLock compact={compact} offer="caleb" body={body ?? t('assemblyLife.lock.otherAssembly')} />;
 }

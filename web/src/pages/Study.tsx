@@ -37,6 +37,7 @@ import {
   listStudyProgress,
   listStudySessions,
   openStudySession,
+  studyCanPilot,
   updatePaperCopy,
   type StudyAnswerView,
   type StudyAssembly,
@@ -53,8 +54,13 @@ import {
   type StudyUnitModuleProgress,
 } from '../services/assemblyApi';
 import { isStudyModuleOff, useStudyAccess, useStudyBase } from '../utils/studyAccess';
-import { LockedFeature } from '../components/LockedFeature';
-import { ENTITLEMENT_ETUDE_SUIVI, moduleAccessDenied, studyCityAccessDenied } from '../services/entitlementsApi';
+import { HierarchyLockedCompact, LockedFeature } from '../components/LockedFeature';
+import {
+  ENTITLEMENT_ETUDE_SUIVI,
+  hierarchyAccessDenied,
+  moduleAccessDenied,
+  studyCityAccessDenied,
+} from '../services/entitlementsApi';
 import { toLocalDate } from '../utils/format';
 import { formatMeetingDate } from '../utils/meetingReport';
 import { EmptyState, ProgressBar, errCode, errMsg } from './Assembly';
@@ -91,12 +97,58 @@ interface StudyPageUnit {
   /** Miroir d'`AssemblyServiceImpl.isAssemblyMember` (MEMBRE de cette assemblée) : lecture de SA note seule (D-ETU-10). */
   member: boolean;
   leader: boolean;
+  /** D-BER-07 (JP 29/10) : écritures de pilotage permises (`/study/me` › `canPilot`, absent = permis). */
+  canPilot: boolean;
+}
+
+// ---------------------------------------------------------------------------------------------
+//  D-BER-01 (JP 29/10) : un dirigeant de PLUSIEURS assemblées choisit UNE assemblée en tête de page ;
+//  le dernier choix est retenu dans `localStorage` (clé liée au compte, RG-BER-17), toujours sous
+//  try/catch : une mémoire illisible ou bloquée = choix par défaut, sans erreur.
+// ---------------------------------------------------------------------------------------------
+
+const leaderUnitKey = (userId: string) => `shephr.study.leaderUnit.v1.${userId}`;
+
+function readLeaderUnit(userId: string | undefined): string | null {
+  if (!userId) return null;
+  try {
+    return window.localStorage.getItem(leaderUnitKey(userId));
+  } catch {
+    return null;
+  }
+}
+
+function writeLeaderUnit(userId: string | undefined, unitId: string): void {
+  if (!userId) return;
+  try {
+    window.localStorage.setItem(leaderUnitKey(userId), unitId);
+  } catch {
+    // Mémoire indisponible (navigation privée, données bloquées) : le choix vaut pour la visite.
+  }
+}
+
+/** RG-BER-16 (JP 29/10) : assemblées dirigées — la gratuite d'abord, puis par nom. */
+function sortLedAssemblies(assemblies: StudyAssembly[], lang: string): StudyAssembly[] {
+  return assemblies
+    .filter((a) => a.leader)
+    .sort((x, y) => Number(!!y.free) - Number(!!x.free) || x.unitName.localeCompare(y.unitName, lang));
+}
+
+/**
+ * RG-BER-17 (JP 29/10) : dernier choix mémorisé s'il est encore dirigé ; sinon la première assemblée
+ * avec une séance en cours ; sinon la gratuite ; sinon la première.
+ */
+function defaultLeaderUnit(led: StudyAssembly[], stored: string | null): string {
+  if (stored && led.some((a) => a.unitId === stored)) return stored;
+  return (led.find((a) => !!a.currentSession) ?? led.find((a) => a.free) ?? led[0]).unitId;
 }
 
 export function StudyPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { me } = useAuth();
   const [unitId, setUnitId] = useState('');
+  // D-BER-01 (JP 29/10) : assemblée dirigée choisie en tête de page (vide tant que non initialisée).
+  const [leaderUnitId, setLeaderUnitId] = useState('');
 
   // RG-06 : sans abonnement STUDY, le module est invisible (le menu est déjà masqué) ; une URL
   // tapée à la main tombe sur un message plutôt que sur une cascade de 403.
@@ -144,6 +196,7 @@ export function StudyPage() {
         language: a?.language ?? null,
         member: isMember(o.unitId),
         leader: a?.leader ?? false,
+        canPilot: studyCanPilot(a),
       });
     }
     for (const a of mine.values()) {
@@ -155,6 +208,7 @@ export function StudyPage() {
           language: a.language,
           member: isMember(a.unitId),
           leader: a.leader,
+          canPilot: studyCanPilot(a),
         });
       }
     }
@@ -162,9 +216,43 @@ export function StudyPage() {
     return Array.from(byId.values()).sort((x, y) => Number(y.leader) - Number(x.leader));
   }, [overviewQ.data, studyMeQ.data, me?.goalRole, me?.goalUnitId]);
 
+  const led = useMemo(
+    () => sortLedAssemblies(studyMeQ.data?.assemblies ?? [], i18n.language),
+    [studyMeQ.data, i18n.language],
+  );
+  // RG-BER-17 : choix par défaut à la première lecture (ou si l'assemblée choisie n'est plus dirigée) ;
+  // la section « Séances / avancement » plus bas suit la même assemblée.
   useEffect(() => {
-    if (units.length > 0 && !units.some((u) => u.id === unitId)) setUnitId(units[0].id);
-  }, [units, unitId]);
+    if (led.length === 0 || led.some((a) => a.unitId === leaderUnitId)) return;
+    const chosen = defaultLeaderUnit(led, readLeaderUnit(me?.id));
+    setLeaderUnitId(chosen);
+    if (units.some((u) => u.id === chosen)) setUnitId(chosen);
+  }, [led, leaderUnitId, me?.id, units]);
+
+  useEffect(() => {
+    // Le choix de tête n'est pas encore posé : l'effet ci-dessus fixe aussi l'assemblée de lecture.
+    if (led.length > 0 && !led.some((a) => a.unitId === leaderUnitId)) return;
+    if (units.length > 0 && !units.some((u) => u.id === unitId)) {
+      setUnitId(units.some((u) => u.id === leaderUnitId) ? leaderUnitId : units[0].id);
+    }
+  }, [units, unitId, leaderUnitId, led]);
+
+  /** D-BER-01 : choix d'une assemblée dirigée (sélecteur de tête), mémorisé pour le compte. */
+  const chooseLeaderUnit = (id: string) => {
+    setLeaderUnitId(id);
+    writeLeaderUnit(me?.id, id);
+    if (units.some((u) => u.id === id)) setUnitId(id);
+  };
+  /** Sélecteur de la vue de lecture : une assemblée dirigée y entraîne aussi le choix de tête. */
+  const chooseUnit = (id: string) => {
+    setUnitId(id);
+    if (led.some((a) => a.unitId === id)) {
+      setLeaderUnitId(id);
+      writeLeaderUnit(me?.id, id);
+    }
+  };
+  // D-BER-01 : si toutes les assemblées de la page sont dirigées, le sélecteur de tête suffit.
+  const showUnitPicker = units.length > 1 && !units.every((u) => u.leader);
 
   const unit = units.find((u) => u.id === unitId) ?? null;
 
@@ -189,12 +277,17 @@ export function StudyPage() {
     return (
       <>
         {/* D-WEB-02 (JP 27/10) : séance en cours, À rattraper, Commencer — assemblées de `/study/me`. */}
-        <StudyHome assemblies={studyMeQ.data?.assemblies ?? []} />
-        {units.length > 1 && (
+        <StudyHome
+          assemblies={studyMeQ.data?.assemblies ?? []}
+          led={led}
+          leaderUnitId={leaderUnitId}
+          onChooseLeader={chooseLeaderUnit}
+        />
+        {showUnitPicker && (
           <Field label={t('assembly.unit')} style={{ maxWidth: 360, marginBottom: 16 }}>
             <Picker
               value={unitId}
-              onChange={setUnitId}
+              onChange={chooseUnit}
               options={units.map((u) => ({ id: u.id, label: u.name, sub: u.cityName ?? undefined }))}
               placeholder={t('assembly.chooseUnit')}
             />
@@ -207,6 +300,8 @@ export function StudyPage() {
           showOverview={units.length > 1}
           personal={unit.member || me?.goalUnitId === unit.id}
           cityLock={cityLock}
+          // D-BER-01 (JP 29/10) : l'historique d'une assemblée dirigée vit dans l'accueil (replié).
+          hideSessions={unit.leader}
         />
       </>
     );
@@ -338,6 +433,7 @@ function StudyTab({
   showOverview,
   personal,
   cityLock,
+  hideSessions,
 }: {
   unit: StudyPageUnit;
   catalog: StudyUnitForAssembly[];
@@ -346,6 +442,8 @@ function StudyTab({
   personal: boolean;
   /** D-ABO-28 : une ville du lecteur sans ETUDE_SUIVI (ses assemblées manquent à la vue d'ensemble). */
   cityLock: ReturnType<typeof moduleAccessDenied>;
+  /** D-BER-01 (JP 29/10) : séances déjà listées par l'accueil de l'assemblée dirigée. */
+  hideSessions: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
@@ -471,6 +569,8 @@ function StudyTab({
           ) : (
           <>
           {/* ---- Séances (pilotées depuis le mobile ou le web depuis D-WEB-02, JP 27/10) ---- */}
+          {!hideSessions && (
+          <>
           <div className="card-head" style={{ padding: 0, border: 'none', marginBottom: 12 }}>
             <div>
               <div className="ttl">{t('assembly.study.sessionsTitle', { name: unit.name })}</div>
@@ -496,9 +596,11 @@ function StudyTab({
               empty={<EmptyState title={t('assembly.study.noSession')} text={t('assembly.study.noSessionHint')} />}
             />
           )}
+          </>
+          )}
 
           {/* ---- Avancement de l'assemblée par membre (RG-ETU-17 / 17b) ---- */}
-          <div className="card-head" style={{ padding: 0, border: 'none', margin: '28px 0 12px' }}>
+          <div className="card-head" style={{ padding: 0, border: 'none', margin: hideSessions ? '0 0 12px' : '28px 0 12px' }}>
             <div>
               <div className="ttl">{t('assembly.study.progressTitle', { name: unit.name })}</div>
               <div className="sub">{t('assembly.study.progressSub')}</div>
@@ -603,7 +705,7 @@ function StudyTab({
         <StudyResultsModal
           sessionId={resultsId}
           onClose={() => setResultsId(null)}
-          onOpenCopy={(id) => setCopy({ id, canAdjust: true })}
+          onOpenCopy={(id, canAdjust) => setCopy({ id, canAdjust })}
         />
       )}
       {member && (
@@ -613,7 +715,8 @@ function StudyTab({
           language={unit.language}
           onClose={() => setMember(null)}
           // §4.8 : le lien vers une copie n'est affiché qu'au dirigeant de l'assemblée (RG-ETU-18).
-          onOpenCopy={leader ? (id) => setCopy({ id, canAdjust: true }) : undefined}
+          // D-BER-06 (JP 29/10) : ajustement seulement si le pilotage est permis sur l'assemblée.
+          onOpenCopy={leader ? (id) => setCopy({ id, canAdjust: unit.canPilot }) : undefined}
         />
       )}
       {copy && <StudyCopyModal copyId={copy.id} canAdjust={copy.canAdjust} onClose={() => setCopy(null)} />}
@@ -775,7 +878,8 @@ export function StudyResultsModal({
 }: {
   sessionId: string;
   onClose: () => void;
-  onOpenCopy: (copyId: string) => void;
+  /** `canAdjust` : D-BER-06 (JP 29/10) — ajustement permis (pilotage de l'assemblée). */
+  onOpenCopy: (copyId: string, canAdjust: boolean) => void;
 }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
@@ -788,6 +892,12 @@ export function StudyResultsModal({
   });
   const r = resultsQ.data ?? null;
   const leader = r?.leader ?? false;
+  // D-BER-06 / RG-BER-23 (JP 29/10) : 403 `HIERARCHIE_SUIVI` sur une écriture de pilotage → verrou
+  // Caleb dans la modale (jamais un toast) et relecture de `/study/me` et des résultats.
+  const [pilotDenied, setPilotDenied] = useState<{ canSubscribe: boolean } | null>(null);
+  // RG-BER-26 (JP 29/10) : copie papier et ajustement masqués quand le serveur refuse le pilotage
+  // (assemblée non gratuite pour ce dirigeant, sans offre Caleb).
+  const pilot = leader && studyCanPilot(r) && !pilotDenied;
   // D-ETU-36 (JP 23/10) : « Cette semaine, chaque membre doit : » dans le détail d'une séance
   // TERMINEE seulement (web, avenant §6) — lu sur §4.4, qui ne les envoie à un non-dirigeant qu'à
   // TERMINEE. Toute erreur = pas de bloc (les résultats restent affichés).
@@ -819,7 +929,18 @@ export function StudyResultsModal({
 
   // Une note change séance, avancement et vue d'ensemble : tout l'arbre « study » est relu.
   const invalidate = () => qc.invalidateQueries({ queryKey: ['assembly', 'study'] });
-  const onError = (title: string) => (err: unknown) => push({ kind: 'error', title, msg: studyErrMsg(err, t) });
+  const onError = (title: string) => (err: unknown) => {
+    const denied = hierarchyAccessDenied(err);
+    if (denied) {
+      setPilotDenied({ canSubscribe: denied.canSubscribe });
+      setAdding(false);
+      setEditing(null);
+      setDeleting(null);
+      void invalidate();
+      return;
+    }
+    push({ kind: 'error', title, msg: studyErrMsg(err, t) });
+  };
 
   const createM = useMutation({
     mutationFn: () => createPaperCopy(sessionId, { userId: newUserId, score: validScore(newScore) as number }),
@@ -883,6 +1004,7 @@ export function StudyResultsModal({
             style: { width: 90 },
             render: (c: StudyCopyResult) =>
               c.source === 'PAPIER' ? (
+                !pilot ? null : (
                 <span style={{ display: 'inline-flex', gap: 4 }} onClick={(e) => e.stopPropagation()}>
                   {paperAllowed && (
                     <IconButton
@@ -901,6 +1023,7 @@ export function StudyResultsModal({
                     onClick={() => setDeleting(c)}
                   />
                 </span>
+                )
               ) : (
                 <span title={t('assembly.study.openCopy')}>
                   <Icon name="chevRight" size={14} />
@@ -925,7 +1048,7 @@ export function StudyResultsModal({
         sub={r ? `${r.session.unitName} · ${fmtInstant(r.session.openedAt)} · ${r.session.moduleName}` : undefined}
         footer={
           <>
-            {leader && paperAllowed && !adding && (
+            {pilot && paperAllowed && !adding && (
               <Button
                 variant="secondary"
                 iconL={<Icon name="plus" size={14} />}
@@ -966,7 +1089,7 @@ export function StudyResultsModal({
                 <span>{t('assembly.study.resultsOpenHint')}</span>
               </div>
             )}
-            {leader && r.session.status === 'REPONSES_OUVERTES' && (
+            {pilot && r.session.status === 'REPONSES_OUVERTES' && (
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, color: 'var(--ink-600)' }}>
                 <Icon name="info" size={15} />
                 <span>{t('assembly.study.paperAfterCorrection')}</span>
@@ -985,7 +1108,9 @@ export function StudyResultsModal({
               </div>
             )}
 
-            {adding && paperAllowed && (
+            {pilotDenied && <HierarchyLockedCompact context="study" canSubscribe={pilotDenied.canSubscribe} />}
+
+            {pilot && adding && paperAllowed && (
               <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <strong style={{ fontSize: 13 }}>{t('assembly.study.addPaper')}</strong>
                 <span style={{ color: 'var(--ink-500)', fontSize: 12.5 }}>{t('assembly.study.addPaperHint')}</span>
@@ -1029,7 +1154,7 @@ export function StudyResultsModal({
               rows={r.copies}
               zebra
               // RG-ETU-13 : seul le dirigeant ouvre une copie (APP / RATTRAPAGE ; une copie papier n'a que sa note).
-              onRowClick={leader ? (c) => c.source !== 'PAPIER' && onOpenCopy(c.id) : undefined}
+              onRowClick={leader ? (c) => c.source !== 'PAPIER' && onOpenCopy(c.id, pilot) : undefined}
               empty={<EmptyState title={t('assembly.study.noCopy')} text={t('assembly.study.noCopyHint')} />}
             />
           </div>
@@ -1134,9 +1259,11 @@ export function StudyCopyModal({ copyId, canAdjust, onClose }: { copyId: string;
     queryFn: () => getStudyCopy(copyId),
   });
   const d = copyQ.data ?? null;
+  // D-BER-06 / RG-BER-23 (JP 29/10) : ajustement refusé (`HIERARCHIE_SUIVI`) → verrou, pas de toast.
+  const [pilotDenied, setPilotDenied] = useState<{ canSubscribe: boolean } | null>(null);
   // Pas de détail par question sur une copie papier en V1 (§4.6) : on y modifie la note seule.
   // D-ETU-46 (JP 23/10) : une copie de rattrapage s'ajuste comme une copie APP.
-  const adjustable = canAdjust && d != null && d.copy.source !== 'PAPIER';
+  const adjustable = canAdjust && !pilotDenied && d != null && d.copy.source !== 'PAPIER';
   // D-ETU-44 / D-ETU-46 (JP 23/10) : sur un rattrapage, les ouvertes attendent l'avis du dirigeant —
   // Juste / À préciser / À revoir passent par l'ajustement, points = barème du verdict côté serveur.
   const reviewable = adjustable && d?.copy.source === 'RATTRAPAGE';
@@ -1156,7 +1283,15 @@ export function StudyCopyModal({ copyId, canAdjust, onClose }: { copyId: string;
       setDrafts(({ [v.questionId]: _, ...rest }) => rest);
       push({ kind: 'ok', title: t('assembly.study.adjustedOk') });
     },
-    onError: (err) => push({ kind: 'error', title: t('assembly.study.saveFailed'), msg: studyErrMsg(err, t) }),
+    onError: (err) => {
+      const denied = hierarchyAccessDenied(err);
+      if (denied) {
+        setPilotDenied({ canSubscribe: denied.canSubscribe });
+        void qc.invalidateQueries({ queryKey: ['assembly', 'study'] });
+        return;
+      }
+      push({ kind: 'error', title: t('assembly.study.saveFailed'), msg: studyErrMsg(err, t) });
+    },
   });
 
   return (
@@ -1187,6 +1322,7 @@ export function StudyCopyModal({ copyId, canAdjust, onClose }: { copyId: string;
               </span>
             )}
           </div>
+          {pilotDenied && <HierarchyLockedCompact context="study" canSubscribe={pilotDenied.canSubscribe} />}
           {d.copy.source === 'PAPIER' ? (
             <p style={{ color: 'var(--ink-500)', margin: 0, fontSize: 13 }}>{t('assembly.study.paperNoDetail')}</p>
           ) : (
@@ -1344,6 +1480,13 @@ export function StudyCopyModal({ copyId, canAdjust, onClose }: { copyId: string;
 //     X à Y » (D-ETU-49), *Commencer* / *Continuer* / *Refaire*. *Commencer* ouvre « À lire avant la
 //     leçon » (D-ETU-35) avec le choix du départ (D-ETU-39/49) ; une séance oubliée qui bloque
 //     (STUDY_SESSION_ALREADY_OPEN) est proposée à *Terminer* (D-ETU-22).
+//  D-BER-01 (JP 29/10) : dirigeant de plusieurs assemblées → sélecteur en tête, UNE assemblée à la
+//  fois (unités et leçons avec l'avancement de CETTE assemblée, leçon suivante, historique replié).
+//  D-BER-02 / D-BER-06 (JP 29/10) : piloter (Commencer, copie papier, ajustement) n'est gratuit que
+//  sur l'assemblée gratuite du dirigeant (`free`, `AccessControlService.freeAssemblyId`) ; ailleurs
+//  l'offre Caleb est requise — le serveur le dit (`canPilot` / `pilotLock` de `/study/me`) et le web
+//  montre un verrou Caleb compact à la place de *Commencer*, jamais un toast. Corriger, Terminer et
+//  Annuler une séance déjà ouverte restent libres.
 // ---------------------------------------------------------------------------------------------
 
 /** D-ETU-35 (JP 23/10) — ce que le dirigeant lit avant *Commencer*. */
@@ -1415,18 +1558,125 @@ function lessonTitleOf(t: TFn, n: number, title: string | null | undefined): str
   return [t('assembly.study.lesson', { n }), title].filter(Boolean).join(' — ');
 }
 
-/** Les assemblées où l'appelant répond ou pilote (`/study/me`) : un bloc chacune, en tête de page. */
-function StudyHome({ assemblies }: { assemblies: StudyAssembly[] }) {
-  const mine = assemblies.filter((a) => a.participant || a.leader);
-  if (mine.length === 0) return null;
+/**
+ * Accueil de l'étude (`/study/me`). D-BER-01 (JP 29/10) : un dirigeant de PLUSIEURS assemblées ne voit
+ * plus un bloc empilé par assemblée — un sélecteur en tête (`led` déjà trié, RG-BER-16), puis
+ * l'accueil de l'assemblée choisie seulement (catalogue et séances lus pour elle seule, RG-BER-18).
+ * Les assemblées où l'appelant n'est que répondant gardent leur bloc, inchangé, dessous (RG-BER-25).
+ */
+function StudyHome({
+  assemblies,
+  led,
+  leaderUnitId,
+  onChooseLeader,
+}: {
+  assemblies: StudyAssembly[];
+  /** Assemblées dirigées, triées (gratuite d'abord, puis par nom). */
+  led: StudyAssembly[];
+  leaderUnitId: string;
+  onChooseLeader: (unitId: string) => void;
+}) {
+  const answering = assemblies.filter((a) => a.participant && !a.leader);
+  const chosen = led.find((a) => a.unitId === leaderUnitId) ?? led[0] ?? null;
+  if (!chosen && answering.length === 0) return null;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22, marginBottom: 30 }}>
-      {mine.map((a) => (
-        <StudyAssemblyHome key={a.unitId} assembly={a} showName={mine.length > 1 || a.leader} />
+      {/* RG-BER-15 : le sélecteur n'apparaît qu'à partir de deux assemblées dirigées. */}
+      {led.length >= 2 && chosen && (
+        <StudyLeaderPicker assemblies={led} value={chosen.unitId} onChange={onChooseLeader} />
+      )}
+      {chosen && <StudyAssemblyHome key={chosen.unitId} assembly={chosen} showName />}
+      {answering.map((a) => (
+        <StudyAssemblyHome key={a.unitId} assembly={a} showName={answering.length + (chosen ? 1 : 0) > 1} />
       ))}
     </div>
   );
 }
+
+/**
+ * D-BER-01 / RG-BER-16 (JP 29/10) : choix de l'assemblée dirigée — pastilles, la gratuite d'abord ;
+ * cadenas sur une assemblée où le pilotage demande l'offre Caleb (`pilotLock` du serveur, D-BER-02),
+ * point « En cours » si une séance y est ouverte.
+ */
+function StudyLeaderPicker({
+  assemblies,
+  value,
+  onChange,
+}: {
+  assemblies: StudyAssembly[];
+  value: string;
+  onChange: (unitId: string) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink-600)' }}>{t('assembly.study.home.pickAssembly')}</span>
+      <div role="radiogroup" aria-label={t('assembly.study.home.pickAssembly')} style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {assemblies.map((a) => {
+          const selected = a.unitId === value;
+          const locked = a.pilotLock === 'HIERARCHIE_SUIVI';
+          const sub = locked
+            ? t('assembly.study.home.lockedAssembly')
+            : a.free
+              ? t('assembly.study.home.freeAssembly')
+              : null;
+          return (
+            <button
+              key={a.unitId}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => onChange(a.unitId)}
+              title={sub ?? undefined}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                maxWidth: '100%',
+                padding: '7px 12px',
+                borderRadius: 99,
+                border: `1px solid ${selected ? 'var(--green-700)' : 'var(--line)'}`,
+                background: selected ? 'var(--green-700)' : 'var(--ivory-card)',
+                color: selected ? 'var(--ivory-raised)' : 'var(--ink-800)',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              {locked && <Icon name="lock" size={13} />}
+              <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <span style={{ fontWeight: 500, fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {a.unitName}
+                </span>
+                {sub && <span style={{ fontSize: 11, opacity: 0.8 }}>{sub}</span>}
+              </span>
+              {a.currentSession && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '1px 7px',
+                    borderRadius: 99,
+                    fontSize: 10.5,
+                    fontWeight: 600,
+                    background: 'var(--earth-500)',
+                    color: 'var(--green-900)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green-900)' }} />
+                  {t('nav.studyLive')}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+type LessonState = 'done' | 'inProgress' | 'todo';
 
 function StudyAssemblyHome({ assembly, showName }: { assembly: StudyAssembly; showName: boolean }) {
   const { t } = useTranslation();
@@ -1434,18 +1684,28 @@ function StudyAssemblyHome({ assembly, showName }: { assembly: StudyAssembly; sh
   const qc = useQueryClient();
   const navigate = useNavigate();
   const base = useStudyBase();
-  const [unitOpen, setUnitOpen] = useState<string | null>(null);
+  // Unités dépliées : null = défaut (celle de la leçon suivante, RG-BER-20).
+  const [openUnits, setOpenUnits] = useState<Set<string> | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
   const [briefing, setBriefing] = useState<Briefing | null>(null);
+  const [resultsId, setResultsId] = useState<string | null>(null);
+  const [copy, setCopy] = useState<{ id: string; canAdjust: boolean } | null>(null);
   // STUDY_SESSION_ALREADY_OPEN : la séance oubliée et la leçon à ouvrir ensuite (D-ETU-22).
   const [forgotten, setForgotten] = useState<{ current: StudySessionSummary; lesson: StudyLesson; start: string | null } | null>(null);
+  // RG-BER-23 (JP 29/10) : 403 `HIERARCHIE_SUIVI` reçu sur *Commencer* (droit expiré entre deux lectures).
+  const [pilotDenied, setPilotDenied] = useState<{ canSubscribe: boolean } | null>(null);
 
   const current = assembly.currentSession;
   const catchUps = assembly.catchUps ?? [];
   const leader = assembly.leader;
+  // D-BER-02 / RG-BER-22 (JP 29/10) : droit de pilotage décidé par le serveur (`/study/me`), jamais
+  // reconstruit ici. Sans lui, un seul verrou Caleb remplace toutes les actions *Commencer*.
+  const pilotLocked = leader && (!studyCanPilot(assembly) || !!pilotDenied);
+  const lockCanSubscribe = pilotDenied?.canSubscribe ?? assembly.canSubscribe ?? false;
 
-  // D-ETU-07 : le catalogue `?unitId=` (verrou, leçons faites, notes du dirigeant, D-ETU-49) et les
-  // séances de l'assemblée (même clé que le tableau des séances : un seul appel).
+  // D-ETU-07 : le catalogue `?unitId=` (verrou D-ETU-19, leçons faites, notes du dirigeant, D-ETU-49)
+  // et les séances de l'assemblée (même clé que le tableau des séances : un seul appel).
   const catalogQ = useQuery({
     queryKey: ['assembly', 'study', 'catalog', assembly.unitId],
     queryFn: () => getStudyCatalog(assembly.unitId),
@@ -1456,14 +1716,66 @@ function StudyAssemblyHome({ assembly, showName }: { assembly: StudyAssembly; sh
     queryFn: () => listStudySessions(assembly.unitId),
     enabled: leader,
   });
-  const catalog = catalogQ.data ?? [];
-  const sessions = sessionsQ.data ?? [];
+  const catalog = useMemo(() => catalogQ.data ?? [], [catalogQ.data]);
+  const sessions = useMemo(() => sessionsQ.data ?? [], [sessionsQ.data]);
+  // RG-BER-24 : historique, plus récentes d'abord.
+  // R-BER-05 (plan 29_10/01 §12.5, JP 29/10) : règle commune web / mobile = TOUTES les séances que rend
+  // `GET /study/units/{id}/sessions` (contrat), séance en cours comprise — « Historique des séances (n) »
+  // a le même n des deux côtés (le mobile s'aligne, `app/study/index.tsx`).
+  const history = useMemo(
+    () => [...sessions].sort((a, b) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime()),
+    [sessions],
+  );
+
+  /** RG-BER-19 (JP 29/10) : faite / en cours (séance ouverte, plage partielle) / à faire. */
+  const lessonState = (u: StudyUnitForAssembly, l: StudyLesson): LessonState => {
+    if (u.doneChapterIds.includes(l.chapterId)) return 'done';
+    if (current?.chapterId === l.chapterId) return 'inProgress';
+    if (pastOfLesson(sessions, l.chapterId).length > 0) return 'inProgress';
+    // D-ETU-49 : le serveur reprend après la première question — une partie est déjà couverte.
+    const nextStart = defaultStartOf(l);
+    return nextStart && nextStart !== lessonNumbersOf(l)[0] ? 'inProgress' : 'todo';
+  };
+
+  /**
+   * RG-BER-20 (JP 29/10) : leçon suivante = première leçon non faite, dans l'ordre du catalogue, de la
+   * première unité NON verrouillée qui en contient une.
+   */
+  const next = useMemo(() => {
+    for (const u of catalog) {
+      if (u.locked) continue;
+      const l = u.unit.lessons.find((x) => !u.doneChapterIds.includes(x.chapterId));
+      if (l) return { moduleId: u.unit.moduleId, chapterId: l.chapterId };
+    }
+    return null;
+  }, [catalog]);
+  const isOpen = (moduleId: string) => (openUnits ? openUnits.has(moduleId) : next?.moduleId === moduleId);
+  const toggleUnit = (moduleId: string) =>
+    setOpenUnits((prev) => {
+      const set = new Set(prev ?? (next ? [next.moduleId] : []));
+      if (set.has(moduleId)) set.delete(moduleId);
+      else set.add(moduleId);
+      return set;
+    });
+  const moduleName = (moduleId: string | null) => {
+    const m = moduleId ? catalog.find((c) => c.unit.moduleId === moduleId) : undefined;
+    return m ? [m.unit.code, m.unit.name].filter(Boolean).join(' · ') : null;
+  };
 
   const openSession = (id: string) => navigate(`${base}/session/${id}`);
   const invalidate = () => void qc.invalidateQueries({ queryKey: ['assembly', 'study'] });
 
+  /** RG-BER-23 : un refus Caleb n'est jamais un toast — verrou + relecture de `/study/me`. */
+  const onPilotDenied = (e: unknown): boolean => {
+    const denied = hierarchyAccessDenied(e);
+    if (!denied) return false;
+    setPilotDenied({ canSubscribe: denied.canSubscribe });
+    invalidate();
+    return true;
+  };
+
   const onStart = (u: StudyUnitForAssembly, lesson: StudyLesson) => {
-    if (opening) return;
+    if (opening || pilotLocked) return;
     const firstOfUnit = !u.unit.lessons.some((l) => u.doneChapterIds.includes(l.chapterId));
     const past = pastOfLesson(sessions, lesson.chapterId);
     // Sans rien à lire ni départ à choisir, la modale n'est qu'une confirmation (comme le mobile).
@@ -1489,6 +1801,7 @@ function StudyAssemblyHome({ assembly, showName }: { assembly: StudyAssembly; sh
       invalidate();
       openSession(created.session.id);
     } catch (e) {
+      if (onPilotDenied(e)) return;
       if (errCode(e) !== 'STUDY_SESSION_ALREADY_OPEN') {
         push({ kind: 'error', title: t('assembly.study.title'), msg: studyErrMsg(e, t) });
         return;
@@ -1507,6 +1820,7 @@ function StudyAssemblyHome({ assembly, showName }: { assembly: StudyAssembly; sh
     }
   };
 
+  // D-BER-06 (JP 29/10) : *Terminer* reste libre ; seule la nouvelle ouverture peut être refusée.
   const finishAndStart = async () => {
     if (!forgotten || opening) return;
     const f = forgotten;
@@ -1519,7 +1833,7 @@ function StudyAssemblyHome({ assembly, showName }: { assembly: StudyAssembly; sh
       invalidate();
       openSession(created.session.id);
     } catch (e) {
-      push({ kind: 'error', title: t('assembly.study.title'), msg: studyErrMsg(e, t) });
+      if (!onPilotDenied(e)) push({ kind: 'error', title: t('assembly.study.title'), msg: studyErrMsg(e, t) });
       invalidate();
     } finally {
       setOpening(null);
@@ -1544,11 +1858,28 @@ function StudyAssemblyHome({ assembly, showName }: { assembly: StudyAssembly; sh
     background: 'var(--ivory-card)',
   } as const;
 
+  // RG-BER-21 / RG-BER-22 : aucune action *Commencer* pendant une séance ouverte, ni sans droit de pilotage.
+  const canStart = !current && !pilotLocked;
+
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {showName && <h3 style={{ ...sectionTitle, fontSize: 17 }}>{assembly.unitName}</h3>}
+      {showName && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <h3 style={{ ...sectionTitle, fontSize: 17 }}>{assembly.unitName}</h3>
+          {leader && assembly.free && <Badge tone="green">{t('assembly.study.home.freeAssembly')}</Badge>}
+          {pilotLocked && (
+            <Badge tone="earth">
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="lock" size={11} />
+                {t('assembly.study.home.lockedAssembly')}
+              </span>
+            </Badge>
+          )}
+        </div>
+      )}
 
       {current ? (
+        // RG-BER-22 : même sans Caleb, la séance déjà ouverte se mène à son terme (Reprendre → Corriger, Terminer).
         <div
           className="card"
           style={{ padding: '16px 18px', background: 'var(--green-800)', color: 'var(--ivory)', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}
@@ -1608,11 +1939,13 @@ function StudyAssemblyHome({ assembly, showName }: { assembly: StudyAssembly; sh
       {leader && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
           <div>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>
-              {current ? t('assembly.study.home.startOther') : t('assembly.study.home.startSession')}
+            <div style={{ fontWeight: 600, fontSize: 14 }}>{t('assembly.study.home.modulesTitle')}</div>
+            <div style={{ fontSize: 13, color: 'var(--ink-500)' }}>
+              {canStart ? t('assembly.study.home.startSub') : t('assembly.study.home.modulesSub')}
             </div>
-            <div style={{ fontSize: 13, color: 'var(--ink-500)' }}>{t('assembly.study.home.startSub')}</div>
           </div>
+          {/* RG-BER-22 (JP 29/10) : UN seul verrou Caleb, au-dessus des unités, à la place des *Commencer*. */}
+          {pilotLocked && <HierarchyLockedCompact context="study" canSubscribe={lockCanSubscribe} />}
           {catalogQ.isLoading || sessionsQ.isLoading ? (
             <p style={{ color: 'var(--ink-500)', margin: 0 }}>{t('common.loading')}</p>
           ) : catalogQ.isError ? (
@@ -1621,14 +1954,15 @@ function StudyAssemblyHome({ assembly, showName }: { assembly: StudyAssembly; sh
             <p style={{ color: 'var(--ink-500)', margin: 0, fontSize: 13 }}>{t('assembly.study.home.noCatalog')}</p>
           ) : (
             catalog.map((u) => {
-              const open = unitOpen === u.unit.moduleId;
+              const open = isOpen(u.unit.moduleId);
               const done = u.unit.lessons.filter((l) => u.doneChapterIds.includes(l.chapterId)).length;
+              const prereq = moduleName(u.unit.prerequisiteModuleId);
               return (
                 <div key={u.unit.moduleId} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <button
                     type="button"
                     aria-expanded={open}
-                    onClick={() => setUnitOpen(open ? null : u.unit.moduleId)}
+                    onClick={() => toggleUnit(u.unit.moduleId)}
                     style={{ ...rowStyle, width: '100%', textAlign: 'left', cursor: 'pointer', color: 'var(--ink-900)' }}
                   >
                     <span style={{ color: u.locked ? 'var(--ink-400)' : 'var(--green-700)', display: 'inline-flex' }}>
@@ -1640,11 +1974,22 @@ function StudyAssemblyHome({ assembly, showName }: { assembly: StudyAssembly; sh
                         {/* D-ETU-26 : version de l'autre langue, proposée faute de mieux — jamais bloquée. */}
                         <StudyLangBadges languages={[u.unit.language]} reference={assembly.language} />
                       </span>
-                      <span style={{ display: 'block', fontSize: 12.5, color: 'var(--ink-500)' }}>
-                        {u.locked
-                          ? t('assembly.study.home.locked')
-                          : t('assembly.study.home.lessonsDone', { done, total: u.unit.lessons.length })}
-                      </span>
+                      {u.locked ? (
+                        // D-ETU-19 : prérequis non atteint dans l'assemblée. R-BER-06 (JP 29/10) : règle commune
+                        // web / mobile — l'unité prérequise est NOMMÉE (lue dans le catalogue).
+                        <span style={{ display: 'block', fontSize: 12.5, color: 'var(--ink-500)' }}>
+                          {prereq ? t('assembly.study.home.lockedPrereq', { module: prereq }) : t('assembly.study.home.locked')}
+                        </span>
+                      ) : (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, maxWidth: 320 }}>
+                          <span style={{ flex: 1 }}>
+                            <ProgressBar percent={u.unit.lessons.length > 0 ? (100 * done) / u.unit.lessons.length : 0} height={5} />
+                          </span>
+                          <span style={{ fontSize: 12.5, color: 'var(--ink-500)', whiteSpace: 'nowrap' }}>
+                            {t('assembly.study.home.lessonsDone', { done, total: u.unit.lessons.length })}
+                          </span>
+                        </span>
+                      )}
                     </span>
                     <Icon name="chevDown" size={14} style={{ transform: open ? 'rotate(180deg)' : undefined }} />
                   </button>
@@ -1654,17 +1999,24 @@ function StudyAssemblyHome({ assembly, showName }: { assembly: StudyAssembly; sh
                         <div style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 13, color: 'var(--ink-500)' }}>{u.unit.bookTitle}</div>
                       )}
                       {u.unit.lessons.map((l) => {
-                        const isDone = u.doneChapterIds.includes(l.chapterId);
+                        const state = lessonState(u, l);
+                        const isNext = next?.chapterId === l.chapterId;
                         // D-ETU-38/42 : leçon commencée, pas encore entièrement couverte.
-                        const covered = isDone ? [] : rangesOf(pastOfLesson(sessions, l.chapterId), t);
+                        const covered = state === 'done' ? [] : rangesOf(pastOfLesson(sessions, l.chapterId), t);
                         // D-ETU-49 : suite de la leçon (« questions 21 à 57 ») avant *Commencer*.
-                        const nextStart = isDone ? null : defaultStartOf(l);
+                        const nextStart = state === 'done' ? null : defaultStartOf(l);
                         const resumeAt = nextStart && nextStart !== lessonNumbersOf(l)[0] ? nextStart : null;
-                        const started = covered.length > 0 || !!resumeAt;
                         return (
-                          <div key={l.chapterId} style={{ ...rowStyle, opacity: u.locked ? 0.55 : 1 }}>
-                            <span style={{ color: isDone || started ? 'var(--green-700)' : 'var(--ink-400)', display: 'inline-flex' }}>
-                              <Icon name={isDone ? 'check' : started ? 'history' : 'arrowRight'} size={16} />
+                          <div
+                            key={l.chapterId}
+                            style={{
+                              ...rowStyle,
+                              opacity: u.locked ? 0.55 : 1,
+                              borderColor: isNext && canStart ? 'var(--green-500)' : 'var(--line)',
+                            }}
+                          >
+                            <span style={{ color: state === 'todo' ? 'var(--ink-400)' : 'var(--green-700)', display: 'inline-flex' }}>
+                              <Icon name={state === 'done' ? 'check' : state === 'inProgress' ? 'history' : 'arrowRight'} size={16} />
                             </span>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontWeight: 500 }}>{lessonTitleOf(t, l.number, l.title)}</div>
@@ -1680,27 +2032,31 @@ function StudyAssemblyHome({ assembly, showName }: { assembly: StudyAssembly; sh
                                 </div>
                               )}
                             </div>
-                            <Badge tone={isDone ? 'ok' : started ? 'earth' : 'gray'}>
-                              {isDone
+                            {isNext && <Badge tone="green">{t('assembly.study.home.nextLesson')}</Badge>}
+                            <Badge tone={state === 'done' ? 'ok' : state === 'inProgress' ? 'earth' : 'gray'}>
+                              {state === 'done'
                                 ? t('assembly.study.home.lessonDone')
-                                : started
-                                  ? t('assembly.study.home.lessonStarted')
-                                  : t('assembly.study.home.lessonToDo')}
+                                : state === 'inProgress'
+                                  ? t('assembly.study.home.lessonInProgress')
+                                  : t('assembly.study.home.lessonTodo')}
                             </Badge>
-                            <Button
-                              size="sm"
-                              variant={isDone ? 'secondary' : 'primary'}
-                              disabled={u.locked || !!opening}
-                              onClick={() => onStart(u, l)}
-                            >
-                              {opening === l.chapterId
-                                ? t('common.loading')
-                                : isDone
-                                  ? t('assembly.study.home.redo')
-                                  : started
-                                    ? t('assembly.study.home.continue')
-                                    : t('assembly.study.home.start')}
-                            </Button>
+                            {/* RG-BER-20 : action principale sur la leçon suivante, secondaire ailleurs ; aucune dans une unité verrouillée. */}
+                            {canStart && !u.locked && (
+                              <Button
+                                size="sm"
+                                variant={isNext ? 'primary' : 'secondary'}
+                                disabled={!!opening}
+                                onClick={() => onStart(u, l)}
+                              >
+                                {opening === l.chapterId
+                                  ? t('common.loading')
+                                  : state === 'done'
+                                    ? t('assembly.study.home.redo')
+                                    : state === 'inProgress'
+                                      ? t('assembly.study.home.continue')
+                                      : t('assembly.study.home.start')}
+                              </Button>
+                            )}
                           </div>
                         );
                       })}
@@ -1709,6 +2065,53 @@ function StudyAssemblyHome({ assembly, showName }: { assembly: StudyAssembly; sh
                 </div>
               );
             })
+          )}
+
+          {/* RG-BER-24 (JP 29/10) : historique des séances de l'assemblée, replié par défaut. */}
+          {!sessionsQ.isLoading && !sessionsQ.isError && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+              <button
+                type="button"
+                aria-expanded={historyOpen}
+                onClick={() => setHistoryOpen((v) => !v)}
+                style={{ ...rowStyle, width: '100%', textAlign: 'left', cursor: 'pointer', color: 'var(--ink-900)' }}
+              >
+                <Icon name="history" size={18} />
+                <span style={{ flex: 1, fontWeight: 500 }}>{t('assembly.study.home.history', { count: history.length })}</span>
+                <Icon name="chevDown" size={14} style={{ transform: historyOpen ? 'rotate(180deg)' : undefined }} />
+              </button>
+              {historyOpen &&
+                (history.length === 0 ? (
+                  <p style={{ color: 'var(--ink-500)', margin: '0 0 0 18px', fontSize: 13 }}>{t('assembly.study.home.historyEmpty')}</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginLeft: 18 }}>
+                    {history.map((s) => {
+                      // RG-ETU-08 / D-ETU-09 : aucun résultat ouvert pendant la CORRECTION (échange des écrans).
+                      const clickable = s.status !== 'CORRECTION';
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          disabled={!clickable}
+                          onClick={() => clickable && setResultsId(s.id)}
+                          style={{ ...rowStyle, width: '100%', textAlign: 'left', cursor: clickable ? 'pointer' : 'default', color: 'var(--ink-900)' }}
+                        >
+                          <span style={{ fontWeight: 500, whiteSpace: 'nowrap', fontSize: 13 }}>{fmtInstant(s.openedAt)}</span>
+                          <span style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ display: 'block', fontSize: 13.5 }}>{lessonLabel(s, t)}</span>
+                            {rangeLine(s, t) && <span style={{ display: 'block', color: 'var(--ink-600)', fontSize: 12.5 }}>{rangeLine(s, t)}</span>}
+                          </span>
+                          <span style={{ fontSize: 12.5, color: 'var(--ink-500)', whiteSpace: 'nowrap' }}>
+                            {t('assembly.study.leader.respondents', { count: s.copyCount })}
+                          </span>
+                          <StudyStatusBadge status={s.status} />
+                          {clickable && <Icon name="chevRight" size={14} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+            </div>
           )}
         </div>
       )}
@@ -1743,6 +2146,14 @@ function StudyAssemblyHome({ assembly, showName }: { assembly: StudyAssembly; sh
           </p>
         </Modal>
       )}
+      {resultsId && (
+        <StudyResultsModal
+          sessionId={resultsId}
+          onClose={() => setResultsId(null)}
+          onOpenCopy={(id, canAdjust) => setCopy({ id, canAdjust })}
+        />
+      )}
+      {copy && <StudyCopyModal copyId={copy.id} canAdjust={copy.canAdjust} onClose={() => setCopy(null)} />}
     </section>
   );
 }

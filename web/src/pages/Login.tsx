@@ -7,7 +7,7 @@ import { Button, Checkbox, Field, Input } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../components/Toast';
 import { safeDocumentNext } from '../utils/documents';
-import { routeAfterLogin, safeNext } from '../utils/authRouting';
+import { isBillingPath, routeAfterLogin, safeNext } from '../utils/authRouting';
 import { SocialSignInButtons } from '../components/SocialSignInButtons';
 import type { AuthResponse, MeResponse } from '../services/authApi';
 
@@ -243,10 +243,11 @@ export function LoginPage() {
             {t('login.noAccountQuestion')}{' '}
             <button
               type="button"
-              // D-WEB-04 (JP 27/10) : le retour vers un document survit au détour par l'inscription.
+              // D-WEB-04 (JP 27/10) : le retour vers un document survit au détour par l'inscription ;
+              // D-FIX-3A (JP 29/10) : le retour vers /offres aussi.
               onClick={() => {
-                const docNext = safeDocumentNext(nextPath);
-                navigate(docNext ? `/signup?next=${encodeURIComponent(docNext)}` : '/signup');
+                const keep = safeDocumentNext(nextPath) ?? (nextPath && isBillingPath(nextPath) ? nextPath : null);
+                navigate(keep ? `/signup?next=${encodeURIComponent(keep)}` : '/signup');
               }}
               style={{
                 background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,

@@ -1,7 +1,7 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useIsFetching, useMutation, useQuery } from '@tanstack/react-query';
 import { Badge, Button, Picker } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { LangSwitch } from '../components/LangSwitch';
@@ -12,6 +12,7 @@ import {
   checkout,
   getPublicPlans,
   listMySubscriptions,
+  openBillingPortal,
   type BillingCurrency,
   type BillingPeriod,
   type PublicPlan,
@@ -19,12 +20,14 @@ import {
 import {
   ENTITLEMENT_HIERARCHIE_SUIVI,
   PLAN_DIRIGEANT_HIERARCHIE,
+  getEntitlements,
   getPersonalEntitlements,
 } from '../services/entitlementsApi';
 import { listStudyLocalities } from '../services/assemblyApi';
 import { useContactSettings } from '../services/contactApi';
 import { useHandoffExchange } from '../utils/handoff';
-import { mobileMoneyMessage, mobileMoneyUrl } from '../utils/mobileMoney';
+import { localPriceForPeriod, mobileMoneyMessage, mobileMoneyUrl } from '../utils/mobileMoney';
+import { SOCIAL_SIGN_IN_CONFIGURED } from '../config/oauth';
 import { billingErrMsg, fmtCents } from './Billing';
 import { CurrencyToggle, EurOnlyNote } from '../components/CurrencyToggle';
 import { centsFor, currenciesOf, hasAnnualPrice, priceFor, pricesOf, useCurrencyChoice } from '../utils/currency';
@@ -138,7 +141,7 @@ export function OffersPage() {
   const target = params.get('offer');
   const canceled = params.get('annule') === '1';
   // D-PAY-05 (RG-PAY-13) : appelé en tête — efface `#handoff=` et l'échange une seule fois.
-  const handedOff = useHandoffExchange();
+  const { exchanged: handedOff, settled: handoffSettled } = useHandoffExchange();
   const { ready, isAuthenticated, me, logout } = useAuth();
   const loggedIn = ready && isAuthenticated;
   // §3.8 : un compte dirigeant (ou superAdmin) voit prix et boutons ; un simple membre ne voit aucun
@@ -150,14 +153,27 @@ export function OffersPage() {
   const subsQ = useQuery({ queryKey: ['billing', 'subscriptions'], queryFn: listMySubscriptions, enabled: loggedIn, retry: false });
   const planOf = (kind: OfferKind) => (plansQ.data ?? []).find((p) => p.planCode === PLAN_OF[kind]);
 
-  // Défilement vers la carte demandée (`?offer=`), une fois la mise en page stabilisée — y compris
-  // après le retour de /login ou l'échange du jeton de passage (RG-PAY-31).
+  // Bug JP 29/10 (« Offres » s'ouvrait en bas) : sans `?offer=`, le haut de page (`ScrollToTop` du
+  // routeur, à chaque arrivée par lien) ; avec `?offer=caleb|nehemie` (dont « En savoir plus » du mobile,
+  // avec ou sans `#handoff=`), le HAUT DE LA CARTE (son en-tête, pas le bloc « Payer »), UNE SEULE FOIS,
+  // quand plus rien ne décale la page au-dessus d'elle : plans lus, session restaurée, jeton de passage
+  // traité (bandeau « Connecté en tant que »), et — compte dirigeant — droits et villes lus (au
+  // téléphone, la carte Caleb grandit au-dessus de la carte Néhémie) (RG-PAY-31).
+  const scrolledRef = useRef<string | null>(null);
+  const personalLoading = useQuery({ queryKey: ['entitlements', 'personal'], queryFn: getPersonalEntitlements, retry: false, enabled: leader }).isLoading;
+  const citiesLoading = useQuery({ queryKey: ['assembly', 'study', 'localities'], queryFn: listStudyLocalities, retry: false, enabled: leader }).isLoading;
+  const contactFetching = useIsFetching({ queryKey: ['app', 'contact'] }) > 0;
+  const layoutSettled =
+    ready && handoffSettled && !plansQ.isLoading && !(leader && (personalLoading || citiesLoading || contactFetching));
   useEffect(() => {
     if (target !== 'caleb' && target !== 'nehemie') return;
-    if (plansQ.isLoading || !ready) return;
-    const id = window.setTimeout(() => scrollToId(`offer-${target}`), 50);
+    if (!layoutSettled || scrolledRef.current === target) return;
+    const id = window.setTimeout(() => {
+      scrolledRef.current = target;
+      document.getElementById(`offer-${target}`)?.scrollIntoView({ block: 'start' });
+    }, 50);
     return () => window.clearTimeout(id);
-  }, [target, plansQ.isLoading, ready, loggedIn]);
+  }, [target, layoutSettled]);
 
   const home = hasMinistryAccess(me) ? '/dashboard' : hasMemberSpace(me) ? '/my-goals' : '/join';
   const who = me?.username ?? me?.email ?? me?.fullName ?? '';
@@ -345,6 +361,8 @@ const pill = (bg: string, fg: string): CSSProperties => ({
 /** Carte Gratuit (RG-MKT-03) : « 0 € · pour toujours » est un texte i18n, pas un prix serveur. */
 function FreeCard({ loggedIn, home }: { loggedIn: boolean; home: string }) {
   const { t } = useTranslation();
+  // R-04 (plan 07 §10.4, JP 29/10) : « 0 € » ou « $0 » selon la devise choisie (texte i18n).
+  const [chosen] = useCurrencyChoice();
   const cta: CSSProperties = {
     marginTop: 6,
     padding: '14px 18px',
@@ -363,7 +381,7 @@ function FreeCard({ loggedIn, home }: { loggedIn: boolean; home: string }) {
         <p style={{ margin: 0, fontSize: 15, color: 'var(--ink-700)' }}>{t('offers.free.tagline')}</p>
       </div>
       <p style={{ margin: 0, fontFamily: 'var(--font-serif)', fontSize: 34, color: 'var(--green-900)' }}>
-        {t('offers.free.price')}
+        {t(chosen === 'USD' ? 'offers.free.priceUsd' : 'offers.free.price')}
         <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--ink-500)' }}> {t('offers.free.forever')}</span>
       </p>
       <FeatureList prefix="offers.free.features" items={FREE_FEATURES} dark={false} accent="var(--green-600)" />
@@ -392,21 +410,10 @@ function FeatureList({ prefix, items, dark, accent }: { prefix: string; items: F
           )}
           <span style={{ color: f.soon ? soonText : nowText, opacity: f.soon && dark ? 0.85 : 1 }}>
             <strong style={{ fontWeight: 600 }}>{t(`${prefix}.${f.key}.title`)}</strong> — {t(`${prefix}.${f.key}.desc`)}
+            {/* Constat MKT n°5 (JP 29/10) : pastille « À venir » = composant `Badge` existant (comme le tableau). */}
             {f.soon && (
-              <span
-                style={{
-                  display: 'inline-block',
-                  marginLeft: 6,
-                  padding: '2px 8px',
-                  borderRadius: 999,
-                  background: dark ? 'var(--green-700)' : 'var(--line-soft)',
-                  color: dark ? 'var(--earth-100)' : 'var(--ink-500)',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  letterSpacing: '.02em',
-                }}
-              >
-                {t('offers.soon')}
+              <span style={{ marginLeft: 6 }}>
+                <Badge tone="gray">{t('offers.soon')}</Badge>
               </span>
             )}
           </span>
@@ -625,7 +632,23 @@ function PayTitle() {
 
 function ReservedText({ kind }: { kind: OfferKind }) {
   const { t } = useTranslation();
-  return <p style={{ margin: 0, color: 'var(--ink-600)', fontSize: 13.5, lineHeight: 1.5 }}>{t(`offers.${kind}.reserved`)}</p>;
+  return <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 13.5, lineHeight: 1.5 }}>{t(`offers.${kind}.reserved`)}</p>;
+}
+
+/**
+ * Constat PAY (plan 28_10_2026/03 §12, JP 29/10) : une erreur réseau / 5xx de `/entitlements/personal`
+ * ou de `/study/localities` n'est plus lue comme « offre réservée » — message et « Réessayer ».
+ */
+function LoadError({ onRetry, retrying }: { onRetry: () => void; retrying: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <div role="alert" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <p style={{ margin: 0, color: 'var(--err)', fontSize: 13.5, lineHeight: 1.5 }}>{t('offers.pay.loadError')}</p>
+      <Button variant="secondary" size="sm" disabled={retrying} onClick={onRetry} style={{ alignSelf: 'flex-start' }}>
+        {t('offers.pay.retry')}
+      </Button>
+    </div>
+  );
 }
 
 /**
@@ -634,7 +657,8 @@ function ReservedText({ kind }: { kind: OfferKind }) {
  */
 function LoginActions({ kind, dark }: { kind: OfferKind; dark: boolean }) {
   const { t } = useTranslation();
-  const next = `/login?next=${encodeURIComponent(`/offres?offer=${kind}`)}`;
+  const back = encodeURIComponent(`/offres?offer=${kind}`);
+  const next = `/login?next=${back}`;
   const sub = dark ? 'var(--green-100)' : 'var(--ink-500)';
   const link = dark ? 'var(--earth-400)' : 'var(--green-700)';
   return (
@@ -653,10 +677,14 @@ function LoginActions({ kind, dark }: { kind: OfferKind; dark: boolean }) {
       >
         {t('offers.pay.loginToSubscribe')}
       </Link>
-      <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: sub, textAlign: 'center' }}>{t(`offers.${kind}.loginHint`)}</p>
+      {/* Constat MKT n°5 (JP 29/10) : « En un clic avec Google ou Apple » seulement si un bouton est configuré. */}
+      <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: sub, textAlign: 'center' }}>
+        {t(SOCIAL_SIGN_IN_CONFIGURED ? `offers.${kind}.loginHint` : `offers.${kind}.loginHintNoSocial`)}
+      </p>
+      {/* D-FIX-3A (JP 29/10) : l'inscription ramène ici (`next` conservé). */}
       <p style={{ margin: 0, fontSize: 13, color: sub, textAlign: 'center' }}>
         {t('offers.noAccount')}{' '}
-        <Link to="/signup" style={{ color: link, fontWeight: 600 }}>{t('billing.offers.signup')}</Link>
+        <Link to={`/signup?next=${back}`} style={{ color: link, fontWeight: 600 }}>{t('billing.offers.signup')}</Link>
       </p>
     </>
   );
@@ -724,8 +752,18 @@ function CalebActions({ publicPlan, username }: { publicPlan: PublicPlan | undef
       checkout(v.offerCode, null, { period: v.period, origin: 'OFFERS', currency: v.currency }),
     onSuccess: (res) => window.location.assign(res.url),
   });
+  // R-06 (plan 07 §10.4, JP 29/10) : changer de devise efface l'erreur de caisse née dans l'autre.
+  useEffect(() => {
+    checkoutM.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chosen]);
+  const portalM = useMutation({
+    mutationFn: (reference: string) => openBillingPortal(reference),
+    onSuccess: (res) => window.location.assign(res.url),
+  });
 
   if (personalQ.isLoading) return <p style={{ margin: 0, color: 'var(--ink-500)', fontSize: 13.5 }}>{t('common.loading')}</p>;
+  if (personalQ.isError) return <LoadError onRetry={() => void personalQ.refetch()} retrying={personalQ.isFetching} />;
   const personal = personalQ.data;
   const plan = personal?.plans.find((p) => p.planCode === PLAN_DIRIGEANT_HIERARCHIE) ?? null;
   const entitled = !!personal?.codes.includes(ENTITLEMENT_HIERARCHIE_SUIVI);
@@ -754,7 +792,22 @@ function CalebActions({ publicPlan, username }: { publicPlan: PublicPlan | undef
     );
   }
   if (sub?.status === 'PENDING') {
-    return <p style={{ margin: 0, color: 'var(--ink-600)', fontSize: 13.5 }}>{t('hierarchy.lock.pending')}</p>;
+    return <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 13.5 }}>{t('hierarchy.lock.pending')}</p>;
+  }
+  // Constat PAY (JP 29/10) : PAST_DUE hors grâce traité comme dans `LockedFeature` — le payeur d'un plan
+  // personnel est toujours l'appelant : « Mettre à jour ma carte » (portail Stripe), ni carte ni Mobile Money.
+  if (sub?.status === 'PAST_DUE') {
+    return (
+      <>
+        <p style={{ margin: 0, color: 'var(--err)', fontSize: 13.5 }}>{t('hierarchy.lock.pastDue')}</p>
+        {sub.source === 'STRIPE' && (
+          <Button variant="primary" style={{ justifyContent: 'center' }} disabled={portalM.isPending} onClick={() => portalM.mutate(sub.reference)}>
+            {t('cityStudy.lock.updateCard')}
+          </Button>
+        )}
+        {portalM.isError && <p style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>{billingErrMsg(portalM.error, t)}</p>}
+      </>
+    );
   }
   // D-PAY-07 : sans droit de souscrire (serveur), ni carte ni Mobile Money.
   if (!plan || !plan.canSubscribe) return <ReservedText kind="caleb" />;
@@ -764,11 +817,15 @@ function CalebActions({ publicPlan, username }: { publicPlan: PublicPlan | undef
   const currency: BillingCurrency = sel?.price.currency ?? 'EUR';
   const hasAnnual = hasAnnualPrice(sel?.price);
   const effPeriod: BillingPeriod = hasAnnual ? period : 'MONTHLY';
+  // R-05 (plan 07 §10.4, JP 29/10) : la période du Mobile Money (FCFA) ne dépend pas de la devise carte —
+  // c'est celle choisie, dès que l'offre a un annuel dans une devise.
+  const anyAnnual = pricesOf(plan).some((p) => hasAnnualPrice(p));
+  const mmPeriod: BillingPeriod = anyAnnual ? period : 'MONTHLY';
   const price = fmtCents(sel ? centsFor(sel.price, effPeriod) : plan.monthlyPriceCents, currency, i18n.language);
   return (
     <>
       <PayTitle />
-      {hasAnnual && (
+      {anyAnnual && (
         <PeriodChoice
           value={period}
           onChange={(p) => {
@@ -788,7 +845,10 @@ function CalebActions({ publicPlan, username }: { publicPlan: PublicPlan | undef
           : t(effPeriod === 'ANNUAL' ? 'offers.pay.cardAnnual' : 'offers.pay.cardMonthly', { price })}
       </Button>
       {checkoutM.isError && <p style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>{billingErrMsg(checkoutM.error, t)}</p>}
-      <MobileMoneyButton message={mobileMoneyMessage(t, { offer: 'caleb', localPrice: localPriceLabel, username, period: effPeriod })} />
+      {/* Constat MKT n°5 (JP 29/10) : le message ne porte QUE la formule choisie et son prix local. */}
+      <MobileMoneyButton
+        message={mobileMoneyMessage(t, { offer: 'caleb', localPrice: localPriceForPeriod(localPriceLabel, mmPeriod), username, period: mmPeriod })}
+      />
       {voucherButton(t('offers.voucher.open'))}
       {voucherModal}
     </>
@@ -811,7 +871,8 @@ function NehemieActions({ publicPlan, username }: { publicPlan: PublicPlan | und
   const citiesQ = useQuery({ queryKey: ['assembly', 'study', 'localities'], queryFn: listStudyLocalities, retry: false });
   const cities = citiesQ.data ?? [];
   const eligible = cities.filter((c) => c.canSubscribe);
-  const open = eligible.filter((c) => !c.entitled);
+  // D-FIX-4A (JP 29/10) : une ville couverte par un accord (`agreement`, serveur) ne se paie pas.
+  const open = eligible.filter((c) => !c.entitled && !c.agreement);
 
   // Présélection quand une seule ville peut être payée (RG-PAY-34).
   const onlyOpenId = open.length === 1 ? open[0].localityId : null;
@@ -826,8 +887,27 @@ function NehemieActions({ publicPlan, username }: { publicPlan: PublicPlan | und
       checkout(v.offerCode, null, { localityId: v.localityId, period: v.period, origin: 'OFFERS', currency: v.currency }),
     onSuccess: (res) => window.location.assign(res.url),
   });
+  // R-06 (plan 07 §10.4, JP 29/10) : changer de devise efface l'erreur de caisse née dans l'autre
+  // (période et ville l'effacent à leur changement).
+  useEffect(() => {
+    checkoutM.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chosen]);
+  // Constat PAY (JP 29/10) : état de l'abonnement de la ville choisie (même clé que le verrou web) —
+  // PENDING, PAST_DUE hors grâce et, D-FIX-4A, ville ouverte par un accord de ministère.
+  const entQ = useQuery({
+    queryKey: ['entitlements', cityId],
+    queryFn: () => getEntitlements(cityId),
+    enabled: !!cityId,
+    retry: false,
+  });
+  const portalM = useMutation({
+    mutationFn: (reference: string) => openBillingPortal(reference),
+    onSuccess: (res) => window.location.assign(res.url),
+  });
 
   if (citiesQ.isLoading) return <p style={{ margin: 0, color: 'var(--ink-500)', fontSize: 13.5 }}>{t('common.loading')}</p>;
+  if (citiesQ.isError) return <LoadError onRetry={() => void citiesQ.refetch()} retrying={citiesQ.isFetching} />;
   const voucherCities: VoucherCity[] = eligible.map((c) => ({ localityId: c.localityId, localityName: c.localityName }));
   const entitledNames = cities.filter((c) => c.entitled).map((c) => c.localityName);
   const activeBadge = entitledNames.length > 0 && (
@@ -852,7 +932,19 @@ function NehemieActions({ publicPlan, username }: { publicPlan: PublicPlan | und
   const currency: BillingCurrency = sel?.price.currency ?? 'EUR';
   const hasAnnual = hasAnnualPrice(sel?.price);
   const effPeriod: BillingPeriod = hasAnnual ? period : 'MONTHLY';
+  // R-05 (JP 29/10) : période du Mobile Money = celle choisie, indépendante de la devise carte.
+  const anyAnnual = pricesOf(publicPlan).some((p) => hasAnnualPrice(p));
+  const mmPeriod: BillingPeriod = anyAnnual ? period : 'MONTHLY';
   const price = sel ? fmtCents(centsFor(sel.price, effPeriod), currency, i18n.language) : null;
+  // État de la ville choisie (`GET /entitlements?nodeId=`), comme `LockActions` de `LockedFeature`.
+  const ent = city && entQ.data?.nodeId === city.localityId ? entQ.data : null;
+  const citySubs = ent?.subscriptions ?? [];
+  const pendingSub = citySubs.find((x) => x.status === 'PENDING');
+  const pastDueSub = citySubs.find((x) => x.status === 'PAST_DUE' && !x.entitled);
+  // D-FIX-4A (JP 29/10) : accord `sub_subscription` (ministère / nation / région, D-ABO-28) lu du
+  // SERVEUR (`StudyLocalitySummary.agreement`, tout code du plan — même règle que la caisse, qui
+  // refuse la ville en 422) ; plus aucune déduction front depuis `entitled` / `/entitlements`.
+  const byAgreement = !!city?.agreement;
 
   return (
     <>
@@ -872,15 +964,42 @@ function NehemieActions({ publicPlan, username }: { publicPlan: PublicPlan | und
           options={eligible.map((c) => ({
             id: c.localityId,
             label: c.localityName,
-            meta: c.entitled ? t('offers.nehemie.alreadyActive') : undefined,
+            meta: c.agreement ? t('offers.nehemie.alreadyActiveAgreement') : c.entitled ? t('offers.nehemie.alreadyActive') : undefined,
           }))}
         />
       </div>
-      {hasAnnual && <PeriodChoice value={period} onChange={setPeriod} />}
-      {city?.entitled ? (
+      {anyAnnual && (
+        <PeriodChoice
+          value={period}
+          onChange={(p) => {
+            setPeriod(p);
+            checkoutM.reset();
+          }}
+        />
+      )}
+      {city?.entitled || byAgreement ? (
         <div>
-          <Badge tone="ok" dot>{t('offers.nehemie.alreadyActive')}</Badge>
+          <Badge tone="ok" dot>{t(byAgreement ? 'offers.nehemie.alreadyActiveAgreement' : 'offers.nehemie.alreadyActive')}</Badge>
         </div>
+      ) : city && entQ.isLoading ? (
+        <p style={{ margin: 0, color: 'var(--ink-500)', fontSize: 13.5 }}>{t('common.loading')}</p>
+      ) : pendingSub ? (
+        // Constat PAY (JP 29/10) : paiement en cours pour cette ville — aucun bouton (comme le verrou).
+        <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 13.5 }}>{t('cityStudy.lock.pending')}</p>
+      ) : pastDueSub ? (
+        <>
+          <p style={{ margin: 0, color: 'var(--err)', fontSize: 13.5 }}>{t('cityStudy.lock.pastDue')}</p>
+          {pastDueSub.paidByMe && pastDueSub.source === 'STRIPE' ? (
+            <Button variant="primary" style={{ justifyContent: 'center' }} disabled={portalM.isPending} onClick={() => portalM.mutate(pastDueSub.reference)}>
+              {t('cityStudy.lock.updateCard')}
+            </Button>
+          ) : (
+            <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 13.5 }}>
+              {t('cityStudy.lock.managedBy', { name: pastDueSub.payerName ?? t('cityStudy.subscription.unknownPayer') })}
+            </p>
+          )}
+          {portalM.isError && <p style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>{billingErrMsg(portalM.error, t)}</p>}
+        </>
       ) : (
         <>
           {publicPlan && price && (
@@ -900,10 +1019,11 @@ function NehemieActions({ publicPlan, username }: { publicPlan: PublicPlan | und
             <MobileMoneyButton
               message={mobileMoneyMessage(t, {
                 offer: 'nehemie',
-                localPrice: publicPlan?.localPriceLabel ?? null,
+                // Constats PAY / MKT (JP 29/10) : prix local de la formule choisie seulement.
+                localPrice: localPriceForPeriod(publicPlan?.localPriceLabel, mmPeriod),
                 username,
                 city: city.localityName,
-                period: effPeriod,
+                period: mmPeriod,
               })}
             />
           )}

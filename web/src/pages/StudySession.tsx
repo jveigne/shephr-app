@@ -152,7 +152,8 @@ function StudySessionView({ sessionId, userId }: { sessionId: string; userId: st
   const [stopPicker, setStopPicker] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [resultsOpen, setResultsOpen] = useState(false);
-  const [copyOpen, setCopyOpen] = useState<string | null>(null);
+  // D-BER-06 (JP 29/10) : `canAdjust` = pilotage permis (`canPilot` des résultats, RG-BER-26).
+  const [copyOpen, setCopyOpen] = useState<{ id: string; canAdjust: boolean } | null>(null);
 
   // Références lues par les rappels asynchrones (minuterie, envoi) : toujours la dernière valeur.
   const draftRef = useRef<StudyDraft>(draft);
@@ -679,9 +680,9 @@ function StudySessionView({ sessionId, userId }: { sessionId: string; userId: st
       )}
       {/* RG-ETU-08 / D-ETU-09 : jamais en CORRECTION (le lien est masqué dans le panneau). */}
       {resultsOpen && detail.leader && s.status !== 'CORRECTION' && (
-        <StudyResultsModal sessionId={sessionId} onClose={() => setResultsOpen(false)} onOpenCopy={(cid) => setCopyOpen(cid)} />
+        <StudyResultsModal sessionId={sessionId} onClose={() => setResultsOpen(false)} onOpenCopy={(cid, canAdjust) => setCopyOpen({ id: cid, canAdjust })} />
       )}
-      {copyOpen && <StudyCopyModal copyId={copyOpen} canAdjust onClose={() => setCopyOpen(null)} />}
+      {copyOpen && <StudyCopyModal copyId={copyOpen.id} canAdjust={copyOpen.canAdjust} onClose={() => setCopyOpen(null)} />}
     </>
   );
 }

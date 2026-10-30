@@ -35,12 +35,14 @@ type TFn = ReturnType<typeof useTranslation>['t'];
 
 /**
  * Montant en centimes → « 99,99 € » selon la langue active (§6.4 : l'API ne formate jamais).
- * D-CUR-04 (JP 28/10) : toujours dans la devise de l'abonnement / de la facture (`54,99 $US`, `US$54.99`).
+ * D-CUR-04 (JP 28/10) : toujours dans la devise de l'abonnement / de la facture.
+ * R-08 (plan 07 §10.4, JP 29/10) : même rendu que les emails / PDF du serveur (E-B-07, JDK CLDR) —
+ * FR `54,99 $US` / `49,99 €`, EN `$54.99` / `€49.99` : en anglais, le dollar se formate en `en-US`
+ * (`en-GB` donnait `US$54.99`), les autres devises restent en `en-GB`.
  */
 export function fmtCents(cents: number, currency: string, lang: string): string {
-  return new Intl.NumberFormat(lang.startsWith('en') ? 'en-GB' : 'fr-FR', { style: 'currency', currency }).format(
-    cents / 100,
-  );
+  const locale = lang.startsWith('en') ? (currency === 'USD' ? 'en-US' : 'en-GB') : 'fr-FR';
+  return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(cents / 100);
 }
 
 /** Date `AAAA-MM-JJ` (fin incluse, Europe/Paris) affichée telle quelle, sans décalage UTC. */

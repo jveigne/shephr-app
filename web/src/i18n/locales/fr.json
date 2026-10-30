@@ -508,10 +508,12 @@
       "compactTitle": "Offre Caleb — le suivi de ma hiérarchie",
       "compactAssembly": "Votre assemblée reste gratuite : comptes rendus, journal, réunions et avancement. Les autres assemblées de votre chaîne de leadership (lecture et rédaction) sont incluses dans l'offre Caleb.",
       "compactMemberCare": "Le suivi pastoral de votre assemblée reste gratuit. Les fiches des assemblées de votre chaîne de leadership sont incluses dans l'offre Caleb.",
-      "openHierarchy": "Voir l'offre dans la Hiérarchie",
       "outsideChainTitle": "Assemblée hors de votre chaîne",
       "outsideChainAssembly": "Votre offre Caleb est active, mais cette assemblée n'est pas dans votre chaîne de leadership : seules les assemblées de votre chaîne de supervision y sont incluses.",
-      "outsideChainMemberCare": "Votre offre Caleb est active, mais les fiches de cette assemblée ne sont pas dans votre chaîne de leadership : seules les assemblées de votre chaîne de supervision y sont incluses."
+      "outsideChainMemberCare": "Votre offre Caleb est active, mais les fiches de cette assemblée ne sont pas dans votre chaîne de leadership : seules les assemblées de votre chaîne de supervision y sont incluses.",
+      "compactStudy": "Votre assemblée reste gratuite pour l'étude. Conduire « Le Message de Bertoua » dans vos autres assemblées est inclus dans l'offre Caleb.",
+      "discoverCaleb": "Découvrir l'offre Caleb",
+      "learnMore": "En savoir plus"
     },
     "plan": {
       "canceledBanner": "Paiement annulé : aucun abonnement n'a été souscrit.",
@@ -1935,15 +1937,11 @@
         "catchUpStart": "Commencer",
         "catchUpContinue": "Continuer",
         "finishedOn": "terminée le {{date}}",
-        "startSession": "Commencer une leçon",
-        "startOther": "Commencer une autre leçon",
         "startSub": "Choisissez l'unité puis la leçon : la séance s'ouvre aux répondants de l'assemblée.",
         "noCatalog": "Aucune unité d'étude n'est encore publiée pour cette assemblée.",
         "locked": "Verrouillée : terminez d'abord l'unité prérequise dans l'assemblée",
         "lessonsDone": "{{done}} / {{total}} leçons faites",
         "lessonDone": "Faite",
-        "lessonStarted": "Commencée",
-        "lessonToDo": "À faire",
         "start": "Commencer",
         "continue": "Continuer",
         "redo": "Refaire",
@@ -1954,7 +1952,18 @@
         "forgottenTitle": "Une séance est encore ouverte",
         "forgottenBody": "La séance « {{lesson}} » n'a pas été terminée. La terminer pour commencer celle-ci ?",
         "finishAndStart": "Terminer et commencer",
-        "started": "Séance ouverte."
+        "started": "Séance ouverte.",
+        "pickAssembly": "Assemblée",
+        "freeAssembly": "Votre assemblée",
+        "lockedAssembly": "Verrouillée — offre Caleb",
+        "lessonInProgress": "En cours",
+        "lessonTodo": "À faire",
+        "nextLesson": "Leçon suivante",
+        "lockedPrereq": "Verrouillée : terminez d'abord {{module}} dans l'assemblée",
+        "modulesTitle": "Unités et leçons de l'assemblée",
+        "modulesSub": "Avancement de cette assemblée : leçons faites, en cours et à faire.",
+        "history": "Historique des séances ({{count}})",
+        "historyEmpty": "Aucune séance dans cette assemblée pour le moment."
       },
       "briefing": {
         "title": "À lire avant la leçon",
@@ -2655,9 +2664,10 @@
     "lock": {
       "title": "Offre Néhémie — le suivi de toute ma ville",
       "askPastor": "Demandez à votre pasteur d'activer le suivi de la ville.",
+      "agreementOther": "L'accord de votre ministère sur cette ville ne comprend pas ce suivi : rapprochez-vous de votre ministère pour l'ajouter.",
       "compactSubscribe": "Le suivi des assemblées de votre ville est inclus dans l'offre Néhémie, souscrite pour toute la ville.",
       "openCity": "Voir le suivi de la ville",
-      "subscribeIntro": "{{plan}} pour {{city}} : suivi de l'étude de toutes les assemblées de la ville, statistiques et exports.",
+      "subscribeIntro": "{{plan}} pour {{city}} : tout le suivi de la ville — étude, journal des réunions et évènements de toutes ses assemblées, statistiques et exports.",
       "period": "Périodicité",
       "periods": {
         "MONTHLY": "Mensuel",
@@ -2714,15 +2724,16 @@
     "noAccount": "Pas encore de compte ?",
     "caleb": {
       "name": "Offre Caleb",
-      "tagline": "Voyez tout votre leadership, d'un coup d'œil.",
+      "tagline": "Voyez tout votre leadership, d’un coup d’œil.",
       "verse": "« Donne-moi donc cette montagne »",
       "verseRef": "Josué 14 : 12",
       "active": "Activée pour votre compte",
       "short": "Caleb",
       "reserved": "Cette offre est réservée aux dirigeants.",
       "audience": "Pour chaque dirigeant",
-      "scope": "Suit votre <strong>chaîne de leadership</strong> : les dirigeants que vous supervisez et leurs assemblées, où qu'elles soient.",
+      "scope": "Suit votre <strong>chaîne de leadership</strong> : les dirigeants que vous supervisez et leurs assemblées, où qu’elles soient.",
       "loginHint": "En un clic avec Google ou Apple. Ensuite : carte bancaire, Mobile Money ou code.",
+      "loginHintNoSocial": "Connectez-vous avec votre identifiant Shephr. Ensuite : carte bancaire, Mobile Money ou code.",
       "features": {
         "dashboard": {
           "title": "Tableau de bord de votre hiérarchie",
@@ -2733,7 +2744,7 @@
           "desc": "les assemblées sans compte rendu depuis 3 semaines remontent toutes seules"
         },
         "teaching": {
-          "title": "Suivi de l'enseignement",
+          "title": "Suivi de l’enseignement",
           "desc": "où en est chaque assemblée, leçon par leçon"
         },
         "evangelism": {
@@ -2754,11 +2765,11 @@
         },
         "trends": {
           "title": "Tendances",
-          "desc": "comparaison avec le mois précédent et l'an dernier"
+          "desc": "comparaison avec le mois précédent et l’an dernier"
         },
         "announcements": {
           "title": "Annonces",
-          "desc": "un message à toute votre hiérarchie, reçu dans l'app"
+          "desc": "un message à toute votre hiérarchie, reçu dans l’app"
         },
         "documents": {
           "title": "Espace documentaire de votre hiérarchie",
@@ -2776,16 +2787,18 @@
       "reserved": "Cette offre est réservée aux dirigeants de ville.",
       "city": "Ville",
       "alreadyActive": "Déjà actif",
+      "alreadyActiveAgreement": "Déjà actif — accord de votre ministère",
       "audience": "Pour le pasteur et les responsables de la ville",
       "scope": "Toutes les assemblées de <strong>la ville</strong>, quel que soit leur dirigeant. Un abonnement, partagé par tous les responsables.",
       "loginHint": "En un clic avec Google ou Apple. Vous choisirez ensuite votre ville parmi celles dont vous êtes responsable.",
+      "loginHintNoSocial": "Connectez-vous avec votre identifiant Shephr. Vous choisirez ensuite votre ville parmi celles dont vous êtes responsable.",
       "features": {
         "cityStats": {
           "title": "Statistiques de la ville",
           "desc": "assemblée par assemblée"
         },
         "teaching": {
-          "title": "Suivi de l'enseignement",
+          "title": "Suivi de l’enseignement",
           "desc": "membres enseignés ou non, leçons manquées"
         },
         "evangelism": {
@@ -2802,11 +2815,11 @@
         },
         "shared": {
           "title": "Un abonnement, tous les responsables",
-          "desc": "le suivi est ouvert à chacun d'eux"
+          "desc": "le suivi est ouvert à chacun d’eux"
         },
         "storage": {
           "title": "Stockage documentaire",
-          "desc": "à l'échelle de l'assemblée, de la ville et du pays"
+          "desc": "à l’échelle de l’assemblée, de la ville et du pays"
         },
         "monthlyEmail": {
           "title": "Rapport mensuel par email",
@@ -2814,7 +2827,7 @@
         },
         "trends": {
           "title": "Tendances",
-          "desc": "comparaison avec le mois précédent et l'an dernier"
+          "desc": "comparaison avec le mois précédent et l’an dernier"
         },
         "announcements": {
           "title": "Annonces",
@@ -2831,11 +2844,12 @@
       "name": "Gratuit",
       "tagline": "Faire vivre son assemblée, sans limite de temps.",
       "price": "0 €",
+      "priceUsd": "0 $US",
       "forever": "· pour toujours",
       "cta": "Créer mon assemblée",
       "features": {
         "study": {
-          "title": "L'étude biblique en réunion",
+          "title": "L’étude biblique en réunion",
           "desc": "questions, correction, notes et rattrapage"
         },
         "assembly": {
@@ -2848,11 +2862,11 @@
         },
         "goals": {
           "title": "Objectifs et engagements",
-          "desc": "le but quinquennal et l'arbre de la hiérarchie"
+          "desc": "le but quinquennal et l’arbre de la hiérarchie"
         },
         "events": {
           "title": "Évènements et évangélisation",
-          "desc": "déclarer, programmer, totaux jusqu'à la ville"
+          "desc": "déclarer, programmer, totaux jusqu’à la ville"
         },
         "documents": {
           "title": "Bibliothèque de documents",
@@ -2861,48 +2875,51 @@
       }
     },
     "voucher": {
-      "open": "J'ai un code",
+      "open": "J’ai un code",
       "extend": "Prolonger avec un code",
-      "titleCaleb": "Offre Caleb — saisir un code d'activation",
-      "titleNehemie": "Offre Néhémie — saisir un code d'activation",
+      "titleCaleb": "Offre Caleb — saisir un code d’activation",
+      "titleNehemie": "Offre Néhémie — saisir un code d’activation",
       "sub": "Le code vous a été remis par votre relais après votre paiement Mobile Money.",
-      "code": "Code d'activation",
+      "code": "Code d’activation",
       "codeHint": "12 caractères, avec ou sans tirets.",
       "city": "Ville",
       "cityPlaceholder": "Choisir la ville",
       "forCity": "Pour la ville de {{city}}.",
-      "noCity": "Aucune ville pour laquelle vous pouvez activer l'offre Néhémie.",
+      "noCity": "Aucune ville pour laquelle vous pouvez activer l’offre Néhémie.",
       "submit": "Activer",
       "checking": "Vérification…",
       "localPrice": "Mobile Money auprès de votre relais — {{price}}",
       "localPriceNoLabel": "Mobile Money auprès de votre relais",
       "receiptTitle": "Code activé",
-      "receiptUntil": "Activée jusqu'au {{date}} inclus.",
-      "receiptNote": "Un email de confirmation vous a été envoyé. Aucune facture n'est émise pour un code d'activation.",
-      "alreadyPaid": "Vous payez déjà cette offre par carte : vous n'avez pas besoin de code."
+      "receiptUntil": "Activée jusqu’au {{date}} inclus.",
+      "receiptNote": "Un email de confirmation vous a été envoyé. Aucune facture n’est émise pour un code d’activation.",
+      "alreadyPaid": "Vous payez déjà cette offre par carte : vous n’avez pas besoin de code.",
+      "cityAlreadyOpen": "Le suivi de cette ville est déjà ouvert (abonnement d’un responsable ou accord de votre ministère) : aucun code n’est nécessaire."
     },
     "pay": {
       "title": "Payer",
       "cardMonthly": "Payer par carte — {{price}}/mois",
       "cardAnnual": "Payer par carte — {{price}}/an",
       "mobileMoney": "Payer par Mobile Money",
-      "mobileMoneyHint": "Vous échangez sur WhatsApp avec notre relais ; il vous remet un code à saisir dans « J'ai un code ».",
+      "mobileMoneyHint": "Vous échangez sur WhatsApp avec notre relais ; il vous remet un code à saisir dans « J’ai un code ».",
       "message": {
-        "caleb": "Bonjour, je souhaite souscrire l'offre {{offer}} ({{localPrice}}), en formule {{period}}. Mon identifiant Shephr : {{username}}.",
-        "calebNoPrice": "Bonjour, je souhaite souscrire l'offre {{offer}}, en formule {{period}}. Mon identifiant Shephr : {{username}}.",
-        "nehemie": "Bonjour, je souhaite souscrire l'offre {{offer}} ({{localPrice}}) pour la ville de {{city}}, en formule {{period}}. Mon identifiant Shephr : {{username}}.",
-        "nehemieNoPrice": "Bonjour, je souhaite souscrire l'offre {{offer}} pour la ville de {{city}}, en formule {{period}}. Mon identifiant Shephr : {{username}}."
+        "caleb": "Bonjour, je souhaite souscrire l’offre {{offer}} ({{localPrice}}), en formule {{period}}. Mon identifiant Shephr : {{username}}.",
+        "calebNoPrice": "Bonjour, je souhaite souscrire l’offre {{offer}}, en formule {{period}}. Mon identifiant Shephr : {{username}}.",
+        "nehemie": "Bonjour, je souhaite souscrire l’offre {{offer}} ({{localPrice}}) pour la ville de {{city}}, en formule {{period}}. Mon identifiant Shephr : {{username}}.",
+        "nehemieNoPrice": "Bonjour, je souhaite souscrire l’offre {{offer}} pour la ville de {{city}}, en formule {{period}}. Mon identifiant Shephr : {{username}}."
       },
       "periodWord": {
         "MONTHLY": "mensuelle",
         "ANNUAL": "annuelle"
       },
       "cancelled": "Paiement annulé. Vous pouvez reprendre quand vous voulez.",
-      "loginToSubscribe": "Se connecter pour s'abonner"
+      "loadError": "Impossible de vérifier vos droits pour le moment.",
+      "retry": "Réessayer",
+      "loginToSubscribe": "Se connecter pour s’abonner"
     },
     "handoff": {
       "connectedAs": "Connecté en tant que {{username}}",
-      "notYou": "Ce n'est pas vous ? Se déconnecter"
+      "notYou": "Ce n’est pas vous ? Se déconnecter"
     },
     "nav": {
       "compare": "Comparer",
@@ -2912,8 +2929,8 @@
     },
     "hero": {
       "eyebrow": "Offres Shephr",
-      "title": "Paissez le troupeau. Voyez toute l'œuvre.",
-      "lead": "Tout ce qu'il faut pour faire vivre une assemblée reste gratuit. Quand votre responsabilité s'élargit — une hiérarchie de dirigeants, une ville entière —, Shephr vous donne la vue d'ensemble."
+      "title": "Paissez le troupeau. Voyez toute l’œuvre.",
+      "lead": "Tout ce qu’il faut pour faire vivre une assemblée reste gratuit. Quand votre responsabilité s’élargit — une hiérarchie de dirigeants, une ville entière —, Shephr vous donne la vue d’ensemble."
     },
     "soon": "À venir",
     "annualBadge": "Annuel : 2 mois offerts",
@@ -2974,7 +2991,7 @@
         },
         "evangelism": {
           "label": "Évangélisation détaillée",
-          "free": "Jusqu'à la ville",
+          "free": "Jusqu’à la ville",
           "caleb": "Par dirigeant",
           "nehemie": "Par assemblée"
         },
@@ -3001,27 +3018,27 @@
       "items": {
         "which": {
           "q": "Caleb ou Néhémie : laquelle choisir ?",
-          "a": "Caleb suit les dirigeants que vous supervisez, où qu'ils soient. Néhémie suit toutes les assemblées d'une ville, quel que soit leur dirigeant. Un dirigeant de ville peut avoir les deux."
+          "a": "Caleb suit les dirigeants que vous supervisez, où qu’ils soient. Néhémie suit toutes les assemblées d’une ville, quel que soit leur dirigeant. Un dirigeant de ville peut avoir les deux."
         },
         "mobileMoney": {
           "q": "Comment payer par Mobile Money ?",
-          "a": "Touchez « Payer par Mobile Money » : WhatsApp s'ouvre avec un message déjà rempli. Votre relais encaisse et vous remet un code à saisir dans « J'ai un code »."
+          "a": "Touchez « Payer par Mobile Money » : WhatsApp s’ouvre avec un message déjà rempli. Votre relais encaisse et vous remet un code à saisir dans « J’ai un code »."
         },
         "commitment": {
           "q": "Suis-je engagé ?",
-          "a": "Non. L'abonnement se résilie à tout moment ; le suivi reste ouvert jusqu'à la fin de la période payée."
+          "a": "Non. L’abonnement se résilie à tout moment ; le suivi reste ouvert jusqu’à la fin de la période payée."
         },
         "period": {
           "q": "Mensuel ou annuel ?",
-          "a": "Les deux offres existent au mois ou à l'année. À l'année, deux mois sont offerts, et en Mobile Money vous ne passez par votre relais qu'une fois par an."
+          "a": "Les deux offres existent au mois ou à l’année. À l’année, deux mois sont offerts, et en Mobile Money vous ne passez par votre relais qu’une fois par an."
         },
         "app": {
-          "q": "Est-ce que je le retrouve dans l'application ?",
-          "a": "Oui. Le paiement est rattaché à votre compte : tout est ouvert dans l'app dès la confirmation."
+          "q": "Est-ce que je le retrouve dans l’application ?",
+          "a": "Oui. Le paiement est rattaché à votre compte : tout est ouvert dans l’app dès la confirmation."
         },
         "study": {
-          "q": "L'étude biblique est-elle payante ?",
-          "a": "Non. Faire l'étude dans son assemblée est gratuit pour tous. Seul le suivi au-delà de son assemblée fait partie des offres."
+          "q": "L’étude biblique est-elle payante ?",
+          "a": "Non. Faire l’étude dans son assemblée est gratuit pour tous. Seul le suivi au-delà de son assemblée fait partie des offres."
         }
       }
     },

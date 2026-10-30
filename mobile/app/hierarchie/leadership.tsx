@@ -107,12 +107,18 @@ export default function MyLeadershipScreen() {
     }
   };
 
-  /** Message d'un refus serveur : code traduit, sinon message du serveur, sinon générique. */
-  const errorText = (e: any, prefix = 'hierarchy.leadership.errors') => {
-    const key = `${prefix}.${errCode(e)}`;
-    const translated = t(key);
-    return translated !== key ? translated : (e?.response?.data?.message ?? t('errors.saveFailed'));
-  };
+  /**
+   * Message d'un refus serveur : code traduit, sinon message générique traduit — R7 (§8, RG-HIE-32,
+   * JP 29/10) : plus jamais le texte brut du serveur (code inconnu, 403 sans code…).
+   */
+  const errorText = useCallback(
+    (e: any, prefix = 'hierarchy.leadership.errors') => {
+      const key = `${prefix}.${errCode(e)}`;
+      const translated = t(key);
+      return translated !== key ? translated : t('hierarchy.leadership.errors.generic');
+    },
+    [t],
+  );
 
   const run = async (id: string, action: () => Promise<SupervisionOverview>, done?: string) => {
     if (busy) return;
@@ -251,6 +257,7 @@ export default function MyLeadershipScreen() {
               tooShort={t('supervisor.searchTooShort')}
               noResult={t('supervisor.noResult')}
               search={searchSupervisorCandidates}
+              searchErrorText={errorText}
               disabled={busy !== null}
               onPick={declareSupervisor}
             />
@@ -392,6 +399,7 @@ export default function MyLeadershipScreen() {
                   tooShort={t('supervisor.searchTooShort')}
                   noResult={tl('noResult')}
                   search={searchDesigneeCandidates}
+                  searchErrorText={errorText}
                   disabled={busy !== null}
                   onPick={(p) => void designate(p)}
                 />
@@ -431,6 +439,7 @@ function PersonSearch({
   search,
   disabled,
   onPick,
+  searchErrorText,
 }: {
   label: string;
   placeholder: string;
@@ -440,9 +449,12 @@ function PersonSearch({
   search: (q: string) => Promise<DiscipleshipPerson[]>;
   disabled: boolean;
   onPick: (p: DiscipleshipPerson) => void;
+  /** R7 : texte (traduit) d'un refus de la recherche. */
+  searchErrorText: (e: unknown) => string;
 }) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<{ q: string; list: DiscipleshipPerson[] } | null>(null);
+  // R7 (RG-HIE-32, JP 29/10) : un refus (403, 422 NO_MINISTRY…) est une erreur, pas « Aucun résultat ».
+  const [results, setResults] = useState<{ q: string; list: DiscipleshipPerson[]; error?: string } | null>(null);
   const q = query.trim();
 
   useEffect(() => {
@@ -452,17 +464,18 @@ function PersonSearch({
       try {
         const list = await search(q);
         if (!cancelled) setResults({ q, list });
-      } catch {
-        if (!cancelled) setResults({ q, list: [] });
+      } catch (e: any) {
+        if (!cancelled) setResults({ q, list: [], error: searchErrorText(e) });
       }
     }, 300);
     return () => {
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [q, search]);
+  }, [q, search, searchErrorText]);
 
   const current = q.length >= 2 && results?.q === q ? results.list : null;
+  const searchError = q.length >= 2 && results?.q === q ? results.error ?? null : null;
   const searching = q.length >= 2 && current === null;
 
   return (
@@ -478,7 +491,11 @@ function PersonSearch({
       />
       <Text style={styles.hint}>{q.length > 0 && q.length < 2 ? tooShort : hint}</Text>
       {searching && <ActivityIndicator color={colors.moss} style={{ marginTop: 12 }} />}
-      {current && current.length === 0 && <Text style={styles.empty}>{noResult}</Text>}
+      {searchError ? (
+        <Text style={[styles.empty, { color: colors.clay }]}>{searchError}</Text>
+      ) : (
+        current && current.length === 0 && <Text style={styles.empty}>{noResult}</Text>
+      )}
       <View style={{ gap: 8, marginTop: 10 }}>
         {(current ?? []).map((p) => (
           <Pressable key={p.id} disabled={disabled} onPress={() => onPick(p)} style={styles.resultRow}>

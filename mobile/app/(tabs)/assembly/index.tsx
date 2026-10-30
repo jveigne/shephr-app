@@ -277,10 +277,15 @@ export default function AssemblyIndexScreen() {
           // assemblée » — celles de sa chaîne relèvent de l'offre Caleb.
           <CalebAssemblyLock />
         ) : (
-          <Card style={styles.emptyCard}>
-            <Ionicons name="home-outline" size={26} color={colors.ink3} />
-            <Text style={styles.emptyText}>{t('assemblyLife.noUnits')}</Text>
-          </Card>
+          <>
+            {/* M-08 (D-FIX, JP 29/10) : l'assemblée demandée par la Hiérarchie hors de `/units` garde
+                son verrou Caleb même quand aucune assemblée n'est listée. */}
+            {requestedLocked && <CalebAssemblyLock compact />}
+            <Card style={styles.emptyCard}>
+              <Ionicons name="home-outline" size={26} color={colors.ink3} />
+              <Text style={styles.emptyText}>{t('assemblyLife.noUnits')}</Text>
+            </Card>
+          </>
         )
       ) : (
         <>

@@ -137,10 +137,14 @@ export default function NotificationGate() {
   );
 
   // ---- D-HIE-06 / RG-HIE-27 : demande de supervision en tête de file ----
-  const head = queue[0] ?? null;
+  // R8 (D-HIE-06 / RG-HIE-27, JP 29/10) : deux files dans la même liste. « Plus tard » / « Voir » sur
+  // un RAPPEL (`dismissed`) ne masque que les rappels ; une demande de supervision reste présentée
+  // (son propre « Plus tard » la retire de la file pour la session).
+  const head =
+    queue.find((n) => n.source === SOURCE_SUPERVISION_REQUEST || !dismissed) ?? null;
   const headIsSupervision = !!head && head.source === SOURCE_SUPERVISION_REQUEST;
   useEffect(() => {
-    if (!head || !headIsSupervision || dismissed || campaign) return;
+    if (!head || !headIsSupervision || campaign) return;
     let active = true;
     fetchSupervisionOverview()
       .then((overview) => {
@@ -161,12 +165,12 @@ export default function NotificationGate() {
     return () => {
       active = false;
     };
-  }, [head, headIsSupervision, dismissed, campaign]);
+  }, [head, headIsSupervision, campaign]);
 
   // L'invitation d'activation du push (N4b) attend que cette porte soit libre : deux `Modal`
   // affichées en même temps ne laissent voir que la dernière, et le message déjà écrit passe
   // avant la demande de permission.
-  const modaleAffichee = !!campaign || (queue.length > 0 && !dismissed);
+  const modaleAffichee = !!campaign || head != null;
   useEffect(() => {
     declarerGateOuverte(modaleAffichee);
     return () => declarerGateOuverte(false);
@@ -240,7 +244,7 @@ export default function NotificationGate() {
 
   // ---- 2) Rappels personnels (Lot 4.4, comportement inchangé) ----
   const current = head;
-  if (!current || dismissed) return null;
+  if (!current) return null;
 
   // ---- 2 bis) Demande de supervision (D-HIE-06, RG-HIE-27 / 28) ----
   if (headIsSupervision) {
@@ -279,9 +283,10 @@ export default function NotificationGate() {
         const code: string | null = e?.response?.data?.error ?? null;
         const key = `hierarchy.leadership.errors.${code}`;
         const translated = t(key);
+        // R7 (RG-HIE-32, JP 29/10) : code inconnu → message générique traduit, jamais le texte du serveur.
         notify(
           t('hierarchy.leadership.actionFailed'),
-          translated !== key ? translated : (e?.response?.data?.message ?? t('errors.saveFailed')),
+          translated !== key ? translated : t('hierarchy.leadership.errors.generic'),
         );
         if (code === 'SUPERVISION_REQUEST_NOT_PENDING') next();
       } finally {
@@ -345,7 +350,8 @@ export default function NotificationGate() {
     } catch {
       // au pire la notification réapparaîtra à la prochaine session
     }
-    setQueue((q) => q.slice(1));
+    // R8 : la notification affichée n'est plus forcément la première de la file.
+    setQueue((q) => q.filter((n) => n.id !== current.id));
     if (!actionnable) return;
     // Les rappels restants sont REMIS À PLUS TARD, pas perdus : aucun n'est marqué lu, et la
     // porte les represente à la prochaine session. Sans ça, une seconde modale s'ouvrirait

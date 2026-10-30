@@ -188,7 +188,11 @@ export function NotificationGate() {
     setClosedCampaigns((ids) => [...ids, campaign.id]);
   }, [campaign]);
 
-  const current = queue[0] ?? null;
+  // R8 (D-HIE-06 / RG-HIE-27, JP 29/10) : files séparées dans la même liste. « Plus tard » / « Voir »
+  // sur un RAPPEL (`remindersDismissed`) ne masque que les rappels ; une demande de supervision reste
+  // présentée (son propre « Plus tard » la remet à la session suivante, `deferredSupervision`).
+  const current =
+    queue.find((n) => n.source === SOURCE_SUPERVISION_REQUEST || !remindersDismissed) ?? null;
   const destination = current ? destinationFor(current.source, me) : null;
   const isSupervision = current?.source === SOURCE_SUPERVISION_REQUEST;
   const supervisionRequest =
@@ -340,7 +344,7 @@ export function NotificationGate() {
   }
 
   // ---- 2) Rappels personnels ----
-  if (!current || remindersDismissed) return null;
+  if (!current) return null;
 
   // ---- 3) Demande de supervision (D-HIE-06) — attend l'aperçu ; rien tant qu'il n'est pas là. ----
   if (isSupervision) {

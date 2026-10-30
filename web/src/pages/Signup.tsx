@@ -7,8 +7,10 @@ import { Icon } from '../components/Icon';
 import { LangSwitch } from '../components/LangSwitch';
 import { Button, Field, Input } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
-import { hasMemberSpace, hasMinistryAccess, isAttachedAccount, type MeResponse } from '../services/authApi';
+import { hasMemberSpace, hasMinistryAccess, isAttachedAccount, type AuthResponse, type MeResponse } from '../services/authApi';
 import { safeDocumentNext } from '../utils/documents';
+import { isBillingPath, routeAfterLogin, safeNext } from '../utils/authRouting';
+import { SocialSignInButtons } from '../components/SocialSignInButtons';
 
 /**
  * Inscription libre côté Web (miroir de `mobile/app/(auth)/signup.tsx`) : identité, email,
@@ -30,12 +32,19 @@ const errData = (err: unknown) =>
 export function SignupPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { register, login } = useAuth();
+  const { register, login, establishSession } = useAuth();
   // D-WEB-04 (JP 27/10) : arrivée depuis le mur d'un document (`?next=/d/{slug}`) — le lien est
   // propagé à `/join`, qui y renverra une fois le compte rattaché (seul un chemin `/d/` est accepté).
   const [searchParams] = useSearchParams();
   const docNext = safeDocumentNext(searchParams.get('next'));
   const joinPath = docNext ? `/join?next=${encodeURIComponent(docNext)}` : '/join';
+  // D-FIX-3A (JP 29/10) : arrivée depuis /offres (« Créer un compte », `?next=/offres?offer=…`) — les
+  // pages d'offres et d'abonnement servent TOUT compte connecté (D-ABO-05) : après l'inscription (ou
+  // Google / Apple), retour direct sur la carte de l'offre, sans passer par /join.
+  const rawNext = safeNext(searchParams.get('next'));
+  const billingNext = rawNext && isBillingPath(rawNext) ? rawNext : null;
+  /** `next` accepté ici (document ou offres), propagé au retour vers /login. */
+  const keptNext = docNext ?? billingNext;
 
   const [mode, setMode] = useState<'form' | 'existing'>('form');
   const [firstName, setFirstName] = useState('');
@@ -51,6 +60,7 @@ export function SignupPage() {
 
   /** Un compte déjà rattaché va à son espace ; sinon il finit son inscription. */
   const routeAfterAuth = (me: MeResponse) => {
+    if (billingNext) return navigate(billingNext, { replace: true });
     if (docNext && isAttachedAccount(me)) return navigate(docNext, { replace: true });
     if (hasMinistryAccess(me)) return navigate('/dashboard', { replace: true });
     if (hasMemberSpace(me)) return navigate('/my-goals', { replace: true });
@@ -99,8 +109,9 @@ export function SignupPage() {
         countryCode:
           phoneDigits.length > 0 ? DIAL_COUNTRIES.find((c) => c.iso === countryIso)?.dial : undefined,
       });
-      // Compte neuf : aucun rattachement possible → rattachement à une assemblée.
-      navigate(joinPath, { replace: true });
+      // Compte neuf : aucun rattachement possible → rattachement à une assemblée ; venu de /offres, retour
+      // sur l'offre (D-FIX-3A).
+      navigate(billingNext ?? joinPath, { replace: true });
     } catch (err: unknown) {
       const data = errData(err);
       if (data?.error === 'USERNAME_ALREADY_EXISTS') {
@@ -118,6 +129,20 @@ export function SignupPage() {
       } else {
         setError(data?.message ?? t('signup.failed'));
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // D-FIX-3A (JP 29/10) : Google / Apple aussi sur /signup — même routage que /login (`next` compris :
+  // document, offres), boutons masqués sans identifiants configurés (`config/oauth.ts`).
+  const onSocialSession = async (res: AuthResponse) => {
+    setLoading(true);
+    try {
+      const me = await establishSession(res.token);
+      if (routeAfterLogin(me, keptNext, navigate) === 'denied') setError(t('login.memberDenied'));
+    } catch {
+      setError(t('login.social.errors.generic'));
     } finally {
       setLoading(false);
     }
@@ -145,7 +170,7 @@ export function SignupPage() {
           onClick={() =>
             mode === 'existing'
               ? setMode('form')
-              : navigate(docNext ? `/login?next=${encodeURIComponent(docNext)}` : '/login')
+              : navigate(keptNext ? `/login?next=${encodeURIComponent(keptNext)}` : '/login')
           }
           style={{
             position: 'absolute', top: 24, left: 24, display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -326,6 +351,8 @@ export function SignupPage() {
 
                 {error && <div className="err">{error}</div>}
               </form>
+
+              <SocialSignInButtons onSession={onSocialSession} onError={setError} disabled={loading} />
 
               <div className="reserved">
                 <Icon name="info" size={16} />

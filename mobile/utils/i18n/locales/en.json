@@ -984,7 +984,8 @@
         "SUPERVISION_ALREADY_LINKED": "You already follow this leader.",
         "SUPERVISION_REQUEST_DUPLICATE": "A request is already pending for this leader.",
         "SUPERVISION_REQUEST_NOT_PENDING": "This request has already been handled.",
-        "SUPERVISION_REQUEST_NOT_ACCEPTED": "This link is no longer active."
+        "SUPERVISION_REQUEST_NOT_ACCEPTED": "This link is no longer active.",
+        "generic": "The action did not go through. Please try again later."
       }
     },
     "life": {
@@ -1748,10 +1749,9 @@
       "correct": "Correct",
       "noCurrent": "No study in progress",
       "noCurrentHint": "When your leader starts a session, it will show up here.",
-      "startSession": "Start a session",
-      "startOther": "Start another lesson",
       "noCatalog": "No study unit has been published yet.",
       "locked": "Locked: finish the prerequisite unit in the assembly first",
+      "lockedPrereq": "Locked: finish {{module}} in the assembly first",
       "lessonsDone": "{{done}} / {{total}} lessons",
       "start": "Start",
       "redo": "Redo",
@@ -1760,8 +1760,7 @@
       "forgottenTitle": "A session is still open",
       "forgottenBody": "The session for {{lesson}} was not finished. Finish it to start this one?",
       "finishAndStart": "Finish and start",
-      "sessions": "Finished sessions",
-      "noSessions": "No finished session yet.",
+      "noSessions": "No session in this assembly yet.",
       "copies_one": "{{count}} copy",
       "copies_other": "{{count}} copies",
       "allSessions_one": "See the session",
@@ -1786,7 +1785,16 @@
       "nextRange": "Next: {{range}}",
       "startPick": "Starting question",
       "startPickNext": "Default: question {{number}}, the first one not yet covered. Tap another question to start elsewhere.",
-      "startPickFirst": "Default: the beginning of the lesson. Tap another question to start elsewhere."
+      "startPickFirst": "Default: the beginning of the lesson. Tap another question to start elsewhere.",
+      "pickAssembly": "Assembly",
+      "lessonDone": "Done",
+      "lessonInProgress": "In progress",
+      "lessonTodo": "To do",
+      "nextLesson": "Next lesson",
+      "history": "Session history ({{count}})",
+      "lockedAssembly": "Locked — Caleb offer",
+      "liveAssembly": "Session in progress",
+      "modules": "Modules and lessons"
     },
     "session": {
       "answered": "{{done}} / {{total}} answered",
@@ -2006,6 +2014,9 @@
         "title": "City tracking",
         "notActivated": "This feature is not activated for your church."
       }
+    },
+    "lock": {
+      "pilotCaleb": "Leading the study in this assembly is not activated for your account."
     }
   },
   "offers": {

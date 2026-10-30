@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import Label from '@/components/Label';
 import Button from '@/components/Button';
 import ErrorBanner from '@/components/ErrorBanner';
 import Field from '@/components/Field';
+import CalebAssemblyLock from '@/components/CalebAssemblyLock';
 import {
   StudyLanguagePill,
   StudyMemberActions,
@@ -45,6 +46,8 @@ import {
   type StudySessionSummary,
   type StudyUnitForAssembly,
 } from '@/services/assemblyApi';
+import { hierarchyAccessDenied } from '@/services/entitlementsApi';
+import { readLeaderUnit, writeLeaderUnit } from '@/services/studyLeaderUnit';
 import { toLocalDate } from '@/utils/format';
 import { fmtIsoDay } from '@/utils/meetingReport';
 import { confirmDialog, notify } from '@/utils/dialogs';
@@ -96,17 +99,38 @@ import { useCityFollowUp } from '@/hooks/useCityFollowUp';
  * l'écran et le menu web, `hooks/useCityFollowUp`) : la liste est vide pour un membre et pour un
  * dirigeant d'unité (RG-ABO-22), l'entrée ne leur apparaît donc jamais. Cadenas si aucune ville
  * n'ouvre ni l'étude ni le journal. L'entrée existe aussi en tuile d'accueil (`(tabs)/home`).
+ *
+ * <p>Lot « BER » (JP 29/10, plan `29_10_2026/01_Plan_Bertoua_Une_Assemblee_Expirations.md`) :
+ * <ul>
+ *   <li>D-BER-01 : un dirigeant de PLUSIEURS assemblées choisit l'assemblée en tête (sélecteur,
+ *       dernier choix retenu pour le compte — `services/studyLeaderUnit`, AsyncStorage sous
+ *       try/catch) ; l'écran ne montre que l'assemblée choisie : séance en cours, leçon suivante,
+ *       modules et leçons avec l'avancement DE CETTE assemblée, historique replié. Les vues
+ *       répondant / membre et « Suivi de la ville » sont inchangées ;</li>
+ *   <li>D-BER-02 : piloter (Commencer) n'est gratuit que sur l'assemblée gratuite du dirigeant
+ *       (`free`, AccessControlService.freeAssemblyId — la même que pour les CR) ; ailleurs, l'offre
+ *       Caleb (HIERARCHIE_SUIVI, droit PERSONNEL, axe CHAÎNE) est requise. Le droit vient du SERVEUR
+ *       (`canPilot` / `pilotLock` de `/study/me`) : cadenas dans le sélecteur et verrou neutre
+ *       (`CalebAssemblyLock`, aucun prix ni bouton de paiement — D-OFF-09) à la place de
+ *       *Commencer* ; un 403 HIERARCHIE_SUIVI relit `/study/me`, jamais un toast.</li>
+ * </ul>
  */
 export default function StudyHomeScreen() {
   const { t } = useLanguage();
   const { me, hasStudy } = useAuth();
+  const userId = me?.id ?? null;
   // D-ETU-50 (JP 27/10) : `hasStudy` = compte rattaché (étude gratuite) ; `isAttachedAccount` gardé
   // pour un binaire dont le contexte serait antérieur.
   const active = hasStudy && isAttachedAccount(me);
 
   const [assemblies, setAssemblies] = useState<StudyAssembly[]>([]);
-  const [catalogs, setCatalogs] = useState<Record<string, StudyUnitForAssembly[]>>({});
-  const [sessions, setSessions] = useState<Record<string, StudySessionSummary[]>>({});
+  // D-BER-01 (JP 29/10) : UNE assemblée dirigée à la fois — catalogue et séances de celle-ci
+  // seulement (RG-BER-18), plus de listes empilées par assemblée.
+  const [selected, setSelected] = useState<string | null>(null);
+  const selectedRef = useRef<string | null>(null);
+  const [unitData, setUnitData] = useState<UnitData | null>(null);
+  // Jeton anti-course : un changement d'assemblée rapide ignore la réponse de la précédente.
+  const unitToken = useRef(0);
   const [overview, setOverview] = useState<StudyAssemblyOverview[]>([]);
   // D-ABO-21 / RG-ABO-22 (JP 27/10) : villes dont le compte est responsable (suivi de la ville).
   const { cities: localities } = useCityFollowUp();
@@ -117,6 +141,17 @@ export default function StudyHomeScreen() {
   // D-ETU-35 (JP 23/10) : feuille « À lire avant la leçon » en attente de *Commencer*.
   const [briefing, setBriefing] = useState<Briefing | null>(null);
 
+  /** RG-BER-18 (JP 29/10) : catalogue `?unitId=` et séances de l'assemblée choisie seulement. */
+  const loadUnit = useCallback(async (unitId: string | null) => {
+    const token = ++unitToken.current;
+    if (!unitId) {
+      setUnitData(null);
+      return;
+    }
+    const [catalog, sessions] = await Promise.all([getStudyCatalog(unitId), listStudySessions(unitId)]);
+    if (token === unitToken.current) setUnitData({ unitId, catalog, sessions });
+  }, []);
+
   const load = useCallback(async () => {
     if (!active) {
       setLoading(false);
@@ -125,21 +160,24 @@ export default function StudyHomeScreen() {
     try {
       const { assemblies: list } = await getStudyMe();
       setAssemblies(list);
-      const led = list.filter((a) => a.leader);
-      const [cats, sess] = await Promise.all([
-        Promise.all(led.map((a) => getStudyCatalog(a.unitId))),
-        Promise.all(led.map((a) => listStudySessions(a.unitId))),
+      const led = sortLed(list.filter((a) => a.leader));
+      // RG-BER-17 (JP 29/10) : choix de la session en cours, sinon dernier choix mémorisé.
+      const wanted = selectedRef.current ?? (led.length > 1 ? await readLeaderUnit(userId) : null);
+      const chosen = pickDefaultLed(led, wanted);
+      selectedRef.current = chosen;
+      setSelected(chosen);
+      const [, ov] = await Promise.all([
+        loadUnit(chosen),
+        list.length === 0 ? getStudyProgressOverview() : Promise.resolve([] as StudyAssemblyOverview[]),
       ]);
-      setCatalogs(Object.fromEntries(led.map((a, i) => [a.unitId, cats[i]])));
-      setSessions(Object.fromEntries(led.map((a, i) => [a.unitId, sess[i]])));
-      setOverview(list.length === 0 ? await getStudyProgressOverview() : []);
+      setOverview(ov);
       setError(null);
     } catch (e: any) {
       setError(studyErrorMessage(e, t));
     } finally {
       setLoading(false);
     }
-  }, [active, t]);
+  }, [active, t, userId, loadUnit]);
 
   useFocusEffect(
     useCallback(() => {
@@ -156,6 +194,20 @@ export default function StudyHomeScreen() {
     }
   };
 
+  /** D-BER-01 / RG-BER-17 (JP 29/10) : choix dans le sélecteur, retenu pour le compte. */
+  const onSelect = async (unitId: string) => {
+    if (unitId === selectedRef.current) return;
+    selectedRef.current = unitId;
+    setSelected(unitId);
+    void writeLeaderUnit(userId, unitId);
+    try {
+      await loadUnit(unitId);
+      setError(null);
+    } catch (e: any) {
+      setError(studyErrorMessage(e, t));
+    }
+  };
+
   const openSession = (id: string) => router.push({ pathname: '/study/session/[id]', params: { id } });
 
   /**
@@ -168,7 +220,7 @@ export default function StudyHomeScreen() {
     if (opening) return;
     const firstOfUnit = !u.unit.lessons.some((l) => u.doneChapterIds.includes(l.chapterId));
     // D-ETU-39 (JP 23/10) : séances déjà tenues sur cette leçon (plus récentes d'abord, §4.7).
-    const past = pastOfLesson(sessions[unitId] ?? [], lesson.chapterId);
+    const past = pastOfLesson(unitData?.unitId === unitId ? unitData.sessions : [], lesson.chapterId);
     const next: Briefing = {
       unitId,
       lesson,
@@ -202,6 +254,8 @@ export default function StudyHomeScreen() {
   /**
    * Ouverture ; sur STUDY_SESSION_ALREADY_OPEN, propose de *Terminer* l'oubliée (D-ETU-22).
    * D-ETU-39 (JP 23/10) : `start` absent = point de départ par défaut du serveur.
+   * RG-BER-23 (D-BER-02, JP 29/10) : un 403 HIERARCHIE_SUIVI (droit Caleb retiré entre-temps) relit
+   * `/study/me` — l'assemblée passe alors sous verrou Caleb — jamais un toast.
    */
   const doStart = async (unitId: string, lesson: StudyLesson, start?: string | null) => {
     if (opening) return;
@@ -210,6 +264,10 @@ export default function StudyHomeScreen() {
       const created = await openStudySession(unitId, lesson.chapterId, start);
       openSession(created.session.id);
     } catch (e: any) {
+      if (hierarchyAccessDenied(e)) {
+        void load();
+        return;
+      }
       if (studyErrorCode(e) !== 'STUDY_SESSION_ALREADY_OPEN') {
         notify(t('study.tile.title'), studyErrorMessage(e, t));
         return;
@@ -236,7 +294,7 @@ export default function StudyHomeScreen() {
         const created = await openStudySession(unitId, lesson.chapterId, start);
         openSession(created.session.id);
       } catch (e2: any) {
-        notify(t('study.tile.title'), studyErrorMessage(e2, t));
+        if (!hierarchyAccessDenied(e2)) notify(t('study.tile.title'), studyErrorMessage(e2, t));
         void load();
       }
     } finally {
@@ -245,6 +303,11 @@ export default function StudyHomeScreen() {
   };
 
   const anyParticipant = assemblies.some((a) => a.participant);
+  // D-BER-01 (JP 29/10) : assemblées dirigées (gratuite d'abord, puis par nom — RG-BER-16) ; les
+  // assemblées où l'appelant n'est que répondant gardent leur rendu (RG-BER-25).
+  const led = sortLed(assemblies.filter((a) => a.leader));
+  const chosen = led.find((a) => a.unitId === selected) ?? null;
+  const answering = assemblies.filter((a) => !a.leader);
 
   return (
     <ScreenShell
@@ -278,16 +341,28 @@ export default function StudyHomeScreen() {
         <>
           {!!error && <ErrorBanner message={error} onRetry={load} />}
 
-          {assemblies.map((a) => (
-            <AssemblySection
+          {/* RG-BER-15 (JP 29/10) : sélecteur seulement pour un dirigeant d'au moins deux assemblées. */}
+          {led.length >= 2 && (
+            <AssemblyPicker assemblies={led} selected={selected} onSelect={(id) => void onSelect(id)} />
+          )}
+
+          {chosen && (
+            <LeaderAssembly
+              key={chosen.unitId}
+              assembly={chosen}
+              data={unitData?.unitId === chosen.unitId ? unitData : null}
+              opening={opening}
+              onOpenSession={openSession}
+              onStart={(u, lesson) => void onStart(chosen.unitId, u, lesson)}
+            />
+          )}
+
+          {answering.map((a) => (
+            <ParticipantSection
               key={a.unitId}
               assembly={a}
               showName={assemblies.length > 1}
-              catalog={catalogs[a.unitId] ?? []}
-              sessions={sessions[a.unitId] ?? []}
-              opening={opening}
               onOpenSession={openSession}
-              onStart={(u, lesson) => void onStart(a.unitId, u, lesson)}
             />
           ))}
 
@@ -322,6 +397,73 @@ export default function StudyHomeScreen() {
       )}
     </ScreenShell>
   );
+}
+
+/** RG-BER-18 (JP 29/10) — catalogue et séances de l'assemblée choisie. */
+type UnitData = {
+  unitId: string;
+  catalog: StudyUnitForAssembly[];
+  sessions: StudySessionSummary[];
+};
+
+/**
+ * D-BER-02 / D-BER-07 (JP 29/10) — pilotage refusé sur cette assemblée (pas l'assemblée gratuite
+ * du dirigeant, sans Caleb). Droit lu du SERVEUR (`pilotLock` / `canPilot`, absents = libre).
+ */
+function pilotLocked(a: StudyAssembly): boolean {
+  return a.leader && (a.pilotLock != null || a.canPilot === false);
+}
+
+/** RG-BER-16 (JP 29/10) — assemblée gratuite d'abord, puis par nom. */
+function sortLed(led: StudyAssembly[]): StudyAssembly[] {
+  return [...led].sort((a, b) => {
+    const fa = a.free ? 0 : 1;
+    const fb = b.free ? 0 : 1;
+    return fa !== fb ? fa - fb : a.unitName.localeCompare(b.unitName);
+  });
+}
+
+/**
+ * RG-BER-17 (JP 29/10) — choix par défaut : `wanted` (choix mémorisé) s'il est encore dirigé ; sinon
+ * la première assemblée avec une séance en cours ; sinon la gratuite ; sinon la première.
+ */
+function pickDefaultLed(led: StudyAssembly[], wanted: string | null): string | null {
+  if (led.length === 0) return null;
+  if (wanted && led.some((a) => a.unitId === wanted)) return wanted;
+  return (led.find((a) => a.currentSession) ?? led.find((a) => a.free) ?? led[0]).unitId;
+}
+
+type LessonStatus = 'done' | 'inProgress' | 'todo';
+
+/**
+ * RG-BER-19 (JP 29/10) — *faite* : `doneChapterIds` ; *en cours* : séance courante sur la leçon, ou
+ * séance(s) TERMINEE sans que la leçon soit faite (plage partielle, D-ETU-38/42) — y compris la suite
+ * annoncée par le serveur (`nextQuestionNumber` après le début, D-ETU-49) ; *à faire* sinon.
+ */
+function lessonStatusOf(
+  u: StudyUnitForAssembly,
+  l: StudyLesson,
+  sessions: StudySessionSummary[],
+  current: StudySessionSummary | null,
+): LessonStatus {
+  if (u.doneChapterIds.includes(l.chapterId)) return 'done';
+  if (current?.chapterId === l.chapterId) return 'inProgress';
+  if (pastOfLesson(sessions, l.chapterId).length > 0) return 'inProgress';
+  const nextStart = defaultStartOf(l);
+  return nextStart && nextStart !== topLevelOf(l)[0] ? 'inProgress' : 'todo';
+}
+
+/**
+ * RG-BER-20 (JP 29/10) — leçon suivante : première leçon non faite, dans l'ordre du catalogue, du
+ * premier module NON verrouillé (prérequis, D-ETU-19) qui en contient une.
+ */
+function nextLessonOf(catalog: StudyUnitForAssembly[]): { unit: StudyUnitForAssembly; lesson: StudyLesson } | null {
+  for (const u of catalog) {
+    if (u.locked) continue;
+    const lesson = u.unit.lessons.find((l) => !u.doneChapterIds.includes(l.chapterId));
+    if (lesson) return { unit: u, lesson };
+  }
+  return null;
 }
 
 /** D-ETU-35 (JP 23/10) — ce que le dirigeant lit avant *Commencer*. */
@@ -553,89 +695,210 @@ function fmtInstantDay(iso: string | null, t: (k: string, o?: any) => string): s
   return iso ? fmtIsoDay(toLocalDate(new Date(iso)), t) : '';
 }
 
-function AssemblySection({
+/**
+ * D-BER-01 / RG-BER-15..17 (JP 29/10) — sélecteur d'assemblée d'un dirigeant de plusieurs
+ * assemblées : rangée de pastilles, cadenas sur une assemblée sous verrou Caleb (`pilotLock`),
+ * point « En cours » si une séance y est ouverte. Aucun prix ni mention de paiement (D-OFF-09).
+ */
+function AssemblyPicker({
+  assemblies,
+  selected,
+  onSelect,
+}: {
+  assemblies: StudyAssembly[];
+  selected: string | null;
+  onSelect: (unitId: string) => void;
+}) {
+  const { t } = useLanguage();
+  return (
+    <View style={styles.pickerBlock}>
+      <Label>{t('study.home.pickAssembly')}</Label>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pickerRow}>
+        {assemblies.map((a) => {
+          const on = a.unitId === selected;
+          const locked = pilotLocked(a);
+          const label = [
+            a.unitName,
+            locked ? t('study.home.lockedAssembly') : null,
+            a.currentSession ? t('study.home.liveAssembly') : null,
+          ]
+            .filter(Boolean)
+            .join(' · ');
+          return (
+            <Pressable
+              key={a.unitId}
+              onPress={() => onSelect(a.unitId)}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: on }}
+              accessibilityLabel={label}
+              style={({ pressed }) => [styles.pickChip, on && styles.pickChipOn, { opacity: pressed ? 0.85 : 1 }]}
+            >
+              {!!a.currentSession && <View style={[styles.pickLive, on && styles.pickLiveOn]} />}
+              <Text style={[styles.pickText, on && styles.pickTextOn]} numberOfLines={1}>
+                {a.unitName}
+              </Text>
+              {locked && <Ionicons name="lock-closed" size={13} color={on ? colors.parchment : colors.ink3} />}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+/** Carte « Séance en cours » (Reprendre / Répondre / Corriger). */
+function CurrentCard({
+  current,
+  action,
+  language,
+  onPress,
+}: {
+  current: StudySessionSummary;
+  action: string;
+  language: StudyAssembly['language'];
+  onPress: () => void;
+}) {
+  const { t } = useLanguage();
+  return (
+    <Card style={styles.currentCard} onPress={onPress}>
+      <View style={styles.liveRow}>
+        <View style={styles.liveDot} />
+        <Text style={styles.liveText}>{t(`study.status.${current.status}`)}</Text>
+      </View>
+      <Text style={styles.currentTitle}>{lessonLabelOf(t, current.lessonNumber, current.lessonTitle)}</Text>
+      <Text style={styles.currentSub}>{[current.moduleCode, current.moduleName].filter(Boolean).join(' · ')}</Text>
+      {current.moduleLanguage && current.moduleLanguage !== language && (
+        <View style={{ marginTop: 6 }}>
+          <StudyLanguagePill language={current.moduleLanguage} />
+        </View>
+      )}
+      <View style={styles.currentCta}>
+        <Text style={styles.currentCtaText}>{action}</Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.white} />
+      </View>
+    </Card>
+  );
+}
+
+/** D-ETU-44/45 (JP 23/10) — bloc « À rattraper » d'une assemblée. */
+function CatchUpBlock({ catchUps, onOpenSession }: { catchUps: StudyCatchUp[]; onOpenSession: (id: string) => void }) {
+  const { t } = useLanguage();
+  if (catchUps.length === 0) return null;
+  return (
+    <>
+      <Label style={styles.blockLabel}>{t('study.home.catchUpTitle')}</Label>
+      <Text style={styles.muted}>{t('study.home.catchUpHint')}</Text>
+      {catchUps.map((c) => (
+        <CatchUpRow key={c.sessionId} item={c} onPress={() => onOpenSession(c.sessionId)} />
+      ))}
+    </>
+  );
+}
+
+/**
+ * D-BER-01 (JP 29/10) — l'assemblée DIRIGÉE choisie : séance en cours, « À rattraper », leçon
+ * suivante, modules et leçons avec l'avancement DE CETTE assemblée (faite / en cours / à faire,
+ * RG-BER-19), prérequis (D-ETU-19), historique des séances replié (RG-BER-24), avancement.
+ *
+ * <p>RG-BER-21 : séance en cours → aucune action *Commencer* (« Terminer et commencer », D-ETU-22,
+ * reste le chemin d'une séance oubliée). RG-BER-22 (D-BER-02) : sous verrou Caleb, UN verrou neutre
+ * (`CalebAssemblyLock`, texte `study.lock.pilotCaleb` + « En savoir plus » — aucun prix, bouton de
+ * paiement ni champ de code) remplace toutes les actions *Commencer* ; statuts, historique et
+ * *Reprendre* d'une séance déjà ouverte restent (correction et fin libres, D-BER-06).
+ */
+function LeaderAssembly({
   assembly,
-  showName,
-  catalog,
-  sessions,
+  data,
   opening,
   onOpenSession,
   onStart,
 }: {
   assembly: StudyAssembly;
-  showName: boolean;
-  catalog: StudyUnitForAssembly[];
-  sessions: StudySessionSummary[];
+  data: UnitData | null;
   opening: string | null;
   onOpenSession: (id: string) => void;
   onStart: (unit: StudyUnitForAssembly, lesson: StudyLesson) => void;
 }) {
   const { t } = useLanguage();
-  const [unitOpen, setUnitOpen] = useState<string | null>(null);
-  const [allSessions, setAllSessions] = useState(false);
   const current = assembly.currentSession;
-  const past = sessions.filter((s) => s.status === 'TERMINEE');
-  // D-ETU-44/45 (JP 23/10) : séances que l'appelant peut encore rattraper.
   const catchUps = assembly.catchUps ?? [];
+  const locked = pilotLocked(assembly);
+  const canStart = !locked && !current;
+  const catalog = data?.catalog ?? [];
+  const sessions = data?.sessions ?? [];
+  const next = canStart ? nextLessonOf(catalog) : null;
+  // Module ouvert : par défaut celui de la leçon suivante (ou de la séance en cours) ; `undefined`
+  // tant que le dirigeant n'a rien replié / déplié.
+  const [unitOpen, setUnitOpen] = useState<string | null | undefined>(undefined);
+  const defaultOpen =
+    next?.unit.unit.moduleId ??
+    catalog.find((u) => u.unit.lessons.some((l) => l.chapterId === current?.chapterId))?.unit.moduleId ??
+    null;
+  const openModule = unitOpen === undefined ? defaultOpen : unitOpen;
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [allSessions, setAllSessions] = useState(false);
+  // R-BER-05 (RG-BER-24, parité web) : l'historique compte et liste TOUTES les séances de
+  // l'assemblée, séance en cours comprise, plus récentes d'abord (ouverture) — comme `pages/Study.tsx`.
+  const past = [...sessions].sort((a, b) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime());
   const shownPast = allSessions ? past : past.slice(0, 5);
-
-  const action = !current
-    ? null
-    : assembly.leader
-      ? t('study.home.resume')
-      : current.status === 'CORRECTION'
-        ? t('study.home.correct')
-        : t('study.home.answer');
+  // R-BER-06 (RG-BER-20, parité web `lockedPrereq`) : nom de l'unité prérequise, lu dans le catalogue.
+  const moduleName = (moduleId: string | null) => {
+    const m = moduleId ? catalog.find((c) => c.unit.moduleId === moduleId) : undefined;
+    return m ? [m.unit.code, m.unit.name].filter(Boolean).join(' · ') : null;
+  };
+  const nextStatus = next ? lessonStatusOf(next.unit, next.lesson, sessions, current) : null;
 
   return (
     <View style={styles.section}>
-      {(showName || assembly.leader) && <Label style={styles.sectionLabel}>{assembly.unitName}</Label>}
+      <Label style={styles.sectionLabel}>{assembly.unitName}</Label>
 
-      {current ? (
-        <Card style={styles.currentCard} onPress={() => onOpenSession(current.id)}>
-          <View style={styles.liveRow}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>{t(`study.status.${current.status}`)}</Text>
-          </View>
-          <Text style={styles.currentTitle}>{lessonLabelOf(t, current.lessonNumber, current.lessonTitle)}</Text>
-          <Text style={styles.currentSub}>{[current.moduleCode, current.moduleName].filter(Boolean).join(' · ')}</Text>
-          {current.moduleLanguage && current.moduleLanguage !== assembly.language && (
-            <View style={{ marginTop: 6 }}>
-              <StudyLanguagePill language={current.moduleLanguage} />
-            </View>
-          )}
-          <View style={styles.currentCta}>
-            <Text style={styles.currentCtaText}>{action}</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.white} />
-          </View>
-        </Card>
-      ) : !assembly.leader && catchUps.length === 0 ? (
-        <Card variant="paper2" style={styles.empty}>
-          <Ionicons name="book-outline" size={26} color={colors.ink3} />
-          <Text style={styles.emptyTitle}>{t('study.home.noCurrent')}</Text>
-          <Text style={styles.emptyText}>{t('study.home.noCurrentHint')}</Text>
-        </Card>
-      ) : null}
-
-      {catchUps.length > 0 && (
-        <>
-          <Label style={styles.blockLabel}>{t('study.home.catchUpTitle')}</Label>
-          <Text style={styles.muted}>{t('study.home.catchUpHint')}</Text>
-          {catchUps.map((c) => (
-            <CatchUpRow key={c.sessionId} item={c} onPress={() => onOpenSession(c.sessionId)} />
-          ))}
-        </>
+      {current && (
+        <CurrentCard
+          current={current}
+          action={t('study.home.resume')}
+          language={assembly.language}
+          onPress={() => onOpenSession(current.id)}
+        />
       )}
 
-      {assembly.leader && (
+      <CatchUpBlock catchUps={catchUps} onOpenSession={onOpenSession} />
+
+      {!data ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator color={colors.moss} />
+        </View>
+      ) : (
         <>
-          <Label style={styles.blockLabel}>{current ? t('study.home.startOther') : t('study.home.startSession')}</Label>
+          {locked && <CalebAssemblyLock compact body={t('study.lock.pilotCaleb')} />}
+
+          {/* RG-BER-20 (JP 29/10) : bouton principal sur la leçon suivante. */}
+          {next && (
+            <Card variant="tinted" style={styles.nextCard}>
+              <Label style={{ color: colors.mossSoft }}>{t('study.home.nextLesson')}</Label>
+              <Text style={styles.nextTitle}>{lessonLabelOf(t, next.lesson.number, next.lesson.title)}</Text>
+              <Text style={styles.rowMeta}>
+                {[next.unit.unit.code, next.unit.unit.name, next.lesson.portion].filter(Boolean).join(' · ')}
+              </Text>
+              <Button
+                label={nextStatus === 'inProgress' ? t('study.home.continue') : t('study.home.start')}
+                onPress={() => onStart(next.unit, next.lesson)}
+                loading={opening === next.lesson.chapterId}
+                disabled={!!opening}
+                fullWidth
+                height={48}
+                style={{ marginTop: 12 }}
+              />
+            </Card>
+          )}
+
+          <Label style={styles.blockLabel}>{t('study.home.modules')}</Label>
           {catalog.length === 0 ? (
             <Text style={styles.muted}>{t('study.home.noCatalog')}</Text>
           ) : (
             catalog.map((u) => {
-              const open = unitOpen === u.unit.moduleId;
+              const open = openModule === u.unit.moduleId;
               const done = u.unit.lessons.filter((l) => u.doneChapterIds.includes(l.chapterId)).length;
+              const prereq = moduleName(u.unit.prerequisiteModuleId);
               return (
                 <View key={u.unit.moduleId} style={styles.unitBlock}>
                   <Pressable
@@ -657,9 +920,11 @@ function AssemblySection({
                           <StudyLanguagePill language={u.unit.language} />
                         </View>
                       )}
-                      <Text style={styles.rowMeta} numberOfLines={1}>
+                      <Text style={styles.rowMeta} numberOfLines={2}>
                         {u.locked
-                          ? t('study.home.locked')
+                          ? prereq
+                            ? t('study.home.lockedPrereq', { module: prereq })
+                            : t('study.home.locked')
                           : t('study.home.lessonsDone', { done, total: u.unit.lessons.length })}
                       </Text>
                     </View>
@@ -669,30 +934,37 @@ function AssemblySection({
                     <View style={styles.lessons}>
                       {!!u.unit.bookTitle && <Text style={styles.book}>{u.unit.bookTitle}</Text>}
                       {u.unit.lessons.map((l) => {
-                        const isDone = u.doneChapterIds.includes(l.chapterId);
+                        const status = lessonStatusOf(u, l, sessions, current);
+                        const isDone = status === 'done';
                         // D-ETU-38/42 (JP 23/10) : leçon commencée, pas encore entièrement couverte.
                         const covered = isDone ? [] : rangesOf(pastOfLesson(sessions, l.chapterId), t);
                         // D-ETU-49 (JP 23/10) : suite de la leçon (« questions 21 à 57 ») avant *Commencer*.
                         const nextStart = isDone ? null : defaultStartOf(l);
                         const resumeAt = nextStart && nextStart !== topLevelOf(l)[0] ? nextStart : null;
-                        const started = covered.length > 0 || !!resumeAt;
+                        const isNext = next?.lesson.chapterId === l.chapterId;
+                        // RG-BER-20..22 : action secondaire seulement si l'on peut commencer et que le module est ouvert.
+                        const actionable = canStart && !u.locked;
                         return (
                           <Pressable
                             key={l.chapterId}
-                            disabled={u.locked || !!opening}
+                            disabled={!actionable || !!opening}
                             onPress={() => onStart(u, l)}
                             style={({ pressed }) => [
                               styles.lessonRow,
+                              isNext && styles.lessonRowNext,
                               { opacity: u.locked ? 0.5 : pressed ? 0.85 : 1 },
                             ]}
                           >
                             <Ionicons
-                              name={isDone ? 'checkmark-circle' : started ? 'time-outline' : 'ellipse-outline'}
+                              name={isDone ? 'checkmark-circle' : status === 'inProgress' ? 'time-outline' : 'ellipse-outline'}
                               size={20}
-                              color={isDone || started ? colors.moss : colors.ink3}
+                              color={status === 'todo' ? colors.ink3 : colors.moss}
                             />
                             <View style={{ flex: 1 }}>
                               <Text style={styles.lessonTitle}>{lessonLabelOf(t, l.number, l.title)}</Text>
+                              <Text style={[styles.statusText, status !== 'todo' && styles.statusTextOn]}>
+                                {t(STATUS_KEYS[status])}
+                              </Text>
                               {!!l.portion && <Text style={styles.rowMeta}>{l.portion}</Text>}
                               {covered.length > 0 && (
                                 <Text style={styles.rowMeta}>{t('study.home.covered', { ranges: covered.join(' · ') })}</Text>
@@ -705,11 +977,11 @@ function AssemblySection({
                             </View>
                             {opening === l.chapterId ? (
                               <ActivityIndicator color={colors.moss} />
-                            ) : (
+                            ) : actionable ? (
                               <Text style={styles.lessonAction}>
-                                {isDone ? t('study.home.redo') : started ? t('study.home.continue') : t('study.home.start')}
+                                {isDone ? t('study.home.redo') : status === 'inProgress' ? t('study.home.continue') : t('study.home.start')}
                               </Text>
-                            )}
+                            ) : null}
                           </Pressable>
                         );
                       })}
@@ -720,60 +992,121 @@ function AssemblySection({
             })
           )}
 
-          <Label style={styles.blockLabel}>{t('study.home.sessions')}</Label>
-          {past.length === 0 ? (
-            <Text style={styles.muted}>{t('study.home.noSessions')}</Text>
-          ) : (
-            <>
-              {shownPast.map((s) => (
-                <Pressable
-                  key={s.id}
-                  onPress={() => router.push({ pathname: '/study/results/[id]', params: { id: s.id } })}
-                  style={({ pressed }) => [styles.row, { opacity: pressed ? 0.9 : 1 }]}
-                >
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.titleRow}>
-                      <Text style={[styles.rowTitle, { flexShrink: 1 }]} numberOfLines={1}>
-                        {lessonLabelOf(t, s.lessonNumber, s.lessonTitle)}
+          {/* RG-BER-24 (JP 29/10) : historique replié par défaut, plus récentes d'abord. */}
+          <Pressable
+            onPress={() => setHistoryOpen((v) => !v)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: historyOpen }}
+            style={({ pressed }) => [styles.historyToggle, { opacity: pressed ? 0.85 : 1 }]}
+          >
+            <Text style={styles.historyText}>{t('study.home.history', { count: past.length })}</Text>
+            <Ionicons name={historyOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.moss} />
+          </Pressable>
+          {historyOpen &&
+            (past.length === 0 ? (
+              <Text style={styles.muted}>{t('study.home.noSessions')}</Text>
+            ) : (
+              <>
+                {shownPast.map((s) => {
+                  // RG-ETU-08 / D-ETU-09 : aucun résultat ouvert pendant la CORRECTION (échange des téléphones).
+                  const clickable = s.status !== 'CORRECTION';
+                  return (
+                  <Pressable
+                    key={s.id}
+                    disabled={!clickable}
+                    onPress={() => router.push({ pathname: '/study/results/[id]', params: { id: s.id } })}
+                    style={({ pressed }) => [styles.row, { opacity: pressed ? 0.9 : 1 }]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.titleRow}>
+                        <Text style={[styles.rowTitle, { flexShrink: 1 }]} numberOfLines={1}>
+                          {lessonLabelOf(t, s.lessonNumber, s.lessonTitle)}
+                        </Text>
+                        {s.moduleLanguage && s.moduleLanguage !== assembly.language && (
+                          <StudyLanguagePill language={s.moduleLanguage} />
+                        )}
+                      </View>
+                      <Text style={styles.rowMeta} numberOfLines={1}>
+                        {[
+                          s.moduleCode,
+                          rangeLabel(s, t),
+                          fmtInstantDay(s.finishedAt ?? s.openedAt, t),
+                          t('study.home.copies', { count: s.copyCount }),
+                          s.status !== 'TERMINEE' ? t(`study.status.${s.status}`) : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </Text>
-                      {s.moduleLanguage && s.moduleLanguage !== assembly.language && (
-                        <StudyLanguagePill language={s.moduleLanguage} />
-                      )}
                     </View>
-                    <Text style={styles.rowMeta} numberOfLines={1}>
-                      {[
-                        s.moduleCode,
-                        rangeLabel(s, t),
-                        fmtInstantDay(s.finishedAt ?? s.openedAt, t),
-                        t('study.home.copies', { count: s.copyCount }),
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.ink3} />
-                </Pressable>
-              ))}
-              {past.length > shownPast.length && (
-                <Text style={styles.link} onPress={() => setAllSessions(true)}>
-                  {t('study.home.allSessions', { count: past.length })}
-                </Text>
-              )}
-            </>
-          )}
-
-          <Button
-            label={t('study.home.unitProgress')}
-            variant="soft"
-            fullWidth
-            height={46}
-            style={{ marginTop: 14 }}
-            onPress={() =>
-              router.push({ pathname: '/study/progress', params: { unitId: assembly.unitId, lang: assembly.language } })
-            }
-          />
+                    {clickable && <Ionicons name="chevron-forward" size={18} color={colors.ink3} />}
+                  </Pressable>
+                  );
+                })}
+                {past.length > shownPast.length && (
+                  <Text style={styles.link} onPress={() => setAllSessions(true)}>
+                    {t('study.home.allSessions', { count: past.length })}
+                  </Text>
+                )}
+              </>
+            ))}
         </>
       )}
+
+      <Button
+        label={t('study.home.unitProgress')}
+        variant="soft"
+        fullWidth
+        height={46}
+        style={{ marginTop: 14 }}
+        onPress={() =>
+          router.push({ pathname: '/study/progress', params: { unitId: assembly.unitId, lang: assembly.language } })
+        }
+      />
+    </View>
+  );
+}
+
+const STATUS_KEYS: Record<LessonStatus, string> = {
+  done: 'study.home.lessonDone',
+  inProgress: 'study.home.lessonInProgress',
+  todo: 'study.home.lessonTodo',
+};
+
+/**
+ * RG-BER-25 (JP 29/10) — assemblée où l'appelant n'est que RÉPONDANT (D-ETU-06) : rendu inchangé —
+ * séance en cours (*Répondre* / *Corriger*) ou « Aucune étude en cours », puis « À rattraper ».
+ */
+function ParticipantSection({
+  assembly,
+  showName,
+  onOpenSession,
+}: {
+  assembly: StudyAssembly;
+  showName: boolean;
+  onOpenSession: (id: string) => void;
+}) {
+  const { t } = useLanguage();
+  const current = assembly.currentSession;
+  // D-ETU-44/45 (JP 23/10) : séances que l'appelant peut encore rattraper.
+  const catchUps = assembly.catchUps ?? [];
+  return (
+    <View style={styles.section}>
+      {showName && <Label style={styles.sectionLabel}>{assembly.unitName}</Label>}
+      {current ? (
+        <CurrentCard
+          current={current}
+          action={current.status === 'CORRECTION' ? t('study.home.correct') : t('study.home.answer')}
+          language={assembly.language}
+          onPress={() => onOpenSession(current.id)}
+        />
+      ) : catchUps.length === 0 ? (
+        <Card variant="paper2" style={styles.empty}>
+          <Ionicons name="book-outline" size={26} color={colors.ink3} />
+          <Text style={styles.emptyTitle}>{t('study.home.noCurrent')}</Text>
+          <Text style={styles.emptyText}>{t('study.home.noCurrentHint')}</Text>
+        </Card>
+      ) : null}
+      <CatchUpBlock catchUps={catchUps} onOpenSession={onOpenSession} />
     </View>
   );
 }
@@ -891,6 +1224,32 @@ const styles = StyleSheet.create({
   loadingBox: { marginTop: 40, alignItems: 'center' },
   section: { marginTop: 20, gap: 8 },
   sectionLabel: { color: colors.mossSoft },
+  pickerBlock: { marginTop: 18, gap: 8 },
+  pickerRow: { gap: 8, paddingRight: 8 },
+  pickChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    maxWidth: 240,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.hair,
+    backgroundColor: colors.paper,
+  },
+  pickChipOn: { borderColor: colors.moss, backgroundColor: colors.moss },
+  pickText: { flexShrink: 1, fontFamily: fonts.sans, fontSize: 14, color: colors.ink },
+  pickTextOn: { color: colors.white, fontWeight: '600' },
+  pickLive: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.earth },
+  pickLiveOn: { backgroundColor: colors.parchment },
+  nextCard: { marginTop: 14, paddingHorizontal: 16, paddingVertical: 14 },
+  nextTitle: { marginTop: 6, fontFamily: fonts.serif, fontSize: 19, color: colors.ink, letterSpacing: -0.2 },
+  lessonRowNext: { borderColor: colors.moss },
+  statusText: { fontFamily: fonts.mono, fontSize: 10.5, color: colors.ink3, letterSpacing: 0.6, textTransform: 'uppercase', marginTop: 2 },
+  statusTextOn: { color: colors.moss },
+  historyToggle: { marginTop: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 },
+  historyText: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: colors.moss },
   blockLabel: { marginTop: 14 },
   muted: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
   empty: { marginTop: 4, paddingHorizontal: 20, paddingVertical: 22, alignItems: 'center', gap: 8 },

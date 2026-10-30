@@ -33,3 +33,18 @@ export function mobileMoneyMessage(
     ...(input.offer === 'nehemie' ? { city: input.city } : {}),
   });
 }
+
+/**
+ * Prix local de LA formule choisie — constats PAY / MKT (plan 28_10_2026/03 §12, 05 §10.6 n°5, JP 29/10).
+ * Le serveur stocke un texte libre « {mensuel} · {annuel} » (ex. « 1 000 FCFA / mois · 10 000 FCFA / an »,
+ * D-OFF-08 / D-CUR-08) : on en garde le segment de la période (mensuel = 1er, annuel = 2ᵈ), jamais
+ * recomposé ni traduit. Un texte sans « · » (une seule formule) est rendu tel quel ; annuel absent → le
+ * texte entier plutôt qu'un prix mensuel présenté comme annuel.
+ */
+export function localPriceForPeriod(label: string | null | undefined, period: BillingPeriod): string | null {
+  const text = (label ?? '').trim();
+  if (!text) return null;
+  const parts = text.split('·').map((p) => p.trim()).filter(Boolean);
+  if (parts.length < 2) return text;
+  return period === 'ANNUAL' ? parts[1] : parts[0];
+}

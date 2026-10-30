@@ -27,3 +27,9 @@ export const APPLE_WEB: { servicesId: string; redirectUri: string } | null = (()
   const redirectUri = configured(import.meta.env.VITE_APPLE_REDIRECT_URI);
   return servicesId && redirectUri ? { servicesId, redirectUri } : null;
 })();
+
+/**
+ * Au moins un bouton Google / Apple peut s'afficher — constat MKT (plan 28_10_2026/05 §10.6 n°5, JP 29/10) :
+ * /offres ne promet « En un clic avec Google ou Apple » que dans ce cas.
+ */
+export const SOCIAL_SIGN_IN_CONFIGURED: boolean = !!(GOOGLE_WEB_CLIENT_ID || APPLE_WEB);

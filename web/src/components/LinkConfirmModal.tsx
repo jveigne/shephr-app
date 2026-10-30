@@ -23,6 +23,9 @@ import { linkConfirmErrorMessage } from '../utils/socialAuthErrors';
 //  - « Renvoyer le code » inactif pendant `resendInSeconds` (compte à rebours, valeur du serveur).
 // ---------------------------------------------------------------------------------------------
 
+/** Attente du renvoi après un 429 sans `Retry-After` lisible : l'espacement minimal du serveur (60 s). */
+const RESEND_FALLBACK_SECONDS = 60;
+
 export function LinkConfirmModal({
   challenge,
   provider,
@@ -108,6 +111,15 @@ export function LinkConfirmModal({
         onClose(r.message);
         return;
       }
+      // Constat MKT n°4 (plan 28_10_2026/05 §10.6, JP 29/10) : un 429 relance le compte à rebours —
+      // `Retry-After` s'il est lisible (exposition CORS non garantie), sinon 60 s (espacement serveur).
+      const res = (err as { response?: { status?: number; headers?: Record<string, unknown> } })?.response;
+      if (res?.status === 429) {
+        const retryAfter = Number(res.headers?.['retry-after']);
+        const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : RESEND_FALLBACK_SECONDS;
+        setResendAt(Date.now() + wait * 1000);
+        setNow(Date.now());
+      }
       setError(r.message);
     } finally {
       setResending(false);
@@ -134,8 +146,11 @@ export function LinkConfirmModal({
       <form id="link-confirm-form" onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Field label={t('login.social.linkConfirm.code')} hint={t('login.social.linkConfirm.codeHint')} style={{ margin: 0 }}>
           {/* <input> natif : `Input` de ui.tsx ne transmet pas de ref (focus après une erreur). */}
+          {/* Constat MKT n°4 (JP 29/10) : nom accessible du champ (le `label` de `Field` n'est pas lié). */}
           <input
             ref={inputRef}
+            id="link-confirm-code"
+            aria-label={t('login.social.linkConfirm.code')}
             className="input"
             value={code}
             onChange={(e) => {
