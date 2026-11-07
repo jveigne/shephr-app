@@ -162,6 +162,8 @@ export type AssemblyErrorCode =
   | 'ATTENDEE_NOT_IN_ASSEMBLY'
   | 'CHAPTERS_FROM_SEVERAL_MODULES'
   | 'TEACHING_MODULE_INACTIVE'
+  // D-FIN-01 (JP 06/11) : un enseignement individuel (`PERSONAL`) ne se lit pas en réunion.
+  | 'TEACHING_MODULE_PERSONAL'
   | 'STUDY_SESSION_ALREADY_OPEN'
   | 'STUDY_SESSION_NOT_OPEN'
   | 'STUDY_SESSION_LOCKED'
@@ -1229,4 +1231,246 @@ export async function getStudyHierarchyOverview(moduleId?: string): Promise<Stud
 export async function getStudyHierarchyStats(from: string, to: string): Promise<StudyHierarchyStats> {
   const { data } = await apiClient.get<StudyHierarchyStats>(`${STUDY}/hierarchy/stats`, { params: { from, to } });
   return { ...data, monthly: data?.monthly ?? [] };
+}
+
+// ---------------------------------------------------------------------------------------------
+//  Enseignements individuels — lot « FIN » (D-FIN-01 / D-FIN-02 / D-FIN-13, JP 06/11 ; contrat
+//  `06_11_2026/02_Contrat_API_Enseignement.md` §5, §10.1). Un enseignement EST un module `PERSONAL` :
+//  parcours par chapitres du livre, chacun seul à son rythme, hors CR et hors Bertoua. Routes
+//  `/api/church/assembly/teaching/**`, SANS `@RequiresModule` : un ministère voit l'enseignement parce
+//  qu'il a du contenu, aucun « CMCI » en dur. Compte non rattaché → 403 `TEACHING_JOIN_REQUIRED`.
+//  ⚠ Deux axes, jamais mélangés : `/hierarchy` = CHAÎNE (`HIERARCHIE_SUIVI`, droit personnel, Caleb) ;
+//  `/localities` et `/locality/{id}` = GÉOGRAPHIE (`ENSEIGNEMENT_SUIVI`, droit de ville, Néhémie).
+//  Miroirs identiques à `mobile/services/assemblyApi.ts` : tout changement se porte des deux côtés.
+// ---------------------------------------------------------------------------------------------
+
+/** D-FIN-13 (JP 06/11). Mirrors com.excellence.back.assembly.TeachingChapter.Run */
+export interface TeachingRun {
+  text: string;
+  bold?: boolean | null;
+  italic?: boolean | null;
+}
+
+/** Mirrors com.excellence.back.assembly.TeachingChapter.Block — texte brut, aucun HTML interprété (§3.1). */
+export interface TeachingBlock {
+  type: 'h2' | 'h3' | 'p' | 'verse' | 'list';
+  runs?: TeachingRun[] | null;
+  reference?: string | null;
+  items?: TeachingRun[][] | null;
+}
+
+/** Mirrors com.excellence.back.assembly.TeachingDtos.TeachingVideoRef — null tant que la vidéo n'est pas publiée. */
+export interface TeachingVideoRef {
+  id: string;
+  title: string;
+  durationSeconds: number | null;
+  posterUrl: string | null;
+}
+
+/** Mirrors TeachingDtos.TeachingMyProgress — `position` = index du bloc de lecture. */
+export interface TeachingMyProgress {
+  position: number;
+  lastOpenedAt: string;
+  completedAt: string | null;
+}
+
+/** Mirrors TeachingDtos.TeachingCourseSummary */
+export interface TeachingCourseSummary {
+  id: string;
+  name: string;
+  bookTitle: string;
+  author: string | null;
+  description: string | null;
+  language: Language;
+  publishedAt: string | null;
+  /** Tous les chapitres, « à venir » compris. */
+  chapterCount: number;
+  /** Chapitres disponibles (D-FIN-14). */
+  totalCount: number;
+  completedCount: number;
+  nextChapterId: string | null;
+  nextChapterNumber: number | null;
+  nextChapterTitle: string | null;
+  /** null = pas commencé. */
+  lastActivityAt: string | null;
+}
+
+/** Mirrors TeachingDtos.TeachingPartView — `number = 0` : aucun en-tête de partie (§3.3). */
+export interface TeachingPartView {
+  id: string;
+  number: number;
+  title: string | null;
+  orderIndex: number;
+}
+
+/** Mirrors TeachingDtos.TeachingChapterSummary — D-FIN-14 : indisponible = minutes, vidéo et avancement à null. */
+export interface TeachingChapterSummary {
+  id: string;
+  partId: string | null;
+  number: number;
+  title: string | null;
+  orderIndex: number;
+  available: boolean;
+  readingMinutes: number | null;
+  video: TeachingVideoRef | null;
+  progress: TeachingMyProgress | null;
+}
+
+/** Mirrors TeachingDtos.TeachingCourseDetail — `parts` vide = module sans parties ; `leaderBlock` décidé par le serveur. */
+export interface TeachingCourseDetail {
+  id: string;
+  name: string;
+  bookTitle: string;
+  author: string | null;
+  description: string | null;
+  language: Language;
+  publishedAt: string | null;
+  parts: TeachingPartView[];
+  chapters: TeachingChapterSummary[];
+  nextChapterId: string | null;
+  completedCount: number;
+  totalCount: number;
+  lastActivityAt: string | null;
+  leaderBlock: boolean;
+}
+
+/** Mirrors TeachingDtos.TeachingChapterContent */
+export interface TeachingChapterContent {
+  id: string;
+  moduleId: string;
+  moduleName: string;
+  partId: string | null;
+  partNumber: number | null;
+  partTitle: string | null;
+  number: number;
+  title: string | null;
+  summary: string | null;
+  readingMinutes: number;
+  blocks: TeachingBlock[];
+  video: TeachingVideoRef | null;
+  progress: TeachingMyProgress | null;
+  followingChapterId: string | null;
+}
+
+/** Mirrors TeachingDtos.TeachingLeaderSummary — P-FIN-1 (JP 06/11) : totaux seuls, aucun nom, gratuit. */
+export interface TeachingLeaderSummary {
+  startedCount: number;
+  memberCount: number;
+  canSeeDetails: boolean;
+}
+
+/** Mirrors TeachingDtos.TeachingMemberProgress */
+export interface TeachingMemberProgress {
+  userId: string;
+  fullName: string;
+  completedCount: number;
+  totalCount: number;
+  lastActivityAt: string | null;
+}
+
+/** Mirrors TeachingDtos.TeachingHierarchyUnit */
+export interface TeachingHierarchyUnit {
+  unitId: string;
+  unitName: string;
+  cityName: string | null;
+  leaderName: string | null;
+  members: TeachingMemberProgress[];
+}
+
+/** Mirrors TeachingDtos.TeachingHierarchyProgress — axe CHAÎNE, HIERARCHIE_SUIVI (D-FIN-03). */
+export interface TeachingHierarchyProgress {
+  moduleId: string;
+  totalCount: number;
+  units: TeachingHierarchyUnit[];
+}
+
+/** Mirrors TeachingDtos.TeachingLocalityMember */
+export interface TeachingLocalityMember extends TeachingMemberProgress {
+  unitId: string | null;
+  unitName: string | null;
+}
+
+/** Mirrors TeachingDtos.TeachingLocalityProgress — axe GÉOGRAPHIE, ENSEIGNEMENT_SUIVI (D-FIN-08). */
+export interface TeachingLocalityProgress {
+  moduleId: string;
+  localityId: string;
+  localityName: string;
+  totalCount: number;
+  members: TeachingLocalityMember[];
+}
+
+/** Mirrors com.excellence.back.storage.PresignedUrl (`TeachingVideoPlay` du contrat §5.13, même forme). */
+export interface TeachingVideoPlay {
+  url: string;
+  expiresAt: string;
+}
+
+const TEACHING = `${BASE}/teaching`;
+
+/** Modules `PERSONAL` actifs du ministère ayant au moins un chapitre disponible (§5.2). */
+export async function listTeachingCourses(): Promise<TeachingCourseSummary[]> {
+  const { data } = await apiClient.get<TeachingCourseSummary[]>(`${TEACHING}/courses`);
+  return data ?? [];
+}
+
+/** Parties et chapitres à plat, mon avancement, chapitre à reprendre (§5.3). */
+export async function getTeachingCourse(id: string): Promise<TeachingCourseDetail> {
+  const { data } = await apiClient.get<TeachingCourseDetail>(`${TEACHING}/courses/${id}`);
+  return { ...data, parts: data?.parts ?? [], chapters: data?.chapters ?? [] };
+}
+
+/** Texte d'un chapitre. Sans contenu → 404 `TEACHING_CHAPTER_UNAVAILABLE` (D-FIN-14). */
+export async function getTeachingChapter(id: string): Promise<TeachingChapterContent> {
+  const { data } = await apiClient.get<TeachingChapterContent>(`${TEACHING}/chapters/${id}`);
+  return { ...data, blocks: data?.blocks ?? [] };
+}
+
+/** Position de lecture : crée ou met à jour, bornée par le serveur au dernier bloc (§5.5). */
+export async function putTeachingProgress(id: string, position: number): Promise<TeachingMyProgress> {
+  const { data } = await apiClient.put<TeachingMyProgress>(`${TEACHING}/chapters/${id}/progress`, { position });
+  return data;
+}
+
+/** « J'ai terminé », idempotent (§5.6). */
+export async function completeTeachingChapter(id: string): Promise<TeachingMyProgress> {
+  const { data } = await apiClient.put<TeachingMyProgress>(`${TEACHING}/chapters/${id}/complete`);
+  return data;
+}
+
+/** Annule « J'ai terminé » (§5.7). */
+export async function uncompleteTeachingChapter(id: string): Promise<void> {
+  await apiClient.delete(`${TEACHING}/chapters/${id}/complete`);
+}
+
+/** Totaux gratuits de l'assemblée du dirigeant, aucun nom (§5.8). */
+export async function getTeachingLeaderSummary(id: string): Promise<TeachingLeaderSummary> {
+  const { data } = await apiClient.get<TeachingLeaderSummary>(`${TEACHING}/courses/${id}/leader-summary`);
+  return data;
+}
+
+/** D-FIN-03 — membres nommés de la CHAÎNE (Caleb) ; sans droit, 403 `HIERARCHIE_SUIVI` → verrou (§5.9). */
+export async function getTeachingHierarchy(id: string): Promise<TeachingHierarchyProgress> {
+  const { data } = await apiClient.get<TeachingHierarchyProgress>(`${TEACHING}/courses/${id}/hierarchy`);
+  return {
+    ...data,
+    units: (data?.units ?? []).map((u) => ({ ...u, members: u.members ?? [] })),
+  };
+}
+
+/** D-FIN-08 — villes visibles du compte, `entitled` = `ENSEIGNEMENT_SUIVI` ; jamais de 403, `[]` masque l'entrée (§5.10). */
+export async function listTeachingLocalities(): Promise<AssemblyLocality[]> {
+  const { data } = await apiClient.get<AssemblyLocality[]>(`${TEACHING}/localities`);
+  return data ?? [];
+}
+
+/** D-FIN-08 — membres nommés de la VILLE (Néhémie) ; sans droit, 403 `ENSEIGNEMENT_SUIVI` → verrou (§5.11). */
+export async function getTeachingLocality(id: string, localityId: string): Promise<TeachingLocalityProgress> {
+  const { data } = await apiClient.get<TeachingLocalityProgress>(`${TEACHING}/courses/${id}/locality/${localityId}`);
+  return { ...data, members: data?.members ?? [] };
+}
+
+/** D-FIN-16 (JP 06/11) — lien de lecture signé, 15 min. Jamais mis en cache : il expire (§5.12). */
+export async function playTeachingVideo(id: string): Promise<TeachingVideoPlay> {
+  const { data } = await apiClient.get<TeachingVideoPlay>(`${TEACHING}/videos/${id}/play`);
+  return data;
 }

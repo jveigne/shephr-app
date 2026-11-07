@@ -25,6 +25,9 @@ import { MyActionsPage } from './pages/MyActions';
 import { StudyPage } from './pages/Study';
 import { StudySessionPage } from './pages/StudySession';
 import { CityStudyPage } from './pages/CityStudy';
+import { TeachingPage } from './pages/Teaching';
+import { TeachingCoursePage, TeachingCourseRedirect } from './pages/TeachingCourse';
+import { TeachingChapterPage } from './pages/TeachingChapter';
 import { BillingReturnPage, MySubscriptionsPage } from './pages/Billing';
 import { OffersPage } from './pages/Offers';
 import { UsersPage } from './pages/Users';
@@ -135,6 +138,12 @@ export function App() {
                     (config/features.ts inchangé, JP-3) : gating = abonnement DOCUMENTS + compte rattaché, dans
                     la page et le menu. */}
                 <Route path="/my-documents" element={<DocumentsPage />} />
+                {/* D-FIN-12 (JP 06/11, lot « FIN ») : Enseignement, sur le modèle de /my-study. Aucun flag :
+                    un ministère le voit parce qu'il a du contenu (D-FIN-02, `useTeachingAccess`). */}
+                <Route path="/my-teaching" element={<TeachingPage />} />
+                <Route path="/my-teaching/course/:id" element={<TeachingCoursePage />} />
+                <Route path="/my-teaching/chapter/:id" element={<TeachingChapterPage />} />
+                <Route path="/my-teaching/:id" element={<TeachingCourseRedirect />} />
                 <Route path="/member-settings" element={<SettingsPage />} />
                 <Route path="/member-contact" element={<ContactPage />} />
               </Route>
@@ -193,6 +202,11 @@ export function App() {
                 <Route path="/member-care" element={<MemberCarePage />} />
                 {/* D-DOC-14 levée (JP 27/10, D-WEB-03) : espace Documents sur le web (gating dans la page). */}
                 <Route path="/documents" element={<DocumentsPage />} />
+                {/* D-FIN-12 (JP 06/11, lot « FIN ») : Enseignement ; /study et /documents restent valides. */}
+                <Route path="/teaching" element={<TeachingPage />} />
+                <Route path="/teaching/course/:id" element={<TeachingCoursePage />} />
+                <Route path="/teaching/chapter/:id" element={<TeachingChapterPage />} />
+                <Route path="/teaching/:id" element={<TeachingCourseRedirect />} />
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/structure/ministeres" element={<MonMinisterePage />} />
                 <Route path="/structure/pays" element={<PaysPage />} />

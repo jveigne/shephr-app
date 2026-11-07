@@ -1,46 +1,36 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, RefreshControl, Modal, Linking, Platform } from 'react-native';
+import React, { Children, useCallback, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, RefreshControl, Linking, Platform } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import ScreenShell from '@/components/ScreenShell';
 import Card from '@/components/Card';
-import Button from '@/components/Button';
 import Label from '@/components/Label';
 import Amount from '@/components/Amount';
-import HandDivider from '@/components/HandDivider';
 import { colors, fonts, radii } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { canDeclareEvents, hasMemberGoals, isAttachedAccount } from '@/services/authApi';
+import { canDeclareEvents, hasMemberGoals, isAttachedAccount, isMinistryWideGoals } from '@/services/authApi';
 import { getSummary, type CurrencyTotal, type DonationSummary } from '@/services/statsApi';
-import { getStudyCatalog, getStudyMe } from '@/services/assemblyApi';
 import { fmtAmount, monthLabel } from '@/utils/format';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCityFollowUp } from '@/hooks/useCityFollowUp';
+import { useTeachingHub, type TeachingResume } from '@/hooks/useTeachingHub';
 import { cityOpen } from '@/utils/cityFollowUp';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
-type ComingKind = 'cantique' | 'priere' | 'compte-rendu';
 
 export default function HomeScreen() {
-  const { me, isLeader, isTreasurer, hasGoals, hasDonations, hasEvents, hasDocuments, hasStudy: hasStudyModule } = useAuth();
+  const { me, isLeader, isTreasurer, hasGoals, hasDonations, hasEvents, hasMemberCare, hasAssembly } = useAuth();
   const { t } = useLanguage();
   const [summary, setSummary] = useState<DonationSummary | null>(null);
   const [summaryFailed, setSummaryFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [coming, setComing] = useState<ComingKind | null>(null);
-  // Plan 21/10 (§6.3) — pastille « En cours » de la tuile d'étude : une séance non terminée dans
-  // une assemblée du compte (`GET /study/me`). Un échec la masque, sans plus.
-  const [studyLive, setStudyLive] = useState(false);
-  // D-ETU-54 (JP 27/10) : la tuile n'apparaît que si `/study/catalog` est non vide. null = pas
-  // encore lu (tuile masquée). Une panne RÉSEAU garde la dernière valeur connue (ou montre la tuile
-  // au premier lancement hors ligne : l'étude a son brouillon hors ligne) ; un refus du serveur
-  // (ex. 403 MODULE_ACCESS_DENIED si la plateforme coupe STUDY) la masque.
-  const [studyCatalog, setStudyCatalog] = useState<boolean | null>(null);
-  // D-ETU-50 (JP 27/10) : étude gratuite — `hasStudy` ne dépend plus de l'abonnement STUDY
-  // (tout compte rattaché, voir AuthContext) ; D-ETU-28 levée pour la tuile.
-  const studyAllowed = hasStudyModule && isAttachedAccount(me);
-  const hasStudy = studyAllowed && studyCatalog === true;
+  const attached = isAttachedAccount(me);
+  // Contrat FIN §11.1 et maquette de l'accueil (JP 06/11) : compte non rattaché = Cantiques, Créer et « Rejoindre » seuls.
+  // Un trésorier garde l'accès à sa Trésorerie : son affectation à un nœud ne passe pas par `goalUnitId`.
+  const showDonations = hasDonations && (attached || isTreasurer);
+  // D-FIN-12 (JP 06/11) : Bertoua, enseignements et Documents derrière une tuile « Enseignement » (règles dans le hook).
+  const hub = useTeachingHub();
   // JP 28/10 — tuile « Suivi de la ville » (offre Néhémie, axe GÉOGRAPHIQUE) : villes de
   // `/study/localities` ∪ `/assembly/localities`, indépendante de la tuile Bertoua et du catalogue
   // d'étude (un LEADER / SECRETARIAT qui n'a que JOURNAL, un ministère sans étude la voient aussi).
@@ -64,18 +54,6 @@ export default function HomeScreen() {
     setSummaryFailed(s.status === 'rejected');
   }, [hasDonations]);
 
-  const loadStudy = useCallback(async () => {
-    if (!studyAllowed) return;
-    const [catalog, mine] = await Promise.allSettled([getStudyCatalog(), getStudyMe()]);
-    if (catalog.status === 'fulfilled') {
-      setStudyCatalog(catalog.value.length > 0);
-    } else {
-      const offline = !(catalog.reason as any)?.response;
-      setStudyCatalog((cur) => (offline ? (cur ?? true) : false));
-    }
-    setStudyLive(mine.status === 'fulfilled' && mine.value.assemblies.some((a) => a.currentSession != null));
-  }, [studyAllowed]);
-
   useEffect(() => {
     load();
   }, [load]);
@@ -83,14 +61,13 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       load();
-      void loadStudy();
-    }, [load, loadStudy]),
+    }, [load]),
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([load(), loadStudy(), reloadCities()]);
+      await Promise.all([load(), hub.reload(), reloadCities()]);
     } finally {
       setRefreshing(false);
     }
@@ -112,6 +89,20 @@ export default function HomeScreen() {
   const yearLines = sortedTotals(summary?.yearToDate);
 
   const today = new Date();
+
+  // Lot S1 (21/07) : brique visible de TOUS ; le contenu de l'écran s'adapte au rôle (listes scopées
+  // côté backend). Sa place change selon le rattachement : voir les lignes ci-dessous.
+  const createTile = (
+    <Tile
+      label={t('dashboard.tiles.structure')}
+      hint={t('dashboard.tiles.structureHint')}
+      icon="add"
+      tone={colors.moss}
+      onPress={() => router.push('/structure')}
+    />
+  );
+
+  const teachingTile = buildTeachingTile(hub, t);
 
   return (
     <ScreenShell
@@ -158,9 +149,116 @@ export default function HomeScreen() {
         </Card>
       )}
 
-      {hasDonations && (
-      <Card style={styles.hero}>
-        <Label style={{ color: colors.mossSoft }}>{t('dashboard.thisMonth')}</Label>
+      {/* Maquette de l'accueil (JP 06/11) — compte non rattaché : une invitation à rejoindre, à la
+          place de « Mes objectifs ». */}
+      {!!me && !attached && (
+        <Card onPress={() => router.push('/(auth)/join')} style={[styles.scopeCta, { backgroundColor: colors.mossSoft }]}>
+          <Ionicons name="home-outline" size={26} color={colors.white} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.scopeTitle}>{t('dashboard.joinTitle')}</Text>
+            <Text style={styles.scopeSub}>{t('dashboard.joinHint')}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.white} />
+        </Card>
+      )}
+
+      {/* Plan FIN §5.3 (JP 06/11) — pleine largeur sous « Mes objectifs », seulement s'il y a quelque chose à faire. */}
+      {!!hub.resume && <ResumeCard resume={hub.resume} />}
+
+      {/* §5.3 du plan FIN (JP 06/11) — l'accueil se lit par lignes, dans cet ordre :
+          1) Enseignement, Cantiques ; 2) Suivi de la ville s'il l'a, Hiérarchie ;
+          3) Créer une assemblée, Déclarer un évènement ; 4) Déclarer un don, Trésorerie.
+          Une tuile seule sur sa ligne prend toute la largeur (`TileRow`). */}
+      <View style={styles.tileGrid}>
+        <TileRow>
+          {/* D-FIN-12 (JP 06/11) — la tuile Enseignement remplace « Le Message de Bertoua » (plan 21/10 §6.3, D-ETU-54) et
+              « Documents » (plan 18/10, D-DOC-14). Conditions de chaque entrée inchangées (`useTeachingHub`). Pastille
+              « En cours » conservée tant qu'une séance est ouverte. */}
+          {teachingTile}
+          {/* §5.3 du plan FIN (JP 06/11) : ouvre CMFIPraise si elle est installée, sinon son store ;
+              plus de fenêtre intermédiaire. */}
+          <Tile
+            label={t('dashboard.tiles.cantique')}
+            hint={t('dashboard.tiles.cantiqueHint')}
+            icon="musical-notes-outline"
+            tone={colors.earthDeep}
+            onPress={openCantiques}
+          />
+          {/* Maquette de l'accueil (JP 06/11) : compte non rattaché, Cantiques et Créer sur une ligne. */}
+          {!attached && createTile}
+        </TileRow>
+
+        <TileRow>
+          {/* JP 28/10 — « Suivi de la ville » : Bertoua, Journal de la ville et Évènements des villes
+              dont le compte est responsable (liste vide pour un membre / dirigeant d'unité, D-ABO-21).
+              Pastille « Offre Néhémie » si aucune ville n'ouvre de suivi ; aucun prix (D-OFF-09). */}
+          {cities.length > 0 && (
+          <Tile
+            label={t('study.city.entry')}
+            hint={cityTileHint(me, cities, t)}
+            icon="business-outline"
+            tone={colors.mossDeep}
+            badge={citiesLocked ? t('dashboard.tiles.cityLocked') : undefined}
+            onPress={() =>
+              router.push(onlyCity ? { pathname: '/study/city', params: { localityId: onlyCity.localityId } } : '/study/city')
+            }
+          />
+          )}
+          {/* RDG 25/07 : la Hiérarchie est un outil de dirigeant, sans objet pour le simple fidèle.
+              §5.3 bis du plan FIN (JP 06/11) : la tuile Membres est retirée de l'accueil ; le même
+              écran s'ouvre depuis la Hiérarchie et depuis le Suivi de la ville. */}
+          {isLeader && (
+          <Tile
+            label={t('dashboard.tiles.hierarchie')}
+            hint={t('dashboard.tiles.hierarchieHint')}
+            icon="git-network-outline"
+            tone="#7A8B6F"
+            onPress={() => router.push('/hierarchie')}
+          />
+          )}
+        </TileRow>
+
+        <TileRow>
+          {attached && createTile}
+          {/* Plan 14/10 (§6.3, spec Recensement §4.1). RG-06 : invisible sans l'abonnement EVENTS
+              (D-EVT-05). RG-ACT-01 : réservée aux comptes rattachés (`canDeclareEvents`) ; l'écran
+              relit `canDeclare` côté serveur. D-EVT-14 : pour le simple membre, cet écran est sa vue
+              d'assemblée, son « Mes actions ».
+              D-FIN-11 (JP 06/11) : « Évènements » quitte la barre du bas ; la tuile, renommée
+              « Déclarer un évènement », ouvre l'écran, qui contient déjà la déclaration. */}
+          {hasEvents && canDeclareEvents(me) && (
+          <Tile
+            label={t('dashboard.tiles.events')}
+            hint={t('dashboard.tiles.eventsHint')}
+            icon="megaphone-outline"
+            tone={colors.clay}
+            onPress={() => router.push('/(tabs)/events')}
+          />
+          )}
+          {/* D-FIN-11 (JP 06/11, écart du plan FIN §11) : « Brebis » s'ouvre depuis l'onglet Assemblées, absent quand
+              le ministère a coupé ASSEMBLY (D-OFF-01). MEMBER_CARE reste alors actif : cette tuile est son accès.
+              Le contrôle `!hasAssembly` évite un doublon avec l'entrée de l'écran Assemblées. */}
+          {isLeader && hasMemberCare && !hasAssembly && (
+          <Tile
+            label={t('tabs.care')}
+            hint={t('dashboard.tiles.careHint')}
+            icon="heart-outline"
+            tone={colors.mossDeep}
+            onPress={() => router.push('/(tabs)/care')}
+          />
+          )}
+        </TileRow>
+      </View>
+
+      {/* D-FIN-10 (JP 06/11) — carte « Vos dons ce mois-ci » juste au-dessus de la ligne Dons, et
+          cliquable : depuis que « Déclarations » a quitté la barre du bas (D-FIN-11), elle en est
+          l'accès. Fond sombre de la maquette de l'accueil. */}
+      {showDonations && (
+      <Card style={styles.hero} onPress={() => router.push('/(tabs)/donations')}>
+        <View style={styles.heroTop}>
+          <Label style={{ color: colors.white }}>{t('dashboard.thisMonth')}</Label>
+          <Ionicons name="chevron-forward" size={18} color={colors.white} />
+        </View>
         {summaryFailed ? (
           <Text style={styles.heroEmpty}>{t('dashboard.summaryUnavailable')}</Text>
         ) : monthLines.length === 0 ? (
@@ -173,17 +271,19 @@ export default function HomeScreen() {
                 currency={line.currency}
                 size={i === 0 ? 46 : 28}
                 showDecimals
+                color={colors.white}
+                subColor={colors.parchment}
               />
               <View style={styles.diffRow}>
                 <Ionicons
                   name={line.diff >= 0 ? 'arrow-up' : 'arrow-down'}
                   size={14}
-                  color={line.diff >= 0 ? colors.mossSoft : colors.clay}
+                  color={line.diff >= 0 ? colors.parchment : colors.earth}
                 />
                 <Text
                   style={[
                     styles.diffPct,
-                    { color: line.diff >= 0 ? colors.mossSoft : colors.clay },
+                    { color: line.diff >= 0 ? colors.parchment : colors.earth },
                   ]}
                 >
                   {line.diff >= 0 ? '+' : '\u2212'}
@@ -199,11 +299,11 @@ export default function HomeScreen() {
 
         {yearLines.length > 0 && (
           <>
-            <HandDivider style={{ marginVertical: 16 }} />
-            <Label style={{ color: colors.mossSoft }}>{t('dashboard.yearTotal')}</Label>
+            <View style={styles.heroDivider} />
+            <Label style={{ color: colors.white }}>{t('dashboard.yearTotal')}</Label>
             {yearLines.map((y) => (
               <View key={y.currency} style={styles.yearRow}>
-                <Amount value={y.total} currency={y.currency} size={24} showDecimals />
+                <Amount value={y.total} currency={y.currency} size={24} showDecimals color={colors.white} subColor={colors.parchment} />
               </View>
             ))}
           </>
@@ -211,155 +311,189 @@ export default function HomeScreen() {
       </Card>
       )}
 
-      <View style={styles.tileGrid}>
-        {hasDonations && (
+      {showDonations && (
+      <View style={[styles.tileGrid, { marginTop: 12 }]}>
+        <TileRow>
+          <Tile
+            label={t('dashboard.tiles.declare')}
+            hint={t('dashboard.tiles.declareHint')}
+            icon="heart-outline"
+            tone={colors.mossSoft}
+            onPress={() => router.push('/declare')}
+          />
+          {/* JP 15/09 — la Trésorerie était une carte pleine largeur en BAS de l'accueil, sous les
+              dons récents : il fallait défiler tout l'écran pour la trouver. En tuile, à côté de
+              « Déclarer un don », elle se lit d'un coup d'œil. C'est aussi devenu son SEUL accès :
+              l'onglet de la barre du bas a été masqué le même jour (voir `(tabs)/_layout.tsx`).
+              Gaté sur `isTreasurer`, JAMAIS sur `isLeader` (lot T4, défaut C) : le rang pastoral
+              ne confère rien côté Dons, et un dirigeant Goals récoltait sinon des 403 silencieux. */}
+          {isTreasurer && (
+          <Tile
+            label={t('dashboard.tiles.treasury')}
+            hint={t('dashboard.tiles.treasuryHint')}
+            icon="wallet-outline"
+            tone={colors.earthDeep}
+            onPress={() => router.push('/(tabs)/leader')}
+          />
+          )}
+        </TileRow>
+      </View>
+      )}
+
+      {/* JP 15/09 — « Dons récents » retiré de l'accueil : la même liste, complète et
+          filtrable, est l'objet de l'onglet « Déclarations ». La répéter ici allongeait l'écran
+          sans rien apprendre, et reléguait les tuiles d'action au-dessus d'un long défilement. */}
+    </ScreenShell>
+  );
+}
+
+/**
+ * Tuile « Enseignement » (D-FIN-12, plan FIN §5.3) : visible dès qu'une entrée l'est. Une seule entrée : son nom d'origine et
+ * ouverture directe. Tant qu'une lecture est en cours, on n'annonce pas encore « une seule entrée » : le nom ne saute pas.
+ */
+function buildTeachingTile(hub: ReturnType<typeof useTeachingHub>, t: (key: string, options?: any) => string) {
+  if (hub.entryCount === 0) return null;
+  const badge = hub.studyLive ? t('study.tile.live') : undefined;
+  if (hub.entryCount === 1 && !hub.pending) {
+    const course = hub.courses[0];
+    if (course) {
+      return (
         <Tile
-          label={t('dashboard.tiles.declare')}
-          hint={t('dashboard.tiles.declareHint')}
-          icon="add"
+          label={course.name}
+          hint={course.author ?? t('teaching.tile.title')}
+          icon="book-outline"
           tone={colors.moss}
           primary
-          onPress={() => router.push('/declare')}
+          onPress={() => router.push({ pathname: '/teaching/course/[id]', params: { id: course.id } })}
         />
-        )}
-        {/* JP 15/09 — la Trésorerie était une carte pleine largeur en BAS de l'accueil, sous les
-            dons récents : il fallait défiler tout l'écran pour la trouver. En tuile, à côté de
-            « Déclarer un don », elle se lit d'un coup d'œil. C'est aussi devenu son SEUL accès :
-            l'onglet de la barre du bas a été masqué le même jour (voir `(tabs)/_layout.tsx`).
-            Gaté sur `isTreasurer`, JAMAIS sur `isLeader` (lot T4, défaut C) : le rang pastoral
-            ne confère rien côté Dons, et un dirigeant Goals récoltait sinon des 403 silencieux. */}
-        {hasDonations && isTreasurer && (
-        <Tile
-          label={t('dashboard.tiles.treasury')}
-          hint={t('dashboard.tiles.treasuryHint')}
-          icon="wallet-outline"
-          tone={colors.earthDeep}
-          onPress={() => router.push('/(tabs)/leader')}
-        />
-        )}
-        {/* Plan 14/10 (§6.3, spec Recensement §4.1) — « Déclarer une action · Évangélisation ».
-            RG-06 : invisible sans l'abonnement EVENTS (D-EVT-05). RG-ACT-01 : réservée aux comptes
-            rattachés (`canDeclareEvents`) ; l'écran relit `canDeclare` côté serveur.
-            D-EVT-13 (JP 14/10) : pas de seconde tuile « Agenda » — les mêmes comptes ont l'onglet
-            « Évènements » dans la barre du bas. D-EVT-14 : pour le simple membre, cet onglet est sa
-            vue d'assemblée, son « Mes actions » ; la saisie l'y ramène. */}
-        {hasEvents && canDeclareEvents(me) && (
-        <Tile
-          label={t('dashboard.tiles.events')}
-          hint={t('dashboard.tiles.eventsHint')}
-          icon="megaphone-outline"
-          tone={colors.clay}
-          onPress={() => router.push('/events/declare')}
-        />
-        )}
-        {/* Plan 18/10 (§6.3, RG-DOC-09) — espace Documents. D-DOC-14 (JP 18/10) [HYPOTHÈSE] : une
-            tuile, pas un onglet (la barre en compte déjà jusqu'à 8). RG-06 : invisible sans
-            l'abonnement DOCUMENTS ; D-DOC-04 : réservée aux comptes rattachés (`isAttachedAccount`),
-            comme la liste côté serveur (403 `DOCUMENT_JOIN_REQUIRED`). Un lien reçu, lui, se lit
-            quel que soit l'abonnement du lecteur (D-DOC-12). */}
-        {hasDocuments && isAttachedAccount(me) && (
-        <Tile
-          label={t('dashboard.tiles.documents')}
-          hint={t('dashboard.tiles.documentsHint')}
-          icon="library-outline"
-          tone={colors.mossSoft}
-          onPress={() => router.push('/documents')}
-        />
-        )}
-        {/* Plan 21/10 (§6.3) — Étude de l'assemblée, programme « Le Message de Bertoua ».
-            D-ETU-04 : libellé i18n fixe (pas de nom de programme en base en V1). D-ETU-50 (JP
-            27/10, lève D-ETU-28) : visible de tout compte rattaché ou dirigeant
-            (`isAttachedAccount`), SANS abonnement STUDY, dès que le catalogue est non vide
-            (D-ETU-54) ; l'écran s'adapte au rôle.
-            Pastille « En cours » tant qu'une séance de son assemblée est ouverte. */}
-        {hasStudy && (
+      );
+    }
+    if (hub.study) {
+      return (
         <Tile
           label={t('study.tile.title')}
           hint={t('study.tile.hint')}
           icon="school-outline"
           tone={colors.moss}
-          badge={studyLive ? t('study.tile.live') : undefined}
+          primary
+          badge={badge}
           onPress={() => router.push('/study')}
         />
+      );
+    }
+    return (
+      <Tile
+        label={t('dashboard.tiles.documents')}
+        hint={t('dashboard.tiles.documentsHint')}
+        icon="library-outline"
+        tone={colors.moss}
+        primary
+        onPress={() => router.push('/documents')}
+      />
+    );
+  }
+  const parts = [
+    hub.study ? t('teaching.tile.partStudy') : null,
+    hub.courses.length > 0 ? t('teaching.tile.partCourses') : null,
+    hub.documents ? t('teaching.tile.partDocuments') : null,
+  ].filter(Boolean) as string[];
+  const hint = parts.join(', ');
+  return (
+    <Tile
+      label={t('teaching.tile.title')}
+      hint={hint.charAt(0).toUpperCase() + hint.slice(1)}
+      icon="book-outline"
+      tone={colors.moss}
+      primary
+      badge={badge}
+      onPress={() => router.push('/teaching')}
+    />
+  );
+}
+
+/**
+ * Indication de la tuile « Suivi de la ville » (maquette de l'accueil, JP 06/11) : sa ville, « 12 villes », « Toutes les villes »
+ * pour le superAdmin, « 3 villes ouvertes » pour LEADER / SECRETARIAT, qui ne reçoivent que les villes ouvertes (D-ABO-21).
+ */
+function cityTileHint(
+  me: ReturnType<typeof useAuth>['me'],
+  cities: ReturnType<typeof useCityFollowUp>['cities'],
+  t: (key: string, options?: any) => string,
+): string {
+  if (me?.superAdmin) return t('study.city.allCities');
+  if (cities.length === 1) return cities[0].localityName;
+  return t(isMinistryWideGoals(me) ? 'study.city.cityCountOpen' : 'study.city.cityCount', { count: cities.length });
+}
+
+/**
+ * Carte « Reprendre » (plan FIN §5.3, JP 06/11) : séance Bertoua ouverte, sinon chapitre en cours, sinon enseignement jamais
+ * ouvert. Contrat §10.5 : « Reprendre : chapitre N », jamais « leçon 12 · 12 / 100 » de la maquette.
+ */
+function ResumeCard({ resume }: { resume: NonNullable<TeachingResume> }) {
+  const { t } = useLanguage();
+  const course = resume.kind === 'session' ? null : resume.course;
+  const total = course?.totalCount ?? 0;
+  const completed = course?.completedCount ?? 0;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() =>
+        resume.kind === 'session'
+          ? router.push({ pathname: '/study/session/[id]', params: { id: resume.sessionId } })
+          : resume.kind === 'start'
+            ? router.push({ pathname: '/teaching/course/[id]', params: { id: resume.course.id } })
+            : router.push({ pathname: '/teaching/chapter/[id]', params: { id: resume.chapterId, resume: '1' } })
+      }
+      style={({ pressed }) => [styles.resume, { opacity: pressed ? 0.92 : 1 }]}
+    >
+      <View style={styles.resumeRow}>
+        <View style={styles.resumePlay}>
+          <Ionicons name="play" size={16} color={colors.paper2} style={{ marginLeft: 2 }} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.resumeLabel} numberOfLines={1}>
+            {resume.kind === 'session' ? t('dashboard.resume.session', { unit: resume.unitName }) : resume.course.name}
+          </Text>
+          <Text style={styles.resumeTitle} numberOfLines={1}>
+            {resume.kind === 'session'
+              ? t('study.tile.title')
+              : resume.kind === 'start'
+                ? t('dashboard.resume.start')
+                : resume.course.nextChapterNumber === 0
+                  ? t('dashboard.resume.intro')
+                  : t('dashboard.resume.chapter', { number: resume.course.nextChapterNumber })}
+          </Text>
+        </View>
+        {!!course && (
+          <Text style={styles.resumeCount}>{t('teaching.course.progress', { completed, total })}</Text>
         )}
-        {/* JP 28/10 — « Suivi de la ville » : Bertoua, Journal de la ville et Évènements des villes
-            dont le compte est responsable (liste vide pour un membre / dirigeant d'unité, D-ABO-21).
-            Pastille « Offre Néhémie » si aucune ville n'ouvre de suivi ; aucun prix (D-OFF-09). */}
-        {cities.length > 0 && (
-        <Tile
-          label={t('study.city.entry')}
-          hint={onlyCity ? onlyCity.localityName : t('study.city.cityCount', { count: cities.length })}
-          icon="business-outline"
-          tone={colors.mossDeep}
-          badge={citiesLocked ? t('dashboard.tiles.cityLocked') : undefined}
-          onPress={() =>
-            router.push(onlyCity ? { pathname: '/study/city', params: { localityId: onlyCity.localityId } } : '/study/city')
-          }
-        />
-        )}
-{/* Lot S1 (21/07) : briques visibles de TOUS — le contenu des écrans s'adapte au rôle
-    (listes scopées côté backend ; lecture seule pour un membre simple).
-    RDG 25/07 : le simple fidèle ne voit QUE « Créer une assemblée » (ex-Structure, recette
-    15/09) et Cantiques (+ ses objectifs en haut) —
-    Membres et Hiérarchie sont des outils de dirigeant, sans objet pour lui. */}
-        <Tile
-          label={t('dashboard.tiles.structure')}
-          hint={t('dashboard.tiles.structureHint')}
-          icon="add"
-          tone={colors.moss}
-          onPress={() => router.push('/structure')}
-        />
-        {isLeader && (
-        <Tile
-          label={t('dashboard.tiles.membres')}
-          hint={t('dashboard.tiles.membresHint')}
-          icon="people-outline"
-          tone={colors.earthDeep}
-          onPress={() => router.push('/membres')}
-        />
-        )}
-        {isLeader && (
-        <Tile
-          label={t('dashboard.tiles.hierarchie')}
-          hint={t('dashboard.tiles.hierarchieHint')}
-          icon="git-network-outline"
-          tone="#7A8B6F"
-          onPress={() => router.push('/hierarchie')}
-        />
-        )}
-{        <Tile
-          label={t('dashboard.tiles.cantique')}
-          hint={t('dashboard.tiles.cantiqueHint')}
-          icon="musical-notes-outline"
-          tone={colors.earth}
-          onPress={() => setComing('cantique')}
-        />
-        /*
-        <Tile
-          label={t('dashboard.tiles.priere')}
-          hint={t('dashboard.tiles.priereHint')}
-          icon="hand-left-outline"
-          tone="#7A8B6F"
-          comingSoon
-          onPress={() => setComing('priere')}
-        />
-        <Tile
-          label={t('dashboard.tiles.compteRendu')}
-          hint={t('dashboard.tiles.compteRenduHint')}
-          icon="reader-outline"
-          tone={colors.earthDeep}
-          comingSoon
-          onPress={() => setComing('compte-rendu')}
-        />*/}
       </View>
+      {!!course && total > 0 && (
+        <View style={styles.resumeTrack}>
+          <View style={[styles.resumeFill, { width: `${Math.round((completed / total) * 100)}%` }]} />
+        </View>
+      )}
+    </Pressable>
+  );
+}
 
-      {/* JP 15/09 — « Dons récents » retiré de l'accueil : la même liste, complète et
-          filtrable, est l'objet de l'onglet « Déclarations ». La répéter ici allongeait l'écran
-          sans rien apprendre, et reléguait les tuiles d'action au-dessus d'un long défilement. */}
-
-
-      <ComingSoonModal kind={coming} onClose={() => setComing(null)} />
-    </ScreenShell>
+/**
+ * Une ligne de tuiles (plan FIN §5.3, JP 06/11) : deux tuiles par ligne, une tuile seule prend toute
+ * la largeur, un groupe sans tuile ne laisse aucun vide. Les conditions restent à l'appel ;
+ * `Children.toArray` écarte les `false` et `null`.
+ */
+function TileRow({ children }: { children: ReactNode }) {
+  const tiles = Children.toArray(children);
+  const rows: ReactNode[][] = [];
+  for (let i = 0; i < tiles.length; i += 2) rows.push(tiles.slice(i, i + 2));
+  return (
+    <>
+      {rows.map((row, i) => (
+        <View key={i} style={styles.tileRow}>
+          {row}
+        </View>
+      ))}
+    </>
   );
 }
 
@@ -369,7 +503,6 @@ function Tile({
   icon,
   tone,
   primary,
-  comingSoon,
   badge,
   onPress,
 }: {
@@ -378,12 +511,10 @@ function Tile({
   icon: IoniconName;
   tone: string;
   primary?: boolean;
-  comingSoon?: boolean;
-  /** Pastille d'état (ex. « En cours » de l'étude, plan 21/10) — à la place de « Bientôt ». */
+  /** Pastille d'état (ex. « En cours » de l'étude, plan 21/10). */
   badge?: string;
   onPress: () => void;
 }) {
-  const { t } = useLanguage();
   return (
     <Pressable
       onPress={onPress}
@@ -405,7 +536,7 @@ function Tile({
             : { backgroundColor: tone + '1A' },
         ]}
       >
-        <Ionicons name={icon} size={22} color={primary ? colors.white : tone} />
+        <Ionicons name={icon} size={21} color={primary ? colors.white : tone} />
       </View>
       <View>
         <Text style={[styles.tileLabel, primary && { color: colors.white }]}>{label}</Text>
@@ -418,88 +549,31 @@ function Tile({
           {hint}
         </Text>
       </View>
-      {comingSoon && !badge && (
-        <Text style={styles.comingPill}>{t('common.comingSoon')}</Text>
-      )}
       {!!badge && <Text style={[styles.comingPill, styles.livePill]}>{badge}</Text>}
     </Pressable>
   );
 }
 
-const COMING_META: Record<ComingKind, { titleKey: string; bodyKey: string; icon: IoniconName; tone: string }> = {
-  cantique: { titleKey: 'dashboard.coming.cantiqueTitle', bodyKey: 'dashboard.coming.cantiqueBody', icon: 'musical-notes-outline', tone: colors.earth },
-  priere: { titleKey: 'dashboard.coming.priereTitle', bodyKey: 'dashboard.coming.priereBody', icon: 'hand-left-outline', tone: '#7A8B6F' },
-  'compte-rendu': { titleKey: 'dashboard.coming.compteRenduTitle', bodyKey: 'dashboard.coming.compteRenduBody', icon: 'reader-outline', tone: colors.earthDeep },
-};
-
 // Cantiques (23/07) : la brique renvoie vers l'app CMFIPraise — liens stores officiels.
 const CMFIPRAISE_IOS = 'https://apps.apple.com/fr/app/cmfipraise/id6744709222';
 const CMFIPRAISE_ANDROID = 'https://play.google.com/store/apps/details?id=org.cmfi.cmfipraise';
 
-function ComingSoonModal({
-  kind,
-  onClose,
-}: {
-  kind: ComingKind | null;
-  onClose: () => void;
-}) {
-  const { t } = useLanguage();
-  if (!kind) return null;
-  const c = COMING_META[kind];
-  const isCantique = kind === 'cantique';
-
-  const openStore = () => {
-    const url = Platform.OS === 'ios' ? CMFIPRAISE_IOS : CMFIPRAISE_ANDROID;
-    Linking.openURL(url).catch(() => {});
-  };
-
-  return (
-    <Modal transparent animationType="fade" visible={!!kind} onRequestClose={onClose}>
-      <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Pressable style={styles.modalCard} onPress={() => {}}>
-          <View style={[styles.modalIcon, { backgroundColor: c.tone + '1A' }]}>
-            <Ionicons name={c.icon} size={28} color={c.tone} />
-          </View>
-          <Text style={styles.modalTitle}>{t(c.titleKey)}</Text>
-          <Text style={[styles.modalKicker, { color: c.tone }]}>
-            {isCantique ? t('dashboard.coming.cantiqueKicker') : t('dashboard.comingSoonBadge')}
-          </Text>
-          <HandDivider style={{ marginVertical: 14, alignSelf: 'center', width: '80%' }} />
-          <Text style={styles.modalBody}>{t(c.bodyKey)}</Text>
-          {isCantique ? (
-            <>
-              <Button
-                label={t('dashboard.coming.cantiqueDownload')}
-                onPress={openStore}
-                fullWidth
-                height={50}
-                style={{ marginTop: 18 }}
-                iconLeft={<Ionicons name="download-outline" size={18} color={colors.white} />}
-              />
-              <Button
-                label={t('dashboard.comingAck')}
-                variant="ghost"
-                onPress={onClose}
-                fullWidth
-                height={44}
-                style={{ marginTop: 8 }}
-              />
-            </>
-          ) : (
-            <Button
-              label={t('dashboard.comingAck')}
-              variant="soft"
-              onPress={onClose}
-              fullWidth
-              height={46}
-              style={{ marginTop: 18 }}
-            />
-          )}
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
+/**
+ * Plan FIN §5.3 (JP 06/11) : ouvre CMFIPraise si elle est installée, sinon son store. `openURL` sans
+ * `canOpenURL` : celui-ci exigerait de déclarer le schéma (`LSApplicationQueriesSchemes`, `<queries>`)
+ * et un nouveau build, alors que `openURL` échoue de lui-même quand aucune app ne le prend en charge.
+ * Sur Expo web, aucune app à ouvrir : le lien du store directement.
+ */
+function openCantiques() {
+  const store = Platform.OS === 'ios' ? CMFIPRAISE_IOS : CMFIPRAISE_ANDROID;
+  const openStore = () => Linking.openURL(store).catch(() => {});
+  if (Platform.OS === 'web') {
+    void openStore();
+    return;
+  }
+  Linking.openURL('cmfipraise://').catch(openStore);
 }
+
 
 interface MonthLine {
   currency: string;
@@ -597,10 +671,12 @@ const styles = StyleSheet.create({
   // tileGrid). Il manquait ici : tant que « Mes objectifs » disparaissait à l'activation
   // des Dons (défaut A, corrigé le 14/09), les deux cartes ne pouvaient jamais être
   // voisines et l'absence de marge ne se voyait pas. Recette 15/09.
-  hero: { marginTop: 18, paddingHorizontal: 22, paddingVertical: 22 },
+  hero: { marginTop: 18, paddingHorizontal: 22, paddingVertical: 22, backgroundColor: colors.moss, borderWidth: 0 },
+  heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  heroDivider: { height: 1, backgroundColor: 'rgba(232,220,196,0.22)', marginVertical: 16 },
   diffRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
   diffPct: { fontFamily: fonts.sans, fontWeight: '600', fontSize: 13 },
-  diffNote: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
+  diffNote: { flexShrink: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.parchment },
   yearRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -611,14 +687,14 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: colors.hair,
+    borderTopColor: 'rgba(232,220,196,0.22)',
   },
   heroEmpty: {
     marginTop: 8,
     fontFamily: fonts.serif,
     fontStyle: 'italic',
     fontSize: 16,
-    color: colors.ink3,
+    color: colors.white,
   },
   scopeCta: {
     marginTop: 18,
@@ -629,21 +705,50 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
   },
+  resume: {
+    marginTop: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    gap: 10,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.earthDeep,
+    backgroundColor: colors.paper,
+  },
+  resumeRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  resumePlay: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.earthDeep,
+  },
+  resumeLabel: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink2 },
+  resumeTitle: { fontFamily: fonts.serif, fontSize: 17, color: colors.ink },
+  resumeCount: { fontFamily: fonts.mono, fontSize: 12, color: colors.ink2 },
+  resumeTrack: { height: 5, borderRadius: 3, backgroundColor: colors.hairStrong, overflow: 'hidden' },
+  resumeFill: { height: 5, borderRadius: 3, backgroundColor: colors.moss },
   scopeTitle: { fontFamily: fonts.serif, fontSize: 18, color: colors.white },
   scopeSub: { fontFamily: fonts.sans, fontSize: 12, color: colors.parchment, opacity: 0.85 },
 
   tileGrid: {
     marginTop: 18,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 12,
   },
+  tileRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  // `flex: 1` et non une largeur fixe : une tuile seule sur sa ligne prend toute la largeur
+  // (plan FIN §5.3, JP 06/11). Mesures de la maquette de l'accueil.
   tile: {
-    width: '48%',
-    minHeight: 138,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 14,
+    flex: 1,
+    minWidth: 0,
+    minHeight: 128,
+    paddingHorizontal: 15,
+    paddingTop: 14,
+    paddingBottom: 13,
     borderRadius: radii.lg,
     justifyContent: 'space-between',
     position: 'relative',
@@ -664,15 +769,15 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   tileIcon: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tileLabel: {
     fontFamily: fonts.serif,
-    fontSize: 17,
+    fontSize: 16.5,
     lineHeight: 20,
     color: colors.ink,
     letterSpacing: -0.2,
@@ -714,53 +819,5 @@ const styles = StyleSheet.create({
     color: colors.ink3,
     letterSpacing: 1.4,
     textTransform: 'uppercase',
-  },
-
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(20,18,14,0.55)',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  modalCard: {
-    backgroundColor: colors.paper,
-    borderRadius: radii.lg,
-    paddingHorizontal: 22,
-    paddingTop: 26,
-    paddingBottom: 22,
-    borderWidth: 1,
-    borderColor: 'rgba(42,38,32,0.07)',
-  },
-  modalIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    alignSelf: 'center',
-    marginBottom: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalTitle: {
-    fontFamily: fonts.serif,
-    fontSize: 24,
-    textAlign: 'center',
-    color: colors.ink,
-    letterSpacing: -0.3,
-  },
-  modalKicker: {
-    marginTop: 4,
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-    textAlign: 'center',
-  },
-  modalBody: {
-    fontFamily: fonts.sans,
-    fontSize: 14,
-    color: colors.ink2,
-    lineHeight: 22,
-    textAlign: 'center',
   },
 });

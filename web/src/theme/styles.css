@@ -1173,3 +1173,14 @@ a:hover { text-decoration: underline; }
   .upick-steps { grid-template-columns: 1fr; }
   .upick-step + .upick-step::before { display: none; }
 }
+
+/* ---------- Lecture d'un chapitre — D-FIN-07 (JP 06/11) : barre collante, sous la barre mobile au téléphone. ---------- */
+.teaching-reader-bar {
+  position: sticky; top: 0; z-index: 5;
+  padding: 12px 32px 12px;
+  background: var(--parchment);
+  border-bottom: 1px solid var(--line);
+}
+@media (max-width: 900px) {
+  .teaching-reader-bar { top: 53px; padding: 10px 14px; }
+}

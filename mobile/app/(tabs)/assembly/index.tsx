@@ -11,6 +11,7 @@ import ErrorBanner from '@/components/ErrorBanner';
 import CalebAssemblyLock from '@/components/CalebAssemblyLock';
 import { colors, fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   getMyMeetings,
   getMyProgress,
@@ -58,6 +59,7 @@ type Tab = 'meetings' | 'progress';
  */
 export default function AssemblyIndexScreen() {
   const { t } = useLanguage();
+  const { isLeader, hasMemberCare } = useAuth();
   const [tab, setTab] = useState<Tab>('meetings');
   // D-ASM-18 (JP 08/10) : ouverture depuis la Hiérarchie, présélectionnée sur une assemblée.
   // `at` change à chaque appui : la présélection s'applique une fois par ouverture, puis l'on
@@ -264,6 +266,20 @@ export default function AssemblyIndexScreen() {
     >
       <Text style={styles.title}>{t('assemblyLife.title')}</Text>
       <Text style={styles.subtitle}>{t('assemblyLife.subtitle')}</Text>
+
+      {/* D-FIN-11 (JP 06/11) : « Brebis » quitte la barre du bas, mêmes conditions que l'ancien onglet.
+          Hors du chargement : l'entrée ne dépend pas de la liste des assemblées. Sans ASSEMBLY, cet
+          écran n'est pas proposé : la tuile de l'accueil prend le relais (`(tabs)/home.tsx`). */}
+      {isLeader && hasMemberCare && (
+        <Card variant="paper2" style={styles.careEntry} onPress={() => router.push('/(tabs)/care')}>
+          <Ionicons name="heart-outline" size={20} color={colors.mossDeep} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.careEntryTitle}>{t('tabs.care')}</Text>
+            <Text style={styles.careEntryHint} numberOfLines={2}>{t('assemblyLife.careEntryHint')}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+        </Card>
+      )}
 
       {!!error && <ErrorBanner message={error} onRetry={onRefresh} />}
 
@@ -633,6 +649,9 @@ function OverviewView({
 const styles = StyleSheet.create({
   title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4 },
   subtitle: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, marginTop: 4, lineHeight: 19 },
+  careEntry: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  careEntryTitle: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
+  careEntryHint: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2 },
   unitName: { fontFamily: fonts.serif, fontSize: 19, color: colors.ink, marginTop: 16 },
   unitCity: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 14 },

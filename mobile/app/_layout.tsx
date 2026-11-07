@@ -24,6 +24,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import PushBridge from '@/components/push/PushBridge';
 import EventQueueSync from '@/components/EventQueueSync';
+import TeachingProgressSync from '@/components/TeachingProgressSync';
 import { loadContactSettings } from '@/services/contactApi';
 import { configureGoogleSignIn } from '@/services/socialSignIn';
 
@@ -87,6 +88,8 @@ export default function RootLayout() {
             {/* Lot E6 (14/10) — vidage de la file hors-ligne des déclarations d'action
                 (RG-ACT-08) : démarrage, retour au premier plan, retour du réseau. Ne rend rien. */}
             <EventQueueSync />
+            {/* Lot FIN (JP 06/11) — vidage de la file d'avancement des enseignements, mêmes déclencheurs. Ne rend rien. */}
+            <TeachingProgressSync />
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#E8DCC4' } }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="(auth)" />
@@ -136,6 +139,10 @@ export default function RootLayout() {
               <Stack.Screen name="study/session/[id]" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="study/results/[id]" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="study/progress" options={{ animation: 'slide_from_right' }} />
+              {/* Enseignements individuels (lot FIN, D-FIN-12 / D-FIN-13, JP 06/11) : tuile, parcours, chapitre. */}
+              <Stack.Screen name="teaching/index" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="teaching/course/[id]" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="teaching/chapter/[id]" options={{ animation: 'slide_from_right' }} />
               {/* D-OFF-10 (JP 27/10) : l'écran « Mes factures » (lot ABO5) est retiré — aucun
                   montant dans l'app ; factures par email (PDF) et sur le web « Mes abonnements ». */}
             </Stack>

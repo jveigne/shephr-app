@@ -4,13 +4,13 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './components/Icon';
 import { FEATURES } from './config/features';
-import { getAccessibleModules, isAttachedAccount } from './services/authApi';
+import { getAccessibleModules } from './services/authApi';
 import { useAuth } from './hooks/useAuth';
 import { NotificationGate } from './components/NotificationGate';
 import { setLanguage } from './i18n';
 import { MySubscriptionsLink } from './components/MySubscriptionsLink';
 import { StudyLiveBadge } from './components/StudyLiveBadge';
-import { useStudyAccess, useStudyMenuVisible } from './utils/studyAccess';
+import { useTeachingMenu } from './utils/teachingAccess';
 
 /**
  * Feature A — shell MINIMAL de l'espace membre (MEMBRE Goals rattaché à une assemblée).
@@ -19,7 +19,7 @@ import { useStudyAccess, useStudyMenuVisible } from './utils/studyAccess';
  * actions de SON assemblée seulement — compteur, programmés, réalisés, Déclarer / Programmer — si
  * l'abonnement EVENTS le couvre, D-EVT-05), « Le Message de Bertoua » (D-ETU-31 JP 23/10, si
  * l'abonnement STUDY le couvre), « Documents » (D-WEB-03 JP 27/10, si l'abonnement DOCUMENTS le
- * couvre), « Réglages » et la déconnexion — aucun élargissement :
+ * couvre), regroupés avec les enseignements sous « Enseignement » (D-FIN-12 JP 06/11), « Réglages » et la déconnexion — aucun élargissement :
  * la garde d'AppShell (canAccessWeb / hasMinistryAccess) n'est pas touchée.
  */
 export function MemberShell() {
@@ -35,13 +35,12 @@ export function MemberShell() {
   });
   const hasAssembly = FEATURES.assembly && (modulesQ.data ?? []).includes('ASSEMBLY');
   const hasEvents = FEATURES.events && (modulesQ.data ?? []).includes('EVENTS');
-  // D-ETU-28 / D-ETU-31 (JP 23/10) : « Le Message de Bertoua » = abonnement STUDY + FEATURES.study.
-  // D-WEB-02 (JP 27/10) : décision centralisée dans `useStudyAccess`.
-  const { hasStudy } = useStudyAccess({ enabled: ready && isAuthenticated && canAccessMemberSpace });
-  // D-ETU-54 (JP 27/10) : entrée de menu seulement si `/study/catalog` est non vide (tuile mobile).
-  const showStudy = useStudyMenuVisible(hasStudy);
-  // D-DOC-14 levée (JP 27/10, D-WEB-03) : « Documents » = abonnement DOCUMENTS ET compte rattaché.
-  const hasDocuments = (modulesQ.data ?? []).includes('DOCUMENTS') && isAttachedAccount(me);
+  // D-FIN-12 (JP 06/11, lot « FIN ») : une seule entrée « Enseignement » regroupe Le Message de Bertoua
+  // (D-ETU-31 / D-ETU-54), Documents (D-WEB-03) et les enseignements ; une seule entrée disponible : son
+  // nom d'origine et accès direct. Décision centralisée dans `useTeachingMenu`.
+  const teaching = useTeachingMenu('/my-teaching', { enabled: ready && isAuthenticated && canAccessMemberSpace });
+  // Les pages regroupées allument l'entrée « Enseignement ».
+  const teachingLit = ['/my-teaching', '/my-study', '/my-documents'].some((p) => location.pathname.startsWith(p));
   const lang = i18n.language.startsWith('en') ? 'en' : 'fr';
 
   useEffect(() => {
@@ -117,14 +116,24 @@ export function MemberShell() {
                   <span>{t('assembly.memberNav')}</span>
                 </NavLink>
               )}
-              {showStudy && (
+              {teaching.kind === 'study' && (
                 <NavLink
-                  to="/my-study"
+                  to={teaching.to}
                   className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                 >
                   <Icon name="edit" size={18} />
                   <span>{t('nav.study')}</span>
-                  <StudyLiveBadge enabled={showStudy} />
+                  <StudyLiveBadge enabled={teaching.showStudy} />
+                </NavLink>
+              )}
+              {(teaching.kind === 'hub' || teaching.kind === 'course') && (
+                <NavLink
+                  to={teaching.to}
+                  className={() => `nav-item ${teachingLit ? 'active' : ''}`}
+                >
+                  <Icon name="book" size={18} style={{ flexShrink: 0 }} />
+                  <span>{teaching.courseName ?? t('nav.teaching')}</span>
+                  <StudyLiveBadge enabled={teaching.showStudy} />
                 </NavLink>
               )}
               {hasEvents && (
@@ -136,9 +145,9 @@ export function MemberShell() {
                   <span>{t('events.member.title')}</span>
                 </NavLink>
               )}
-              {hasDocuments && (
+              {teaching.kind === 'documents' && (
                 <NavLink
-                  to="/my-documents"
+                  to={teaching.to}
                   className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                 >
                   <Icon name="fileText" size={18} />

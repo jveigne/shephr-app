@@ -139,7 +139,7 @@ function flattenUnits(nodes: LeaderHierarchyNode[]): UnitEntry[] {
 
 export default function HierarchieScreen() {
   const insets = useSafeAreaInsets();
-  const { me } = useAuth();
+  const { me, isLeader } = useAuth();
   const { t } = useLanguage();
   const [data, setData] = useState<LeaderHierarchyResponse | null>(null);
   const [error, setError] = useState(false);
@@ -273,6 +273,16 @@ export default function HierarchieScreen() {
           hint={t('hierarchy.home.lifeCardHint')}
           locked={access === 'locked'}
           onPress={() => router.push('/hierarchie/vie')}
+        />
+      )}
+      {/* Plan FIN §5.3 bis (JP 06/11) : la tuile Membres quitte l'accueil, même condition ici. L'écran
+          `app/membres.tsx` est réutilisé tel quel, sa liste reste scopée par le serveur. */}
+      {isLeader && (
+        <AccessCard
+          icon="people-outline"
+          title={t('hierarchy.home.membersCard')}
+          hint={t('hierarchy.home.membersCardHint')}
+          onPress={() => router.push('/membres')}
         />
       )}
 

@@ -20,7 +20,9 @@ import {
 } from '../components/AssemblyHierarchyStats';
 import { EventHierarchyBlock } from '../components/EventHierarchyBlock';
 import { StudyHierarchyBlock } from '../components/StudyHierarchyBlock';
+import { TeachingHierarchyBlock } from '../components/TeachingHierarchyBlock';
 import { useStudyAccess, useStudyMenuVisible } from '../utils/studyAccess';
+import { useTeachingAccess } from '../utils/teachingAccess';
 import { currentPeriod, periodRange, type Period } from '../utils/assemblyJournal';
 import { FEATURES } from '../config/features';
 
@@ -36,6 +38,8 @@ import { FEATURES } from '../config/features';
 //    Assemblées et dernier CR (sorti de l'arbre de la page 1), Journal PDF de ma hiérarchie.
 //  - Blocs Vie d'assemblée / Évènements masqués si `ASSEMBLY` / `EVENTS` absent d'`accessible-modules`
 //    (RG-06) ; Bertoua si l'étude n'est pas visible (D-ETU-54).
+//  - D-FIN-03 (JP 06/11, lot « FIN ») : avancement nommé des enseignements, cumulé, INDÉPENDANT de la
+//    période ; bloc absent si le ministère n'a aucun enseignement (D-FIN-02).
 //  - Retours Stripe Caleb (composés par le serveur, RG-HIE-41) : annulation `?annule=1`, portail ici.
 // ---------------------------------------------------------------------------------------------
 
@@ -57,6 +61,7 @@ export function HierarchyLifePage() {
   const hasEvents = FEATURES.events && modules.includes('EVENTS');
   const { hasStudy } = useStudyAccess();
   const studyVisible = useStudyMenuVisible(hasStudy);
+  const { hasTeaching } = useTeachingAccess();
 
   const [lockedByServer, setLockedByServer] = useState(false);
   const onLocked = useCallback(() => {
@@ -100,12 +105,13 @@ export function HierarchyLifePage() {
         <AssemblyStatsProvider roots={roots} isChain={false} entitled={entitled} onLocked={onLocked} period={period}>
           {hasEvents && <EventHierarchyBlock from={from} to={to} onLocked={onLocked} />}
           {studyVisible && <StudyHierarchyBlock from={from} to={to} onLocked={onLocked} />}
+          {hasTeaching && <TeachingHierarchyBlock onLocked={onLocked} />}
           <AssemblyLastReportList roots={roots} />
           <div style={{ marginTop: 4 }}>
             <HierarchyJournalButton />
           </div>
         </AssemblyStatsProvider>
-        {!hasAssembly && !hasEvents && !studyVisible && (
+        {!hasAssembly && !hasEvents && !studyVisible && !hasTeaching && (
           <p className="section-sub">{t('hierarchy.life.nothing')}</p>
         )}
       </>

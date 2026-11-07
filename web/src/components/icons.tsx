@@ -162,6 +162,9 @@ export const Icons = {
   // Lot E8 (JP 14/10) — Évènements / « Déclarer une action » (spec §4.1 : mégaphone), propre à
   // l'espace ministère : absent du jeu porté de shephr-webapp.
   Megaphone: (p: IconProps) => <I {...p}><path d="M4 10v4a1 1 0 0 0 1 1h3l8 4V5L8 9H5a1 1 0 0 0-1 1z" /><path d="M8 15l1.5 5h2.5L11 15.8" /><path d="M19.5 9.5a3.5 3.5 0 0 1 0 5" /></I>,
+  // D-FIN-12 (JP 06/11) — entrée « Enseignement » et lecteur vidéo, propres à l'espace ministère.
+  Book: (p: IconProps) => <I {...p}><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z" /><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3" /><path d="M9 7.5h6" /></I>,
+  Play: (p: IconProps) => <I {...p}><path d="M8 5l11 7-11 7z" fill="currentColor" /></I>,
 };
 
 export type IconName = keyof typeof Icons;

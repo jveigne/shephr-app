@@ -217,3 +217,18 @@ export function cityEventsAccessDenied(err: unknown): ModuleAccessDeniedDetails 
   const denied = moduleAccessDenied(err);
   return denied && denied.moduleCode === ENTITLEMENT_EVENEMENTS_SUIVI ? denied : null;
 }
+
+// ---------------------------------------------------------------------------------------------
+//  D-FIN-08 (JP 06/11, lot « FIN », contrat §10.2) — offre Néhémie : avancement des enseignements,
+//  membres nommés, dans une ville. Axe GÉOGRAPHIQUE, même plan `EGLISE_VILLE` et même verrou web
+//  `LockedFeature` que `JOURNAL` / `EVENEMENTS_SUIVI`. Le suivi par la chaîne (Caleb) reste
+//  `HIERARCHIE_SUIVI`, lu par `hierarchyAccessDenied` : jamais confondus. Copie identique au mobile.
+// ---------------------------------------------------------------------------------------------
+
+export const ENTITLEMENT_ENSEIGNEMENT_SUIVI = 'ENSEIGNEMENT_SUIVI';
+
+/** Raccourci : 403 `MODULE_ACCESS_DENIED` sur `ENSEIGNEMENT_SUIVI` (suivi de l'enseignement d'une ville), sinon null. */
+export function cityTeachingAccessDenied(err: unknown): ModuleAccessDeniedDetails | null {
+  const denied = moduleAccessDenied(err);
+  return denied && denied.moduleCode === ENTITLEMENT_ENSEIGNEMENT_SUIVI ? denied : null;
+}

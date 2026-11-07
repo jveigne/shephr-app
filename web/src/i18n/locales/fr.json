@@ -105,7 +105,7 @@
   },
   "privacy": {
     "title": "Politique de confidentialité",
-    "updated": "Dernière mise à jour : 18 octobre 2026",
+    "updated": "Dernière mise à jour : 6 novembre 2026",
     "intro": "Shephr est une plateforme de gestion pour les ministères et les églises. Cette politique explique quelles données nous collectons, pourquoi, qui peut les consulter et comment vous en gardez le contrôle. Elle s'applique à l'application mobile Shephr comme au site web.",
     "controllerTitle": "Qui est responsable de vos données",
     "controllerText": "Shephr est édité par JEXCELLENCE SAS, 9 rue des Colonnes, 75002 Paris, France, responsable du traitement des données décrites ici. Votre ministère ou votre église, qui décide des personnes à inscrire et des modules activés, en est responsable conjointement pour les données de ses membres.",
@@ -184,7 +184,15 @@
     "contactTitle": "Nous contacter",
     "contactText": "Une question sur vos données, une demande d'accès ou de suppression ? Écrivez-nous, nous vous répondons.",
     "mailSubject": "Shephr — question sur mes données personnelles",
-    "whatsappText": "Bonjour, j'ai une question sur la confidentialité de mes données Shephr."
+    "whatsappText": "Bonjour, j'ai une question sur la confidentialité de mes données Shephr.",
+    "teachingTitle": "Avancement dans les enseignements",
+    "teachingIntro": "Quand vous suivez un enseignement dans l'application, nous enregistrons votre avancement pour que vous puissiez reprendre où vous en étiez, sur tout appareil.",
+    "teaching": {
+      "what": "Ce qui est enregistré : pour chaque chapitre ouvert, la position de lecture, la date de dernière ouverture et la date à laquelle vous l'avez marqué comme terminé. Sur le web, la taille du texte et la dernière position sont aussi gardées dans votre navigateur.",
+      "who": "Qui le voit : vous, et les dirigeants qui ont activé le suivi de leur hiérarchie ou de leur ville. Ils voient votre nom, le nombre de chapitres terminés et votre dernière activité. Un dirigeant sans ce suivi ne voit qu'un total, sans aucun nom.",
+      "video": "Vidéos : aucun journal des lectures n'est tenu et aucune adresse IP n'est stockée.",
+      "deletion": "Suppression : votre avancement est supprimé avec votre compte."
+    }
   },
   "deleteAccount": {
     "title": "Suppression de votre compte Shephr",
@@ -300,7 +308,8 @@
     "studyLive": "En cours",
     "documents": "Documents",
     "studyCity": "Suivi de la ville",
-    "offers": "Offres"
+    "offers": "Offres",
+    "teaching": "Enseignement"
   },
   "sidebar": {
     "logout": "Déconnexion",
@@ -500,7 +509,7 @@
     },
     "lock": {
       "title": "Offre Caleb — le suivi de ma hiérarchie",
-      "intro": "Vie d'assemblée (comptes rendus, journal PDF consolidé) et « Le Message de Bertoua » pour toutes les assemblées de votre chaîne de leadership.",
+      "intro": "Vie d'assemblée (comptes rendus, journal PDF consolidé), « Le Message de Bertoua » et avancement des enseignements pour toutes les assemblées de votre chaîne de leadership.",
       "askShephr": "Demandez l'activation à l'équipe Shephr.",
       "pending": "Un paiement est en cours pour le suivi de votre hiérarchie.",
       "pastDue": "Le dernier paiement a échoué : le suivi de votre hiérarchie est suspendu.",
@@ -1674,7 +1683,8 @@
       "MEETING_ALREADY_EXISTS": "Une réunion existe déjà à cette date pour cette assemblée.",
       "ATTENDEE_NOT_IN_ASSEMBLY": "Un des présents cochés n'est plus rattaché à cette assemblée.",
       "CHAPTERS_FROM_SEVERAL_MODULES": "Les chapitres d'une réunion doivent venir d'un seul module.",
-      "TEACHING_MODULE_INACTIVE": "Ce module d'enseignement a été désactivé."
+      "TEACHING_MODULE_INACTIVE": "Ce module d'enseignement a été désactivé.",
+      "TEACHING_MODULE_PERSONAL": "Cet enseignement individuel ne peut pas être noté dans un compte rendu."
     },
     "report": {
       "title": "CR Assemblée {{date}}",
@@ -2601,7 +2611,8 @@
       "subscription": "Abonnement",
       "journal": "Journal de la ville",
       "events": "Évènements",
-      "studyPrefixed": "Bertoua · {{tab}}"
+      "studyPrefixed": "Bertoua · {{tab}}",
+      "teaching": "Enseignement"
     },
     "filters": {
       "city": "Ville",
@@ -2667,7 +2678,7 @@
       "agreementOther": "L'accord de votre ministère sur cette ville ne comprend pas ce suivi : rapprochez-vous de votre ministère pour l'ajouter.",
       "compactSubscribe": "Le suivi des assemblées de votre ville est inclus dans l'offre Néhémie, souscrite pour toute la ville.",
       "openCity": "Voir le suivi de la ville",
-      "subscribeIntro": "{{plan}} pour {{city}} : tout le suivi de la ville — étude, journal des réunions et évènements de toutes ses assemblées, statistiques et exports.",
+      "subscribeIntro": "{{plan}} pour {{city}} : tout le suivi de la ville — étude, enseignements, journal des réunions et évènements de toutes ses assemblées, statistiques et exports.",
       "period": "Périodicité",
       "periods": {
         "MONTHLY": "Mensuel",
@@ -2747,6 +2758,10 @@
           "title": "Suivi de l’enseignement",
           "desc": "où en est chaque assemblée, leçon par leçon"
         },
+        "courses": {
+          "title": "Parcours de chaque membre",
+          "desc": "où en est chacun dans les enseignements de votre chaîne, chapitre par chapitre"
+        },
         "evangelism": {
           "title": "Évangélisation",
           "desc": "actions, participants et invités, par dirigeant"
@@ -2800,6 +2815,10 @@
         "teaching": {
           "title": "Suivi de l’enseignement",
           "desc": "membres enseignés ou non, leçons manquées"
+        },
+        "courses": {
+          "title": "Parcours de chaque membre",
+          "desc": "où en est chacun dans les enseignements de la ville, chapitre par chapitre"
         },
         "evangelism": {
           "title": "Évangélisation de la ville",
@@ -2989,6 +3008,12 @@
           "label": "Suivi pastoral des autres assemblées",
           "caleb": "Oui"
         },
+        "courses": {
+          "label": "Enseignements individuels",
+          "free": "Lecture libre",
+          "caleb": "Avancement de votre chaîne",
+          "nehemie": "Avancement de la ville"
+        },
         "evangelism": {
           "label": "Évangélisation détaillée",
           "free": "Jusqu’à la ville",
@@ -3043,5 +3068,87 @@
       }
     },
     "footer": "Versets : Louis Segond 1910 · Paiement par carte sécurisé par Stripe · Mobile Money auprès de votre relais"
+  },
+  "teaching": {
+    "hub": {
+      "resume": "Reprendre au chapitre {{number}}",
+      "resumeIntro": "Reprendre l'introduction",
+      "start": "Commencer",
+      "allDone": "Terminé",
+      "studyHint": "Étude en assemblée",
+      "documentsHint": "Enseignements à lire et partager",
+      "emptyTitle": "Aucun enseignement pour le moment",
+      "emptyText": "Les enseignements de votre ministère s'afficheront ici."
+    },
+    "course": {
+      "progress": "{{completed}} / {{total}}",
+      "part": "Partie {{number}} — {{title}}",
+      "partNoTitle": "Partie {{number}}",
+      "introduction": "Introduction",
+      "chapterFallback": "Chapitre {{number}}",
+      "comingSoon": "Contenu à venir",
+      "minutes": "{{count}} min de lecture",
+      "video": "vidéo",
+      "videoMinutes": "vidéo {{count}} min",
+      "visibilityNote": "Vos dirigeants peuvent voir votre avancement."
+    },
+    "chapter": {
+      "eyebrow": "Chapitre {{number}} · Partie {{part}}",
+      "eyebrowNoPart": "Chapitre {{number}}",
+      "read": "Lire · {{count}} min",
+      "resumeReading": "Reprendre la lecture",
+      "watch": "Regarder la vidéo · {{count}} min",
+      "watchNoDuration": "Regarder la vidéo"
+    },
+    "reader": {
+      "decrease": "A−",
+      "increase": "A+",
+      "decreaseLabel": "Réduire le texte",
+      "increaseLabel": "Agrandir le texte"
+    },
+    "end": {
+      "done": "Chapitre {{number}} terminé",
+      "doneIntro": "Introduction terminée",
+      "replay": "Revoir en vidéo · {{count}} min",
+      "replayNoDuration": "Revoir en vidéo",
+      "complete": "J'ai terminé",
+      "undo": "Annuler",
+      "completed": "Terminé",
+      "next": "Chapitre suivant",
+      "backToCourse": "Retour au parcours"
+    },
+    "leader": {
+      "summary_one": "{{started}} membre sur {{members}} a commencé",
+      "summary_other": "{{started}} membres sur {{members}} ont commencé",
+      "seeProgress": "Voir l'avancement de mes membres"
+    },
+    "hierarchy": {
+      "title": "Avancement des enseignements",
+      "cumulative": "Avancement cumulé depuis le début, sans période.",
+      "course": "Enseignement",
+      "member": "Membre",
+      "chapters": "Chapitres terminés",
+      "lastActivity": "Dernière activité",
+      "none": "Aucune assemblée dans votre hiérarchie.",
+      "noMembers": "Aucun membre dans cette assemblée."
+    },
+    "city": {
+      "title": "Avancement des enseignements",
+      "assembly": "Assemblée",
+      "chapters": "Chapitres terminés",
+      "lastActivity": "Dernière activité",
+      "none": "Aucun membre dans cette ville."
+    },
+    "lock": {
+      "calebBody": "Voir l'avancement de vos membres, nom par nom, y compris dans votre propre assemblée, est inclus dans l'offre Caleb."
+    },
+    "video": {
+      "unavailable": "La vidéo n'est pas disponible pour le moment.",
+      "retry": "Réessayer"
+    },
+    "errors": {
+      "joinRequired": "Les enseignements sont réservés aux membres rattachés à une assemblée. Rejoignez la vôtre pour y accéder.",
+      "chapterUnavailable": "Le contenu de ce chapitre n'est pas encore disponible."
+    }
   }
 }

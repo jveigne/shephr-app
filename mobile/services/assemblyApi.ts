@@ -168,6 +168,8 @@ export const ASSEMBLY_ERROR_CODES = [
   'ATTENDEE_NOT_IN_ASSEMBLY',
   'CHAPTERS_FROM_SEVERAL_MODULES',
   'TEACHING_MODULE_INACTIVE',
+  // D-FIN-01 (JP 06/11) : un module `PERSONAL` (enseignement individuel) ne se note pas dans un CR.
+  'TEACHING_MODULE_PERSONAL',
 ];
 
 const BASE = '/api/church/assembly';
@@ -1291,4 +1293,279 @@ export async function getStudyHierarchyOverview(moduleId?: string): Promise<Stud
 export async function getStudyHierarchyStats(from: string, to: string): Promise<StudyHierarchyStats> {
   const { data } = await apiClient.get<StudyHierarchyStats>(`${STUDY}/hierarchy/stats`, { params: { from, to } });
   return { ...data, monthly: data?.monthly ?? [] };
+}
+
+// ─── Enseignements individuels — lot « FIN » (JP 06/11, contrat `06_11_2026/02_Contrat_API_Enseignement.md`) ───
+//
+// D-FIN-01 / D-FIN-02 (JP 06/11) : un enseignement EST un module `PERSONAL`, chacun seul à son rythme, gratuit pour tout
+// compte rattaché (403 `TEACHING_JOIN_REQUIRED` sinon). D-FIN-13 (JP 06/11) : le parcours suit les CHAPITRES du livre.
+// Aucun `@RequiresModule` côté serveur, aucun « CMCI » ici : un ministère voit l'enseignement parce qu'il a du contenu.
+// Suivi : Caleb = axe CHAÎNE (`HIERARCHIE_SUIVI`, droit personnel) ; Néhémie = axe GÉOGRAPHIE (`ENSEIGNEMENT_SUIVI`, droit
+// de ville) — jamais mélangés. Miroirs identiques au web (`web/src/services/assemblyApi.ts`, contrat §10.1).
+
+/** D-FIN-13 (JP 06/11). Mirrors com.excellence.back.assembly.TeachingChapter.Run */
+export interface TeachingRun {
+  text: string;
+  bold?: boolean | null;
+  italic?: boolean | null;
+}
+
+/** Mirrors com.excellence.back.assembly.TeachingChapter.Block — texte brut, aucun HTML interprété. */
+export interface TeachingBlock {
+  type: 'h2' | 'h3' | 'p' | 'verse' | 'list';
+  runs?: TeachingRun[] | null;
+  reference?: string | null;
+  items?: TeachingRun[][] | null;
+}
+
+/** Mirrors com.excellence.back.assembly.TeachingDtos.TeachingVideoRef — null sur le chapitre si la vidéo n'est pas publiée. */
+export interface TeachingVideoRef {
+  id: string;
+  title: string;
+  durationSeconds: number | null;
+  posterUrl: string | null;
+}
+
+/** Mirrors com.excellence.back.assembly.TeachingDtos.TeachingMyProgress — `position` = index du bloc. */
+export interface TeachingMyProgress {
+  position: number;
+  lastOpenedAt: string;
+  completedAt: string | null;
+}
+
+/** Mirrors com.excellence.back.assembly.TeachingDtos.TeachingCourseSummary */
+export interface TeachingCourseSummary {
+  id: string;
+  name: string;
+  bookTitle: string;
+  author: string | null;
+  description: string | null;
+  language: Language;
+  publishedAt: string | null;
+  /** Tous les chapitres, « à venir » compris. */
+  chapterCount: number;
+  /** Chapitres disponibles (D-FIN-14). */
+  totalCount: number;
+  completedCount: number;
+  nextChapterId: string | null;
+  nextChapterNumber: number | null;
+  nextChapterTitle: string | null;
+  /** null = pas commencé. */
+  lastActivityAt: string | null;
+}
+
+/** Mirrors com.excellence.back.assembly.TeachingDtos.TeachingPartView */
+export interface TeachingPartView {
+  id: string;
+  number: number;
+  title: string | null;
+  orderIndex: number;
+}
+
+/** Mirrors com.excellence.back.assembly.TeachingDtos.TeachingChapterSummary */
+export interface TeachingChapterSummary {
+  id: string;
+  partId: string | null;
+  number: number;
+  title: string | null;
+  orderIndex: number;
+  /** D-FIN-14 (JP 06/11) : false = « Contenu à venir », ne s'ouvre pas. */
+  available: boolean;
+  readingMinutes: number | null;
+  video: TeachingVideoRef | null;
+  progress: TeachingMyProgress | null;
+}
+
+/** Mirrors com.excellence.back.assembly.TeachingDtos.TeachingCourseDetail */
+export interface TeachingCourseDetail {
+  id: string;
+  name: string;
+  bookTitle: string;
+  author: string | null;
+  description: string | null;
+  language: Language;
+  publishedAt: string | null;
+  parts: TeachingPartView[];
+  chapters: TeachingChapterSummary[];
+  nextChapterId: string | null;
+  completedCount: number;
+  totalCount: number;
+  lastActivityAt: string | null;
+  /** Droit d'afficher « Voir l'avancement de mes membres », décidé par le serveur (contrat §5.3). */
+  leaderBlock: boolean;
+}
+
+/** Mirrors com.excellence.back.assembly.TeachingDtos.TeachingChapterContent */
+export interface TeachingChapterContent {
+  id: string;
+  moduleId: string;
+  moduleName: string;
+  partId: string | null;
+  partNumber: number | null;
+  partTitle: string | null;
+  number: number;
+  title: string | null;
+  summary: string | null;
+  readingMinutes: number;
+  blocks: TeachingBlock[];
+  video: TeachingVideoRef | null;
+  progress: TeachingMyProgress | null;
+  /** Chapitre disponible suivant dans l'ordre du livre, null sur le dernier. */
+  followingChapterId: string | null;
+}
+
+/** Mirrors com.excellence.back.assembly.TeachingDtos.TeachingLeaderSummary — gratuit, totaux seuls, aucun nom. */
+export interface TeachingLeaderSummary {
+  startedCount: number;
+  memberCount: number;
+  canSeeDetails: boolean;
+}
+
+/** Mirrors com.excellence.back.assembly.TeachingDtos.TeachingMemberProgress */
+export interface TeachingMemberProgress {
+  userId: string;
+  fullName: string;
+  completedCount: number;
+  totalCount: number;
+  lastActivityAt: string | null;
+}
+
+/** Mirrors com.excellence.back.assembly.TeachingDtos.TeachingHierarchyUnit */
+export interface TeachingHierarchyUnit {
+  unitId: string;
+  unitName: string;
+  cityName: string | null;
+  leaderName: string | null;
+  members: TeachingMemberProgress[];
+}
+
+/** Mirrors com.excellence.back.assembly.TeachingDtos.TeachingHierarchyProgress — axe CHAÎNE, HIERARCHIE_SUIVI (D-FIN-03). */
+export interface TeachingHierarchyProgress {
+  moduleId: string;
+  totalCount: number;
+  units: TeachingHierarchyUnit[];
+}
+
+/** Mirrors com.excellence.back.assembly.TeachingDtos.TeachingLocalityMember */
+export interface TeachingLocalityMember extends TeachingMemberProgress {
+  unitId: string | null;
+  unitName: string | null;
+}
+
+/** Mirrors com.excellence.back.assembly.TeachingDtos.TeachingLocalityProgress — axe GÉOGRAPHIE, ENSEIGNEMENT_SUIVI (D-FIN-08). */
+export interface TeachingLocalityProgress {
+  moduleId: string;
+  localityId: string;
+  localityName: string;
+  totalCount: number;
+  members: TeachingLocalityMember[];
+}
+
+/** Mirrors com.excellence.back.storage.PresignedUrl (`TeachingVideoPlay` du contrat, même forme) — lien de 15 min. */
+export interface TeachingVideoPlay {
+  url: string;
+  expiresAt: string;
+}
+
+const TEACHING = `${BASE}/teaching`;
+
+/** Un vidage de la file d'avancement porte le jeton du compte de la file (comme `eventQueue`, voir `apiClient`). */
+const withToken = (token?: string | null) => (token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+
+/** `GET /courses` — modules `PERSONAL` actifs du ministère ayant au moins un chapitre disponible. */
+export async function listTeachingCourses(): Promise<TeachingCourseSummary[]> {
+  const { data } = await apiClient.get<TeachingCourseSummary[]>(`${TEACHING}/courses`);
+  return data ?? [];
+}
+
+/** `GET /courses/{id}` — parties et chapitres à plat, mon avancement, chapitre à reprendre. */
+export async function getTeachingCourse(id: string): Promise<TeachingCourseDetail> {
+  const { data } = await apiClient.get<TeachingCourseDetail>(`${TEACHING}/courses/${id}`);
+  return { ...data, parts: data?.parts ?? [], chapters: data?.chapters ?? [] };
+}
+
+/** `GET /chapters/{id}` — lecture seule : l'ouverture s'enregistre par `PUT …/progress` (contrat §5.4). */
+export async function getTeachingChapter(id: string): Promise<TeachingChapterContent> {
+  const { data } = await apiClient.get<TeachingChapterContent>(`${TEACHING}/chapters/${id}`);
+  return { ...data, blocks: data?.blocks ?? [] };
+}
+
+/** `PUT /chapters/{id}/progress` — idempotent ; une position au-delà du dernier bloc est bornée, jamais refusée. */
+export async function putTeachingProgress(
+  id: string,
+  position: number,
+  token?: string | null,
+): Promise<TeachingMyProgress> {
+  const { data } = await apiClient.put<TeachingMyProgress>(
+    `${TEACHING}/chapters/${id}/progress`,
+    { position },
+    withToken(token),
+  );
+  return data;
+}
+
+/** `PUT /chapters/{id}/complete` — « J'ai terminé », idempotent. */
+export async function completeTeachingChapter(id: string, token?: string | null): Promise<TeachingMyProgress> {
+  const { data } = await apiClient.put<TeachingMyProgress>(
+    `${TEACHING}/chapters/${id}/complete`,
+    undefined,
+    withToken(token),
+  );
+  return data;
+}
+
+/** `DELETE /chapters/{id}/complete` — annule « J'ai terminé ». */
+export async function uncompleteTeachingChapter(id: string, token?: string | null): Promise<void> {
+  await apiClient.delete(`${TEACHING}/chapters/${id}/complete`, withToken(token));
+}
+
+/** `GET /courses/{id}/leader-summary` — totaux de l'assemblée du dirigeant, sans aucun nom (P-FIN-1). */
+export async function getTeachingLeaderSummary(id: string): Promise<TeachingLeaderSummary> {
+  const { data } = await apiClient.get<TeachingLeaderSummary>(`${TEACHING}/courses/${id}/leader-summary`);
+  return data;
+}
+
+/** `GET /courses/{id}/hierarchy` — Caleb ; sans droit, 403 `MODULE_ACCESS_DENIED` / HIERARCHIE_SUIVI → verrou. */
+export async function getTeachingHierarchy(id: string): Promise<TeachingHierarchyProgress> {
+  const { data } = await apiClient.get<TeachingHierarchyProgress>(`${TEACHING}/courses/${id}/hierarchy`);
+  return { ...data, units: (data?.units ?? []).map((u) => ({ ...u, members: u.members ?? [] })) };
+}
+
+/** `GET /localities` — Néhémie : villes dont le compte est lecteur. `[]` masque l'entrée, jamais de 403. */
+export async function listTeachingLocalities(): Promise<AssemblyLocality[]> {
+  const { data } = await apiClient.get<AssemblyLocality[]>(`${TEACHING}/localities`);
+  return data ?? [];
+}
+
+/** `GET /courses/{id}/locality/{localityId}` — Néhémie ; sans droit, 403 `MODULE_ACCESS_DENIED` / ENSEIGNEMENT_SUIVI → verrou. */
+export async function getTeachingLocality(id: string, localityId: string): Promise<TeachingLocalityProgress> {
+  const { data } = await apiClient.get<TeachingLocalityProgress>(`${TEACHING}/courses/${id}/locality/${localityId}`);
+  return { ...data, members: data?.members ?? [] };
+}
+
+/** `GET /videos/{id}/play` — lien signé de 15 min après contrôle du droit (D-FIN-09 / D-FIN-16, JP 06/11). */
+export async function playTeachingVideo(id: string): Promise<TeachingVideoPlay> {
+  const { data } = await apiClient.get<TeachingVideoPlay>(`${TEACHING}/videos/${id}/play`);
+  return data;
+}
+
+/** Code d'une erreur de l'enseignement (`ApiError.error`), null sinon. */
+export function teachingErrorCode(e: any): string | null {
+  const code = e?.response?.data?.error;
+  return typeof code === 'string' ? code : null;
+}
+
+/**
+ * Lot FIN (JP 06/11) — SEUL point qui décide si le serveur a vraiment refusé un contenu ou une écriture de l'enseignement.
+ * Un refus efface ce qui est gardé sur l'appareil et abandonne l'avancement en file ; tout le reste (réseau coupé, 5xx, 429,
+ * 401, jeton refusé) n'efface rien, et se réessaie.
+ *
+ * <p>Un jeton refusé répond 403 SANS corps sur le vrai serveur, et non 401 : le `sendError(401)` de `JwtAuthenticationFilter`
+ * repart par `/error`, qui n'est pas public (`RefusedTokenOverHttpTest`, backend). Seul un 403 qui porte un code machine
+ * (`ApiError.error` : TEACHING_JOIN_REQUIRED, UNAUTHORIZED_ACCESS…) vient donc d'une décision sur le contenu.
+ */
+export function isTeachingRefusal(e: any): boolean {
+  const status = e?.response?.status;
+  if (status === 403) return /^[A-Z][A-Z0-9_]*$/.test(teachingErrorCode(e) ?? '');
+  return status === 400 || status === 404 || status === 422;
 }

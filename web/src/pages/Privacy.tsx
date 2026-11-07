@@ -96,6 +96,13 @@ export function PrivacyPage() {
           <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: '16px 0 0' }}>{t('privacy.documentsBasis')}</p>
         </Section>
 
+        {/* D-FIN-02 (JP 06/11, contrat §9) : avancement dans les enseignements, visible des dirigeants qui ont
+            ce suivi, supprimé avec le compte. Aucun journal des lectures vidéo, aucune IP stockée. */}
+        <Section title={t('privacy.teachingTitle')}>
+          <Para>{t('privacy.teachingIntro')}</Para>
+          <List items={tr('teaching', ['what', 'who', 'video', 'deletion'])} />
+        </Section>
+
         <Section title={t('privacy.purposeTitle')}>
           <List items={tr('purpose', ['service', 'org', 'support', 'security', 'legal'])} />
         </Section>

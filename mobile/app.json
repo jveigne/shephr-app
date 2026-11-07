@@ -92,6 +92,13 @@
       "expo-sharing",
       "expo-status-bar",
       "expo-web-browser",
+      [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": false,
+          "supportsPictureInPicture": false
+        }
+      ],
       "expo-apple-authentication",
       [
         "@react-native-google-signin/google-signin",

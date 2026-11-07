@@ -105,7 +105,7 @@
   },
   "privacy": {
     "title": "Privacy Policy",
-    "updated": "Last updated: 18 October 2026",
+    "updated": "Last updated: 6 November 2026",
     "intro": "Shephr is a management platform for ministries and churches. This policy explains what data we collect, why, who can see it and how you stay in control of it. It applies to the Shephr mobile app as well as to the website.",
     "controllerTitle": "Who is responsible for your data",
     "controllerText": "Shephr is published by JEXCELLENCE SAS, 9 rue des Colonnes, 75002 Paris, France, the controller for the processing described here. Your ministry or church, which decides who is enrolled and which modules are enabled, is a joint controller for its members' data.",
@@ -184,7 +184,15 @@
     "contactTitle": "Contact us",
     "contactText": "A question about your data, an access or deletion request? Write to us and we will get back to you.",
     "mailSubject": "Shephr — question about my personal data",
-    "whatsappText": "Hello, I have a question about the privacy of my Shephr data."
+    "whatsappText": "Hello, I have a question about the privacy of my Shephr data.",
+    "teachingTitle": "Progress in teachings",
+    "teachingIntro": "When you follow a teaching in the app, we record your progress so that you can pick up where you left off, on any device.",
+    "teaching": {
+      "what": "What is recorded: for each chapter you open, your reading position, the date you last opened it and the date you marked it as finished. On the web, text size and your last position are also kept in your browser.",
+      "who": "Who can see it: you, and the leaders who have turned on tracking for their hierarchy or their city. They see your name, the number of chapters you have finished and your last activity. A leader without this tracking sees only a total, with no names.",
+      "video": "Videos: no viewing log is kept and no IP address is stored.",
+      "deletion": "Deletion: your progress is deleted along with your account."
+    }
   },
   "deleteAccount": {
     "title": "Delete your Shephr account",
@@ -300,7 +308,8 @@
     "studyLive": "Live",
     "documents": "Documents",
     "studyCity": "City tracking",
-    "offers": "Plans"
+    "offers": "Plans",
+    "teaching": "Teaching"
   },
   "sidebar": {
     "logout": "Log out",
@@ -500,7 +509,7 @@
     },
     "lock": {
       "title": "Caleb plan — tracking my hierarchy",
-      "intro": "Assembly life (meeting reports, consolidated PDF journal) and “The Bertoua Message” for every assembly in your leadership chain.",
+      "intro": "Assembly life (meeting reports, consolidated PDF journal), “The Bertoua Message” and teaching progress for every assembly in your leadership chain.",
       "askShephr": "Ask the Shephr team to activate it.",
       "pending": "A payment is in progress for your hierarchy tracking.",
       "pastDue": "The last payment failed: your hierarchy tracking is suspended.",
@@ -1674,7 +1683,8 @@
       "MEETING_ALREADY_EXISTS": "A meeting already exists on this date for this assembly.",
       "ATTENDEE_NOT_IN_ASSEMBLY": "One of the people checked is no longer attached to this assembly.",
       "CHAPTERS_FROM_SEVERAL_MODULES": "A meeting's chapters must all come from a single module.",
-      "TEACHING_MODULE_INACTIVE": "This teaching module has been disabled."
+      "TEACHING_MODULE_INACTIVE": "This teaching module has been disabled.",
+      "TEACHING_MODULE_PERSONAL": "This individual teaching cannot be recorded in a meeting report."
     },
     "report": {
       "title": "Assembly report {{date}}",
@@ -2601,7 +2611,8 @@
       "subscription": "Subscription",
       "journal": "City journal",
       "events": "Events",
-      "studyPrefixed": "Bertoua · {{tab}}"
+      "studyPrefixed": "Bertoua · {{tab}}",
+      "teaching": "Teaching"
     },
     "filters": {
       "city": "City",
@@ -2667,7 +2678,7 @@
       "agreementOther": "Your ministry’s agreement for this city does not include this tracking: contact your ministry to add it.",
       "compactSubscribe": "Tracking your city's assemblies is included in the Nehemiah plan, subscribed for the whole city.",
       "openCity": "Open city tracking",
-      "subscribeIntro": "{{plan}} for {{city}}: tracking of the whole city — study, meeting journal and events of every assembly, statistics and exports.",
+      "subscribeIntro": "{{plan}} for {{city}}: tracking of the whole city — study, teachings, meeting journal and events of every assembly, statistics and exports.",
       "period": "Billing period",
       "periods": {
         "MONTHLY": "Monthly",
@@ -2747,6 +2758,10 @@
           "title": "Teaching progress",
           "desc": "where each assembly stands, lesson by lesson"
         },
+        "courses": {
+          "title": "Each member's journey",
+          "desc": "where everyone in your chain stands in the teachings, chapter by chapter"
+        },
         "evangelism": {
           "title": "Evangelism",
           "desc": "actions, participants and guests, by leader"
@@ -2800,6 +2815,10 @@
         "teaching": {
           "title": "Teaching progress",
           "desc": "members taught or not, missed lessons"
+        },
+        "courses": {
+          "title": "Each member's journey",
+          "desc": "where everyone in the city stands in the teachings, chapter by chapter"
         },
         "evangelism": {
           "title": "City evangelism",
@@ -2989,6 +3008,12 @@
           "label": "Pastoral care of other assemblies",
           "caleb": "Yes"
         },
+        "courses": {
+          "label": "Individual teachings",
+          "free": "Free to read",
+          "caleb": "Your chain's progress",
+          "nehemie": "The city's progress"
+        },
         "evangelism": {
           "label": "Detailed evangelism",
           "free": "Up to city level",
@@ -3043,5 +3068,87 @@
       }
     },
     "footer": "Verses: King James Version · Card payment secured by Stripe · Mobile Money through your local agent"
+  },
+  "teaching": {
+    "hub": {
+      "resume": "Resume at chapter {{number}}",
+      "resumeIntro": "Resume the introduction",
+      "start": "Start",
+      "allDone": "Completed",
+      "studyHint": "Study in your assembly",
+      "documentsHint": "Teachings to read and share",
+      "emptyTitle": "No teaching yet",
+      "emptyText": "Your ministry's teachings will appear here."
+    },
+    "course": {
+      "progress": "{{completed}} / {{total}}",
+      "part": "Part {{number}} — {{title}}",
+      "partNoTitle": "Part {{number}}",
+      "introduction": "Introduction",
+      "chapterFallback": "Chapter {{number}}",
+      "comingSoon": "Content coming soon",
+      "minutes": "{{count}} min read",
+      "video": "video",
+      "videoMinutes": "video {{count}} min",
+      "visibilityNote": "Your leaders can see your progress."
+    },
+    "chapter": {
+      "eyebrow": "Chapter {{number}} · Part {{part}}",
+      "eyebrowNoPart": "Chapter {{number}}",
+      "read": "Read · {{count}} min",
+      "resumeReading": "Resume reading",
+      "watch": "Watch the video · {{count}} min",
+      "watchNoDuration": "Watch the video"
+    },
+    "reader": {
+      "decrease": "A−",
+      "increase": "A+",
+      "decreaseLabel": "Make text smaller",
+      "increaseLabel": "Make text larger"
+    },
+    "end": {
+      "done": "Chapter {{number}} completed",
+      "doneIntro": "Introduction completed",
+      "replay": "Watch again · {{count}} min",
+      "replayNoDuration": "Watch again",
+      "complete": "I've finished",
+      "undo": "Undo",
+      "completed": "Finished",
+      "next": "Next chapter",
+      "backToCourse": "Back to the course"
+    },
+    "leader": {
+      "summary_one": "{{started}} member out of {{members}} has started",
+      "summary_other": "{{started}} members out of {{members}} have started",
+      "seeProgress": "See my members' progress"
+    },
+    "hierarchy": {
+      "title": "Teaching progress",
+      "cumulative": "Cumulative progress since the start, with no period.",
+      "course": "Teaching",
+      "member": "Member",
+      "chapters": "Chapters finished",
+      "lastActivity": "Last activity",
+      "none": "No assembly in your hierarchy.",
+      "noMembers": "No member in this assembly."
+    },
+    "city": {
+      "title": "Teaching progress",
+      "assembly": "Assembly",
+      "chapters": "Chapters finished",
+      "lastActivity": "Last activity",
+      "none": "No member in this city."
+    },
+    "lock": {
+      "calebBody": "Seeing your members' progress, name by name, including in your own assembly, is part of the Caleb plan."
+    },
+    "video": {
+      "unavailable": "The video is not available right now.",
+      "retry": "Try again"
+    },
+    "errors": {
+      "joinRequired": "Teachings are for members attached to an assembly. Join yours to access them.",
+      "chapterUnavailable": "This chapter's content is not available yet."
+    }
   }
 }

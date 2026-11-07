@@ -84,10 +84,13 @@ type Feature = { key: string; soon?: boolean };
 // D-MKT-01 : listes de la maquette, dans son ordre. Les « À venir » ne sont que du texte (aucune
 // fonctionnalité codée derrière).
 const FREE_FEATURES: Feature[] = ['study', 'assembly', 'memberCare', 'goals', 'events', 'documents'].map((key) => ({ key }));
+// D-FIN-03 / D-FIN-08 (JP 06/11, lot « FIN ») : `courses`, avancement des enseignements individuels,
+// sans le mot « Bertoua » (D-MKT-01), aucun libellé de prix du livre (D-FIN-04).
 const CALEB_FEATURES: Feature[] = [
   { key: 'dashboard' },
   { key: 'alerts' },
   { key: 'teaching' },
+  { key: 'courses' },
   { key: 'evangelism' },
   { key: 'memberCare' },
   { key: 'pdf' },
@@ -99,6 +102,7 @@ const CALEB_FEATURES: Feature[] = [
 const NEHEMIE_FEATURES: Feature[] = [
   { key: 'cityStats' },
   { key: 'teaching' },
+  { key: 'courses' },
   { key: 'evangelism' },
   { key: 'journal' },
   { key: 'exports' },
@@ -118,6 +122,7 @@ const COMPARE_ROWS: { key: string; free: Cell; caleb: Cell; nehemie: Cell }[] = 
   { key: 'stats', free: 'dash', caleb: 'text', nehemie: 'text' },
   { key: 'reports', free: 'dash', caleb: 'text', nehemie: 'text' },
   { key: 'memberCare', free: 'dash', caleb: 'text', nehemie: 'dash' },
+  { key: 'courses', free: 'text', caleb: 'text', nehemie: 'text' },
   { key: 'evangelism', free: 'text', caleb: 'text', nehemie: 'text' },
   { key: 'exports', free: 'dash', caleb: 'text', nehemie: 'text' },
   { key: 'shared', free: 'dash', caleb: 'text', nehemie: 'text' },

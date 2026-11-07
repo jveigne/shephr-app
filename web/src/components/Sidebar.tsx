@@ -11,7 +11,6 @@ import {
   canManageUnits,
   canManageZones,
   getAccessibleModules,
-  isAttachedAccount,
   isSecretariat,
   primaryRoleKey,
 } from '../services/authApi';
@@ -20,8 +19,9 @@ import { FEATURES } from '../config/features';
 import { setLanguage } from '../i18n';
 import { MySubscriptionsLink } from './MySubscriptionsLink';
 import { StudyLiveBadge } from './StudyLiveBadge';
-import { useStudyAccess, useStudyMenuVisible } from '../utils/studyAccess';
-import { listAssemblyLocalities, listStudyLocalities } from '../services/assemblyApi';
+import { useStudyAccess } from '../utils/studyAccess';
+import { useTeachingMenu } from '../utils/teachingAccess';
+import { listAssemblyLocalities, listStudyLocalities, listTeachingLocalities } from '../services/assemblyApi';
 
 interface NavChild {
   id: string;
@@ -32,6 +32,8 @@ interface NavChild {
 interface NavItem {
   id: string;
   labelKey: string;
+  /** D-FIN-12 (JP 06/11) : nom d'origine du seul enseignement, à la place de `labelKey`. */
+  label?: string;
   to?: string;
   icon: string;
   children?: NavChild[];
@@ -118,8 +120,12 @@ export function Sidebar() {
   // D-ETU-50 (JP 27/10) : Étude GRATUITE — flag de livraison FEATURES.study + compte rattaché, plus
   // l'abonnement STUDY (D-ETU-28 levée) ; décision centralisée dans `useStudyAccess` (D-WEB-02).
   const { hasStudy } = useStudyAccess();
-  // D-ETU-54 (JP 27/10) : l'entrée « Le Message de Bertoua » attend un catalogue non vide.
-  const showStudy = useStudyMenuVisible(hasStudy);
+  // D-FIN-12 (JP 06/11, lot « FIN ») : une seule entrée « Enseignement » regroupe Le Message de Bertoua
+  // (catalogue non vide, D-ETU-54), Documents (D-WEB-03) et les enseignements ; une seule entrée
+  // disponible : son nom d'origine et accès direct. Décision centralisée dans `useTeachingMenu`.
+  const teaching = useTeachingMenu('/teaching');
+  const showStudy = teaching.showStudy;
+  const hasTeaching = teaching.courses.length > 0;
   // D-WEB-07 / §9.3 du contrat 27/10 : « Suivi de la ville » si `GET /study/localities` est non vide
   // (vide pour un membre ou un dirigeant d'unité, RG-ABO-22) ; cadenas si aucune ville n'ouvre droit.
   const studyCitiesQ = useQuery({
@@ -137,13 +143,19 @@ export function Sidebar() {
     enabled: hasAssembly,
     retry: false,
   });
+  // D-FIN-08 (JP 06/11) : villes de `/teaching/localities` (même règle D-ABO-21), dès que le ministère a
+  // un enseignement ; `ENSEIGNEMENT_SUIVI` compte aussi pour le cadenas.
+  const teachingCitiesQ = useQuery({
+    queryKey: ['assembly', 'teaching', 'localities'],
+    queryFn: listTeachingLocalities,
+    enabled: hasTeaching,
+    retry: false,
+  });
   const studyCities = hasStudy ? studyCitiesQ.data ?? [] : [];
   const journalCities = hasAssembly ? journalCitiesQ.data ?? [] : [];
-  const hasStudyCity = studyCities.length > 0 || journalCities.length > 0;
-  const studyCityLocked = !studyCities.some((c) => c.entitled) && !journalCities.some((c) => c.entitled);
-  // D-DOC-14 levée (JP 27/10, D-WEB-03) : « Documents » = abonnement DOCUMENTS (RG-06) ET compte
-  // rattaché (D-DOC-04), comme la tuile d'accueil mobile. Aucun flag de livraison.
-  const hasDocuments = (modulesQ.data ?? []).includes('DOCUMENTS') && isAttachedAccount(me);
+  const teachingCities = hasTeaching ? teachingCitiesQ.data ?? [] : [];
+  const hasStudyCity = studyCities.length > 0 || journalCities.length > 0 || teachingCities.length > 0;
+  const studyCityLocked = ![...studyCities, ...journalCities, ...teachingCities].some((c) => c.entitled);
 
   // Le /me ne porte ni la localité, ni — pour un DIRIGEANT_UNITE — la zone (zoneNames
   // n'est renseigné que pour le DIRIGEANT_SENIOR). On les résout par ID depuis l'unité du
@@ -203,8 +215,14 @@ export function Sidebar() {
       if (hasAssembly && sec.sectionKey === 'nav.section.pilotage') {
         items = [...items, { id: 'assembly', labelKey: 'nav.assembly', icon: 'calendar', to: '/assembly' }];
       }
-      if (showStudy && sec.sectionKey === 'nav.section.pilotage') {
-        items = [...items, { id: 'study', labelKey: 'nav.study', icon: 'edit', to: '/study' }];
+      if (teaching.kind === 'study' && sec.sectionKey === 'nav.section.pilotage') {
+        items = [...items, { id: 'study', labelKey: 'nav.study', icon: 'edit', to: teaching.to }];
+      }
+      if ((teaching.kind === 'hub' || teaching.kind === 'course') && sec.sectionKey === 'nav.section.pilotage') {
+        items = [
+          ...items,
+          { id: 'teaching', labelKey: 'nav.teaching', label: teaching.courseName ?? undefined, icon: 'book', to: teaching.to },
+        ];
       }
       if (hasStudyCity && sec.sectionKey === 'nav.section.pilotage') {
         items = [
@@ -218,12 +236,12 @@ export function Sidebar() {
       if (hasMemberCare && sec.sectionKey === 'nav.section.pilotage') {
         items = [...items, { id: 'member-care', labelKey: 'nav.memberCare', icon: 'users', to: '/member-care' }];
       }
-      if (hasDocuments && sec.sectionKey === 'nav.section.pilotage') {
-        items = [...items, { id: 'documents', labelKey: 'nav.documents', icon: 'fileText', to: '/documents' }];
+      if (teaching.kind === 'documents' && sec.sectionKey === 'nav.section.pilotage') {
+        items = [...items, { id: 'documents', labelKey: 'nav.documents', icon: 'fileText', to: teaching.to }];
       }
       return { ...sec, items };
     });
-  }, [hasMemberCare, hasAssembly, showStudy, hasStudyCity, studyCityLocked, hasEvents, hasDocuments, canSeeStructureChild]);
+  }, [hasMemberCare, hasAssembly, teaching.kind, teaching.to, teaching.courseName, hasStudyCity, studyCityLocked, hasEvents, canSeeStructureChild]);
 
   const initials = (me?.fullName ?? 'A·')
     .split(' ')
@@ -306,14 +324,20 @@ export function Sidebar() {
                     to={item.to!}
                     className={({ isActive }) => {
                       // `/study/city` est sous `/study` : seule l'entrée « Suivi de la ville » s'allume.
-                      const on = isActive && !(item.id === 'study' && location.pathname.startsWith('/study/city'));
-                      return `nav-item ${on ? 'active' : ''}`;
+                      const onCity = location.pathname.startsWith('/study/city');
+                      const on = isActive && !(item.id === 'study' && onCity);
+                      // D-FIN-12 : les pages regroupées sous « Enseignement » allument son entrée.
+                      const lit =
+                        item.id === 'teaching' &&
+                        !onCity &&
+                        ['/teaching', '/study', '/documents'].some((p) => location.pathname.startsWith(p));
+                      return `nav-item ${on || lit ? 'active' : ''}`;
                     }}
                   >
-                    <Icon name={item.icon} size={18} />
-                    <span>{t(item.labelKey)}</span>
+                    <Icon name={item.icon} size={18} style={{ flexShrink: 0 }} />
+                    <span>{item.label ?? t(item.labelKey)}</span>
                     {/* D-WEB-02 (JP 27/10) : pastille « En cours », comme la tuile mobile. */}
-                    {item.id === 'study' && <StudyLiveBadge enabled={showStudy} />}
+                    {(item.id === 'study' || item.id === 'teaching') && <StudyLiveBadge enabled={showStudy} />}
                     {item.locked && (
                       <span title={t('cityStudy.lockedCity')} style={{ marginLeft: 'auto', display: 'inline-flex', opacity: 0.8 }}>
                         <Icon name="lock" size={13} />

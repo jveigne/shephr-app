@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   TextInput,
 } from 'react-native';
 
+import { useLocalSearchParams } from 'expo-router';
 import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -51,6 +52,13 @@ export default function MembresScreen() {
   const insets = useSafeAreaInsets();
   const { me } = useAuth();
   const { t } = useLanguage();
+  // Plan FIN §5.3 bis (JP 06/11) : ouvert depuis le Suivi de la ville, l'écran part filtré sur la ville.
+  const params = useLocalSearchParams<{ cityId?: string; cityName?: string }>();
+  const [presetCity, setPresetCity] = useState<{ id: string; name: string } | null>(() =>
+    typeof params.cityId === 'string' && params.cityId
+      ? { id: params.cityId, name: typeof params.cityName === 'string' ? params.cityName : '' }
+      : null,
+  );
   const [users, setUsers] = useState<AdminUserResponse[]>([]);
   const [units, setUnits] = useState<UnitResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,7 +80,30 @@ export default function MembresScreen() {
   const [submission, setSubmission] = useState<GoalSubmissionSummary | null>(null);
 
   // La recherche par noms approchés ignore le filtre géographique (décision JP).
-  const placeNodeId = search ? undefined : (city ?? region ?? nation)?.id;
+  const placeNodeId = search ? undefined : (presetCity ?? city ?? region ?? nation)?.id;
+
+  // La ville demandée se retrouve dans les sélecteurs nation → région → ville, et se change comme un
+  // filtre posé à la main. `placeNodeId` ne bouge pas : pas de second chargement de la liste.
+  // Absente du contexte (périmètre de saisie plus étroit que le suivi) : `presetCity` reste, affichée.
+  // Une seule fois, à la réception du contexte ; le filtre retiré entre-temps n'est pas rétabli.
+  const wantedCityId = useRef(presetCity?.id ?? null);
+  const clearPresetCity = () => {
+    wantedCityId.current = null;
+    setPresetCity(null);
+  };
+  const applyWantedCity = useCallback((ctx: StructureRequestContext) => {
+    const wanted = wantedCityId.current;
+    if (!wanted) return;
+    wantedCityId.current = null;
+    const c = ctx.cities.find((o) => o.id === wanted);
+    const r = c && ctx.regions.find((o) => o.id === c.parentId);
+    const n = r && ctx.nations.find((o) => o.id === r.parentId);
+    if (!c || !r || !n) return;
+    setNation(n);
+    setRegion(r);
+    setCity(c);
+    setPresetCity(null);
+  }, []);
 
   const PAGE_SIZE = 30;
 
@@ -88,11 +119,14 @@ export default function MembresScreen() {
       setLast(u.value.last ?? u.value.content.length < PAGE_SIZE);
     }
     if (un.status === 'fulfilled') setUnits(un.value);
-    if (ctx.status === 'fulfilled') setContext(ctx.value);
+    if (ctx.status === 'fulfilled') {
+      setContext(ctx.value);
+      applyWantedCity(ctx.value);
+    }
     setSubmission(sub.status === 'fulfilled' ? sub.value : null);
     setPage(0);
     setLoading(false);
-  }, [placeNodeId, search]);
+  }, [placeNodeId, search, applyWantedCity]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -154,6 +188,17 @@ export default function MembresScreen() {
       </View>
       <Text style={styles.subtitle}>{t('membres.subtitle')}</Text>
 
+      {presetCity && !search && (
+        <View style={styles.presetRow}>
+          <Text style={styles.presetText} numberOfLines={1}>
+            {t('membres.cityFilter', { city: presetCity.name })}
+          </Text>
+          <Pressable onPress={clearPresetCity} hitSlop={10} accessibilityLabel={t('membres.clearSearch')}>
+            <Ionicons name="close" size={16} color={colors.mossDeep} />
+          </Pressable>
+        </View>
+      )}
+
       {/* Filtre géographique — nation → région → ville. Il est IGNORÉ pendant une recherche
           par nom : on cherche une personne où qu'elle soit (décision JP 31/07). */}
       {context && (
@@ -162,7 +207,7 @@ export default function MembresScreen() {
             label={t('join.pickNation')}
             options={context.nations}
             pick={nation}
-            onChange={(n) => { setNation(n); setRegion(null); setCity(null); }}
+            onChange={(n) => { clearPresetCity(); setNation(n); setRegion(null); setCity(null); }}
           />
           <SelectField
             label={t('join.pickRegion')}
@@ -463,6 +508,11 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2 },
   title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4 },
   subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4 },
+  presetRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', maxWidth: '100%', marginTop: 12,
+    backgroundColor: colors.mossTint2, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99,
+  },
+  presetText: { flexShrink: 1, fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.mossDeep },
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14,
     borderWidth: 1, borderColor: 'rgba(42,38,32,0.15)', borderRadius: 10,

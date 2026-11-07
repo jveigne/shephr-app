@@ -8,7 +8,7 @@
     "care": "Brebis",
     "requests": "Demandes",
     "treasury": "Trésorerie",
-    "assembly": "Assemblée",
+    "assembly": "Assemblées",
     "events": "Évènements"
   },
   "common": {
@@ -194,38 +194,29 @@
       "declareHint": "Espèces, chèque, virement",
       "structure": "Créer une assemblée",
       "structureHint": "Dans la ville de votre choix",
-      "membres": "Membres",
-      "membresHint": "Annuaire de votre périmètre",
       "hierarchie": "Hiérarchie",
       "hierarchieHint": "Votre leadership",
       "cantique": "Cantiques",
-      "cantiqueHint": "Chris est Vainqueur",
-      "priere": "Prière",
-      "priereHint": "Intentions & retraite",
-      "compteRendu": "Compte rendu",
-      "compteRenduHint": "Notes d'assemblée",
+      "cantiqueHint": "Ouvre CMFIPraise",
       "treasury": "Trésorerie",
       "treasuryHint": "Les dons de votre périmètre",
-      "events": "Déclarer une action",
-      "eventsHint": "Évangélisation",
+      "events": "Déclarer un évènement",
+      "eventsHint": "Évangélisation, rencontre",
+      "careHint": "Suivi pastoral",
       "documents": "Documents",
       "documentsHint": "Enseignements à lire et partager",
       "cityLocked": "Offre Néhémie"
     },
-    "comingSoonBadge": "Bientôt disponible",
-    "comingAck": "D'accord",
-    "coming": {
-      "cantiqueTitle": "Cantique",
-      "cantiqueBody": "Retrouvez tous les cantiques — paroles et accords — dans l'application CMFIPraise. Téléchargez-la et chantez avec nous.\n\nSoyez bénis !\n— L'équipe CMFIPraise",
-      "priereTitle": "Retraite & prière",
-      "priereBody": "Bientôt — un espace pour partager vos intentions de prière, suivre les retraites de l'assemblée et prier en communion avec les membres.",
-      "compteRenduTitle": "Compte rendu d'assemblée",
-      "compteRenduBody": "Bientôt — prenez et partagez les notes des cultes : enseignements, témoignages, décisions de l'assemblée locale.",
-      "cantiqueKicker": "Disponible sur l'app CMFIPraise",
-      "cantiqueDownload": "Télécharger CMFIPraise"
-    },
+    "joinTitle": "Rejoindre mon assemblée",
+    "joinHint": "Pour lire les enseignements en entier",
     "noneThisMonth": "Aucun don déclaré ce mois-ci.",
-    "summaryUnavailable": "Vos totaux n'ont pas pu être chargés."
+    "summaryUnavailable": "Vos totaux n'ont pas pu être chargés.",
+    "resume": {
+      "session": "Séance en cours · {{unit}}",
+      "chapter": "Reprendre : chapitre {{number}}",
+      "intro": "Reprendre : introduction",
+      "start": "Commencer"
+    }
   },
   "declare": {
     "title": "Déclarer un don",
@@ -716,6 +707,7 @@
     }
   },
   "membres": {
+    "cityFilter": "Ville : {{city}}",
     "title": "Membres",
     "subtitle": "Annuaire de votre périmètre (liste scopée selon votre rôle).",
     "searchPlaceholder": "Nom ou email…",
@@ -925,6 +917,8 @@
       "pendingBadge_other": "{{count}} demandes en attente",
       "lifeCard": "Vie de mon leadership",
       "lifeCardHint": "Vie d'assemblée, évènements et Message de Bertoua de ma hiérarchie.",
+      "membersCard": "Membres",
+      "membersCardHint": "Annuaire de votre périmètre",
       "lockedA11y": "Fonctionnalité non activée"
     },
     "leadership": {
@@ -1206,6 +1200,7 @@
   },
   "assemblyLife": {
     "title": "Vie d'assemblée",
+    "careEntryHint": "Le suivi pastoral des membres de votre assemblée.",
     "unitPicker": "Assemblée",
     "subtitle": "Réunions, comptes rendus et avancement des modules d'enseignement.",
     "tabMeetings": "Réunions",
@@ -1278,7 +1273,8 @@
       "MEETING_ALREADY_EXISTS": "Un compte rendu existe déjà pour cette assemblée à cette date.",
       "ATTENDEE_NOT_IN_ASSEMBLY": "Une personne cochée n'appartient plus à cette assemblée : rechargez la liste.",
       "CHAPTERS_FROM_SEVERAL_MODULES": "Les chapitres lus doivent appartenir à un seul module.",
-      "TEACHING_MODULE_INACTIVE": "Ce module d'enseignement est désactivé : choisissez-en un autre."
+      "TEACHING_MODULE_INACTIVE": "Ce module d'enseignement est désactivé : choisissez-en un autre.",
+      "TEACHING_MODULE_PERSONAL": "Ce module est un enseignement individuel : il ne se note pas dans un compte rendu."
     },
     "report": {
       "header": "CR Assemblée {{date}}",
@@ -1955,8 +1951,12 @@
       "entry": "Suivi de la ville",
       "title": "Suivi de la ville",
       "titleOf": "Suivi de {{city}}",
+      "membersLink": "Membres de {{city}}",
       "cityCount_one": "{{count}} ville",
       "cityCount_other": "{{count}} villes",
+      "cityCountOpen_one": "{{count}} ville ouverte",
+      "cityCountOpen_other": "{{count}} villes ouvertes",
+      "allCities": "Toutes les villes",
       "lockedCity": "Suivi non activé pour cette ville",
       "noCity": "Aucune ville à suivre dans votre périmètre.",
       "noAssembly": "Aucune assemblée dans cette ville.",
@@ -1973,7 +1973,8 @@
         "members": "Membres",
         "stats": "Statistiques",
         "journal": "Journal de la ville",
-        "events": "Évènements"
+        "events": "Évènements",
+        "teaching": "Enseignement"
       },
       "journal": {
         "scope": "Ville de {{city}}",
@@ -2028,6 +2029,92 @@
     "nehemie": {
       "name": "Offre Néhémie",
       "subtitle": "Le suivi de toute ma ville"
+    }
+  },
+  "teaching": {
+    "tile": {
+      "title": "Enseignement",
+      "partStudy": "Bertoua",
+      "partCourses": "finances",
+      "partDocuments": "documents"
+    },
+    "hub": {
+      "resume": "Reprendre au chapitre {{number}}",
+      "resumeIntro": "Reprendre l'introduction",
+      "start": "Commencer",
+      "finished": "Terminé",
+      "empty": "Aucun enseignement pour le moment."
+    },
+    "course": {
+      "progress": "{{completed}} / {{total}}",
+      "part": "Partie {{number}} — {{title}}",
+      "partShort": "Partie {{number}}",
+      "introduction": "Introduction",
+      "comingSoon": "Contenu à venir",
+      "minutes": "{{count}} min de lecture",
+      "videoMinutes": "vidéo {{count}} min",
+      "visibilityNote": "Vos dirigeants peuvent voir votre avancement."
+    },
+    "chapter": {
+      "short": "Chapitre {{number}}",
+      "eyebrow": "Chapitre {{number}} · Partie {{part}}",
+      "read": "Lire · {{count}} min",
+      "watch": "Regarder la vidéo · {{count}} min",
+      "watchShort": "Regarder la vidéo"
+    },
+    "reader": {
+      "decrease": "A−",
+      "increase": "A+",
+      "decreaseLabel": "Réduire le texte",
+      "increaseLabel": "Agrandir le texte",
+      "offlineCopy": "Hors ligne : dernière version enregistrée sur cet appareil."
+    },
+    "end": {
+      "done": "Chapitre {{number}} terminé",
+      "doneIntro": "Introduction terminée",
+      "replay": "Revoir en vidéo · {{count}} min",
+      "replayShort": "Revoir en vidéo",
+      "complete": "J'ai terminé",
+      "completed": "Marqué comme terminé",
+      "undo": "Annuler",
+      "next": "Chapitre suivant",
+      "backToCourse": "Retour au parcours"
+    },
+    "leader": {
+      "summary_one": "{{count}} membre de votre assemblée sur {{members}} a commencé",
+      "summary_other": "{{count}} membres de votre assemblée sur {{members}} ont commencé",
+      "seeProgress": "Voir l'avancement de mes membres"
+    },
+    "hierarchy": {
+      "title": "Avancement dans les enseignements",
+      "cumulative": "Avancement cumulé : la période choisie plus haut ne s'y applique pas."
+    },
+    "city": {
+      "cumulative": "Avancement cumulé des membres de la ville."
+    },
+    "follow": {
+      "chapters": "{{completed}} chapitres terminés sur {{total}}",
+      "lastActivity": "Dernière activité : {{date}}",
+      "notStarted": "Pas encore commencé",
+      "started_one": "{{count}} membre sur {{members}} a commencé",
+      "started_other": "{{count}} membres sur {{members}} ont commencé",
+      "none": "Aucun membre à afficher pour le moment.",
+      "noMember": "Aucun membre dans cette assemblée.",
+      "noUnit": "Sans assemblée"
+    },
+    "lock": {
+      "calebBody": "L'avancement de vos membres n'est pas activé pour votre compte."
+    },
+    "video": {
+      "unavailable": "La vidéo n'est pas disponible pour le moment.",
+      "updateRequired": "Mettez à jour l'application pour regarder la vidéo de ce chapitre."
+    },
+    "errors": {
+      "joinRequired": "Rejoignez votre assemblée pour lire les enseignements.",
+      "chapterUnavailable": "Le contenu de ce chapitre est à venir.",
+      "notFound": "Cet enseignement n'est plus disponible.",
+      "offline": "Connexion impossible, et ce contenu n'a pas encore été ouvert sur cet appareil.",
+      "loadFailed": "Impossible de charger l'avancement."
     }
   }
 }

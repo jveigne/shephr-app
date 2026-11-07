@@ -9,6 +9,8 @@ interface Props {
   size?: number;
   showDecimals?: boolean;
   color?: string;
+  /** Couleur du symbole et des décimales (fond sombre : carte des dons de l'accueil, JP 06/11). */
+  subColor?: string;
   style?: StyleProp<TextStyle>;
 }
 
@@ -18,6 +20,7 @@ export default function Amount({
   size = 24,
   showDecimals = false,
   color = colors.ink,
+  subColor = colors.ink3,
   style,
 }: Props) {
   const whole = Math.floor(Math.abs(value));
@@ -29,7 +32,7 @@ export default function Amount({
           fontFamily: fonts.serif,
           fontWeight: '500',
           fontSize: size * 0.55,
-          color: colors.ink3,
+          color: subColor,
           marginRight: size * 0.05,
         }}
       >
@@ -55,7 +58,7 @@ export default function Amount({
           style={{
             fontFamily: fonts.serif,
             fontSize: size * 0.4,
-            color: colors.ink3,
+            color: subColor,
           }}
         >
           {decimals}

@@ -37,12 +37,20 @@ export function useStudyAccess(options?: { enabled?: boolean }): { hasStudy: boo
  * tous les ministères sans module Bertoua importé. Même clé que `pages/Study.tsx` : un seul appel.
  */
 export function useStudyMenuVisible(hasStudy: boolean): boolean {
+  return useStudyMenuState(hasStudy).visible;
+}
+
+/**
+ * Même règle que `useStudyMenuVisible`, avec l'état de chargement. D-FIN-12 (JP 06/11) : la page
+ * Enseignement attend le catalogue avant de décider si « une seule entrée » ouvre directement.
+ */
+export function useStudyMenuState(hasStudy: boolean): { visible: boolean; isLoading: boolean } {
   const catalogQ = useQuery({
     queryKey: ['assembly', 'study', 'catalog'],
     queryFn: () => getStudyCatalog(),
     enabled: hasStudy,
   });
-  return hasStudy && (catalogQ.data?.length ?? 0) > 0;
+  return { visible: hasStudy && (catalogQ.data?.length ?? 0) > 0, isLoading: hasStudy && catalogQ.isLoading };
 }
 
 /** D-ETU-50 (JP 27/10) — 403 `MODULE_ACCESS_DENIED` sur `STUDY` : interrupteur plateforme coupé. */

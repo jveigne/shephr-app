@@ -711,9 +711,10 @@ export function HierarchyLockedCompact({
   /**
    * Ce qui est verrouillé : une assemblée (CR, journal, avancement), des fiches de suivi pastoral, ou
    * — D-BER-02 (JP 29/10) — le pilotage de « Le Message de Bertoua » dans une assemblée qui n'est pas
-   * la gratuite du dirigeant (lien vers `/offres?offer=caleb`).
+   * la gratuite du dirigeant (lien vers `/offres?offer=caleb`). D-FIN-03 (JP 06/11) : l'avancement
+   * nommé des membres d'un enseignement, y compris dans sa propre assemblée (`teaching`).
    */
-  context: 'assembly' | 'memberCare' | 'study';
+  context: 'assembly' | 'memberCare' | 'study' | 'teaching';
   /**
    * `details.canSubscribe` du 403 `HIERARCHIE_SUIVI` quand on l'a (il prime : c'est la réponse la plus
    * fraîche) ; `undefined` = affichage d'avance, sans 403 — le plan personnel décide alors.
@@ -772,7 +773,9 @@ export function HierarchyLockedCompact({
               ? 'hierarchy.lock.compactMemberCare'
               : context === 'study'
                 ? 'hierarchy.lock.compactStudy'
-                : 'hierarchy.lock.compactAssembly',
+                : context === 'teaching'
+                  ? 'teaching.lock.calebBody'
+                  : 'hierarchy.lock.compactAssembly',
           )}
         </div>
         {!subscribable && (

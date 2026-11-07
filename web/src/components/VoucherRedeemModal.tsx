@@ -112,6 +112,11 @@ export function VoucherRedeemModal({
       void qc.invalidateQueries({ queryKey: ['entitlements'] });
       void qc.invalidateQueries({ queryKey: ['assembly', 'study', 'localities'] });
       void qc.invalidateQueries({ queryKey: ['assembly', 'localities'] });
+      // D-FIN-08 (JP 06/11) : villes `ENSEIGNEMENT_SUIVI` (onglet Enseignement de `/study/city`, menu), clé
+      // sans préfixe commun avec les deux précédentes ; `['teaching']` : un 403 `ENSEIGNEMENT_SUIVI` /
+      // `HIERARCHIE_SUIVI` gardé en cache (`locality`, `hierarchy`) et `canSeeDetails` de `leader-summary`.
+      void qc.invalidateQueries({ queryKey: ['assembly', 'teaching', 'localities'] });
+      void qc.invalidateQueries({ queryKey: ['teaching'] });
       void qc.invalidateQueries({ queryKey: ['billing', 'subscriptions'] });
       void qc.invalidateQueries({ queryKey: ['accessible-modules'] });
     },

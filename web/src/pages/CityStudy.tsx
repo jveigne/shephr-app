@@ -10,6 +10,7 @@ import { VoucherRedeemModal } from '../components/VoucherRedeemModal';
 import { PeriodPicker } from '../components/AssemblyHierarchyStats';
 import { EventPeriodFilter } from '../components/EventPeriodFilter';
 import { EventStatsDrill } from '../components/EventStatsDrill';
+import { TeachingCityTab } from '../components/TeachingCityTab';
 import { FEATURES } from '../config/features';
 import { getAccessibleModules } from '../services/authApi';
 import {
@@ -21,6 +22,7 @@ import {
   listLocalityMeetings,
   listStudyLocalities,
   listStudyLocalityMembers,
+  listTeachingLocalities,
   type StudyLocalityMember,
   type StudyLocalityModule,
   type StudyLocalityOverview,
@@ -28,6 +30,7 @@ import {
   type UnitMeetingStats,
 } from '../services/assemblyApi';
 import {
+  ENTITLEMENT_ENSEIGNEMENT_SUIVI,
   ENTITLEMENT_ETUDE_SUIVI,
   ENTITLEMENT_EVENEMENTS_SUIVI,
   ENTITLEMENT_JOURNAL,
@@ -43,6 +46,7 @@ import { EmptyState, ProgressBar, errMsg } from './Assembly';
 import { saveBlob } from '../utils/download';
 import { startOfYearISO, todayISO } from '../utils/format';
 import { useStudyAccess } from '../utils/studyAccess';
+import { useTeachingAccess } from '../utils/teachingAccess';
 import { ALERT_DAYS, aggregate, averageAttendance, isAlert, todayIso } from '../utils/assemblyHierarchyStats';
 import { buildConsolidatedJournalHtml, currentPeriod, periodRange, type Period as JournalPeriod } from '../utils/assemblyJournal';
 import { defaultPeriod, periodBounds, type Period as EventPeriod } from '../utils/events';
@@ -74,10 +78,14 @@ import { printHtml } from '../utils/printHtml';
 //  Villes = `GET /study/localities` ∪ `GET /assembly/localities` (même règle de visibilité D-ABO-21) ;
 //  chaque onglet garde son propre code de droit (un accord de ministère peut n'en couvrir qu'un).
 //  La route et ses paramètres (`tab=subscription`, `annule=1`) sont composés par le serveur : inchangés.
+//
+//  D-FIN-08 (JP 06/11, lot « FIN ») : onglet Enseignement (`ENSEIGNEMENT_SUIVI`, droit de ville, axe
+//  GÉOGRAPHIQUE) : avancement nommé des membres de la ville, si le ministère a un enseignement. S'ajoute
+//  `GET /teaching/localities` à l'union des villes ; `tab=teaching`.
 // ---------------------------------------------------------------------------------------------
 
-type Tab = 'overview' | 'members' | 'stats' | 'journal' | 'events' | 'subscription';
-const TABS: Tab[] = ['overview', 'members', 'stats', 'journal', 'events', 'subscription'];
+type Tab = 'overview' | 'members' | 'stats' | 'journal' | 'events' | 'teaching' | 'subscription';
+const TABS: Tab[] = ['overview', 'members', 'stats', 'journal', 'events', 'teaching', 'subscription'];
 const STUDY_TABS: Tab[] = ['overview', 'members', 'stats'];
 const TAB_ICON: Record<Tab, string> = {
   overview: 'building',
@@ -85,6 +93,7 @@ const TAB_ICON: Record<Tab, string> = {
   stats: 'dashboard',
   journal: 'fileText',
   events: 'megaphone',
+  teaching: 'book',
   subscription: 'currency',
 };
 
@@ -100,6 +109,8 @@ interface CityEntry {
   assemblyCount: number;
   studyEntitled: boolean | null;
   journalEntitled: boolean | null;
+  /** D-FIN-08 (JP 06/11) : `ENSEIGNEMENT_SUIVI` ; null = ville absente de `/teaching/localities`. */
+  teachingEntitled: boolean | null;
   canSubscribe: boolean;
 }
 
@@ -203,6 +214,7 @@ export function CityStudyPage() {
   const { push } = useToast();
   const [params, setParams] = useSearchParams();
   const { hasStudy, isLoading: accessLoading } = useStudyAccess();
+  const { hasTeaching, isLoading: teachingLoading } = useTeachingAccess();
   const [moduleId, setModuleId] = useState('');
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
 
@@ -223,6 +235,12 @@ export function CityStudyPage() {
     enabled: hasAssembly,
     retry: false,
   });
+  const teachingCitiesQ = useQuery({
+    queryKey: ['assembly', 'teaching', 'localities'],
+    queryFn: listTeachingLocalities,
+    enabled: hasTeaching,
+    retry: false,
+  });
 
   const localities = useMemo<CityEntry[]>(() => {
     const byId = new Map<string, CityEntry>();
@@ -233,6 +251,7 @@ export function CityStudyPage() {
         assemblyCount: l.assemblyCount,
         studyEntitled: l.entitled,
         journalEntitled: null,
+        teachingEntitled: null,
         canSubscribe: l.canSubscribe,
       });
     }
@@ -244,11 +263,24 @@ export function CityStudyPage() {
         assemblyCount: prev?.assemblyCount ?? l.assemblyCount,
         studyEntitled: prev?.studyEntitled ?? null,
         journalEntitled: l.entitled,
+        teachingEntitled: null,
+        canSubscribe: (prev?.canSubscribe ?? false) || l.canSubscribe,
+      });
+    }
+    for (const l of hasTeaching ? teachingCitiesQ.data ?? [] : []) {
+      const prev = byId.get(l.localityId);
+      byId.set(l.localityId, {
+        localityId: l.localityId,
+        localityName: prev?.localityName ?? l.localityName,
+        assemblyCount: prev?.assemblyCount ?? l.assemblyCount,
+        studyEntitled: prev?.studyEntitled ?? null,
+        journalEntitled: prev?.journalEntitled ?? null,
+        teachingEntitled: l.entitled,
         canSubscribe: (prev?.canSubscribe ?? false) || l.canSubscribe,
       });
     }
     return Array.from(byId.values());
-  }, [hasStudy, hasAssembly, studyCitiesQ.data, journalCitiesQ.data]);
+  }, [hasStudy, hasAssembly, hasTeaching, studyCitiesQ.data, journalCitiesQ.data, teachingCitiesQ.data]);
 
   const paramId = params.get('localityId') ?? '';
   const rawTab = params.get('tab') as Tab | null;
@@ -258,7 +290,12 @@ export function CityStudyPage() {
   // première : `GET /entitlements?nodeId=` donne son nom et `canSubscribe`, la page la garde (onglets
   // Évènements et Abonnement seulement). Échec ou nœud qui n'est pas une ville → repli sur la première.
   const listsLoading =
-    accessLoading || modulesQ.isLoading || (hasStudy && studyCitiesQ.isLoading) || (hasAssembly && journalCitiesQ.isLoading);
+    accessLoading ||
+    teachingLoading ||
+    modulesQ.isLoading ||
+    (hasStudy && studyCitiesQ.isLoading) ||
+    (hasAssembly && journalCitiesQ.isLoading) ||
+    (hasTeaching && teachingCitiesQ.isLoading);
   const missingCity = !listsLoading && !!paramId && !localities.some((l) => l.localityId === paramId);
   const extraCityQ = useQuery({
     queryKey: ['entitlements', paramId],
@@ -274,6 +311,7 @@ export function CityStudyPage() {
           assemblyCount: 0,
           studyEntitled: null,
           journalEntitled: null,
+          teachingEntitled: null,
           canSubscribe: extraCityQ.data.canSubscribe,
         }
       : null;
@@ -289,9 +327,11 @@ export function CityStudyPage() {
       ? city?.studyEntitled != null
       : k === 'journal'
         ? city?.journalEntitled != null
-        : k === 'events'
-          ? hasEvents
-          : true,
+        : k === 'teaching'
+          ? city?.teachingEntitled != null
+          : k === 'events'
+            ? hasEvents
+            : true,
   );
   const tab: Tab = rawTab && available.includes(rawTab) ? rawTab : available[0] ?? 'subscription';
   const isStudyTab = STUDY_TABS.includes(tab);
@@ -346,15 +386,21 @@ export function CityStudyPage() {
   };
 
   const tabLocked = (k: Tab) =>
-    STUDY_TABS.includes(k) ? city?.studyEntitled === false : k === 'journal' ? city?.journalEntitled === false : false;
+    STUDY_TABS.includes(k)
+      ? city?.studyEntitled === false
+      : k === 'journal'
+        ? city?.journalEntitled === false
+        : k === 'teaching'
+          ? city?.teachingEntitled === false
+          : false;
 
   const body = (() => {
     if (listsLoading || extraCityLoading) {
       return <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>;
     }
-    if (!hasStudy && !hasAssembly) return <EmptyState title={t('cityStudy.unavailable')} text={t('cityStudy.unavailableHint')} />;
-    if (localities.length === 0 && (studyCitiesQ.isError || journalCitiesQ.isError)) {
-      return <p role="alert" style={{ color: 'var(--err)' }}>{errMsg(studyCitiesQ.error ?? journalCitiesQ.error, t('common.error'))}</p>;
+    if (!hasStudy && !hasAssembly && !hasTeaching) return <EmptyState title={t('cityStudy.unavailable')} text={t('cityStudy.unavailableHint')} />;
+    if (localities.length === 0 && (studyCitiesQ.isError || journalCitiesQ.isError || teachingCitiesQ.isError)) {
+      return <p role="alert" style={{ color: 'var(--err)' }}>{errMsg(studyCitiesQ.error ?? journalCitiesQ.error ?? teachingCitiesQ.error, t('common.error'))}</p>;
     }
     // RG-ABO-22 : un membre ou un dirigeant d'unité n'a aucune ville (et pas d'entrée de menu).
     if (!city) return <EmptyState title={t('cityStudy.noCity')} text={t('cityStudy.noCityHint')} />;
@@ -382,7 +428,7 @@ export function CityStudyPage() {
                   id: l.localityId,
                   label: l.localityName,
                   sub:
-                    l.studyEntitled || l.journalEntitled
+                    l.studyEntitled || l.journalEntitled || l.teachingEntitled
                       ? t('cityStudy.assemblyCount', { count: l.assemblyCount })
                       : t('cityStudy.lockedCity'),
                 }))}
@@ -435,6 +481,13 @@ export function CityStudyPage() {
           )
         ) : tab === 'events' ? (
           <CityEventsTab city={city} />
+        ) : tab === 'teaching' ? (
+          city.teachingEntitled ? (
+            <TeachingCityTab localityId={city.localityId} />
+          ) : (
+            // D-FIN-08 : ville sans `ENSEIGNEMENT_SUIVI` → verrou d'avance, sans appeler `/locality/{id}`.
+            <LockedFeature denied={lockOf(city, ENTITLEMENT_ENSEIGNEMENT_SUIVI)} />
+          )
         ) : !studyEntitled ? (
           // RG-ABO-22 : ville sans droit → verrou d'avance, sans attendre le 403.
           <LockedFeature denied={lockOf(city)} />
@@ -934,8 +987,8 @@ function SubscriptionTab({ city }: { city: CityEntry }) {
   if (q.isLoading) return <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>;
   if (q.isError || !q.data) return <p role="alert" style={{ color: 'var(--err)' }}>{errMsg(q.error, t('common.error'))}</p>;
   const ent = q.data;
-  // P-08 (JP 27/10) : la page couvre les trois codes de ville de l'offre Néhémie.
-  const suivi = [ENTITLEMENT_ETUDE_SUIVI, ENTITLEMENT_JOURNAL, ENTITLEMENT_EVENEMENTS_SUIVI].some((c) => ent.codes.includes(c));
+  // P-08 (JP 27/10) : la page couvre les codes de ville de l'offre Néhémie ; D-FIN-08 (JP 06/11) : quatre.
+  const suivi = [ENTITLEMENT_ETUDE_SUIVI, ENTITLEMENT_JOURNAL, ENTITLEMENT_EVENEMENTS_SUIVI, ENTITLEMENT_ENSEIGNEMENT_SUIVI].some((c) => ent.codes.includes(c));
   const subs = ent.subscriptions;
 
   return (

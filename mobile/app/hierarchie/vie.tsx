@@ -14,6 +14,7 @@ import {
 } from '@/components/AssemblyHierarchyStats';
 import EventHierarchyStatsBlock from '@/components/EventHierarchyStats';
 import StudyHierarchyStatsBlock from '@/components/StudyHierarchyStats';
+import TeachingHierarchyStatsBlock from '@/components/TeachingHierarchyStats';
 import { colors, fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -30,6 +31,7 @@ import {
 import { treeUnitIds } from '@/utils/assemblyHierarchyStats';
 import { fetchLeaderHierarchy, type LeaderHierarchyNode, type LeaderHierarchyResponse } from '@/services/leadersApi';
 import { ENTITLEMENT_HIERARCHIE_SUIVI, getPersonalEntitlements } from '@/services/entitlementsApi';
+import { listTeachingCourses, type TeachingCourseSummary } from '@/services/assemblyApi';
 
 /**
  * Page 3 de la Hiérarchie, « Vie de mon leadership » — D-HIE-01 / D-HIE-09 / D-HIE-10 (JP 28/10).
@@ -49,6 +51,9 @@ import { ENTITLEMENT_HIERARCHIE_SUIVI, getPersonalEntitlements } from '@/service
  * Évènements de la chaîne (D-HIE-09), Le Message de Bertoua (D-HIE-10), « Assemblées et dernier CR »
  * (ce qui a quitté l'arbre de la page 1) et « Journal PDF de ma hiérarchie ». Blocs masqués si le
  * module du ministère (`ASSEMBLY`, `EVENTS`, `STUDY`) n'est pas accessible (RG-06).
+ *
+ * <p>D-FIN-03 (JP 06/11) : bloc « Avancement dans les enseignements », membres nommés de la chaîne, assemblée dirigée comprise.
+ * Avancement CUMULÉ : le sélecteur de période ne s'y applique pas. Sans module à tester : un ministère le voit s'il a du contenu.
  */
 type Access = 'unknown' | 'open' | 'locked';
 
@@ -79,6 +84,7 @@ export default function HierarchyLifeScreen() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [period, setPeriod] = useState<Period>(() => currentPeriod('month'));
+  const [courses, setCourses] = useState<TeachingCourseSummary[]>([]);
   const { from, to } = periodRange(period);
 
   const checkAccess = useCallback(async () => {
@@ -108,6 +114,14 @@ export default function HierarchyLifeScreen() {
     void loadTree();
   }, [loadTree]);
 
+  // Une panne garde la liste déjà connue ; un compte sans cours n'a simplement pas de bloc.
+  const loadCourses = useCallback(async () => {
+    await listTeachingCourses().then(setCourses, () => undefined);
+  }, []);
+  useEffect(() => {
+    void loadCourses();
+  }, [loadCourses]);
+
   const lock = useCallback(() => setAccess('locked'), []);
   const open = access === 'open';
   const assemblyEnabled = open && isLeader && hasAssembly;
@@ -118,7 +132,7 @@ export default function HierarchyLifeScreen() {
     setRefreshing(true);
     setRefreshKey((k) => k + 1);
     try {
-      await Promise.all([checkAccess(), loadTree()]);
+      await Promise.all([checkAccess(), loadTree(), loadCourses()]);
     } finally {
       setRefreshing(false);
     }
@@ -157,11 +171,12 @@ export default function HierarchyLifeScreen() {
       ) : locked ? (
         // Verrou UNIQUE (D-HIE-01) — texte neutre inchangé (D-OFF-09), « En savoir plus » (D-OFF-11).
         <FeatureLock offer="caleb" body={t('hierarchy.lock.notActivated')} />
-      ) : !anyBlock ? (
+      ) : !anyBlock && courses.length === 0 ? (
         <Text style={styles.empty}>{th('noModule')}</Text>
       ) : (
         <>
           {/* Sélecteur de période UNIQUE pour toute la page (D-HIE-01). */}
+          {anyBlock && (
           <Card style={styles.periodCard}>
             <View style={styles.segments}>
               {PERIODICITIES.map((k) => (
@@ -197,6 +212,7 @@ export default function HierarchyLifeScreen() {
               </Pressable>
             </View>
           </Card>
+          )}
 
           {treeError && <Text style={styles.empty}>{t('hierarchy.loadError')}</Text>}
 
@@ -257,6 +273,11 @@ export default function HierarchyLifeScreen() {
               style={{ marginTop: 14 }}
               iconLeft={<Ionicons name="document-text-outline" size={16} color={colors.moss} />}
             />
+          )}
+
+          {/* D-FIN-03 (JP 06/11) : hors du sélecteur de période, l'avancement est cumulé. */}
+          {courses.length > 0 && (
+            <TeachingHierarchyStatsBlock courses={courses} refreshKey={refreshKey} onDenied={lock} />
           )}
         </>
       )}

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
 import Card from '@/components/Card';
@@ -10,6 +10,7 @@ import Button from '@/components/Button';
 import SelectField from '@/components/SelectField';
 import ErrorBanner from '@/components/ErrorBanner';
 import StudyCityLock from '@/components/StudyCityLock';
+import TeachingCityProgress from '@/components/TeachingCityProgress';
 import EventPeriodPicker from '@/components/EventPeriodPicker';
 import EventStatsDrill from '@/components/EventStatsDrill';
 import { colors, fonts, radii } from '@/theme';
@@ -23,6 +24,8 @@ import {
   listLocalityMeetings,
   listStudyLocalities,
   listStudyLocalityMembers,
+  listTeachingCourses,
+  listTeachingLocalities,
   studyErrorMessage,
   type AssemblyLocality,
   type StudyLocalityMember,
@@ -31,6 +34,7 @@ import {
   type StudyLocalityStats,
   type StudyMemberStatus,
   type StudyMissedLesson,
+  type TeachingCourseSummary,
   type UnitMeetingStats,
 } from '@/services/assemblyApi';
 import { cityJournalAccessDenied, studyCityAccessDenied } from '@/services/entitlementsApi';
@@ -55,8 +59,8 @@ import { goBack } from '@/utils/navigation';
 import { mergeCities, type CityEntry } from '@/utils/cityFollowUp';
 
 type StudyTab = 'overview' | 'members' | 'stats';
-type Tab = StudyTab | 'journal' | 'events';
-const TABS: Tab[] = ['overview', 'members', 'stats', 'journal', 'events'];
+type Tab = StudyTab | 'journal' | 'events' | 'teaching';
+const TABS: Tab[] = ['overview', 'members', 'stats', 'journal', 'events', 'teaching'];
 const STUDY_TABS: readonly Tab[] = ['overview', 'members', 'stats'];
 type Period = 'year' | 'last12' | 'lastYear';
 type Translate = (k: string, o?: any) => string;
@@ -81,7 +85,9 @@ type Translate = (k: string, o?: any) => string;
  *       {ville} », SANS AUCUN NOM de personne (`attendeeCount`) ;</li>
  *   <li>onglet Évènements (`EVENEMENTS_SUIVI`, D-OFF-12, JP 28/10) — module EVENTS accessible :
  *       `EventStatsDrill` ancré sur la ville ; le total de la ville est gratuit, la ventilation par
- *       assemblée arrive `children = null` + `childrenLocked` sans l'offre (verrou à sa place).</li>
+ *       assemblée arrive `children = null` + `childrenLocked` sans l'offre (verrou à sa place) ;</li>
+ *   <li>onglet Enseignement (`ENSEIGNEMENT_SUIVI`, D-FIN-08, JP 06/11) — ville présente dans `/teaching/localities`, ministère
+ *       qui a du contenu (`/courses` non vide) : avancement cumulé, membres nommés, axe GÉOGRAPHIE.</li>
  * </ul>
  * CHAQUE ONGLET DÉCIDE SELON SON PROPRE CODE (JP 28/10) : une ville `entitled = false` pour l'étude
  * (ou un 403 `ETUDE_SUIVI`) ne verrouille que les trois onglets Bertoua ; Journal et Évènements
@@ -108,6 +114,8 @@ export default function StudyCityScreen() {
   // (§9.1) — jamais Journal ni Évènements, qui ont leur propre code.
   const [denied, setDenied] = useState<{ canSubscribe: boolean } | null>(null);
   // Périodes du Journal et des Évènements, gardées au tirer-pour-rafraîchir et au changement de ville.
+  // D-FIN-02 (JP 06/11) : un ministère sans contenu n'a pas d'onglet Enseignement.
+  const [courses, setCourses] = useState<TeachingCourseSummary[]>([]);
   const [journalPeriod, setJournalPeriod] = useState<JournalPeriod>(() => currentPeriod('month'));
   const [eventPeriod, setEventPeriod] = useState<EventPeriod>(() => defaultPeriod('year'));
   // Incrémenté par le tirer-pour-rafraîchir : les onglets rechargent.
@@ -119,16 +127,27 @@ export default function StudyCityScreen() {
   }, [localityId]);
 
   const loadLocalities = useCallback(async () => {
-    // Les deux listes en parallèle ; l'échec de l'une n'empêche pas l'autre de s'afficher.
-    const [study, journal] = await Promise.allSettled([
+    // Les listes en parallèle ; l'échec de l'une n'empêche pas les autres de s'afficher.
+    const [study, journal, teaching] = await Promise.allSettled([
       listStudyLocalities(),
       hasAssembly ? listAssemblyLocalities() : Promise.resolve<AssemblyLocality[]>([]),
+      listTeachingLocalities(),
     ]);
-    const failed = study.status === 'rejected' ? study.reason : journal.status === 'rejected' ? journal.reason : null;
+    const failed =
+      study.status === 'rejected'
+        ? study.reason
+        : journal.status === 'rejected'
+          ? journal.reason
+          : teaching.status === 'rejected'
+            ? teaching.reason
+            : null;
     const list = mergeCities(
       study.status === 'fulfilled' ? study.value : [],
       journal.status === 'fulfilled' ? journal.value : [],
+      teaching.status === 'fulfilled' ? teaching.value : [],
     );
+    // Une panne garde les cours déjà connus : l'onglet ne disparaît pas sous les yeux.
+    void listTeachingCourses().then(setCourses, () => undefined);
     if (failed && list.length === 0) {
       setListError(studyErrorMessage(failed, t));
       setLocalities((cur) => cur ?? []);
@@ -187,7 +206,9 @@ export default function StudyCityScreen() {
       ? selected?.studyEntitled != null
       : k === 'journal'
         ? hasAssembly && selected?.journalEntitled != null
-        : hasEvents,
+        : k === 'teaching'
+          ? selected?.teachingEntitled != null && courses.length > 0
+          : hasEvents,
   );
   const shownTab: Tab | null = available.includes(tab) ? tab : (available[0] ?? null);
   const isStudyTab = shownTab != null && STUDY_TABS.includes(shownTab);
@@ -236,7 +257,7 @@ export default function StudyCityScreen() {
                   onPress={() => pickLocality(l.localityId)}
                   iconLeft={
                     // Cadenas seulement si la ville n'ouvre ni l'étude ni le journal (comme le web).
-                    l.studyEntitled || l.journalEntitled ? undefined : (
+                    l.studyEntitled || l.journalEntitled || l.teachingEntitled ? undefined : (
                       <Ionicons
                         name="lock-closed"
                         size={12}
@@ -248,6 +269,28 @@ export default function StudyCityScreen() {
                 />
               ))}
             </View>
+          )}
+
+          {/* Plan FIN §5.3 bis (JP 06/11) : la tuile Membres quitte l'accueil ; ici, l'annuaire s'ouvre
+              filtré sur la ville. Hors de tout verrou : il ne relève d'aucun code de droit tant que
+              JP n'a pas tranché son tarif (§10 du plan, recommandation : gratuit). */}
+          {selected && (
+            <Card
+              variant="paper2"
+              style={styles.membersLink}
+              onPress={() =>
+                router.push({
+                  pathname: '/membres',
+                  params: { cityId: selected.localityId, cityName: selected.localityName },
+                })
+              }
+            >
+              <Ionicons name="people-outline" size={18} color={colors.mossDeep} />
+              <Text style={styles.membersLinkText} numberOfLines={1}>
+                {t('study.city.membersLink', { city: selected.localityName })}
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+            </Card>
           )}
 
           {selected && available.length > 1 && (
@@ -295,6 +338,13 @@ export default function StudyCityScreen() {
                 city={selected}
                 period={journalPeriod}
                 onPeriod={setJournalPeriod}
+              />
+            ) : shownTab === 'teaching' ? (
+              <TeachingCityProgress
+                key={`${selected.localityId}:${reloadKey}`}
+                localityId={selected.localityId}
+                entitled={selected.teachingEntitled === true}
+                courses={courses}
               />
             ) : (
               <View style={styles.block}>
@@ -1028,7 +1078,9 @@ const styles = StyleSheet.create({
   emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2, lineHeight: 20, textAlign: 'center' },
   muted: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
-  // Jusqu'à cinq onglets (Bertoua ×3, Journal, Évènements) : rangée défilante, pas de colonnes égales.
+  membersLink: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  membersLinkText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: colors.ink },
+  // Jusqu'à six onglets (Bertoua ×3, Journal, Évènements, Enseignement) : rangée défilante, pas de colonnes égales.
   tabsScroll: { marginTop: 16, flexGrow: 0 },
   tabs: {
     flexDirection: 'row',

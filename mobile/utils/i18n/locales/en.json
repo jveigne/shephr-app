@@ -8,7 +8,7 @@
     "care": "Flock",
     "requests": "Requests",
     "treasury": "Treasury",
-    "assembly": "Assembly",
+    "assembly": "Assemblies",
     "events": "Events"
   },
   "common": {
@@ -194,38 +194,29 @@
       "declareHint": "Cash, cheque, transfer",
       "structure": "Create an assembly",
       "structureHint": "In the city of your choice",
-      "membres": "Members",
-      "membresHint": "Your scope's directory",
       "hierarchie": "Hierarchy",
       "hierarchieHint": "Your leadership",
       "cantique": "Hymn",
-      "cantiqueHint": "Chris The Victor",
-      "priere": "Prayer",
-      "priereHint": "Intentions & retreat",
-      "compteRendu": "Report",
-      "compteRenduHint": "Assembly notes",
+      "cantiqueHint": "Opens CMFIPraise",
       "treasury": "Treasury",
       "treasuryHint": "Donations in your scope",
-      "events": "Record an action",
-      "eventsHint": "Evangelism",
+      "events": "Record an event",
+      "eventsHint": "Evangelism, gathering",
+      "careHint": "Pastoral care",
       "documents": "Documents",
       "documentsHint": "Teachings to read and share",
       "cityLocked": "Nehemiah offer"
     },
-    "comingSoonBadge": "Coming soon",
-    "comingAck": "Got it",
-    "coming": {
-      "cantiqueTitle": "Hymn",
-      "cantiqueBody": "Find every hymn — lyrics and chords — in the CMFIPraise app. Download it and sing with us.\n\nBe blessed!\n— The CMFIPraise team",
-      "priereTitle": "Retreat & prayer",
-      "priereBody": "Coming soon — a space to share your prayer requests, follow the assembly's retreats and pray in fellowship with the members.",
-      "compteRenduTitle": "Assembly report",
-      "compteRenduBody": "Coming soon — take and share notes from services: teachings, testimonies, decisions of the local assembly.",
-      "cantiqueKicker": "Available on the CMFIPraise app",
-      "cantiqueDownload": "Download CMFIPraise"
-    },
+    "joinTitle": "Join my assembly",
+    "joinHint": "To read the teachings in full",
     "noneThisMonth": "No giving recorded this month.",
-    "summaryUnavailable": "Your totals could not be loaded."
+    "summaryUnavailable": "Your totals could not be loaded.",
+    "resume": {
+      "session": "Session in progress · {{unit}}",
+      "chapter": "Resume: chapter {{number}}",
+      "intro": "Resume: introduction",
+      "start": "Start"
+    }
   },
   "declare": {
     "title": "Record a gift",
@@ -716,6 +707,7 @@
     }
   },
   "membres": {
+    "cityFilter": "City: {{city}}",
     "title": "Members",
     "subtitle": "Your scope's directory (list scoped to your role).",
     "searchPlaceholder": "Name or email…",
@@ -925,6 +917,8 @@
       "pendingBadge_other": "{{count}} pending requests",
       "lifeCard": "Life of my leadership",
       "lifeCardHint": "Assembly life, events and the Bertoua Message across my chain.",
+      "membersCard": "Members",
+      "membersCardHint": "Your scope's directory",
       "lockedA11y": "Feature not activated"
     },
     "leadership": {
@@ -1206,6 +1200,7 @@
   },
   "assemblyLife": {
     "title": "Assembly life",
+    "careEntryHint": "Pastoral care of your assembly's members.",
     "unitPicker": "Assembly",
     "subtitle": "Meetings, reports and progress through the teaching modules.",
     "tabMeetings": "Meetings",
@@ -1278,7 +1273,8 @@
       "MEETING_ALREADY_EXISTS": "A report already exists for this assembly on this date.",
       "ATTENDEE_NOT_IN_ASSEMBLY": "Someone you checked no longer belongs to this assembly: reload the list.",
       "CHAPTERS_FROM_SEVERAL_MODULES": "The chapters read must all come from one module.",
-      "TEACHING_MODULE_INACTIVE": "This teaching module is disabled: choose another one."
+      "TEACHING_MODULE_INACTIVE": "This teaching module is disabled: choose another one.",
+      "TEACHING_MODULE_PERSONAL": "This module is a personal teaching: it cannot be recorded in a report."
     },
     "report": {
       "header": "Assembly report {{date}}",
@@ -1955,8 +1951,12 @@
       "entry": "City tracking",
       "title": "City tracking",
       "titleOf": "{{city}} tracking",
+      "membersLink": "{{city}} members",
       "cityCount_one": "{{count}} city",
       "cityCount_other": "{{count}} cities",
+      "cityCountOpen_one": "{{count}} open city",
+      "cityCountOpen_other": "{{count}} open cities",
+      "allCities": "All cities",
       "lockedCity": "Tracking not activated for this city",
       "noCity": "No city to track in your scope.",
       "noAssembly": "No assembly in this city.",
@@ -1973,7 +1973,8 @@
         "members": "Members",
         "stats": "Statistics",
         "journal": "City journal",
-        "events": "Events"
+        "events": "Events",
+        "teaching": "Teaching"
       },
       "journal": {
         "scope": "City of {{city}}",
@@ -2028,6 +2029,92 @@
     "nehemie": {
       "name": "Nehemiah offer",
       "subtitle": "Tracking my whole city"
+    }
+  },
+  "teaching": {
+    "tile": {
+      "title": "Teaching",
+      "partStudy": "Bertoua",
+      "partCourses": "finances",
+      "partDocuments": "documents"
+    },
+    "hub": {
+      "resume": "Resume at chapter {{number}}",
+      "resumeIntro": "Resume the introduction",
+      "start": "Start",
+      "finished": "Finished",
+      "empty": "No teaching available yet."
+    },
+    "course": {
+      "progress": "{{completed}} / {{total}}",
+      "part": "Part {{number}} — {{title}}",
+      "partShort": "Part {{number}}",
+      "introduction": "Introduction",
+      "comingSoon": "Content coming soon",
+      "minutes": "{{count}} min read",
+      "videoMinutes": "{{count}} min video",
+      "visibilityNote": "Your leaders can see your progress."
+    },
+    "chapter": {
+      "short": "Chapter {{number}}",
+      "eyebrow": "Chapter {{number}} · Part {{part}}",
+      "read": "Read · {{count}} min",
+      "watch": "Watch the video · {{count}} min",
+      "watchShort": "Watch the video"
+    },
+    "reader": {
+      "decrease": "A−",
+      "increase": "A+",
+      "decreaseLabel": "Smaller text",
+      "increaseLabel": "Larger text",
+      "offlineCopy": "Offline: latest version saved on this device."
+    },
+    "end": {
+      "done": "Chapter {{number}} finished",
+      "doneIntro": "Introduction finished",
+      "replay": "Watch again · {{count}} min",
+      "replayShort": "Watch again",
+      "complete": "I've finished",
+      "completed": "Marked as finished",
+      "undo": "Undo",
+      "next": "Next chapter",
+      "backToCourse": "Back to the course"
+    },
+    "leader": {
+      "summary_one": "{{count}} member of your assembly out of {{members}} has started",
+      "summary_other": "{{count}} members of your assembly out of {{members}} have started",
+      "seeProgress": "See my members' progress"
+    },
+    "hierarchy": {
+      "title": "Progress in the teachings",
+      "cumulative": "Cumulative progress: the period chosen above does not apply."
+    },
+    "city": {
+      "cumulative": "Cumulative progress of the city's members."
+    },
+    "follow": {
+      "chapters": "{{completed}} of {{total}} chapters finished",
+      "lastActivity": "Last activity: {{date}}",
+      "notStarted": "Not started yet",
+      "started_one": "{{count}} member out of {{members}} has started",
+      "started_other": "{{count}} members out of {{members}} have started",
+      "none": "No members to show yet.",
+      "noMember": "No members in this assembly.",
+      "noUnit": "No assembly"
+    },
+    "lock": {
+      "calebBody": "Your members' progress is not activated for your account."
+    },
+    "video": {
+      "unavailable": "The video is not available right now.",
+      "updateRequired": "Update the app to watch this chapter's video."
+    },
+    "errors": {
+      "joinRequired": "Join your assembly to read the teachings.",
+      "chapterUnavailable": "This chapter's content is coming soon.",
+      "notFound": "This teaching is no longer available.",
+      "offline": "Could not connect, and this content has not been opened on this device yet.",
+      "loadFailed": "Could not load the progress."
     }
   }
 }

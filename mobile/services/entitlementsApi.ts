@@ -128,6 +128,18 @@ export function cityEventsAccessDenied(err: unknown): ModuleAccessDeniedDetails 
   return denied && denied.moduleCode === ENTITLEMENT_EVENEMENTS_SUIVI ? denied : null;
 }
 
+/**
+ * D-FIN-08 (JP 06/11) — offre Néhémie : avancement des enseignements, membres nommés, dans une ville. Axe GÉOGRAPHIQUE,
+ * même 403 enrichi (`nodeId` = la ville). Contrat 06/11 §10.2 : helper identique à la copie web.
+ */
+export const ENTITLEMENT_ENSEIGNEMENT_SUIVI = 'ENSEIGNEMENT_SUIVI';
+
+/** Raccourci : 403 `MODULE_ACCESS_DENIED` sur `ENSEIGNEMENT_SUIVI` (suivi de l'enseignement d'une ville), sinon null. */
+export function cityTeachingAccessDenied(err: unknown): ModuleAccessDeniedDetails | null {
+  const denied = moduleAccessDenied(err);
+  return denied && denied.moduleCode === ENTITLEMENT_ENSEIGNEMENT_SUIVI ? denied : null;
+}
+
 // ---------------------------------------------------------------------------------------------
 // Suivi de ma hiérarchie — plan PERSONNEL `DIRIGEANT_HIERARCHIE` (lot « pro-plan », suite du 27/10,
 // D-ABO-31 et suivantes, JP 27/10). Axe de la CHAÎNE de leadership (supervisor_id récursif, écran

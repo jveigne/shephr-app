@@ -4,14 +4,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { canDeclareEvents, hasMemberGoals } from '@/services/authApi';
+import { hasMemberGoals } from '@/services/authApi';
 import { colors, fonts } from '@/theme';
 import NotificationGate from '@/components/NotificationGate';
 
+/**
+ * D-FIN-11 (JP 06/11, « ne faisons pas trop ») — barre du bas : Accueil, Objectifs, Assemblées, Profil.
+ * Les autres onglets sont masqués par `href: null`, sans retirer leur <Tabs.Screen> : leurs routes
+ * restent atteignables par `router.push` et par les notifications (`components/push/routagePush.ts`).
+ * Les conditions d'accès ont rejoint leur entrée : Déclarations = carte « Vos dons ce mois-ci » de
+ * l'accueil (`hasDonations`) ; Évènements = tuile de l'accueil (`hasEvents && canDeclareEvents`) ;
+ * Brebis (`isLeader && hasMemberCare`) = écran Assemblées, ou tuile de l'accueil si le ministère a coupé ASSEMBLY.
+ */
 export default function TabLayout() {
   const { t, applyAccountLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { isLeader, hasGoals, hasMemberCare, hasAssembly, hasDonations, hasEvents, me } = useAuth();
+  const { isLeader, hasGoals, hasAssembly, me } = useAuth();
 
   // Initialise la langue depuis le compte (me.language) tant que l'utilisateur
   // n'a pas choisi explicitement une langue dans l'app (cf. LanguageContext).
@@ -60,8 +68,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="donations"
         options={{
-          // RG-06 : visible seulement si un abonnement DONATIONS couvre l'utilisateur.
-          href: hasDonations ? '/(tabs)/donations' : null,
+          // RG-06 : accessible seulement si un abonnement DONATIONS couvre l'utilisateur (accueil).
+          // D-FIN-11 (JP 06/11) : hors de la barre du bas.
+          href: null,
           title: t('tabs.donations'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="list-outline" size={size} color={color} />
@@ -123,6 +132,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="events"
         options={{
+          // D-FIN-11 (JP 06/11) : hors de la barre du bas, la tuile de l'accueil garde la condition
+          // `hasEvents && canDeclareEvents(me)` décrite ci-dessous.
           // Évènements (plan 14/10, §6.3, lot E7) : agenda + statistiques, abonnement EVENTS
           // (D-EVT-05, RG-06). D-EVT-09 : le SECRETARIAT est le destinataire des statistiques.
           // D-EVT-13 (JP 14/10) : comptes rattachés (`goalUnitId`), tout rôle > MEMBRE (LEADER /
@@ -132,7 +143,7 @@ export default function TabLayout() {
           // dirigeants / LEADER / SECRETARIAT, vue de son assemblée pour le simple membre
           // (`!isLeader`, cf. `events/index.tsx`). Les boutons restent pilotés par le serveur
           // (`canPlan` / `canDeclare` de `/me/scopes`).
-          href: hasEvents && canDeclareEvents(me) ? '/(tabs)/events' : null,
+          href: null,
           title: t('tabs.events'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="megaphone-outline" size={size} color={color} />
@@ -143,7 +154,9 @@ export default function TabLayout() {
         name="care"
         options={{
           // Suivi pastoral (UC-MCR) : réservé aux dirigeants disposant du module Member Care.
-          href: isLeader && hasMemberCare ? '/(tabs)/care' : null,
+          // D-FIN-11 (JP 06/11) : hors de la barre du bas, entrée « Brebis » de l'écran Assemblées, ou tuile de
+          // l'accueil quand ASSEMBLY est coupé pour le ministère (D-OFF-01).
+          href: null,
           title: t('tabs.care'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="heart-outline" size={size} color={color} />

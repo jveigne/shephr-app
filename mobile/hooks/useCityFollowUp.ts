@@ -5,8 +5,8 @@ import { isAttachedAccount } from '@/services/authApi';
 import { loadCityFollowUp, type CityEntry } from '@/utils/cityFollowUp';
 
 /**
- * Entrée « Suivi de la ville » (JP 28/10) : villes de `/study/localities` ∪ `/assembly/localities`,
- * relues à chaque retour sur l'écran. La liste est vide pour un membre et pour un dirigeant d'unité
+ * Entrée « Suivi de la ville » (JP 28/10) : villes de `/study/localities` ∪ `/assembly/localities`
+ * ∪ `/teaching/localities` (D-FIN-08, JP 06/11), relues à chaque retour sur l'écran. La liste est vide pour un membre et pour un dirigeant d'unité
  * (D-ABO-21 / RG-ABO-22) : l'entrée ne leur apparaît jamais. Ne dépend PAS du catalogue d'étude.
  */
 export function useCityFollowUp(): { cities: CityEntry[]; reload: () => Promise<void> } {
