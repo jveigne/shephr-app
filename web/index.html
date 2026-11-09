@@ -10,6 +10,28 @@
       href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    <script>
+      // Thème (docs/theme-plan.md §4.3, R10) : appliqué AVANT l'affichage, pour éviter un flash.
+      // Lit le dernier choix et ses variables déjà calculées, écrits par `hooks/useTheme.tsx`
+      // (clé `shephr.theme.v1`) — ce script ne peut pas importer `theme/couleurs.ts`.
+      (function () {
+        try {
+          var v = JSON.parse(localStorage.getItem('shephr.theme.v1') || 'null');
+          if (!v) return;
+          var mode = v.mode;
+          if (mode === 'auto') {
+            mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'sombre' : 'clair';
+          }
+          if (mode !== 'clair' && mode !== 'sombre' && mode !== 'noirEtBlanc') return;
+          var racine = document.documentElement;
+          racine.setAttribute('data-theme', mode);
+          var vars = (v.vars && v.vars[mode]) || {};
+          for (var nom in vars) racine.style.setProperty(nom, vars[nom]);
+        } catch (e) {
+          /* stockage illisible : thème par défaut */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

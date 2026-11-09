@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './hooks/useAuth';
+import { ThemeProvider } from './hooks/useTheme';
 import { ToastProvider } from './components/Toast';
 import { ScrollToTop } from './components/ScrollToTop';
 import { AppShell } from './AppShell';
@@ -71,6 +72,9 @@ export function App() {
         {/* Bug JP 29/10 (« Offres » ouverte en bas) : haut de page à chaque changement de chemin. */}
         <ScrollToTop />
         <AuthProvider>
+          {/* Thème (docs/theme-plan.md §4.3) — sous AuthProvider : à l'étape W4, il lira les
+              préférences du compte connecté. */}
+          <ThemeProvider>
           <ToastProvider>
             <Routes>
               {/* Landing publique : présentation + fonctionnalités + tarification. */}
@@ -218,6 +222,7 @@ export function App() {
               </Route>
             </Routes>
           </ToastProvider>
+          </ThemeProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
