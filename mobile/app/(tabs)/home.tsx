@@ -20,6 +20,7 @@ import { useCityFollowUp } from '@/hooks/useCityFollowUp';
 import { cityOpen } from '@/utils/cityFollowUp';
 
 import { creerStyles } from '@/theme/creerStyles';
+import { tonDonnee } from '@/theme/tonsDonnees';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { PaletteTheme } from '@/theme/palettes';
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
@@ -328,7 +329,7 @@ export default function HomeScreen() {
           label={t('dashboard.tiles.hierarchie')}
           hint={t('dashboard.tiles.hierarchieHint')}
           icon="git-network-outline"
-          tone="#7A8B6F"
+          tone={tonDonnee('#7A8B6F')}
           onPress={() => router.push('/hierarchie')}
         />
         )}
@@ -344,7 +345,7 @@ export default function HomeScreen() {
           label={t('dashboard.tiles.priere')}
           hint={t('dashboard.tiles.priereHint')}
           icon="hand-left-outline"
-          tone="#7A8B6F"
+          tone={tonDonnee('#7A8B6F')}
           comingSoon
           onPress={() => setComing('priere')}
         />
@@ -435,7 +436,7 @@ function Tile({
 
 const comingMeta = (c: PaletteTheme): Record<ComingKind, { titleKey: string; bodyKey: string; icon: IoniconName; tone: string }> => ({
   cantique: { titleKey: 'dashboard.coming.cantiqueTitle', bodyKey: 'dashboard.coming.cantiqueBody', icon: 'musical-notes-outline', tone: c.secondaire },
-  priere: { titleKey: 'dashboard.coming.priereTitle', bodyKey: 'dashboard.coming.priereBody', icon: 'hand-left-outline', tone: '#7A8B6F' },
+  priere: { titleKey: 'dashboard.coming.priereTitle', bodyKey: 'dashboard.coming.priereBody', icon: 'hand-left-outline', tone: tonDonnee('#7A8B6F') },
   'compte-rendu': { titleKey: 'dashboard.coming.compteRenduTitle', bodyKey: 'dashboard.coming.compteRenduBody', icon: 'reader-outline', tone: c.secondaireProfond },
 });
 

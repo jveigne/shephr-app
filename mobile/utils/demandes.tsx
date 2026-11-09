@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   ScrollView,
   RefreshControl,
@@ -16,7 +15,7 @@ import ScreenShell from '@/components/ScreenShell';
 import Card from '@/components/Card';
 import Label from '@/components/Label';
 import Button from '@/components/Button';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { canManageUsers, isAssemblyLeaderOnly, isSecretariat } from '@/services/authApi';
@@ -31,6 +30,10 @@ import {
   rejectJoinRequest, reviewableJoinRequests, type JoinRequestResponse,
 } from '@/services/joinRequestsApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { tonDonnee } from '@/theme/tonsDonnees';
+import type { PaletteTheme } from '@/theme/palettes';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Demandes de structure (RDG 22/07, restreintes par le RDG 25/07) : une demande ne porte plus
  * que sur une ASSEMBLÉE rattachée à une ville EXISTANTE — nation, région et ville se créent
@@ -38,6 +41,8 @@ import {
  * (web / back-office) ; les chaînes déposées avant le 25/07 restent affichées et décidables.
  */
 export default function DemandesScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const { me } = useAuth();
@@ -141,7 +146,7 @@ export default function DemandesScreen() {
     return (
       <ScreenShell>
         <View style={{ alignItems: 'center', paddingTop: 80 }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       </ScreenShell>
     );
@@ -150,7 +155,7 @@ export default function DemandesScreen() {
   return (
     <ScreenShell
       paddingTop={insets.top ? 4 : 16}
-      refreshControl={<RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={styles.headerRow}>
         <Text style={styles.title}>{t('requests.title')}</Text>
@@ -162,7 +167,7 @@ export default function DemandesScreen() {
           label={t('requests.newRequest')}
           onPress={() => setDepositOpen(true)}
           style={{ marginTop: 14 }}
-          iconLeft={<Ionicons name="add" size={18} color={colors.white} />}
+          iconLeft={<Ionicons name="add" size={18} color={c.surAccent} />}
         />
       )}
 
@@ -229,16 +234,21 @@ export default function DemandesScreen() {
   );
 }
 
-const STATUS_META: Record<StructureRequestStatus, { color: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  PENDING: { color: '#A9812C', icon: 'time-outline' },
-  APPROVED: { color: colors.moss, icon: 'checkmark-circle-outline' },
-  REJECTED: { color: colors.clay, icon: 'close-circle-outline' },
-  CANCELLED: { color: colors.ink3, icon: 'remove-circle-outline' },
-};
+/** Statuts d'une demande (D8) : ton ocre « en attente » passé par le thème, alerte rouge partout. */
+const statusMeta = (c: PaletteTheme): Record<StructureRequestStatus, { color: string; icon: keyof typeof Ionicons.glyphMap }> => ({
+  PENDING: { color: tonDonnee(OCRE_EN_ATTENTE), icon: 'time-outline' },
+  APPROVED: { color: c.accent, icon: 'checkmark-circle-outline' },
+  REJECTED: { color: c.alerte, icon: 'close-circle-outline' },
+  CANCELLED: { color: c.texte3, icon: 'remove-circle-outline' },
+});
+
+const OCRE_EN_ATTENTE = '#A9812C';
 
 function RequestRow({ request, onCancel }: { request: StructureRequestResponse; onCancel: () => void }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
-  const meta = STATUS_META[request.status];
+  const meta = statusMeta(c)[request.status];
   const parentLabel = request.parentName
     ? request.parentPending
       ? t('requests.parentPendingInline', { name: request.parentName })
@@ -279,8 +289,10 @@ function JoinRequestRow({
   request: JoinRequestResponse;
   onCancel: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
-  const meta = STATUS_META[request.status];
+  const meta = statusMeta(c)[request.status];
   const name = request.assemblyName ?? request.newAssemblyName ?? '—';
   return (
     <Card style={styles.itemCard}>
@@ -314,11 +326,13 @@ function JoinPendingCard({
   onApprove: () => void;
   onReject: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <Card style={styles.joinPendingCard}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <Ionicons name="person-add-outline" size={20} color={colors.moss} />
+        <Ionicons name="person-add-outline" size={20} color={c.accent} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={styles.itemName} numberOfLines={1}>{request.userName}</Text>
           <Text style={styles.itemMeta} numberOfLines={2}>
@@ -350,6 +364,8 @@ function RejectJoinModal({
   onClose: () => void;
   onSubmit: (reason: string) => Promise<void>;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
@@ -382,7 +398,7 @@ function RejectJoinModal({
             onChangeText={setReason}
             style={styles.input}
             placeholder={t('requests.rejectReasonPlaceholder')}
-            placeholderTextColor={colors.ink3}
+            placeholderTextColor={c.texte3}
             multiline
           />
           <Button
@@ -415,6 +431,8 @@ function DepositModal({
   onClose: () => void;
   onSubmitted: () => Promise<void>;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [city, setCity] = useState<RequestNodeOption | null>(null);
   const [name, setName] = useState('');
@@ -481,7 +499,7 @@ function DepositModal({
               onChangeText={setName}
               style={styles.input}
               placeholder={t('requests.namePlaceholder')}
-              placeholderTextColor={colors.ink3}
+              placeholderTextColor={c.texte3}
             />
 
             <Text style={styles.existing}>{t('requests.cityMissingHint')}</Text>
@@ -506,6 +524,8 @@ function SearchExisting({
   pick: RequestNodeOption | null;
   onChange: (p: RequestNodeOption | null) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [query, setQuery] = useState('');
 
@@ -534,13 +554,13 @@ function SearchExisting({
     <>
       <Label style={{ marginTop: 14, marginBottom: 6 }}>{label}</Label>
       <View style={styles.searchBox}>
-        <Ionicons name="search" size={15} color={colors.ink3} />
+        <Ionicons name="search" size={15} color={c.texte3} />
         <TextInput
           value={query}
           onChangeText={setQuery}
           style={styles.searchInput}
           placeholder={t('requests.searchPlaceholder')}
-          placeholderTextColor={colors.ink3}
+          placeholderTextColor={c.texte3}
           autoCapitalize="none"
         />
       </View>
@@ -558,57 +578,57 @@ function SearchExisting({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2 },
-  title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4 },
-  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4, lineHeight: 18 },
+  title: { fontFamily: fonts.serif, fontSize: 28, color: c.texte, letterSpacing: -0.4 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 4, lineHeight: 18 },
   sectionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
     marginTop: 26,
   },
-  sectionTitle: { fontFamily: fonts.serif, fontSize: 20, color: colors.ink },
+  sectionTitle: { fontFamily: fonts.serif, fontSize: 20, color: c.texte },
   groupLabel: {
     fontFamily: fonts.sans,
     fontSize: 11.5,
     fontWeight: '700',
-    color: colors.ink3,
+    color: c.texte3,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
     marginTop: 14,
   },
   joinPendingCard: { paddingHorizontal: 14, paddingVertical: 12 },
   itemCard: { paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  itemName: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: colors.ink },
-  itemMeta: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginTop: 2, lineHeight: 17 },
-  empty: { fontFamily: fonts.serif, fontStyle: 'italic', color: colors.ink3, textAlign: 'center', paddingVertical: 20 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(22,41,31,0.45)', justifyContent: 'center', padding: 20 },
+  itemName: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: c.texte },
+  itemMeta: { fontFamily: fonts.sans, fontSize: 12, color: c.texte3, marginTop: 2, lineHeight: 17 },
+  empty: { fontFamily: fonts.serif, fontStyle: 'italic', color: c.texte3, textAlign: 'center', paddingVertical: 20 },
+  backdrop: { flex: 1, backgroundColor: c.voile, justifyContent: 'center', padding: 20 },
   modalCard: { paddingHorizontal: 20, paddingVertical: 20, maxHeight: '88%' },
-  modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink },
+  modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: c.texte },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 99, backgroundColor: 'rgba(42,38,32,0.06)' },
-  chipActive: { backgroundColor: colors.moss },
-  chipCreate: { backgroundColor: 'rgba(169,129,44,0.14)' },
-  chipText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink2 },
-  chipTextActive: { color: colors.white },
-  chipTextCreate: { color: '#A9812C' },
-  existing: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginTop: 10, lineHeight: 17 },
+  chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 99, backgroundColor: transparence(c.texte, 0.06) },
+  chipActive: { backgroundColor: c.accent },
+  chipCreate: { backgroundColor: transparence(tonDonnee(OCRE_EN_ATTENTE), 0.14) },
+  chipText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.texte2 },
+  chipTextActive: { color: c.surAccent },
+  chipTextCreate: { color: tonDonnee(OCRE_EN_ATTENTE) },
+  existing: { fontFamily: fonts.sans, fontSize: 12, color: c.texte3, marginTop: 10, lineHeight: 17 },
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderWidth: 1, borderColor: 'rgba(42,38,32,0.15)', borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 8, backgroundColor: colors.paper,
+    borderWidth: 1, borderColor: transparence(c.texte, 0.15), borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 8, backgroundColor: c.surface,
   },
-  searchInput: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: colors.ink, padding: 0 },
+  searchInput: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: c.texte, padding: 0 },
   optionRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingVertical: 9, paddingHorizontal: 10,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(42,38,32,0.06)',
+    borderBottomWidth: 1, borderBottomColor: transparence(c.texte, 0.06),
   },
-  optionText: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink2 },
+  optionText: { fontFamily: fonts.sans, fontSize: 14, color: c.texte2 },
   input: {
-    fontFamily: fonts.sans, fontSize: 15, color: colors.ink,
-    borderWidth: 1, borderColor: 'rgba(42,38,32,0.15)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+    fontFamily: fonts.sans, fontSize: 15, color: c.texte,
+    borderWidth: 1, borderColor: transparence(c.texte, 0.15), borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
   },
-  cancelLink: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink3, fontWeight: '600' },
-});
+  cancelLink: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte3, fontWeight: '600' },
+}));

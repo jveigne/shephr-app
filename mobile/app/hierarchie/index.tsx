@@ -35,6 +35,7 @@ import {
 import { ENTITLEMENT_HIERARCHIE_SUIVI, getPersonalEntitlements } from '@/services/entitlementsApi';
 
 import { creerStyles } from '@/theme/creerStyles';
+import { tonDonnee } from '@/theme/tonsDonnees';
 import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Hiérarchie des dirigeants (Lot H3 — 21/07) : arbre du leadership renvoyé par le backend,
@@ -618,9 +619,9 @@ const useStyles = creerStyles((c) => ({
     backgroundColor: c.accent, overflow: 'hidden',
   },
   needsLeaderPill: {
-    fontFamily: fonts.mono, fontSize: 9, color: '#A9812C', letterSpacing: 0.6,
+    fontFamily: fonts.mono, fontSize: 9, color: tonDonnee('#A9812C'), letterSpacing: 0.6,
     textTransform: 'uppercase', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99,
-    backgroundColor: 'rgba(169,129,44,0.14)', overflow: 'hidden',
+    backgroundColor: transparence(tonDonnee('#A9812C'), 0.14), overflow: 'hidden',
   },
   goalPill: {
     fontFamily: fonts.mono, fontSize: 9, letterSpacing: 0.6,

@@ -14,6 +14,7 @@
  */
 import React, { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
+import { declarerThemeDonnees } from '@/theme/tonsDonnees';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   ACCENT_DEFAUT,
@@ -118,6 +119,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const modeResolu: ModeResolu = mode === 'auto' ? (systeme === 'dark' ? 'sombre' : 'clair') : mode;
   const couleurs = useMemo(() => construirePalette(modeResolu, accent), [modeResolu, accent]);
+  // Tons des catégories et statuts (D8) : déclarés avant le rendu des enfants.
+  declarerThemeDonnees(modeResolu, couleurs);
 
   const valeur = useMemo<ThemeContextType>(
     () => ({
