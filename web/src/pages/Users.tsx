@@ -399,7 +399,7 @@ export function UsersPage() {
             <span
               style={{
                 fontSize: 13, fontWeight: 600, color: 'var(--accent)',
-                background: 'var(--paper-2, #faf7f0)', border: '1px solid var(--filet)',
+                background: 'var(--surface-haute)', border: '1px solid var(--filet)',
                 borderRadius: 999, padding: '3px 10px',
               }}
               title={t('users.submittedCounterHint')}
@@ -776,7 +776,7 @@ function ExtraUnitsField({
                 onClick={() => onChange(extras.filter((x) => x !== id))}
                 style={{
                   border: '1px solid var(--filet)', borderRadius: 999, padding: '4px 10px',
-                  background: 'var(--paper-2, #faf7f0)', color: 'var(--texte-corps)', cursor: 'pointer',
+                  background: 'var(--surface-haute)', color: 'var(--texte-corps)', cursor: 'pointer',
                   fontSize: 13, fontFamily: 'var(--font-sans)',
                 }}
               >

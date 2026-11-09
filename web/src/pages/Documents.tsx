@@ -132,7 +132,7 @@ export function DocumentsPage() {
   // --- Corps -----------------------------------------------------------------------------------
   let body: ReactNode;
   if (loading) {
-    body = <p style={{ color: 'var(--ink-500)', fontSize: 14 }}>{t('common.loading')}</p>;
+    body = <p style={{ color: 'var(--texte-3)', fontSize: 14 }}>{t('common.loading')}</p>;
   } else if (!active) {
     body = (
       <EmptyCard icon="lock" text={hasModule ? t('documents.space.joinRequired') : t('documents.space.moduleUnavailable')}>
@@ -156,7 +156,7 @@ export function DocumentsPage() {
   } else if (q) {
     const results = searchQ.data ?? [];
     body = searchQ.isLoading ? (
-      <p style={{ color: 'var(--ink-500)', fontSize: 14 }}>{t('common.loading')}</p>
+      <p style={{ color: 'var(--texte-3)', fontSize: 14 }}>{t('common.loading')}</p>
     ) : searchErrorView ? (
       <EmptyCard icon="warning" text={searchErrorView.message}>
         <Button onClick={() => void searchQ.refetch()}>{t('documents.reader.retry')}</Button>
@@ -224,7 +224,7 @@ export function DocumentsPage() {
           <p style={{ marginTop: 20, fontSize: 13 }}>
             <Link
               to={path.length > 1 ? `${basePath}?folder=${encodeURIComponent(path[path.length - 2].id)}` : basePath}
-              style={{ color: 'var(--green-700)', fontWeight: 600, textDecoration: 'none' }}
+              style={{ color: 'var(--accent-moyen)', fontWeight: 600, textDecoration: 'none' }}
             >
               ‹ {path.length > 1 ? path[path.length - 2].label : t('documents.space.title')}
             </Link>
@@ -256,7 +256,7 @@ function CrumbLink({ children, onClick }: { children: ReactNode; onClick: () => 
 function Block({ label, children }: { label: string; children: ReactNode }) {
   return (
     <section style={{ marginBottom: 24 }}>
-      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ink-500)', marginBottom: 8 }}>
+      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--texte-3)', marginBottom: 8 }}>
         {label}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{children}</div>
@@ -278,8 +278,8 @@ function EmptyCard({ icon, text, children }: { icon: string; text: string; child
 
 const rowStyle = {
   display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left',
-  padding: '12px 14px', borderRadius: 'var(--radius)', background: 'var(--ivory-card)',
-  border: '1px solid var(--line)', cursor: 'pointer', font: 'inherit', color: 'inherit',
+  padding: '12px 14px', borderRadius: 'var(--radius)', background: 'var(--surface)',
+  border: '1px solid var(--filet)', cursor: 'pointer', font: 'inherit', color: 'inherit',
 } as const;
 
 const rowIconStyle = {
@@ -290,16 +290,16 @@ function FolderRow({ folder, onOpen }: { folder: FolderNode; onOpen: () => void 
   const { t } = useTranslation();
   return (
     <button type="button" onClick={onOpen} style={rowStyle}>
-      <span style={{ ...rowIconStyle, background: 'var(--earth-50)', color: 'var(--earth-700)' }}>
+      <span style={{ ...rowIconStyle, background: 'var(--secondaire-teinte-douce)', color: 'var(--secondaire-profond)' }}>
         <Icon name="folder" size={19} />
       </span>
       <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: 'block', fontFamily: 'var(--font-serif)', fontSize: 16, color: 'var(--green-900)' }}>{folder.label}</span>
-        <span style={{ display: 'block', fontSize: 12.5, color: 'var(--ink-500)', marginTop: 2 }}>
+        <span style={{ display: 'block', fontFamily: 'var(--font-serif)', fontSize: 16, color: 'var(--accent-profond)' }}>{folder.label}</span>
+        <span style={{ display: 'block', fontSize: 12.5, color: 'var(--texte-3)', marginTop: 2 }}>
           {t('documents.space.documentCount', { count: folder.count })}
         </span>
       </span>
-      <Icon name="chevRight" size={16} style={{ color: 'var(--ink-400)' }} />
+      <Icon name="chevRight" size={16} style={{ color: 'var(--texte-4)' }} />
     </button>
   );
 }
@@ -321,22 +321,22 @@ function DocumentRow({
   const meta = [doc.author, scope, t('documents.space.pages', { count: doc.pageCount })].filter(Boolean).join(' · ');
   return (
     <button type="button" onClick={onOpen} style={rowStyle}>
-      <span style={{ ...rowIconStyle, background: 'var(--green-50)', color: 'var(--green-700)' }}>
+      <span style={{ ...rowIconStyle, background: 'var(--accent-teinte-douce)', color: 'var(--accent-moyen)' }}>
         <Icon name="fileText" size={19} />
       </span>
       <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: 'block', fontFamily: 'var(--font-serif)', fontSize: 16, color: 'var(--green-900)' }}>{doc.title}</span>
+        <span style={{ display: 'block', fontFamily: 'var(--font-serif)', fontSize: 16, color: 'var(--accent-profond)' }}>{doc.title}</span>
         {path && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12.5, color: 'var(--ink-700)', marginTop: 2 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12.5, color: 'var(--texte-2)', marginTop: 2 }}>
             <Icon name="folder" size={12} />
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{path}</span>
           </span>
         )}
-        <span style={{ display: 'block', fontSize: 12.5, color: 'var(--ink-500)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ display: 'block', fontSize: 12.5, color: 'var(--texte-3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {meta}
         </span>
       </span>
-      <Icon name="chevRight" size={16} style={{ color: 'var(--ink-400)' }} />
+      <Icon name="chevRight" size={16} style={{ color: 'var(--texte-4)' }} />
     </button>
   );
 }

@@ -435,7 +435,7 @@ function StudySessionView({ sessionId, userId }: { sessionId: string; userId: st
     </>
   );
 
-  if (accessLoading) return shell(t('assembly.study.title'), <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>);
+  if (accessLoading) return shell(t('assembly.study.title'), <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>);
   if (!hasStudy) {
     return shell(
       t('assembly.study.title'),
@@ -451,11 +451,11 @@ function StudySessionView({ sessionId, userId }: { sessionId: string; userId: st
     );
   }
   if (!detail) {
-    if (sessionQ.isLoading) return shell(t('assembly.study.title'), <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>);
+    if (sessionQ.isLoading) return shell(t('assembly.study.title'), <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>);
     return shell(
       t('assembly.study.title'),
       <div className="card" style={{ padding: 18, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-        <span style={{ color: 'var(--err)', flex: 1 }}>{studyErrMsg(sessionQ.error, t)}</span>
+        <span style={{ color: 'var(--alerte)', flex: 1 }}>{studyErrMsg(sessionQ.error, t)}</span>
         <Button onClick={() => refetch()}>{t('common.retryLater')}</Button>
       </div>,
     );
@@ -471,10 +471,10 @@ function StudySessionView({ sessionId, userId }: { sessionId: string; userId: st
   const awaitingReview = !!myCopy?.submittedAt && writtenLeft > 0;
 
   const counter = (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '14px 0 10px', fontSize: 13, fontWeight: 600, color: 'var(--green-700)' }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '14px 0 10px', fontSize: 13, fontWeight: 600, color: 'var(--accent-moyen)' }}>
       <span>{t('assembly.study.session.answered', { done: answeredCount, total: answerable.length })}</span>
       {saveState !== 'idle' && (
-        <span style={{ color: saveState === 'failed' ? 'var(--err)' : undefined }}>· {t(`assembly.study.session.save.${saveState}`)}</span>
+        <span style={{ color: saveState === 'failed' ? 'var(--alerte)' : undefined }}>· {t(`assembly.study.session.save.${saveState}`)}</span>
       )}
     </div>
   );
@@ -484,16 +484,16 @@ function StudySessionView({ sessionId, userId }: { sessionId: string; userId: st
       <TopBar title={lessonTitle} crumbs={[t('common.brand'), back, t('assembly.study.lesson', { n: s.lessonNumber })]} />
       <div className="content narrow" style={{ maxWidth: 860 }}>
         {/* En-tête : unité, leçon, portion, plage, statut, assemblée. */}
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, letterSpacing: 1.2, textTransform: 'uppercase', color: 'var(--earth-700)' }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, letterSpacing: 1.2, textTransform: 'uppercase', color: 'var(--secondaire-profond)' }}>
           {[s.moduleCode, s.moduleName].filter(Boolean).join(' · ')}
         </div>
         {detail.lessonPortion && (
-          <div style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-700)', marginTop: 4 }}>
+          <div style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--texte-2)', marginTop: 4 }}>
             {detail.lessonPortion}
           </div>
         )}
         {range && (
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, color: 'var(--green-700)', marginTop: 6 }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, color: 'var(--accent-moyen)', marginTop: 6 }}>
             {t('assembly.study.session.rangeLine', { n: s.lessonNumber, first: range.first, last: range.last })}
           </div>
         )}
@@ -501,7 +501,7 @@ function StudySessionView({ sessionId, userId }: { sessionId: string; userId: st
           <Badge tone={s.status === 'TERMINEE' ? 'ok' : s.status === 'CORRECTION' ? 'earth' : 'warn'} dot>
             {t(`assembly.study.status.${s.status}`)}
           </Badge>
-          <span style={{ fontSize: 13, color: 'var(--ink-500)' }}>{s.unitName}</span>
+          <span style={{ fontSize: 13, color: 'var(--texte-3)' }}>{s.unitName}</span>
         </div>
 
         {offline && (
@@ -531,7 +531,7 @@ function StudySessionView({ sessionId, userId }: { sessionId: string; userId: st
             {detail.participant ? (
               counter
             ) : (
-              <p style={{ margin: '14px 0 10px', fontSize: 13, color: 'var(--ink-500)' }}>{t('assembly.study.session.readerHint')}</p>
+              <p style={{ margin: '14px 0 10px', fontSize: 13, color: 'var(--texte-3)' }}>{t('assembly.study.session.readerHint')}</p>
             )}
             <StudyQuestionList
               questions={questions}
@@ -549,7 +549,7 @@ function StudySessionView({ sessionId, userId }: { sessionId: string; userId: st
             {detail.participant && hasAnything ? (
               <>
                 <Notice icon="copy" tone="green">{t('assembly.study.session.correctionHint')}</Notice>
-                <div style={{ margin: '14px 0 10px', fontSize: 13, fontWeight: 600, color: 'var(--green-700)' }}>
+                <div style={{ margin: '14px 0 10px', fontSize: 13, fontWeight: 600, color: 'var(--accent-moyen)' }}>
                   {writtenLeft > 0
                     ? t('assembly.study.session.writtenLeft', { count: writtenLeft })
                     : t('assembly.study.session.writtenDone')}
@@ -606,23 +606,23 @@ function StudySessionView({ sessionId, userId }: { sessionId: string; userId: st
           <>
             {detail.participant && (
               <div className="card" style={{ marginTop: 16, padding: 20 }}>
-                <div style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--green-600)' }}>
+                <div style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--accent-doux)' }}>
                   {t('assembly.study.session.myScore')}
                 </div>
                 {myCopy ? (
-                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: 40, color: 'var(--green-700)', marginTop: 4 }}>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: 40, color: 'var(--accent-moyen)', marginTop: 4 }}>
                     {t('assembly.study.scoreOf', { score: fmtStudyPoints(myCopy.score, lang), max: fmtStudyPoints(myCopy.maxScore, lang) })}
                   </div>
                 ) : (
-                  <div style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 16, color: 'var(--ink-500)', marginTop: 8 }}>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 16, color: 'var(--texte-3)', marginTop: 8 }}>
                     {t('assembly.study.session.noCopy')}
                   </div>
                 )}
                 {awaitingReview && (
-                  <div style={{ fontSize: 13, color: 'var(--ink-500)', marginTop: 4 }}>{t('assembly.study.session.awaitingReview')}</div>
+                  <div style={{ fontSize: 13, color: 'var(--texte-3)', marginTop: 4 }}>{t('assembly.study.session.awaitingReview')}</div>
                 )}
                 <div style={{ marginTop: 12 }}>
-                  <Link to={base} style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--green-700)' }}>
+                  <Link to={base} style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--accent-moyen)' }}>
                     {t('assembly.study.session.myProgress')} →
                   </Link>
                 </div>
@@ -630,7 +630,7 @@ function StudySessionView({ sessionId, userId }: { sessionId: string; userId: st
             )}
             {/* D-ETU-36 (JP 23/10) : actions des membres, montrées à tous une fois la séance terminée. */}
             {(detail.memberActions ?? []).some((a) => a && a.trim()) && (
-              <div className="card" style={{ marginTop: 16, padding: 16, background: 'var(--green-50)' }}>
+              <div className="card" style={{ marginTop: 16, padding: 16, background: 'var(--accent-teinte-douce)' }}>
                 <StudyMemberActions actions={detail.memberActions} />
               </div>
             )}
@@ -696,9 +696,9 @@ interface ConfirmState {
 }
 
 const NOTICE_TONE: Record<'green' | 'warn' | 'err', { bg: string; fg: string }> = {
-  green: { bg: 'var(--green-50)', fg: 'var(--green-700)' },
-  warn: { bg: 'var(--warn-bg)', fg: 'var(--warn)' },
-  err: { bg: 'var(--err-bg)', fg: 'var(--err)' },
+  green: { bg: 'var(--accent-teinte-douce)', fg: 'var(--accent-moyen)' },
+  warn: { bg: 'var(--avertissement-teinte)', fg: 'var(--avertissement)' },
+  err: { bg: 'var(--alerte-teinte)', fg: 'var(--alerte)' },
 };
 
 function Notice({
@@ -725,7 +725,7 @@ function Notice({
         background: c.bg,
         fontSize: 13.5,
         lineHeight: 1.45,
-        color: 'var(--ink-800)',
+        color: 'var(--texte-corps)',
       }}
     >
       <span style={{ color: c.fg, display: 'inline-flex', marginTop: 1 }}>
@@ -770,7 +770,7 @@ function LeaderPanel({
   // RG-ETU-08 / D-ETU-09 (JP 21/10) : en CORRECTION, l'écran du dirigeant (répondant lui aussi,
   // D-ETU-06) est entre les mains d'un voisin — pas de lien vers les copies des autres.
   const resultsAllowed = s.status !== 'CORRECTION';
-  const stat = { fontFamily: 'var(--font-serif)', fontSize: 18, color: 'var(--ink-900)', marginTop: 8 } as const;
+  const stat = { fontFamily: 'var(--font-serif)', fontSize: 18, color: 'var(--texte)', marginTop: 8 } as const;
   const linkBtn = {
     display: 'inline-flex',
     alignItems: 'center',
@@ -778,15 +778,15 @@ function LeaderPanel({
     background: 'none',
     border: 'none',
     padding: 0,
-    color: 'var(--green-700)',
+    color: 'var(--accent-moyen)',
     fontWeight: 600,
     fontSize: 13.5,
     cursor: 'pointer',
   } as const;
   return (
-    <div className="card" style={{ marginTop: 16, padding: '14px 18px', borderLeft: '3px solid var(--green-700)' }}>
+    <div className="card" style={{ marginTop: 16, padding: '14px 18px', borderLeft: '3px solid var(--accent-moyen)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-        <span style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--green-600)' }}>
+        <span style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: 0.8, textTransform: 'uppercase', color: 'var(--accent-doux)' }}>
           {t('assembly.study.leader.panel')}
         </span>
         {resultsAllowed && (
@@ -820,7 +820,7 @@ function LeaderPanel({
           <div style={stat}>
             {left > 0 ? t('assembly.study.leader.reviewsLeft', { count: left }) : t('assembly.study.leader.reviewsDone')}
           </div>
-          <div style={{ fontSize: 12.5, color: 'var(--ink-500)', marginTop: 2 }}>
+          <div style={{ fontSize: 12.5, color: 'var(--texte-3)', marginTop: 2 }}>
             {t('assembly.study.leader.respondents', { count: s.copyCount })}
           </div>
           <div style={{ marginTop: 12 }}>
@@ -835,7 +835,7 @@ function LeaderPanel({
 
       {/* D-ETU-35 (JP 23/10) : « Notes du dirigeant », repliées par défaut (texte brut, D-ETU-37). */}
       {hasNotes && (
-        <div style={{ marginTop: 12, borderTop: '1px solid var(--line-soft)', paddingTop: 8 }}>
+        <div style={{ marginTop: 12, borderTop: '1px solid var(--filet-doux)', paddingTop: 8 }}>
           <button type="button" style={linkBtn} aria-expanded={notesOpen} onClick={() => setNotesOpen((v) => !v)}>
             <Icon name="chevDown" size={14} style={{ transform: notesOpen ? 'rotate(180deg)' : undefined }} />
             {t('assembly.study.leader.notes')}
@@ -904,26 +904,26 @@ function StopAfterModal({
                 padding: '8px 12px',
                 textAlign: 'left',
                 borderRadius: 'var(--radius-sm)',
-                border: `1px solid ${selected ? 'var(--green-700)' : 'var(--line)'}`,
-                background: selected ? 'var(--green-50)' : 'var(--ivory)',
+                border: `1px solid ${selected ? 'var(--accent-moyen)' : 'var(--filet)'}`,
+                background: selected ? 'var(--accent-teinte-douce)' : 'var(--surface-basse)',
                 cursor: 'pointer',
-                color: 'var(--ink-900)',
+                color: 'var(--texte)',
               }}
             >
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, color: 'var(--earth-700)', minWidth: 42 }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, color: 'var(--secondaire-profond)', minWidth: 42 }}>
                 {t('assembly.study.answer.number', { number: q.number })}
               </span>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--ink-700)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--texte-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {q.statement}
               </span>
               {q.number === last && (
-                <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--green-700)' }}>{t('assembly.study.leader.stopLast')}</span>
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--accent-moyen)' }}>{t('assembly.study.leader.stopLast')}</span>
               )}
             </button>
           );
         })}
       </div>
-      <p style={{ margin: '14px 0 0', fontSize: 12.5, color: 'var(--ink-500)', lineHeight: 1.5 }}>
+      <p style={{ margin: '14px 0 0', fontSize: 12.5, color: 'var(--texte-3)', lineHeight: 1.5 }}>
         {cut ? t('assembly.study.leader.stopAfterCut', { number: pick }) : t('assembly.study.leader.toCorrectionConfirm')}
       </p>
     </Modal>

@@ -162,10 +162,10 @@ export function RequestsPage() {
   // Assemblée visée d'une demande de rattachement (existante ou « à créer »).
   const joinAssemblyCell = (r: JoinRequestResponse) => (
     <div>
-      <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>
+      <span style={{ fontWeight: 500, color: 'var(--texte)' }}>
         {r.assemblyName ?? r.newAssemblyName ?? '—'}
       </span>
-      {r.cityName && <span style={{ color: 'var(--ink-500)' }}> · {r.cityName}</span>}
+      {r.cityName && <span style={{ color: 'var(--texte-3)' }}> · {r.cityName}</span>}
       {r.structureRequestId != null && (
         <span style={{ marginLeft: 6 }}>
           <Badge tone="gray">{t('join.newAssemblyBadge')}</Badge>
@@ -184,7 +184,7 @@ export function RequestsPage() {
   );
 
   const joinPendingCols: Column<JoinRequestResponse>[] = [
-    { label: t('requests.colDate'), render: (r) => <span style={{ color: 'var(--ink-500)' }}>{fmtDate(r.createdAt)}</span> },
+    { label: t('requests.colDate'), render: (r) => <span style={{ color: 'var(--texte-3)' }}>{fmtDate(r.createdAt)}</span> },
     { label: t('join.colUser'), render: (r) => <span style={{ fontWeight: 500 }}>{r.userName}</span> },
     { label: t('join.colAssembly'), render: joinAssemblyCell },
     { label: t('join.colRole'), render: joinRoleCell },
@@ -206,7 +206,7 @@ export function RequestsPage() {
   ];
 
   const joinMineCols: Column<JoinRequestResponse>[] = [
-    { label: t('requests.colDate'), render: (r) => <span style={{ color: 'var(--ink-500)' }}>{fmtDate(r.createdAt)}</span> },
+    { label: t('requests.colDate'), render: (r) => <span style={{ color: 'var(--texte-3)' }}>{fmtDate(r.createdAt)}</span> },
     { label: t('join.colAssembly'), render: joinAssemblyCell },
     { label: t('join.colRole'), render: joinRoleCell },
     {
@@ -215,10 +215,10 @@ export function RequestsPage() {
         <div>
           <Badge tone={STATUS_TONE[r.status]}>{t(`join.status.${r.status}`)}</Badge>
           {r.status === 'REJECTED' && r.decisionReason && (
-            <div style={{ marginTop: 4, fontSize: 12, color: 'var(--ink-500)' }}>{r.decisionReason}</div>
+            <div style={{ marginTop: 4, fontSize: 12, color: 'var(--texte-3)' }}>{r.decisionReason}</div>
           )}
           {r.decidedByName && r.status !== 'PENDING' && r.status !== 'CANCELLED' && (
-            <div style={{ marginTop: 4, fontSize: 12, color: 'var(--ink-500)' }}>
+            <div style={{ marginTop: 4, fontSize: 12, color: 'var(--texte-3)' }}>
               {t('join.decidedBy', { name: r.decidedByName })}
             </div>
           )}
@@ -237,7 +237,7 @@ export function RequestsPage() {
   ];
 
   const parentCell = (r: StructureRequestResponse) => (
-    <span style={{ color: 'var(--ink-600)' }}>
+    <span style={{ color: 'var(--texte-corps)' }}>
       {r.parentName ?? '—'}
       {r.parentPending && (
         <span style={{ marginLeft: 6 }}>
@@ -248,9 +248,9 @@ export function RequestsPage() {
   );
 
   const baseCols: Column<StructureRequestResponse>[] = [
-    { label: t('requests.colDate'), render: (r) => <span style={{ color: 'var(--ink-500)' }}>{fmtDate(r.createdAt)}</span> },
+    { label: t('requests.colDate'), render: (r) => <span style={{ color: 'var(--texte-3)' }}>{fmtDate(r.createdAt)}</span> },
     { label: t('requests.colType'), render: (r) => <Badge tone="earth">{typeLabel(r.type)}</Badge> },
-    { label: t('requests.colName'), render: (r) => <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{r.name}</span> },
+    { label: t('requests.colName'), render: (r) => <span style={{ fontWeight: 500, color: 'var(--texte)' }}>{r.name}</span> },
     { label: t('requests.colParent'), render: parentCell },
   ];
 
@@ -283,10 +283,10 @@ export function RequestsPage() {
         <div>
           <Badge tone={STATUS_TONE[r.status]}>{t(`requests.status.${r.status}`)}</Badge>
           {r.status === 'REJECTED' && r.decisionReason && (
-            <div style={{ marginTop: 4, fontSize: 12, color: 'var(--ink-500)' }}>{r.decisionReason}</div>
+            <div style={{ marginTop: 4, fontSize: 12, color: 'var(--texte-3)' }}>{r.decisionReason}</div>
           )}
           {r.status === 'APPROVED' && r.createdEntityId && (
-            <div style={{ marginTop: 4, fontSize: 12, color: 'var(--ink-500)' }}>{t('requests.entityCreated')}</div>
+            <div style={{ marginTop: 4, fontSize: 12, color: 'var(--texte-3)' }}>{t('requests.entityCreated')}</div>
           )}
         </div>
       ),
@@ -520,7 +520,7 @@ function DepositModal({
         />
 
         {existingHint && (
-          <div style={{ fontSize: 12.5, color: 'var(--ink-500)', lineHeight: 1.6 }}>
+          <div style={{ fontSize: 12.5, color: 'var(--texte-3)', lineHeight: 1.6 }}>
             {existingHint.list.length > 0
               ? t('requests.existingList', { parent: existingHint.parent, list: existingHint.list.join(', ') })
               : t('requests.existingNone', { parent: existingHint.parent })}
@@ -531,7 +531,7 @@ function DepositModal({
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('requests.namePlaceholder')} />
         </Field>
 
-        <div style={{ fontSize: 12.5, color: 'var(--ink-500)', lineHeight: 1.6 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--texte-3)', lineHeight: 1.6 }}>
           {t('requests.cityMissingHint')}
         </div>
       </div>
@@ -579,19 +579,19 @@ function SearchExisting({
       />
       <div style={{
         marginTop: 6, maxHeight: 180, overflowY: 'auto',
-        border: '1px solid var(--line,#eee)', borderRadius: 8,
+        border: '1px solid var(--filet,#eee)', borderRadius: 8,
       }}>
         {matches.slice(0, 30).map((o) => (
           <div
             key={o.id}
             onClick={() => onChange(o)}
-            style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--line,#f2f2f2)' }}
+            style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--filet,#f2f2f2)' }}
           >
             {o.name}
           </div>
         ))}
         {matches.length === 0 && (
-          <div style={{ padding: '8px 12px', color: 'var(--ink-500)' }}>{t('requests.noOption')}</div>
+          <div style={{ padding: '8px 12px', color: 'var(--texte-3)' }}>{t('requests.noOption')}</div>
         )}
       </div>
     </Field>

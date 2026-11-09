@@ -1,4 +1,13 @@
-import { SEUIL_TEXTE, ajusterPourContraste, contraste, melanger, normaliserHex, texteSur } from './couleurs';
+import {
+  SEUIL_GRAPHIQUE,
+  SEUIL_TEXTE,
+  ajusterPourContraste,
+  contraste,
+  estHexValide,
+  melanger,
+  normaliserHex,
+  texteSur,
+} from './couleurs';
 
 /**
  * Thème de l'Espace ministère (`docs/theme-plan.md` §4.3) : modes, accent, variables CSS.
@@ -96,4 +105,22 @@ export function calculerAccent(mode: 'clair' | 'sombre', base: string): Record<s
     '--accent-teinte-douce': melanger(a, f.surface, 0.86),
     '--sur-accent': texteSur(a),
   };
+}
+
+/** Gris des données en Noir et blanc (même valeur que le mobile, `theme/tonsDonnees.ts`). */
+export const GRIS_DONNEE = '#666666';
+
+/**
+ * Couleur de DONNÉE (statut, catégorie) selon le mode affiché (D8) : inchangée en Clair,
+ * éclaircie jusqu'à 3:1 contre les cartes en Sombre, grise en Noir et blanc. Une valeur qui
+ * n'est pas un hex est rendue telle quelle.
+ */
+export function tonDonnee(ton: string, mode: ModeResolu): string {
+  if (!estHexValide(ton)) return ton;
+  if (mode === 'noirEtBlanc') return GRIS_DONNEE;
+  if (mode === 'sombre') {
+    const f = FONDS.sombre;
+    return ajusterPourContraste(ton, [f.surface, f.page], SEUIL_GRAPHIQUE);
+  }
+  return normaliserHex(ton);
 }

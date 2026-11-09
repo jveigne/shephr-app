@@ -169,9 +169,9 @@ function TabButton({ active, onClick, icon, children }: { active: boolean; onCli
 
 function Kpi({ label, value, warn = false }: { label: string; value: ReactNode; warn?: boolean }) {
   return (
-    <div className="card" style={{ padding: 14, ...(warn ? { background: 'var(--earth-50)' } : null) }}>
-      <div style={{ fontSize: 12, color: 'var(--ink-500)', marginBottom: 6 }}>{label}</div>
-      <div style={{ fontFamily: 'var(--font-serif)', fontSize: 24, color: warn ? 'var(--earth-700)' : 'var(--green-700)' }}>{value}</div>
+    <div className="card" style={{ padding: 14, ...(warn ? { background: 'var(--secondaire-teinte-douce)' } : null) }}>
+      <div style={{ fontSize: 12, color: 'var(--texte-3)', marginBottom: 6 }}>{label}</div>
+      <div style={{ fontFamily: 'var(--font-serif)', fontSize: 24, color: warn ? 'var(--secondaire-profond)' : 'var(--accent-moyen)' }}>{value}</div>
     </div>
   );
 }
@@ -191,10 +191,10 @@ function QueryBody<T>({
   deny?: (err: unknown) => ModuleAccessDeniedDetails | null;
   children: (data: T) => ReactNode;
 }) {
-  if (q.isLoading) return <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>;
+  if (q.isLoading) return <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>;
   const denied = deny(q.error);
   if (denied) return <LockedFeature denied={denied} />;
-  if (q.error || q.data === undefined) return <p role="alert" style={{ color: 'var(--err)' }}>{errMsg(q.error, t('common.error'))}</p>;
+  if (q.error || q.data === undefined) return <p role="alert" style={{ color: 'var(--alerte)' }}>{errMsg(q.error, t('common.error'))}</p>;
   return <>{children(q.data)}</>;
 }
 
@@ -350,11 +350,11 @@ export function CityStudyPage() {
 
   const body = (() => {
     if (listsLoading || extraCityLoading) {
-      return <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>;
+      return <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>;
     }
     if (!hasStudy && !hasAssembly) return <EmptyState title={t('cityStudy.unavailable')} text={t('cityStudy.unavailableHint')} />;
     if (localities.length === 0 && (studyCitiesQ.isError || journalCitiesQ.isError)) {
-      return <p role="alert" style={{ color: 'var(--err)' }}>{errMsg(studyCitiesQ.error ?? journalCitiesQ.error, t('common.error'))}</p>;
+      return <p role="alert" style={{ color: 'var(--alerte)' }}>{errMsg(studyCitiesQ.error ?? journalCitiesQ.error, t('common.error'))}</p>;
     }
     // RG-ABO-22 : un membre ou un dirigeant d'unité n'a aucune ville (et pas d'entrée de menu).
     if (!city) return <EmptyState title={t('cityStudy.noCity')} text={t('cityStudy.noCityHint')} />;
@@ -362,7 +362,7 @@ export function CityStudyPage() {
     return (
       <>
         {canceled && (
-          <div role="status" style={{ background: 'var(--warn-bg)', color: 'var(--warn)', borderRadius: 'var(--radius)', padding: '12px 16px', fontSize: 14, marginBottom: 18, display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div role="status" style={{ background: 'var(--avertissement-teinte)', color: 'var(--avertissement)', borderRadius: 'var(--radius)', padding: '12px 16px', fontSize: 14, marginBottom: 18, display: 'flex', gap: 10, alignItems: 'center' }}>
             <Icon name="info" size={16} />
             <span style={{ flex: 1 }}>{t('cityStudy.canceledBanner')}</span>
             <button type="button" className="icon-btn" aria-label={t('common.close')} onClick={() => setParam({ annule: null })}>
@@ -565,7 +565,7 @@ function CityJournalTab({ city }: { city: CityEntry }) {
               render: (r) => {
                 const alert = isAlert(r, today);
                 return (
-                  <span style={{ color: alert ? 'var(--earth-700)' : 'var(--ink-500)', whiteSpace: 'nowrap' }}>
+                  <span style={{ color: alert ? 'var(--secondaire-profond)' : 'var(--texte-3)', whiteSpace: 'nowrap' }}>
                     {alert && <Icon name="warning" size={12} />}{' '}
                     {r.lastMeetingDate ? formatMeetingDate(r.lastMeetingDate) : t('assembly.journal.neverReported')}
                   </span>
@@ -586,7 +586,7 @@ function CityJournalTab({ city }: { city: CityEntry }) {
               <div style={{ overflowX: 'auto' }}>
                 <Table columns={cols} rows={agg.rows.map((r) => ({ ...r, id: r.unitId }))} zebra />
               </div>
-              <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--ink-400)' }}>
+              <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--texte-4)' }}>
                 {t('assembly.journal.distinctHint')} {t('cityStudy.journal.noNames')}
               </p>
             </>
@@ -615,7 +615,7 @@ function CityEventsTab({ city }: { city: CityEntry }) {
       {bounds ? (
         <EventStatsDrill from={bounds.from} to={bounds.to} root={{ level: 'LOCALITY', id: city.localityId }} lock="full" />
       ) : (
-        <p style={{ color: 'var(--ink-500)' }}>{t('events.period.chooseValid')}</p>
+        <p style={{ color: 'var(--texte-3)' }}>{t('events.period.chooseValid')}</p>
       )}
     </>
   );
@@ -670,7 +670,7 @@ function ModuleGrid({ module: m, overview, lang }: { module: StudyLocalityModule
       render: (r) => (
         <div>
           <div style={{ fontWeight: 500 }}>{r.name}</div>
-          <div style={{ color: 'var(--ink-500)', fontSize: 12 }}>{t('cityStudy.overview.members', { count: r.members })}</div>
+          <div style={{ color: 'var(--texte-3)', fontSize: 12 }}>{t('cityStudy.overview.members', { count: r.members })}</div>
         </div>
       ),
     },
@@ -693,22 +693,22 @@ function ModuleGrid({ module: m, overview, lang }: { module: StudyLocalityModule
         cellStyle: { textAlign: 'center' },
         render: (r) =>
           r.numbers.has(l.number) ? (
-            <span style={{ color: 'var(--ok)', fontWeight: 700 }} aria-label={t('cityStudy.overview.done')}>✓</span>
+            <span style={{ color: 'var(--succes)', fontWeight: 700 }} aria-label={t('cityStudy.overview.done')}>✓</span>
           ) : (
-            <span style={{ color: 'var(--ink-300, var(--ink-400))' }} aria-label={t('cityStudy.overview.notDone')}>–</span>
+            <span style={{ color: 'var(--texte-5, var(--texte-4))' }} aria-label={t('cityStudy.overview.notDone')}>–</span>
           ),
       }),
     ),
     {
       label: t('cityStudy.overview.lastSession'),
-      render: (r) => <span style={{ color: 'var(--ink-500)', fontSize: 12.5, whiteSpace: 'nowrap' }}>{fmtDay(r.last, lang)}</span>,
+      render: (r) => <span style={{ color: 'var(--texte-3)', fontSize: 12.5, whiteSpace: 'nowrap' }}>{fmtDay(r.last, lang)}</span>,
     },
   ];
   return (
     <div className="card" style={{ padding: 16 }}>
-      <h3 style={{ margin: '0 0 10px', fontSize: 15.5, fontFamily: 'var(--font-serif)', color: 'var(--green-800)', fontWeight: 500 }}>
+      <h3 style={{ margin: '0 0 10px', fontSize: 15.5, fontFamily: 'var(--font-serif)', color: 'var(--accent)', fontWeight: 500 }}>
         {[m.code, m.name].filter(Boolean).join(' · ')}{' '}
-        <span style={{ fontSize: 12.5, color: 'var(--ink-500)', fontFamily: 'var(--font-sans)' }}>
+        <span style={{ fontSize: 12.5, color: 'var(--texte-3)', fontFamily: 'var(--font-sans)' }}>
           {t('cityStudy.overview.lessons', { count: m.totalLessons })}
         </span>
       </h3>
@@ -759,9 +759,9 @@ function MembersTab({
       label: t('cityStudy.members.missed'),
       render: (m) =>
         m.missedLessons.length === 0 ? (
-          <span style={{ color: 'var(--ink-400)' }}>—</span>
+          <span style={{ color: 'var(--texte-4)' }}>—</span>
         ) : (
-          <span title={m.missedLessons.map((l) => `${l.number}. ${l.title}`).join('\n')} style={{ color: 'var(--warn)' }}>
+          <span title={m.missedLessons.map((l) => `${l.number}. ${l.title}`).join('\n')} style={{ color: 'var(--avertissement)' }}>
             {m.missedLessons.map((l) => l.number).join(', ')}
           </span>
         ),
@@ -770,14 +770,14 @@ function MembersTab({
       label: t('cityStudy.members.score'),
       render: (m) =>
         m.score == null ? (
-          <span style={{ color: 'var(--ink-400)' }}>—</span>
+          <span style={{ color: 'var(--texte-4)' }}>—</span>
         ) : (
           <span>{t('assembly.study.scoreOf', { score: fmtNum(m.score, lang), max: fmtNum(m.maxScore, lang) })}</span>
         ),
     },
     {
       label: t('cityStudy.members.lastDone'),
-      render: (m) => <span style={{ color: 'var(--ink-500)', fontSize: 12.5, whiteSpace: 'nowrap' }}>{fmtDay(m.lastDoneAt, lang)}</span>,
+      render: (m) => <span style={{ color: 'var(--texte-3)', fontSize: 12.5, whiteSpace: 'nowrap' }}>{fmtDay(m.lastDoneAt, lang)}</span>,
     },
   ];
 
@@ -812,7 +812,7 @@ function MembersTab({
       <QueryBody q={q} t={t}>
         {(rows: StudyLocalityMember[]) => (
           <>
-            <p style={{ color: 'var(--ink-500)', fontSize: 13, margin: '0 0 10px' }}>{t('cityStudy.members.count', { count: rows.length })}</p>
+            <p style={{ color: 'var(--texte-3)', fontSize: 13, margin: '0 0 10px' }}>{t('cityStudy.members.count', { count: rows.length })}</p>
             <div style={{ overflowX: 'auto' }}>
               <Table
                 columns={cols}
@@ -857,7 +857,7 @@ function StatsTab({ localityId, moduleId }: { localityId: string; moduleId: stri
         </Field>
       </div>
       {!valid ? (
-        <p style={{ color: 'var(--err)' }}>
+        <p style={{ color: 'var(--alerte)' }}>
           {tooLong ? t('cityStudy.stats.periodTooLong', { days: MAX_STATS_DAYS }) : t('cityStudy.stats.invalidPeriod')}
         </p>
       ) : (
@@ -874,7 +874,7 @@ function StatsTab({ localityId, moduleId }: { localityId: string; moduleId: stri
                   <Kpi label={t('cityStudy.stats.copies')} value={s.copyCount} />
                   <Kpi label={t('cityStudy.stats.average')} value={s.averagePercent == null ? '—' : `${fmtNum(s.averagePercent, lang)} %`} />
                 </div>
-                <h3 style={{ margin: '0 0 10px', fontSize: 15.5, fontFamily: 'var(--font-serif)', color: 'var(--green-800)', fontWeight: 500 }}>
+                <h3 style={{ margin: '0 0 10px', fontSize: 15.5, fontFamily: 'var(--font-serif)', color: 'var(--accent)', fontWeight: 500 }}>
                   {t('cityStudy.stats.monthly')}
                 </h3>
                 <div style={{ overflowX: 'auto' }}>
@@ -931,8 +931,8 @@ function SubscriptionTab({ city }: { city: CityEntry }) {
     queryFn: () => getEntitlements(city.localityId),
     retry: false,
   });
-  if (q.isLoading) return <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>;
-  if (q.isError || !q.data) return <p role="alert" style={{ color: 'var(--err)' }}>{errMsg(q.error, t('common.error'))}</p>;
+  if (q.isLoading) return <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>;
+  if (q.isError || !q.data) return <p role="alert" style={{ color: 'var(--alerte)' }}>{errMsg(q.error, t('common.error'))}</p>;
   const ent = q.data;
   // P-08 (JP 27/10) : la page couvre les trois codes de ville de l'offre Néhémie.
   const suivi = [ENTITLEMENT_ETUDE_SUIVI, ENTITLEMENT_JOURNAL, ENTITLEMENT_EVENEMENTS_SUIVI].some((c) => ent.codes.includes(c));
@@ -941,8 +941,8 @@ function SubscriptionTab({ city }: { city: CityEntry }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div className="card" style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <Icon name={suivi ? 'check' : 'lock'} size={16} style={{ color: suivi ? 'var(--ok)' : 'var(--earth-700)' }} />
-        <span style={{ fontWeight: 600, color: 'var(--green-800)' }}>
+        <Icon name={suivi ? 'check' : 'lock'} size={16} style={{ color: suivi ? 'var(--succes)' : 'var(--secondaire-profond)' }} />
+        <span style={{ fontWeight: 600, color: 'var(--accent)' }}>
           {suivi ? t('cityStudy.subscription.open', { city: ent.localityName ?? city.localityName }) : t('cityStudy.subscription.closed', { city: ent.localityName ?? city.localityName })}
         </span>
       </div>
@@ -951,7 +951,7 @@ function SubscriptionTab({ city }: { city: CityEntry }) {
       ))}
       {subs.length === 0 && suivi && (
         // D-ABO-28 : droit ouvert sans plan de ville = « accord de ministère » (couverture sub_subscription).
-        <p style={{ color: 'var(--ink-600)', fontSize: 14, margin: 0 }}>{t('cityStudy.subscription.agreement')}</p>
+        <p style={{ color: 'var(--texte-corps)', fontSize: 14, margin: 0 }}>{t('cityStudy.subscription.agreement')}</p>
       )}
       {/* Sans droit et sans caisse / impayé en cours (déjà présentés par leur carte) : la caisse. */}
       {!suivi && !subs.some((s) => s.status === 'PENDING' || s.status === 'PAST_DUE') && (
@@ -994,34 +994,34 @@ function SubscriptionCard({
     <div className="card" style={{ padding: 16, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
       <div style={{ flex: '1 1 260px', display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <strong style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 17, color: 'var(--green-800)' }}>
+          <strong style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 17, color: 'var(--accent)' }}>
             {t(`cityStudy.subscription.plans.${sub.planCode}`, { defaultValue: sub.planCode })}
           </strong>
           <Badge tone={SUB_TONE[sub.status]} dot>{t(`billing.status.${sub.status}`)}</Badge>
           <Badge tone={sub.entitled ? 'ok' : 'gray'}>{t(sub.entitled ? 'cityStudy.subscription.entitled' : 'cityStudy.subscription.notEntitled')}</Badge>
         </div>
-        <div style={{ color: 'var(--ink-500)', fontSize: 12.5, fontFamily: 'var(--font-mono)' }}>{sub.reference}</div>
-        <div style={{ color: 'var(--ink-600)', fontSize: 13 }}>
+        <div style={{ color: 'var(--texte-3)', fontSize: 12.5, fontFamily: 'var(--font-mono)' }}>{sub.reference}</div>
+        <div style={{ color: 'var(--texte-corps)', fontSize: 13 }}>
           {t(`cityStudy.subscription.period.${sub.billingPeriod}`)} · {t(`cityStudy.subscription.source.${sub.source}`)}
         </div>
-        {due && <div style={{ color: sub.cancelAtPeriodEnd ? 'var(--warn)' : 'var(--ink-600)', fontSize: 13 }}>{due}</div>}
+        {due && <div style={{ color: sub.cancelAtPeriodEnd ? 'var(--avertissement)' : 'var(--texte-corps)', fontSize: 13 }}>{due}</div>}
         {sub.status === 'PAST_DUE' && sub.graceEndsAt && (
-          <div style={{ color: 'var(--err)', fontSize: 13 }}>{t('cityStudy.subscription.grace', { date: fmtDay(sub.graceEndsAt, lang) })}</div>
+          <div style={{ color: 'var(--alerte)', fontSize: 13 }}>{t('cityStudy.subscription.grace', { date: fmtDay(sub.graceEndsAt, lang) })}</div>
         )}
-        {sub.status === 'PENDING' && <div style={{ color: 'var(--ink-500)', fontSize: 13 }}>{t('cityStudy.lock.pending')}</div>}
+        {sub.status === 'PENDING' && <div style={{ color: 'var(--texte-3)', fontSize: 13 }}>{t('cityStudy.lock.pending')}</div>}
         {!sub.paidByMe && (
-          <div style={{ color: 'var(--ink-600)', fontSize: 13 }}>
+          <div style={{ color: 'var(--texte-corps)', fontSize: 13 }}>
             {sub.source === 'MANUEL'
               ? t('cityStudy.subscription.manual')
               : t('cityStudy.lock.managedBy', { name: sub.payerName ?? t('cityStudy.subscription.unknownPayer') })}
           </div>
         )}
         {sub.paidByMe && !manual && (
-          <Link to="/abonnements/mes-abonnements" style={{ color: 'var(--green-700)', fontWeight: 600, fontSize: 13 }}>
+          <Link to="/abonnements/mes-abonnements" style={{ color: 'var(--accent-moyen)', fontWeight: 600, fontSize: 13 }}>
             {t('cityStudy.subscription.invoices')}
           </Link>
         )}
-        {portalM.isError && <div style={{ color: 'var(--err)', fontSize: 13 }}>{billingErrMsg(portalM.error, t)}</div>}
+        {portalM.isError && <div style={{ color: 'var(--alerte)', fontSize: 13 }}>{billingErrMsg(portalM.error, t)}</div>}
       </div>
       {portal && (
         <Button variant={sub.status === 'PAST_DUE' ? 'primary' : 'secondary'} disabled={portalM.isPending} onClick={() => portalM.mutate()}>
