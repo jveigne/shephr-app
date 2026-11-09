@@ -89,50 +89,50 @@ function choicesOf(q: StudyQuestionView, t: TFn): { key: string; label: string }
 
 const VERDICTS: StudyVerdict[] = ['JUSTE', 'A_PRECISER', 'A_REVOIR'];
 const VERDICT_TONE: Record<StudyVerdict, string> = {
-  JUSTE: 'var(--ok)',
-  A_PRECISER: 'var(--warn)',
-  A_REVOIR: 'var(--err)',
+  JUSTE: 'var(--succes)',
+  A_PRECISER: 'var(--avertissement)',
+  A_REVOIR: 'var(--alerte)',
 };
 
 const card: CSSProperties = {
   padding: '12px 14px',
   borderRadius: 'var(--radius)',
-  background: 'var(--ivory-card)',
-  border: '1px solid var(--line)',
+  background: 'var(--surface)',
+  border: '1px solid var(--filet)',
   display: 'flex',
   flexDirection: 'column',
   gap: 8,
 };
 // RG-ETU-20 : une sous-question (6.a) se lit sous son parent.
-const sub: CSSProperties = { marginLeft: 22, borderLeft: '3px solid var(--green-100)' };
-const numberStyle: CSSProperties = { fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--earth-700)', letterSpacing: 0.6 };
+const sub: CSSProperties = { marginLeft: 22, borderLeft: '3px solid var(--accent-teinte)' };
+const numberStyle: CSSProperties = { fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--secondaire-profond)', letterSpacing: 0.6 };
 const tagStyle: CSSProperties = {
   fontFamily: 'var(--font-mono)',
   fontSize: 10,
   letterSpacing: 0.8,
   textTransform: 'uppercase',
-  color: 'var(--ink-500)',
+  color: 'var(--texte-3)',
   padding: '1px 6px',
   borderRadius: 99,
-  background: 'var(--green-50)',
+  background: 'var(--accent-teinte-douce)',
 };
 const boxLabel: CSSProperties = {
   fontSize: 11,
   fontWeight: 600,
   letterSpacing: 0.6,
   textTransform: 'uppercase',
-  color: 'var(--ink-500)',
+  color: 'var(--texte-3)',
 };
 const answerBox: CSSProperties = {
   padding: '8px 12px',
   borderRadius: 'var(--radius-sm)',
-  background: 'var(--ivory)',
-  border: '1px solid var(--line-soft)',
+  background: 'var(--surface-basse)',
+  border: '1px solid var(--filet-doux)',
   display: 'flex',
   flexDirection: 'column',
   gap: 4,
 };
-const manualBox: CSSProperties = { ...answerBox, background: 'var(--green-50)', borderColor: 'var(--green-100)' };
+const manualBox: CSSProperties = { ...answerBox, background: 'var(--accent-teinte-douce)', borderColor: 'var(--accent-teinte)' };
 
 export function StudyQuestionList({
   questions,
@@ -207,10 +207,10 @@ function QuestionBlock({
     return (
       <div style={{ padding: '6px 4px 0', display: 'flex', flexDirection: 'column', gap: 4, ...(isSub ? { marginLeft: 22 } : {}) }}>
         {q.number && <span style={numberStyle}>{t('assembly.study.answer.number', { number: q.number })}</span>}
-        <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-700)', whiteSpace: 'pre-wrap' }}>
+        <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--texte-2)', whiteSpace: 'pre-wrap' }}>
           {q.statement}
         </span>
-        {q.bibleReference && <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 13, color: 'var(--ink-500)' }}>{q.bibleReference}</span>}
+        {q.bibleReference && <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 13, color: 'var(--texte-3)' }}>{q.bibleReference}</span>}
       </div>
     );
   }
@@ -221,11 +221,11 @@ function QuestionBlock({
       <div style={{ ...card, ...(isSub ? sub : {}) }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={numberStyle}>{t('assembly.study.answer.number', { number: q.number })}</span>
-          <span style={{ color: answered ? 'var(--ok)' : 'var(--ink-400)', display: 'inline-flex' }}>
+          <span style={{ color: answered ? 'var(--succes)' : 'var(--texte-4)', display: 'inline-flex' }}>
             <Icon name={answered ? 'check' : 'x'} size={13} />
           </span>
         </div>
-        <span style={{ fontSize: 14, color: 'var(--ink-700)' }}>
+        <span style={{ fontSize: 14, color: 'var(--texte-2)' }}>
           {answered ? t('assembly.study.answer.personalAnswered') : t('assembly.study.answer.personalNotAnswered')}
         </span>
       </div>
@@ -247,14 +247,14 @@ function QuestionBlock({
         {q.type === 'EXERCICE' && <span style={tagStyle}>{t('assembly.study.type.EXERCICE')}</span>}
         <span style={{ flex: 1 }} />
         {graded && !corrected && (
-          <span style={{ fontSize: 12, color: 'var(--ink-500)' }}>
+          <span style={{ fontSize: 12, color: 'var(--texte-3)' }}>
             {t('assembly.study.answer.points', { count: q.points, value: fmtStudyPoints(q.points, lang) })}
           </span>
         )}
         {graded && corrected && (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             {a?.adjusted && <span style={tagStyle}>{t('assembly.study.answer.adjusted')}</span>}
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, color: pendingReview ? 'var(--warn)' : 'var(--green-700)' }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, color: pendingReview ? 'var(--avertissement)' : 'var(--accent-moyen)' }}>
               {t('assembly.study.scoreOf', {
                 score: pendingReview && a?.points == null ? '—' : fmtStudyPoints(a?.points ?? 0, lang),
                 max: fmtStudyPoints(q.points, lang),
@@ -263,9 +263,9 @@ function QuestionBlock({
           </span>
         )}
       </div>
-      <div style={{ fontSize: 15, lineHeight: 1.45, color: 'var(--ink-900)', whiteSpace: 'pre-wrap' }}>{q.statement}</div>
+      <div style={{ fontSize: 15, lineHeight: 1.45, color: 'var(--texte)', whiteSpace: 'pre-wrap' }}>{q.statement}</div>
       {q.bibleReference && (
-        <div style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 13, color: 'var(--ink-500)' }}>{q.bibleReference}</div>
+        <div style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 13, color: 'var(--texte-3)' }}>{q.bibleReference}</div>
       )}
 
       {mode === 'answer' ? (
@@ -295,7 +295,7 @@ function QuestionBlock({
                   borderRadius: 'var(--radius-sm)',
                   border: `1.5px solid ${tone}`,
                   background: selected ? tone : 'transparent',
-                  color: selected ? 'var(--ivory-raised)' : tone,
+                  color: selected ? 'var(--surface-haute)' : tone,
                   fontWeight: 600,
                   fontSize: 13.5,
                   cursor: busy || disabled ? 'default' : 'pointer',
@@ -309,7 +309,7 @@ function QuestionBlock({
         </div>
       )}
       {!verdictButtons && corrected && q.type === 'OUVERTE' && answered && (
-        <span style={{ fontSize: 13, fontWeight: 600, color: a?.verdict ? VERDICT_TONE[a.verdict] : 'var(--ink-500)' }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: a?.verdict ? VERDICT_TONE[a.verdict] : 'var(--texte-3)' }}>
           {a?.verdict ? t(`assembly.study.verdict.${a.verdict}`) : t('assembly.study.answer.noVerdict')}
         </span>
       )}
@@ -385,7 +385,7 @@ function ChoiceRow({
   tone?: string;
   note?: string | null;
 }) {
-  const color = tone ?? (selected ? 'var(--green-700)' : 'var(--ink-400)');
+  const color = tone ?? (selected ? 'var(--accent-moyen)' : 'var(--texte-4)');
   const interactive = !!onClick && !disabled;
   return (
     <button
@@ -402,9 +402,9 @@ function ChoiceRow({
         textAlign: 'left',
         padding: '9px 12px',
         borderRadius: 'var(--radius-sm)',
-        border: `1px solid ${selected ? color : 'var(--line)'}`,
-        background: selected ? 'var(--green-50)' : 'var(--ivory)',
-        color: 'var(--ink-900)',
+        border: `1px solid ${selected ? color : 'var(--filet)'}`,
+        background: selected ? 'var(--accent-teinte-douce)' : 'var(--surface-basse)',
+        color: 'var(--texte)',
         fontSize: 14,
         cursor: interactive ? 'pointer' : 'default',
         opacity: disabled && onClick ? 0.6 : 1,
@@ -422,11 +422,11 @@ function ChoiceRow({
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'var(--ivory-raised)',
+          color: 'var(--surface-haute)',
         }}
       >
         {selected && multi && <Icon name="check" size={11} />}
-        {selected && !multi && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--ivory-raised)' }} />}
+        {selected && !multi && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--surface-haute)' }} />}
       </span>
       <span style={{ flex: 1 }}>{label}</span>
       {note && <span style={{ fontSize: 11.5, fontWeight: 600, color }}>{note}</span>}
@@ -437,9 +437,9 @@ function ChoiceRow({
 /** Réponse donnée, une fois corrigée : choix marqués juste / faux, texte, exercice fait. */
 function CorrectedAnswer({ q, a, answered }: { q: StudyQuestionView; a: StudyAnswerValue | undefined; answered: boolean }) {
   const { t } = useTranslation();
-  const none = <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 14, color: 'var(--ink-500)' }}>{t('assembly.study.answer.noAnswer')}</span>;
+  const none = <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 14, color: 'var(--texte-3)' }}>{t('assembly.study.answer.noAnswer')}</span>;
   if (q.type === 'EXERCICE') {
-    return <span style={{ fontSize: 14, color: 'var(--ink-700)' }}>{a?.done ? t('assembly.study.answer.doneMark') : t('assembly.study.answer.notDone')}</span>;
+    return <span style={{ fontSize: 14, color: 'var(--texte-2)' }}>{a?.done ? t('assembly.study.answer.doneMark') : t('assembly.study.answer.notDone')}</span>;
   }
   if (isTextual(q)) {
     if (!answered) return none;
@@ -460,7 +460,7 @@ function CorrectedAnswer({ q, a, answered }: { q: StudyQuestionView; a: StudyAns
         const selected = chosen.includes(c.key);
         const right = key ? key.includes(c.key) : null;
         // RG-ETU-05/06 : la note vient du serveur ; ici on ne fait que marquer les choix.
-        const tone = right == null ? undefined : selected ? (right ? 'var(--ok)' : 'var(--err)') : right ? 'var(--ok)' : undefined;
+        const tone = right == null ? undefined : selected ? (right ? 'var(--succes)' : 'var(--alerte)') : right ? 'var(--succes)' : undefined;
         const note =
           right == null ? null : selected && !right ? t('assembly.study.answer.wrong') : !selected && right ? t('assembly.study.answer.expected') : null;
         if (!selected && !right) return null;
@@ -482,7 +482,7 @@ function ManualAnswer({ q, corrected }: { q: StudyQuestionView; corrected: boole
     const text = q.answerKey.map((k) => labels.find((c) => c.key === k)?.label ?? k).join(' · ');
     return (
       <div style={manualBox}>
-        <span style={{ ...boxLabel, color: 'var(--green-700)' }}>{t('assembly.study.answer.manual')}</span>
+        <span style={{ ...boxLabel, color: 'var(--accent-moyen)' }}>{t('assembly.study.answer.manual')}</span>
         <span style={{ fontSize: 14.5 }}>{text}</span>
       </div>
     );
@@ -490,7 +490,7 @@ function ManualAnswer({ q, corrected }: { q: StudyQuestionView; corrected: boole
   if (!q.expectedAnswer) return null;
   return (
     <div style={manualBox}>
-      <span style={{ ...boxLabel, color: 'var(--green-700)' }}>{t('assembly.study.answer.manual')}</span>
+      <span style={{ ...boxLabel, color: 'var(--accent-moyen)' }}>{t('assembly.study.answer.manual')}</span>
       <span style={{ fontSize: 14.5, whiteSpace: 'pre-wrap' }}>{q.expectedAnswer}</span>
     </div>
   );
@@ -504,8 +504,8 @@ export function StudyNotesText({ title, text }: { title?: string; text: string |
   if (!text || !text.trim()) return null;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {title && <strong style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 15.5, color: 'var(--green-800)' }}>{title}</strong>}
-      <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--ink-700)', whiteSpace: 'pre-wrap' }}>{text}</div>
+      {title && <strong style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 15.5, color: 'var(--accent)' }}>{title}</strong>}
+      <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--texte-2)', whiteSpace: 'pre-wrap' }}>{text}</div>
     </div>
   );
 }
@@ -520,10 +520,10 @@ export function StudyMemberActions({ actions, title }: { actions: string[] | nul
   if (list.length === 0) return null;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <strong style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 15.5, color: 'var(--green-800)' }}>
+      <strong style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 15.5, color: 'var(--accent)' }}>
         {title ?? t('assembly.study.memberActionsTitle')}
       </strong>
-      <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 14, color: 'var(--ink-700)' }}>
+      <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 14, color: 'var(--texte-2)' }}>
         {list.map((a, i) => (
           <li key={i} style={{ whiteSpace: 'pre-wrap' }}>{a}</li>
         ))}

@@ -372,7 +372,7 @@ export function Sidebar() {
                       fontWeight: lang === l ? 700 : 600,
                     }}
                   >
-                    <span style={{ color: lang === l ? 'var(--green-800, #14241C)' : 'inherit' }}>
+                    <span style={{ color: lang === l ? 'var(--accent, #14241C)' : 'inherit' }}>
                       {l.toUpperCase()}
                     </span>
                   </button>

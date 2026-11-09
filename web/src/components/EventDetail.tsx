@@ -116,22 +116,22 @@ export function EventDetailModal({
     if (!event) {
       if (detailQ.isError) {
         return (
-          <p style={{ margin: 0, color: 'var(--ink-500)' }}>
+          <p style={{ margin: 0, color: 'var(--texte-3)' }}>
             {errCode(detailQ.error) === 'RESOURCE_NOT_FOUND'
               ? t('events.detail.gone')
               : eventErrorMessage(detailQ.error, t)}
           </p>
         );
       }
-      return <p style={{ margin: 0, color: 'var(--ink-500)' }}>{t('common.loading')}</p>;
+      return <p style={{ margin: 0, color: 'var(--texte-3)' }}>{t('common.loading')}</p>;
     }
     if (view === 'edit') {
       if (typesQ.isLoading || scopesQ.isLoading) {
-        return <p style={{ margin: 0, color: 'var(--ink-500)' }}>{t('common.loading')}</p>;
+        return <p style={{ margin: 0, color: 'var(--texte-3)' }}>{t('common.loading')}</p>;
       }
       if (!typesQ.data || !scopesQ.data) {
         return (
-          <p style={{ margin: 0, color: 'var(--err)' }}>
+          <p style={{ margin: 0, color: 'var(--alerte)' }}>
             {eventErrorMessage(typesQ.error ?? scopesQ.error, t)}
           </p>
         );
@@ -277,9 +277,9 @@ export function EventDetailModal({
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 12, padding: '7px 0', borderBottom: '1px solid var(--line-soft)', fontSize: 13.5 }}>
-      <span style={{ color: 'var(--ink-500)' }}>{label}</span>
-      <span style={{ color: 'var(--ink-800)', minWidth: 0, overflowWrap: 'anywhere' }}>{children}</span>
+    <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 12, padding: '7px 0', borderBottom: '1px solid var(--filet-doux)', fontSize: 13.5 }}>
+      <span style={{ color: 'var(--texte-3)' }}>{label}</span>
+      <span style={{ color: 'var(--texte-corps)', minWidth: 0, overflowWrap: 'anywhere' }}>{children}</span>
     </div>
   );
 }
@@ -287,7 +287,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 function EventDetailBody({ event }: { event: EventResponse }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
-  const dash = <span style={{ color: 'var(--ink-400)' }}>—</span>;
+  const dash = <span style={{ color: 'var(--texte-4)' }}>—</span>;
   return (
     <div>
       {event.title && <Row label={t('events.form.title')}>{event.title}</Row>}
@@ -299,7 +299,7 @@ function EventDetailBody({ event }: { event: EventResponse }) {
       {event.evangelism && (
         <Row label={t('events.form.preacher')}>
           {event.preacher ? (
-            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 15.5, fontWeight: 600, color: 'var(--green-800)' }}>
+            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 15.5, fontWeight: 600, color: 'var(--accent)' }}>
               {event.preacher}
             </span>
           ) : (
@@ -309,7 +309,7 @@ function EventDetailBody({ event }: { event: EventResponse }) {
       )}
       <Row label={t('events.detail.scope')}>
         {event.scopeName ?? '—'}
-        <span style={{ color: 'var(--ink-500)' }}> · {t(levelKey(event.scopeLevel))}</span>
+        <span style={{ color: 'var(--texte-3)' }}> · {t(levelKey(event.scopeLevel))}</span>
       </Row>
       <Row label={t('events.form.place')}>{event.place ?? dash}</Row>
       {/* D-EVT-17 : participants puis invités, tout type ; D-EVT-15 : conversions / restaurations /
@@ -322,7 +322,7 @@ function EventDetailBody({ event }: { event: EventResponse }) {
       </Row>
       <Row label={t('events.detail.author')}>{event.createdByName}</Row>
       {event.status === 'DONE' && (
-        <p style={{ margin: '12px 0 0', fontSize: 12.5, color: 'var(--ink-500)' }}>
+        <p style={{ margin: '12px 0 0', fontSize: 12.5, color: 'var(--texte-3)' }}>
           {event.counted
             ? event.toVerify
               ? t('events.detail.countedToVerify')
@@ -331,7 +331,7 @@ function EventDetailBody({ event }: { event: EventResponse }) {
         </p>
       )}
       {!event.canEdit && (
-        <p style={{ margin: '12px 0 0', fontSize: 12.5, color: 'var(--ink-500)' }}>{t('events.detail.readOnly')}</p>
+        <p style={{ margin: '12px 0 0', fontSize: 12.5, color: 'var(--texte-3)' }}>{t('events.detail.readOnly')}</p>
       )}
     </div>
   );
@@ -372,11 +372,11 @@ function DoneForm({
   const guestsExceed = guestsExceedParticipants(resulting('participants'), resulting('guests'));
   const countHint = (k: EventCountKey) =>
     parsed(k) === undefined ? (
-      <span style={{ color: 'var(--err)' }}>{t('events.form.countInvalid')}</span>
+      <span style={{ color: 'var(--alerte)' }}>{t('events.form.countInvalid')}</span>
     ) : k === 'guests' && guestsExceed ? (
-      <span style={{ color: 'var(--err)' }}>{t('events.form.guestsExceed')}</span>
+      <span style={{ color: 'var(--alerte)' }}>{t('events.form.guestsExceed')}</span>
     ) : counts[k].trim() === '' && event[k] != null ? (
-      <span style={{ color: 'var(--warn)' }}>{t('events.detail.countKept', { n: event[k] })}</span>
+      <span style={{ color: 'var(--avertissement)' }}>{t('events.detail.countKept', { n: event[k] })}</span>
     ) : k === 'guests' ? (
       t('events.form.guestsHint')
     ) : (
@@ -404,7 +404,7 @@ function DoneForm({
       }}
       style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
     >
-      <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ink-700)' }}>
+      <p style={{ margin: 0, fontSize: 13.5, color: 'var(--texte-2)' }}>
         {event.evangelism ? t('events.detail.markDoneIntroEvangelism') : t('events.detail.markDoneIntro')}
       </p>
       {event.evangelism && <EventPreacherField value={preacher} onChange={setPreacher} />}
@@ -426,7 +426,7 @@ function DoneForm({
         />
       </Field>
       {doneM.isError && (
-        <div role="alert" style={{ color: 'var(--err)', fontSize: 13 }}>
+        <div role="alert" style={{ color: 'var(--alerte)', fontSize: 13 }}>
           {eventErrorMessage(doneM.error, t)}
         </div>
       )}

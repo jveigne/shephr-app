@@ -65,7 +65,7 @@ export function EventPeriodFilter({ value, onChange }: { value: Period; onChange
             <Input type="date" value={value.to} min={value.from || undefined} onChange={(e) => onChange({ ...value, to: e.target.value })} />
           </Field>
           {rangeError && (
-            <span role="alert" style={{ color: 'var(--err)', fontSize: 12.5, paddingBottom: 10 }}>
+            <span role="alert" style={{ color: 'var(--alerte)', fontSize: 12.5, paddingBottom: 10 }}>
               {t(rangeError)}
             </span>
           )}

@@ -48,7 +48,7 @@ function formatVoucherInput(raw: string): string {
 export function LocalPriceLine({ label, style }: { label: string | null | undefined; style?: CSSProperties }) {
   const { t } = useTranslation();
   return (
-    <p style={{ margin: 0, color: 'var(--ink-500)', fontSize: 12.5, lineHeight: 1.5, ...style }}>
+    <p style={{ margin: 0, color: 'var(--texte-3)', fontSize: 12.5, lineHeight: 1.5, ...style }}>
       {label ? t('offers.voucher.localPrice', { price: label }) : t('offers.voucher.localPriceNoLabel')}
     </p>
   );
@@ -132,17 +132,17 @@ export function VoucherRedeemModal({
         }
       >
         <div role="status" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--ok-bg)', color: 'var(--ok)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--succes-teinte)', color: 'var(--succes)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
             <Icon name="check" size={18} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <strong style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 18, color: 'var(--green-800)' }}>
+            <strong style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 18, color: 'var(--accent)' }}>
               {receipt.localityName ? `${receipt.offerName} — ${receipt.localityName}` : receipt.offerName}
             </strong>
-            <span style={{ color: 'var(--ink-700)', fontSize: 14 }}>
+            <span style={{ color: 'var(--texte-2)', fontSize: 14 }}>
               {t('offers.voucher.receiptUntil', { date: fmtLocalDay(receipt.endDate, i18n.language) })}
             </span>
-            <span style={{ color: 'var(--ink-500)', fontSize: 13, lineHeight: 1.5 }}>{t('offers.voucher.receiptNote')}</span>
+            <span style={{ color: 'var(--texte-3)', fontSize: 13, lineHeight: 1.5 }}>{t('offers.voucher.receiptNote')}</span>
           </div>
         </div>
       </Modal>
@@ -178,11 +178,11 @@ export function VoucherRedeemModal({
       >
         {needsCity &&
           (singleCity ? (
-            <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-700)' }}>
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--texte-2)' }}>
               {t('offers.voucher.forCity', { city: singleCity.localityName })}
             </p>
           ) : cities.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-600)' }}>{t('offers.voucher.noCity')}</p>
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--texte-corps)' }}>{t('offers.voucher.noCity')}</p>
           ) : (
             <Field label={t('offers.voucher.city')} style={{ margin: 0 }}>
               <Picker
@@ -210,7 +210,7 @@ export function VoucherRedeemModal({
         </Field>
         <LocalPriceLine label={localPriceLabel} />
         {redeemM.isError && (
-          <p role="alert" style={{ margin: 0, color: 'var(--err)', fontSize: 13.5 }}>
+          <p role="alert" style={{ margin: 0, color: 'var(--alerte)', fontSize: 13.5 }}>
             {voucherErrMsg(redeemM.error, t, plan)}
           </p>
         )}

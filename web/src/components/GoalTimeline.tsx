@@ -61,14 +61,14 @@ function CategoryCurve({
     <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} style={{ display: 'block', overflow: 'visible' }}>
       <defs>
         <linearGradient id="tlGreen" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="#1E3A2F" stopOpacity="0.26" />
-          <stop offset="100%" stopColor="#1E3A2F" stopOpacity="0" />
+          <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.26" />
+          <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
         </linearGradient>
       </defs>
       {yTicks.map((v, i) => (
         <g key={i}>
-          <line x1={padL} x2={w - padR} y1={y(v)} y2={y(v)} stroke="#BFAB85" strokeOpacity="0.25" strokeDasharray={i === 0 ? '0' : '3 5'} />
-          <text x={padL - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="#7A6B55" fontFamily="Inter">
+          <line x1={padL} x2={w - padR} y1={y(v)} y2={y(v)} stroke="var(--filet-fort)" strokeOpacity="0.25" strokeDasharray={i === 0 ? '0' : '3 5'} />
+          <text x={padL - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="var(--texte-3)" fontFamily="Inter">
             {format(v)}
           </text>
         </g>
@@ -76,18 +76,18 @@ function CategoryCurve({
       {/* Ligne de cible (engagé effectif) */}
       {target > 0 && (
         <g>
-          <line x1={padL} x2={w - padR} y1={y(target)} y2={y(target)} stroke="#C9956B" strokeWidth="1.5" strokeDasharray="5 4" />
-          <text x={w - padR} y={y(target) - 5} textAnchor="end" fontSize="11" fill="#C9956B" fontFamily="Inter">
+          <line x1={padL} x2={w - padR} y1={y(target)} y2={y(target)} stroke="var(--secondaire)" strokeWidth="1.5" strokeDasharray="5 4" />
+          <text x={w - padR} y={y(target) - 5} textAnchor="end" fontSize="11" fill="var(--secondaire)" fontFamily="Inter">
             {t('goals.targetLabel', { value: format(target) })}
           </text>
         </g>
       )}
       {areaD && <path d={areaD} fill="url(#tlGreen)" />}
-      {pathD && <path d={pathD} fill="none" stroke="#1E3A2F" strokeWidth="2" strokeLinecap="round" />}
+      {pathD && <path d={pathD} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" />}
       {coords.map((p, i) => (
         <g key={i}>
-          <circle cx={p[0]} cy={p[1]} r={3} fill="#1E3A2F" />
-          <text x={p[0]} y={h - 8} textAnchor="middle" fontSize="10" fill="#7A6B55" fontFamily="Inter">
+          <circle cx={p[0]} cy={p[1]} r={3} fill="var(--accent)" />
+          <text x={p[0]} y={h - 8} textAnchor="middle" fontSize="10" fill="var(--texte-3)" fontFamily="Inter">
             {monthLabel(pts[i].label)}
           </text>
         </g>
@@ -112,7 +112,7 @@ export function GoalTimeline({
 
   if (withPoints.length === 0) {
     return (
-      <p style={{ color: 'var(--ink-400)', fontSize: 13, fontStyle: 'italic' }}>
+      <p style={{ color: 'var(--texte-4)', fontSize: 13, fontStyle: 'italic' }}>
         {t('goals.noEvolution')}
       </p>
     );
@@ -133,9 +133,9 @@ export function GoalTimeline({
                 borderRadius: 999,
                 fontSize: 13,
                 cursor: 'pointer',
-                border: active ? '1px solid var(--green-700, #1E3A2F)' : '1px solid var(--line, #E0D6C2)',
-                background: active ? 'var(--green-700, #1E3A2F)' : 'transparent',
-                color: active ? '#FBF5E4' : 'var(--ink-600, #5A4B3A)',
+                border: active ? '1px solid var(--accent-moyen, #1E3A2F)' : '1px solid var(--filet, #E0D6C2)',
+                background: active ? 'var(--accent-moyen, #1E3A2F)' : 'transparent',
+                color: active ? 'var(--sur-accent)' : 'var(--texte-2)',
               }}
             >
               {d.categoryCode}

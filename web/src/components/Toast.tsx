@@ -33,7 +33,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div className="toast-container">
         {toasts.map((t) => (
           <div key={t.id} className={`toast ${t.kind === 'error' ? 'error' : 'ok'}`}>
-            <span style={{ color: t.kind === 'error' ? 'var(--err)' : 'var(--ok)' }}>
+            <span style={{ color: t.kind === 'error' ? 'var(--alerte)' : 'var(--succes)' }}>
               <Icon name={t.kind === 'error' ? 'warning' : 'check'} size={18} />
             </span>
             <div style={{ flex: 1 }}>

@@ -29,7 +29,7 @@ export function CurrencyToggle({
       aria-label={t('offers.currency.label')}
       style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: align === 'center' ? 'center' : 'flex-start', ...style }}
     >
-      <span style={{ fontSize: 13, color: 'var(--ink-500)' }}>{t('offers.currency.label')}</span>
+      <span style={{ fontSize: 13, color: 'var(--texte-3)' }}>{t('offers.currency.label')}</span>
       <div style={{ display: 'inline-flex', gap: 4 }}>
         {available.map((c) => (
           <button
@@ -52,5 +52,5 @@ export function CurrencyToggle({
 export function EurOnlyNote({ show, color, style }: { show: boolean; color?: string; style?: CSSProperties }) {
   const { t } = useTranslation();
   if (!show) return null;
-  return <p style={{ margin: '4px 0 0', fontSize: 12.5, color: color ?? 'var(--ink-500)', ...style }}>{t('offers.currency.eurOnly')}</p>;
+  return <p style={{ margin: '4px 0 0', fontSize: 12.5, color: color ?? 'var(--texte-3)', ...style }}>{t('offers.currency.eurOnly')}</p>;
 }

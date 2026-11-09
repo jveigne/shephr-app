@@ -23,7 +23,7 @@ export function YearPicker({
         alignItems: 'center',
         gap: 8,
         fontSize: 13,
-        color: 'var(--ink-400)',
+        color: 'var(--texte-4)',
         whiteSpace: 'nowrap',
       }}
     >

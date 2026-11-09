@@ -96,11 +96,11 @@ export function SocialSignInButtons({
     <div style={{ marginTop: 18 }}>
       <div
         aria-hidden
-        style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--ink-400)', fontSize: 13, margin: '0 0 14px' }}
+        style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--texte-4)', fontSize: 13, margin: '0 0 14px' }}
       >
-        <span style={{ flex: 1, height: 1, background: 'var(--line, #e5e1d8)' }} />
+        <span style={{ flex: 1, height: 1, background: 'var(--filet, #e5e1d8)' }} />
         {t('login.social.or')}
-        <span style={{ flex: 1, height: 1, background: 'var(--line, #e5e1d8)' }} />
+        <span style={{ flex: 1, height: 1, background: 'var(--filet, #e5e1d8)' }} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'stretch' }}>
         {GOOGLE_WEB_CLIENT_ID && (

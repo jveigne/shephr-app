@@ -66,7 +66,7 @@ const crumbStyle: CSSProperties = {
   border: 'none',
   padding: 0,
   cursor: 'pointer',
-  color: 'var(--green-700)',
+  color: 'var(--accent-moyen)',
   fontSize: 13,
   textDecoration: 'underline',
 };
@@ -75,7 +75,7 @@ const cardTitle: CSSProperties = {
   margin: 0,
   fontSize: 16,
   fontFamily: 'var(--font-serif)',
-  color: 'var(--green-800)',
+  color: 'var(--accent)',
   fontWeight: 500,
 };
 
@@ -134,13 +134,13 @@ export function EventStatsDrill({
   }, [nodeGone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Racine illisible : rien à descendre, pas de fil d'Ariane.
-  if (!current && rootQ.isLoading) return <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>;
+  if (!current && rootQ.isLoading) return <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>;
   if (!current && denied) return <CityEventsLock nodeId={denied.nodeId} canSubscribe={denied.canSubscribe} lock={lock} />;
   if (!current && !rootQ.data) {
     // Contrat §6 : aucun périmètre de lecture → 403 (compte sans assemblée ni responsabilité dans le module).
     const noPerimeter = errCode(rootQ.error) === 'UNAUTHORIZED_ACCESS';
     return (
-      <p role="alert" style={{ color: noPerimeter ? 'var(--ink-500)' : 'var(--err)' }}>
+      <p role="alert" style={{ color: noPerimeter ? 'var(--texte-3)' : 'var(--alerte)' }}>
         {noPerimeter ? t('events.stats.noPerimeter') : eventErrorMessage(rootQ.error, t)}
       </p>
     );
@@ -186,9 +186,9 @@ export function EventStatsDrill({
           onOpen={(c) => setPath([...path, { level: c.level, id: c.id, name: c.name ?? t(levelKey(c.level)) }])}
         />
       ) : q.isLoading ? (
-        <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>
+        <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>
       ) : (
-        <p role="alert" style={{ color: 'var(--err)' }}>{eventErrorMessage(q.error, t)}</p>
+        <p role="alert" style={{ color: 'var(--alerte)' }}>{eventErrorMessage(q.error, t)}</p>
       )}
     </div>
   );
@@ -211,7 +211,7 @@ function CityEventsLock({ nodeId, canSubscribe, lock }: { nodeId: string | null;
   const denied = { moduleCode: ENTITLEMENT_EVENEMENTS_SUIVI, nodeId, canSubscribe: entQ.data?.canSubscribe ?? canSubscribe };
   return (
     <div>
-      <p style={{ margin: '0 0 10px', fontSize: 13.5, color: 'var(--ink-600)' }}>{t('events.stats.cityLocked')}</p>
+      <p style={{ margin: '0 0 10px', fontSize: 13.5, color: 'var(--texte-corps)' }}>{t('events.stats.cityLocked')}</p>
       <LockedFeature denied={denied} compact={lock === 'compact'} tab="events" />
     </div>
   );
@@ -228,7 +228,7 @@ function StatsBody({ stats, lock, onOpen }: { stats: EventStats; lock: 'full' | 
     <>
       <StatsKpis stats={stats} />
 
-      <p style={{ margin: '12px 0 22px', fontSize: 12.5, color: 'var(--ink-500)' }}>{t('events.stats.countingRule')}</p>
+      <p style={{ margin: '12px 0 22px', fontSize: 12.5, color: 'var(--texte-3)' }}>{t('events.stats.countingRule')}</p>
 
       {childrenLocked ? (
         <CityEventsLock nodeId={stats.scope.level === 'LOCALITY' ? stats.scope.id : null} canSubscribe={false} lock={lock} />
@@ -271,7 +271,7 @@ function StatsKpis({ stats }: { stats: EventStats }) {
       <div className="kpi">
         <div className="lbl">{t('events.stats.kpiAgenda')}</div>
         <div className="val">{fmtCount(stats.plannedUpcoming, lang)}</div>
-        <div className="delta" style={{ color: stats.toCloseCount > 0 ? 'var(--warn)' : 'var(--ink-500)' }}>
+        <div className="delta" style={{ color: stats.toCloseCount > 0 ? 'var(--avertissement)' : 'var(--texte-3)' }}>
           {t('events.stats.toClose', { count: stats.toCloseCount })}
         </div>
         <span className="deco" />
@@ -332,7 +332,7 @@ function ChildrenBlock({
             render: (c) => (
               <div>
                 <div style={{ fontWeight: 500 }}>{c.name ?? '—'}</div>
-                {!homogeneous && <div style={{ color: 'var(--ink-500)', fontSize: 12 }}>{t(levelKey(c.level))}</div>}
+                {!homogeneous && <div style={{ color: 'var(--texte-3)', fontSize: 12 }}>{t(levelKey(c.level))}</div>}
               </div>
             ),
           },
@@ -345,7 +345,7 @@ function ChildrenBlock({
       />
       {/* D-EVT-04 : rattachés au nœud lui-même, ils comptent ici et dans aucun sous-niveau. */}
       {stats.ownLevelCount > 0 && stats.scope.level !== 'MINISTRY' && (
-        <p style={{ margin: 0, padding: '12px 22px', fontSize: 12.5, color: 'var(--ink-500)', borderTop: '1px solid var(--line-soft)' }}>
+        <p style={{ margin: 0, padding: '12px 22px', fontSize: 12.5, color: 'var(--texte-3)', borderTop: '1px solid var(--filet-doux)' }}>
           {t('events.stats.ownLevel', { count: stats.ownLevelCount, name: here })}
         </p>
       )}
@@ -367,7 +367,7 @@ function TypesBlock({ rows, lang }: { rows: TypeStats[]; lang: string }) {
         ]}
         rows={rows.map((r) => ({ ...r, id: r.typeId }))}
         zebra
-        empty={<p style={{ margin: 0, padding: '16px 22px', color: 'var(--ink-500)' }}>{t('events.stats.noType')}</p>}
+        empty={<p style={{ margin: 0, padding: '16px 22px', color: 'var(--texte-3)' }}>{t('events.stats.noType')}</p>}
       />
     </div>
   );

@@ -166,12 +166,12 @@ export function LinkConfirmModal({
           />
         </Field>
         {error && (
-          <p role="alert" style={{ margin: 0, color: 'var(--err)', fontSize: 13.5 }}>
+          <p role="alert" style={{ margin: 0, color: 'var(--alerte)', fontSize: 13.5 }}>
             {error}
           </p>
         )}
         {info && (
-          <p role="status" style={{ margin: 0, color: 'var(--ok)', fontSize: 13.5 }}>
+          <p role="status" style={{ margin: 0, color: 'var(--succes)', fontSize: 13.5 }}>
             {info}
           </p>
         )}
@@ -187,14 +187,14 @@ export function LinkConfirmModal({
               fontFamily: 'var(--font-sans)',
               fontSize: 13.5,
               fontWeight: 600,
-              color: waitSeconds > 0 || resending ? 'var(--ink-400)' : 'var(--green-700)',
+              color: waitSeconds > 0 || resending ? 'var(--texte-4)' : 'var(--accent-moyen)',
               cursor: waitSeconds > 0 || resending ? 'default' : 'pointer',
             }}
           >
             {waitSeconds > 0 ? t('login.social.linkConfirm.resendIn', { seconds: waitSeconds }) : t('login.social.linkConfirm.resend')}
           </button>
         </div>
-        <p style={{ margin: 0, color: 'var(--ink-500)', fontSize: 12.5, lineHeight: 1.5 }}>{t('login.social.linkConfirm.notMine')}</p>
+        <p style={{ margin: 0, color: 'var(--texte-3)', fontSize: 12.5, lineHeight: 1.5 }}>{t('login.social.linkConfirm.notMine')}</p>
       </form>
     </Modal>
   );

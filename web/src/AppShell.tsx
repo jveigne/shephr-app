@@ -33,7 +33,7 @@ export function AppShell() {
           minHeight: '100vh',
           display: 'grid',
           placeItems: 'center',
-          color: 'var(--ink-500)',
+          color: 'var(--texte-3)',
           fontFamily: 'var(--font-sans)',
         }}
       >

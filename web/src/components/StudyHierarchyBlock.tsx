@@ -106,7 +106,7 @@ export function StudyHierarchyBlock({ from, to, onLocked }: { from: string; to: 
           <StatsView from={from} to={to} onLocked={onLocked} onOff={() => setOff(true)} />
         )}
       </div>
-      <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--ink-400)' }}>{t('hierarchy.study.hint')}</p>
+      <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--texte-4)' }}>{t('hierarchy.study.hint')}</p>
     </div>
   );
 }
@@ -145,18 +145,18 @@ function OverviewView({ onLocked, onOff }: { onLocked: () => void; onOff: () => 
   });
   const handled = useDeniedEffects(q.error ?? perModule.error, onLocked, onOff);
 
-  if (q.isLoading) return <p style={{ margin: 0, color: 'var(--ink-500)', fontSize: 13 }}>{t('common.loading')}</p>;
+  if (q.isLoading) return <p style={{ margin: 0, color: 'var(--texte-3)', fontSize: 13 }}>{t('common.loading')}</p>;
   if (handled) return null;
   if (q.isError || !q.data) {
-    return <p role="alert" style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>{errMsg(q.error, t('hierarchy.study.loadError'))}</p>;
+    return <p role="alert" style={{ margin: 0, color: 'var(--alerte)', fontSize: 13 }}>{errMsg(q.error, t('hierarchy.study.loadError'))}</p>;
   }
   const o: StudyHierarchyOverview = modules.length > 1 ? (perModule.data ?? q.data) : q.data;
   if (o.units.length === 0 || modules.length === 0) {
-    return <p style={{ margin: 0, color: 'var(--ink-500)', fontSize: 13 }}>{t('hierarchy.study.empty')}</p>;
+    return <p style={{ margin: 0, color: 'var(--texte-3)', fontSize: 13 }}>{t('hierarchy.study.empty')}</p>;
   }
   const current = modules.find((m) => m.id === currentId) ?? modules[0];
   if (modules.length > 1 && perModule.isLoading) {
-    return <p style={{ margin: 0, color: 'var(--ink-500)', fontSize: 13 }}>{t('common.loading')}</p>;
+    return <p style={{ margin: 0, color: 'var(--texte-3)', fontSize: 13 }}>{t('common.loading')}</p>;
   }
   return (
     <>
@@ -197,12 +197,12 @@ function ModuleTable({ module: m, units }: { module: StudyHierarchyModule; units
         <div>
           <div style={{ fontWeight: 500 }}>
             {r.unitName}
-            {r.cityName && <span style={{ color: 'var(--ink-500)', fontSize: 12, fontWeight: 400 }}> · {r.cityName}</span>}
+            {r.cityName && <span style={{ color: 'var(--texte-3)', fontSize: 12, fontWeight: 400 }}> · {r.cityName}</span>}
           </div>
           {/* Chaîne de dirigeants entre l'appelant et l'assemblée (du plus haut au plus bas), puis
               son dirigeant — noms de DIRIGEANTS seulement, jamais de membre (D-ETU-55). */}
           {(r.supervisorChain.length > 0 || r.leaderName) && (
-            <div style={{ color: 'var(--ink-500)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+            <div style={{ color: 'var(--texte-3)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
               <Icon name="hierarchy" size={11} />
               <span>
                 {[...r.supervisorChain, ...(r.leaderName && r.supervisorChain[r.supervisorChain.length - 1] !== r.leaderName ? [r.leaderName] : [])].join(' › ')}
@@ -218,7 +218,7 @@ function ModuleTable({ module: m, units }: { module: StudyHierarchyModule; units
         <div style={{ whiteSpace: 'nowrap', fontSize: 13 }}>
           <strong>{r.taughtCount}</strong>/{r.memberCount}
           {r.notTaughtCount > 0 && (
-            <div style={{ color: 'var(--earth-700)', fontSize: 12 }}>{t('hierarchy.study.notTaught', { count: r.notTaughtCount })}</div>
+            <div style={{ color: 'var(--secondaire-profond)', fontSize: 12 }}>{t('hierarchy.study.notTaught', { count: r.notTaughtCount })}</div>
           )}
         </div>
       ),
@@ -242,9 +242,9 @@ function ModuleTable({ module: m, units }: { module: StudyHierarchyModule; units
         cellStyle: { textAlign: 'center' },
         render: (r) =>
           r.done.has(l.id) ? (
-            <span style={{ color: 'var(--ok)', fontWeight: 700 }} aria-label={t('hierarchy.study.done')}>✓</span>
+            <span style={{ color: 'var(--succes)', fontWeight: 700 }} aria-label={t('hierarchy.study.done')}>✓</span>
           ) : (
-            <span style={{ color: 'var(--ink-300, var(--ink-400))' }} aria-label={t('hierarchy.study.notDone')}>–</span>
+            <span style={{ color: 'var(--texte-5, var(--texte-4))' }} aria-label={t('hierarchy.study.notDone')}>–</span>
           ),
       }),
     ),
@@ -254,13 +254,13 @@ function ModuleTable({ module: m, units }: { module: StudyHierarchyModule; units
     },
     {
       label: t('hierarchy.study.lastSession'),
-      render: (r) => <span style={{ color: 'var(--ink-500)', fontSize: 12.5, whiteSpace: 'nowrap' }}>{fmtDate(r.lastSessionDate, lang)}</span>,
+      render: (r) => <span style={{ color: 'var(--texte-3)', fontSize: 12.5, whiteSpace: 'nowrap' }}>{fmtDate(r.lastSessionDate, lang)}</span>,
     },
   ];
 
   return (
     <>
-      <div style={{ fontSize: 13, color: 'var(--ink-600)', marginBottom: 8 }}>
+      <div style={{ fontSize: 13, color: 'var(--texte-corps)', marginBottom: 8 }}>
         {[m.code, m.name].filter(Boolean).join(' · ')} · {t('hierarchy.study.lessons', { count: total })}
       </div>
       <div style={{ overflowX: 'auto' }}>
@@ -287,16 +287,16 @@ function StatsView({ from, to, onLocked, onOff }: { from: string; to: string; on
   let body: ReactNode;
   if (!valid) {
     body = (
-      <p style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>
+      <p style={{ margin: 0, color: 'var(--alerte)', fontSize: 13 }}>
         {tooLong ? t('hierarchy.study.periodTooLong', { days: MAX_STATS_DAYS }) : t('hierarchy.study.invalidPeriod')}
       </p>
     );
   } else if (q.isLoading) {
-    body = <p style={{ margin: 0, color: 'var(--ink-500)', fontSize: 13 }}>{t('common.loading')}</p>;
+    body = <p style={{ margin: 0, color: 'var(--texte-3)', fontSize: 13 }}>{t('common.loading')}</p>;
   } else if (handled) {
     body = null;
   } else if (q.isError || !q.data) {
-    body = <p role="alert" style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>{errMsg(q.error, t('hierarchy.study.loadError'))}</p>;
+    body = <p role="alert" style={{ margin: 0, color: 'var(--alerte)', fontSize: 13 }}>{errMsg(q.error, t('hierarchy.study.loadError'))}</p>;
   } else {
     const s = q.data;
     const maxSessions = Math.max(1, ...s.monthly.map((m) => m.sessionsFinished));
@@ -309,7 +309,7 @@ function StatsView({ from, to, onLocked, onOff }: { from: string; to: string; on
           <Kpi label={t('hierarchy.study.average')} value={s.averageScorePercent == null ? '—' : `${fmtNum(s.averageScorePercent, lang)} %`} />
         </div>
         {s.monthly.length === 0 ? (
-          <p style={{ margin: 0, color: 'var(--ink-500)', fontSize: 13 }}>{t('hierarchy.study.noSessions')}</p>
+          <p style={{ margin: 0, color: 'var(--texte-3)', fontSize: 13 }}>{t('hierarchy.study.noSessions')}</p>
         ) : (
           <>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>{t('hierarchy.study.monthly')}</div>

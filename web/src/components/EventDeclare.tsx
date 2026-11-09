@@ -41,11 +41,11 @@ export function DeclarePanel() {
 
   const body = (() => {
     if (typesQ.isLoading || scopesQ.isLoading) {
-      return <p style={{ margin: 0, color: 'var(--ink-500)' }}>{t('common.loading')}</p>;
+      return <p style={{ margin: 0, color: 'var(--texte-3)' }}>{t('common.loading')}</p>;
     }
     if (!typesQ.data || !scopesQ.data) {
       return (
-        <p role="alert" style={{ margin: 0, color: 'var(--err)' }}>
+        <p role="alert" style={{ margin: 0, color: 'var(--alerte)' }}>
           {eventErrorMessage(typesQ.error ?? scopesQ.error, t)}
         </p>
       );
@@ -119,9 +119,9 @@ export function MyEventsList() {
         )}
       </div>
       {mineQ.isLoading ? (
-        <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>
+        <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>
       ) : !mine ? (
-        <p role="alert" style={{ color: 'var(--err)' }}>{eventErrorMessage(mineQ.error, t)}</p>
+        <p role="alert" style={{ color: 'var(--alerte)' }}>{eventErrorMessage(mineQ.error, t)}</p>
       ) : (
         <EventsTable
           page={mine.events}
