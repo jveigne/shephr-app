@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
@@ -10,7 +10,7 @@ import ErrorBanner from '@/components/ErrorBanner';
 import EventCounters from '@/components/EventCounters';
 import EventQueueBlocks from '@/components/EventQueueBlocks';
 import { EventRow } from '@/components/EventRow';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getMyEvents, type EventResponse, type MyEventsResponse } from '@/services/eventsApi';
@@ -18,6 +18,8 @@ import { flushEventQueue, useEventQueue } from '@/services/eventQueue';
 import { monthLocal } from '@/utils/events';
 import { goBack } from '@/utils/navigation';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Plan 14/10 (§6.3, lot E6) — « MES ACTIONS » (spec Recensement §6.1) d'un dirigeant, LEADER,
  * SECRETARIAT ou superAdmin, ouvert depuis la saisie (`app/events/declare` : lien d'en-tête et
@@ -32,6 +34,8 @@ import { goBack } from '@/utils/navigation';
  * onglet « Évènements » (`EventMemberView`), où la saisie le ramène (`router.dismissTo`).
  */
 export default function MyEventsScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const { me, hasEvents } = useAuth();
   const userId = me?.id ?? null;
@@ -124,13 +128,13 @@ export default function MyEventsScreen() {
       withTabBar={false}
       refreshControl={
         active ? (
-          <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />
         ) : undefined
       }
     >
       <View style={styles.headerRow}>
         <Pressable onPress={() => goBack()} hitSlop={10}>
-          <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+          <Ionicons name="chevron-back" size={22} color={c.texte2} />
         </Pressable>
       </View>
       <Text style={styles.kicker}>{t('events.declare.kicker')}</Text>
@@ -138,7 +142,7 @@ export default function MyEventsScreen() {
 
       {!hasEvents ? (
         <Card variant="paper2" style={styles.empty}>
-          <Ionicons name="lock-closed-outline" size={26} color={colors.ink3} />
+          <Ionicons name="lock-closed-outline" size={26} color={c.texte3} />
           <Text style={styles.emptyText}>{t('events.declare.moduleUnavailable')}</Text>
         </Card>
       ) : (
@@ -158,7 +162,7 @@ export default function MyEventsScreen() {
             fullWidth
             height={50}
             style={{ marginTop: 16 }}
-            iconLeft={<Ionicons name="megaphone-outline" size={18} color={colors.white} />}
+            iconLeft={<Ionicons name="megaphone-outline" size={18} color={c.surAccent} />}
           />
           {/* `dismissTo` et non `push` : on revient à l'onglet sous la pile (accueil → déclarer →
               mes actions) au lieu d'empiler une seconde barre d'onglets. */}
@@ -169,7 +173,7 @@ export default function MyEventsScreen() {
             fullWidth
             height={46}
             style={{ marginTop: 10 }}
-            iconLeft={<Ionicons name="calendar-outline" size={17} color={colors.mossDeep} />}
+            iconLeft={<Ionicons name="calendar-outline" size={17} color={c.accentProfond} />}
           />
 
           {!!loadError && <ErrorBanner message={loadError} onRetry={load} />}
@@ -179,11 +183,11 @@ export default function MyEventsScreen() {
           {/* Mes évènements enregistrés */}
           {loading ? (
             <View style={styles.loadingBox}>
-              <ActivityIndicator color={colors.moss} />
+              <ActivityIndicator color={c.accent} />
             </View>
           ) : nothingYet ? (
             <Card variant="paper2" style={styles.empty}>
-              <Ionicons name="megaphone-outline" size={26} color={colors.ink3} />
+              <Ionicons name="megaphone-outline" size={26} color={c.texte3} />
               <Text style={styles.emptyText}>{t('events.mine.empty')}</Text>
             </Card>
           ) : (
@@ -215,17 +219,17 @@ export default function MyEventsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   kicker: {
     marginTop: 10,
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.clay,
+    color: c.alerte,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4, marginTop: 4 },
+  title: { fontFamily: fonts.serif, fontSize: 28, color: c.texte, letterSpacing: -0.4, marginTop: 4 },
   block: { marginTop: 20, gap: 8 },
   blockLabel: { marginBottom: 0 },
   loadingBox: { marginTop: 40, alignItems: 'center' },
@@ -239,8 +243,8 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: fonts.sans,
     fontSize: 13.5,
-    color: colors.ink2,
+    color: c.texte2,
     lineHeight: 20,
     textAlign: 'center',
   },
-});
+}));

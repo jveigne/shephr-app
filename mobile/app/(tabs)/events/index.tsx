@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
@@ -10,13 +10,15 @@ import EventAgenda from '@/components/EventAgenda';
 import EventStatsDrill from '@/components/EventStatsDrill';
 import EventPeriodPicker from '@/components/EventPeriodPicker';
 import EventMemberView from '@/components/EventMemberView';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useEventCatalog } from '@/hooks/useEventCatalog';
 import { isSecretariat } from '@/services/authApi';
 import { defaultPeriod, periodBounds, type Period } from '@/utils/events';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 type Tab = 'agenda' | 'stats';
 
 /**
@@ -46,6 +48,8 @@ export default function EventsTabScreen() {
  * clôture dans le détail, par exemple) recharge le contenu affiché.
  */
 function LeaderEventsTab() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const { me, hasEvents } = useAuth();
   // RG-06 : sans l'abonnement EVENTS, aucune route du module n'est appelée.
@@ -84,7 +88,7 @@ function LeaderEventsTab() {
   return (
     <ScreenShell
       refreshControl={
-        hasEvents ? <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} /> : undefined
+        hasEvents ? <RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} /> : undefined
       }
     >
       <Text style={styles.kicker}>{t('events.tab.kicker')}</Text>
@@ -93,7 +97,7 @@ function LeaderEventsTab() {
 
       {!hasEvents ? (
         <Card variant="paper2" style={styles.empty}>
-          <Ionicons name="lock-closed-outline" size={26} color={colors.ink3} />
+          <Ionicons name="lock-closed-outline" size={26} color={c.texte3} />
           <Text style={styles.emptyText}>{t('events.declare.moduleUnavailable')}</Text>
         </Card>
       ) : (
@@ -108,7 +112,7 @@ function LeaderEventsTab() {
 
           {tab === 'agenda' ? (
             catalog.loading ? (
-              <ActivityIndicator color={colors.moss} style={{ marginTop: 40 }} />
+              <ActivityIndicator color={c.accent} style={{ marginTop: 40 }} />
             ) : catalog.error || !scopes ? (
               <ErrorBanner message={t('events.tab.loadFailed')} onRetry={catalog.reload} />
             ) : (
@@ -122,7 +126,7 @@ function LeaderEventsTab() {
                         disabled={noTypes}
                         height={46}
                         style={{ flex: 1 }}
-                        iconLeft={<Ionicons name="calendar-outline" size={17} color={colors.white} />}
+                        iconLeft={<Ionicons name="calendar-outline" size={17} color={c.surAccent} />}
                       />
                     )}
                     {scopes.canDeclare && (
@@ -133,7 +137,7 @@ function LeaderEventsTab() {
                         disabled={noTypes}
                         height={46}
                         style={{ flex: 1 }}
-                        iconLeft={<Ionicons name="megaphone-outline" size={17} color={colors.mossDeep} />}
+                        iconLeft={<Ionicons name="megaphone-outline" size={17} color={c.accentProfond} />}
                       />
                     )}
                   </View>
@@ -158,35 +162,35 @@ function LeaderEventsTab() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   kicker: {
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.clay,
+    color: c.alerte,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4, marginTop: 4 },
-  subtitle: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, marginTop: 4, lineHeight: 19 },
+  title: { fontFamily: fonts.serif, fontSize: 28, color: c.texte, letterSpacing: -0.4, marginTop: 4 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, marginTop: 4, lineHeight: 19 },
   tabRow: {
     flexDirection: 'row',
     marginTop: 18,
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
     borderRadius: 99,
     padding: 3,
   },
   tabBtn: { flex: 1, paddingVertical: 9, borderRadius: 99, alignItems: 'center' },
   tabBtnOn: {
-    backgroundColor: colors.paper,
-    shadowColor: colors.ink,
+    backgroundColor: c.surface,
+    shadowColor: c.texte,
     shadowOffset: { width: 0, height: 1 },
     shadowRadius: 3,
     shadowOpacity: 0.08,
   },
-  tabText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink3 },
-  tabTextOn: { color: colors.moss },
+  tabText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.texte3 },
+  tabTextOn: { color: c.accent },
   actions: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  hint: { marginTop: 10, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, lineHeight: 17 },
+  hint: { marginTop: 10, fontFamily: fonts.sans, fontSize: 12, color: c.texte3, lineHeight: 17 },
   empty: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 24, alignItems: 'center', gap: 10 },
-  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2, lineHeight: 20, textAlign: 'center' },
-});
+  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte2, lineHeight: 20, textAlign: 'center' },
+}));

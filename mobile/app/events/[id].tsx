@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -21,7 +20,7 @@ import EventForm from '@/components/EventForm';
 import EventCounterFields from '@/components/EventCounterFields';
 import EventPreacherField from '@/components/EventPreacherField';
 import { EventPill, EventStatusPills } from '@/components/EventRow';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useEventCatalog } from '@/hooks/useEventCatalog';
@@ -48,6 +47,8 @@ import {
 import { confirmDialog, notify } from '@/utils/dialogs';
 import { goBack } from '@/utils/navigation';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Plan 14/10 (§6.3, lot E7) — DÉTAIL D'UN ÉVÈNEMENT et gestes permis par le serveur (contrat §4,
  * boutons dérivés ; aucun droit n'est recalculé ici) :
@@ -77,6 +78,8 @@ const ON_EVENT = {
 };
 
 export default function EventDetailScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t, language } = useLanguage();
   const english = isEnglishLang(language);
@@ -194,7 +197,7 @@ export default function EventDetailScreen() {
         hitSlop={10}
         accessibilityLabel={t('common.back')}
       >
-        <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+        <Ionicons name="chevron-back" size={22} color={c.texte2} />
       </Pressable>
     </View>
   );
@@ -207,7 +210,7 @@ export default function EventDetailScreen() {
         {!hasEvents ? (
           <EmptyState icon="lock-closed-outline" text={t('events.declare.moduleUnavailable')} />
         ) : loading ? (
-          <ActivityIndicator color={colors.moss} style={{ marginTop: 60 }} />
+          <ActivityIndicator color={c.accent} style={{ marginTop: 60 }} />
         ) : gone ? (
           <EmptyState icon="trash-outline" text={t('events.errors.eventGone')} />
         ) : (
@@ -230,7 +233,7 @@ export default function EventDetailScreen() {
           <Text style={styles.kicker}>{t('events.detail.editKicker')}</Text>
           <Text style={styles.title}>{label}</Text>
           {catalog.loading ? (
-            <ActivityIndicator color={colors.moss} style={{ marginTop: 40 }} />
+            <ActivityIndicator color={c.accent} style={{ marginTop: 40 }} />
           ) : catalog.error || !catalog.scopes ? (
             <ErrorBanner message={t('events.declare.loadFailed')} onRetry={catalog.reload} />
           ) : (
@@ -283,7 +286,7 @@ export default function EventDetailScreen() {
   return (
     <ScreenShell
       withTabBar={false}
-      refreshControl={<RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />}
     >
       {header}
       <Text style={styles.kicker}>{t(event.evangelism ? 'events.detail.kickerEvangelism' : 'events.detail.kicker')}</Text>
@@ -292,14 +295,14 @@ export default function EventDetailScreen() {
       <View style={styles.pills}>
         <EventStatusPills event={event} t={t} />
         {event.status === 'DONE' && (
-          <EventPill tone={colors.moss} icon="checkmark-circle-outline" text={t('events.status.DONE')} />
+          <EventPill tone={c.accent} icon="checkmark-circle-outline" text={t('events.status.DONE')} />
         )}
       </View>
 
       {/* D-EVT-16 (JP 14/10) : le prédicateur en évidence (toujours null hors type évangélique). */}
       {!!event.preacher && (
         <Card variant="tinted" style={styles.preacher}>
-          <Ionicons name="mic-outline" size={20} color={colors.moss} />
+          <Ionicons name="mic-outline" size={20} color={c.accent} />
           <View style={{ flex: 1 }}>
             <Text style={styles.preacherLabel}>{t('events.declare.preacher')}</Text>
             <Text style={styles.preacherName}>{event.preacher}</Text>
@@ -309,7 +312,7 @@ export default function EventDetailScreen() {
 
       {!!flash && (
         <Card variant="tinted" style={styles.flash}>
-          <Ionicons name="checkmark-circle-outline" size={18} color={colors.moss} />
+          <Ionicons name="checkmark-circle-outline" size={18} color={c.accent} />
           <Text style={styles.flashText}>{flash}</Text>
         </Card>
       )}
@@ -361,7 +364,7 @@ export default function EventDetailScreen() {
               disabled={busy || notYetHeld}
               fullWidth
               height={52}
-              iconLeft={<Ionicons name="checkmark-done" size={19} color={colors.white} />}
+              iconLeft={<Ionicons name="checkmark-done" size={19} color={c.surAccent} />}
             />
             {notYetHeld && <Text style={styles.actionHint}>{t('events.detail.notYetHeld')}</Text>}
           </>
@@ -377,7 +380,7 @@ export default function EventDetailScreen() {
             disabled={busy}
             fullWidth
             height={48}
-            iconLeft={<Ionicons name="create-outline" size={18} color={colors.mossDeep} />}
+            iconLeft={<Ionicons name="create-outline" size={18} color={c.accentProfond} />}
           />
         )}
         {event.canFlag && (
@@ -393,7 +396,7 @@ export default function EventDetailScreen() {
             disabled={busy}
             fullWidth
             height={48}
-            iconLeft={<Ionicons name={event.toVerify ? 'flag' : 'flag-outline'} size={17} color={colors.moss} />}
+            iconLeft={<Ionicons name={event.toVerify ? 'flag' : 'flag-outline'} size={17} color={c.accent} />}
           />
         )}
         {canClose && (
@@ -414,7 +417,7 @@ export default function EventDetailScreen() {
             disabled={busy}
             fullWidth
             height={48}
-            iconLeft={<Ionicons name="trash-outline" size={17} color={colors.clay} />}
+            iconLeft={<Ionicons name="trash-outline" size={17} color={c.alerte} />}
           />
         )}
       </View>
@@ -431,11 +434,13 @@ function Row({
   value: string | number | null | undefined;
   last?: boolean;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const empty = value == null || value === '';
   return (
     <View style={[styles.row, !last && styles.rowBorder]}>
       <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={[styles.rowValue, empty && { color: colors.ink3 }]}>{empty ? '—' : String(value)}</Text>
+      <Text style={[styles.rowValue, empty && { color: c.texte3 }]}>{empty ? '—' : String(value)}</Text>
     </View>
   );
 }
@@ -458,6 +463,8 @@ function DoneForm({
   onCancel: () => void;
   onDone: (saved: EventResponse) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [counters, setCounters] = useState(() => counterDraft(event));
   const [preacher, setPreacher] = useState(event.preacher ?? '');
@@ -521,7 +528,7 @@ function DoneForm({
         fullWidth
         height={54}
         style={{ marginTop: 18 }}
-        iconLeft={<Ionicons name="checkmark-done" size={19} color={colors.white} />}
+        iconLeft={<Ionicons name="checkmark-done" size={19} color={c.surAccent} />}
       />
       <Button
         label={t('common.cancel')}
@@ -536,45 +543,47 @@ function DoneForm({
 }
 
 function EmptyState({ icon, text }: { icon: React.ComponentProps<typeof Ionicons>['name']; text: string }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   return (
     <Card variant="paper2" style={styles.empty}>
-      <Ionicons name={icon} size={26} color={colors.ink3} />
+      <Ionicons name={icon} size={26} color={c.texte3} />
       <Text style={styles.emptyText}>{text}</Text>
     </Card>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   kicker: {
     marginTop: 10,
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.clay,
+    color: c.alerte,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4, marginTop: 4 },
-  subtitle: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink2, marginTop: 4 },
-  intro: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, marginTop: 8, lineHeight: 20 },
+  title: { fontFamily: fonts.serif, fontSize: 28, color: c.texte, letterSpacing: -0.4, marginTop: 4 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 14, color: c.texte2, marginTop: 4 },
+  intro: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, marginTop: 8, lineHeight: 20 },
   pills: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 10 },
   preacher: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  preacherLabel: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3 },
-  preacherName: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink, letterSpacing: -0.2, marginTop: 1 },
+  preacherLabel: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3 },
+  preacherName: { fontFamily: fonts.serif, fontSize: 18, color: c.texte, letterSpacing: -0.2, marginTop: 1 },
   flash: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  flashText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
+  flashText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: c.texte2 },
   detailCard: { marginTop: 16, paddingHorizontal: 16, paddingVertical: 4 },
   row: { paddingVertical: 10, gap: 2 },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.hair },
-  rowLabel: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3 },
-  rowValue: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink, lineHeight: 20 },
-  hint: { marginTop: 10, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, lineHeight: 17 },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: c.filet },
+  rowLabel: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3 },
+  rowValue: { fontFamily: fonts.sans, fontSize: 14, color: c.texte, lineHeight: 20 },
+  hint: { marginTop: 10, fontFamily: fonts.sans, fontSize: 12, color: c.texte3, lineHeight: 17 },
   actions: { marginTop: 20, gap: 10 },
-  actionHint: { marginTop: -4, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, textAlign: 'center' },
+  actionHint: { marginTop: -4, fontFamily: fonts.sans, fontSize: 12, color: c.texte3, textAlign: 'center' },
   section: { marginTop: 18 },
   noteHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  counter: { fontFamily: fonts.mono, fontSize: 11, color: colors.ink3 },
+  counter: { fontFamily: fonts.mono, fontSize: 11, color: c.texte3 },
   noteField: { minHeight: 72, textAlignVertical: 'top' },
   empty: { marginTop: 24, paddingHorizontal: 20, paddingVertical: 24, alignItems: 'center', gap: 10 },
-  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2, lineHeight: 20, textAlign: 'center' },
-});
+  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte2, lineHeight: 20, textAlign: 'center' },
+}));

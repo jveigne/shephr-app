@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Switch } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
@@ -9,7 +9,7 @@ import Label from '@/components/Label';
 import Button from '@/components/Button';
 import ErrorBanner from '@/components/ErrorBanner';
 import CalebAssemblyLock from '@/components/CalebAssemblyLock';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getMeeting, listMeetings, type MeetingDetail, type MeetingSummary } from '@/services/assemblyApi';
 import { hierarchyAccessDenied } from '@/services/entitlementsApi';
@@ -29,6 +29,8 @@ import {
   type Periodicity,
 } from '@/utils/assemblyJournal';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** Détails chargés par paquets : un journal annuel compte ~50 réunions, inutile de tout lancer d'un coup. */
@@ -54,6 +56,8 @@ async function loadDetails(ids: string[]): Promise<MeetingDetail[]> {
  * 403 `MODULE_ACCESS_DENIED` / `HIERARCHIE_SUIVI` affiche le verrou Caleb à la place de l'écran.
  */
 export default function AssemblyJournalScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const { unitId, unitName, cityName } = useLocalSearchParams<{
     unitId: string;
@@ -150,7 +154,7 @@ export default function AssemblyJournalScreen() {
       <ScreenShell>
         <View style={styles.headerRow}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+            <Ionicons name="chevron-back" size={22} color={c.texte2} />
           </Pressable>
         </View>
         <Text style={styles.title}>{t('assemblyLife.journal.title')}</Text>
@@ -169,7 +173,7 @@ export default function AssemblyJournalScreen() {
     <ScreenShell>
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+          <Ionicons name="chevron-back" size={22} color={c.texte2} />
         </Pressable>
       </View>
       <Text style={styles.title}>{t('assemblyLife.journal.title')}</Text>
@@ -197,7 +201,7 @@ export default function AssemblyJournalScreen() {
 
         <View style={styles.periodRow}>
           <Pressable onPress={() => setPeriod(shiftPeriod(period, -1))} hitSlop={8} style={styles.navBtn}>
-            <Ionicons name="chevron-back" size={18} color={colors.ink2} />
+            <Ionicons name="chevron-back" size={18} color={c.texte2} />
           </Pressable>
           <Text style={styles.periodText}>{capitalize(periodLabel(period, t))}</Text>
           <Pressable
@@ -206,13 +210,13 @@ export default function AssemblyJournalScreen() {
             hitSlop={8}
             style={[styles.navBtn, !canGoNext && { opacity: 0.3 }]}
           >
-            <Ionicons name="chevron-forward" size={18} color={colors.ink2} />
+            <Ionicons name="chevron-forward" size={18} color={c.texte2} />
           </Pressable>
         </View>
 
         <View style={styles.countRow}>
           {yearMeetings === null && !error ? (
-            <ActivityIndicator color={colors.moss} />
+            <ActivityIndicator color={c.accent} />
           ) : (
             <Text style={styles.countText}>
               {t('assemblyLife.journal.reportCount', { count: inPeriod.length })}
@@ -227,8 +231,8 @@ export default function AssemblyJournalScreen() {
           <Switch
             value={includeAttendees}
             onValueChange={setIncludeAttendees}
-            trackColor={{ true: colors.moss, false: colors.hairStrong }}
-            thumbColor={colors.paper2}
+            trackColor={{ true: c.accent, false: c.filetFort }}
+            thumbColor={c.surfaceHaute}
           />
         </Pressable>
         <Text style={styles.hint}>{t('assemblyLife.journal.contentHint')}</Text>
@@ -240,16 +244,16 @@ export default function AssemblyJournalScreen() {
         loading={generating}
         disabled={inPeriod.length === 0}
         style={{ marginTop: 18 }}
-        iconLeft={<Ionicons name="document-text-outline" size={18} color={colors.white} />}
+        iconLeft={<Ionicons name="document-text-outline" size={18} color={c.surAccent} />}
       />
     </ScreenShell>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center' },
-  title: { fontFamily: fonts.serif, fontSize: 26, color: colors.ink, letterSpacing: -0.4, marginTop: 8 },
-  subtitle: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, marginTop: 4 },
+  title: { fontFamily: fonts.serif, fontSize: 26, color: c.texte, letterSpacing: -0.4, marginTop: 8 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, marginTop: 4 },
   card: { marginTop: 14, paddingHorizontal: 16, paddingVertical: 16 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   periodRow: {
@@ -265,18 +269,18 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
   },
   periodText: {
     fontFamily: fonts.serif,
     fontSize: 20,
-    color: colors.ink,
+    color: c.texte,
     minWidth: 170,
     textAlign: 'center',
   },
   countRow: { marginTop: 14, alignItems: 'center', minHeight: 20 },
-  countText: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2 },
+  countText: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte2 },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  switchLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
-  hint: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, lineHeight: 18, marginTop: 10 },
-});
+  switchLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.texte },
+  hint: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, lineHeight: 18, marginTop: 10 },
+}));

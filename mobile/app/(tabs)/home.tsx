@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, RefreshControl, Modal, Linking, Platform } from 'react-native';
+import { View, Text, Pressable, RefreshControl, Modal, Linking, Platform } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
@@ -9,7 +9,7 @@ import Button from '@/components/Button';
 import Label from '@/components/Label';
 import Amount from '@/components/Amount';
 import HandDivider from '@/components/HandDivider';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii, transparence } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { canDeclareEvents, hasMemberGoals, isAttachedAccount } from '@/services/authApi';
 import { getSummary, type CurrencyTotal, type DonationSummary } from '@/services/statsApi';
@@ -19,10 +19,15 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useCityFollowUp } from '@/hooks/useCityFollowUp';
 import { cityOpen } from '@/utils/cityFollowUp';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { PaletteTheme } from '@/theme/palettes';
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 type ComingKind = 'cantique' | 'priere' | 'compte-rendu';
 
 export default function HomeScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { me, isLeader, isTreasurer, hasGoals, hasDonations, hasEvents, hasDocuments, hasStudy: hasStudyModule } = useAuth();
   const { t } = useLanguage();
   const [summary, setSummary] = useState<DonationSummary | null>(null);
@@ -116,7 +121,7 @@ export default function HomeScreen() {
   return (
     <ScreenShell
       refreshControl={
-        <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
       <View style={styles.headerRow}>
@@ -149,18 +154,18 @@ export default function HomeScreen() {
           quoi qu'il arrive. Ne jamais la re-conditionner sur un abonnement Dons. */}
       {(hasGoals || hasMemberGoals(me)) && (
         <Card onPress={() => router.push('/(tabs)/goals')} style={styles.scopeCta}>
-          <Ionicons name="flag" size={26} color={colors.white} />
+          <Ionicons name="flag" size={26} color={c.surAccent} />
           <View style={{ flex: 1 }}>
             <Text style={styles.scopeTitle}>{t('dashboard.myGoals')}</Text>
             <Text style={styles.scopeSub}>{t('dashboard.myGoalsSub')}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.white} />
+          <Ionicons name="chevron-forward" size={18} color={c.surAccent} />
         </Card>
       )}
 
       {hasDonations && (
       <Card style={styles.hero}>
-        <Label style={{ color: colors.mossSoft }}>{t('dashboard.thisMonth')}</Label>
+        <Label style={{ color: c.accentDoux }}>{t('dashboard.thisMonth')}</Label>
         {summaryFailed ? (
           <Text style={styles.heroEmpty}>{t('dashboard.summaryUnavailable')}</Text>
         ) : monthLines.length === 0 ? (
@@ -178,12 +183,12 @@ export default function HomeScreen() {
                 <Ionicons
                   name={line.diff >= 0 ? 'arrow-up' : 'arrow-down'}
                   size={14}
-                  color={line.diff >= 0 ? colors.mossSoft : colors.clay}
+                  color={line.diff >= 0 ? c.accentDoux : c.alerte}
                 />
                 <Text
                   style={[
                     styles.diffPct,
-                    { color: line.diff >= 0 ? colors.mossSoft : colors.clay },
+                    { color: line.diff >= 0 ? c.accentDoux : c.alerte },
                   ]}
                 >
                   {line.diff >= 0 ? '+' : '\u2212'}
@@ -200,7 +205,7 @@ export default function HomeScreen() {
         {yearLines.length > 0 && (
           <>
             <HandDivider style={{ marginVertical: 16 }} />
-            <Label style={{ color: colors.mossSoft }}>{t('dashboard.yearTotal')}</Label>
+            <Label style={{ color: c.accentDoux }}>{t('dashboard.yearTotal')}</Label>
             {yearLines.map((y) => (
               <View key={y.currency} style={styles.yearRow}>
                 <Amount value={y.total} currency={y.currency} size={24} showDecimals />
@@ -217,7 +222,7 @@ export default function HomeScreen() {
           label={t('dashboard.tiles.declare')}
           hint={t('dashboard.tiles.declareHint')}
           icon="add"
-          tone={colors.moss}
+          tone={c.accent}
           primary
           onPress={() => router.push('/declare')}
         />
@@ -233,7 +238,7 @@ export default function HomeScreen() {
           label={t('dashboard.tiles.treasury')}
           hint={t('dashboard.tiles.treasuryHint')}
           icon="wallet-outline"
-          tone={colors.earthDeep}
+          tone={c.secondaireProfond}
           onPress={() => router.push('/(tabs)/leader')}
         />
         )}
@@ -248,7 +253,7 @@ export default function HomeScreen() {
           label={t('dashboard.tiles.events')}
           hint={t('dashboard.tiles.eventsHint')}
           icon="megaphone-outline"
-          tone={colors.clay}
+          tone={c.alerte}
           onPress={() => router.push('/events/declare')}
         />
         )}
@@ -262,7 +267,7 @@ export default function HomeScreen() {
           label={t('dashboard.tiles.documents')}
           hint={t('dashboard.tiles.documentsHint')}
           icon="library-outline"
-          tone={colors.mossSoft}
+          tone={c.accentDoux}
           onPress={() => router.push('/documents')}
         />
         )}
@@ -277,7 +282,7 @@ export default function HomeScreen() {
           label={t('study.tile.title')}
           hint={t('study.tile.hint')}
           icon="school-outline"
-          tone={colors.moss}
+          tone={c.accent}
           badge={studyLive ? t('study.tile.live') : undefined}
           onPress={() => router.push('/study')}
         />
@@ -290,7 +295,7 @@ export default function HomeScreen() {
           label={t('study.city.entry')}
           hint={onlyCity ? onlyCity.localityName : t('study.city.cityCount', { count: cities.length })}
           icon="business-outline"
-          tone={colors.mossDeep}
+          tone={c.accentProfond}
           badge={citiesLocked ? t('dashboard.tiles.cityLocked') : undefined}
           onPress={() =>
             router.push(onlyCity ? { pathname: '/study/city', params: { localityId: onlyCity.localityId } } : '/study/city')
@@ -306,7 +311,7 @@ export default function HomeScreen() {
           label={t('dashboard.tiles.structure')}
           hint={t('dashboard.tiles.structureHint')}
           icon="add"
-          tone={colors.moss}
+          tone={c.accent}
           onPress={() => router.push('/structure')}
         />
         {isLeader && (
@@ -314,7 +319,7 @@ export default function HomeScreen() {
           label={t('dashboard.tiles.membres')}
           hint={t('dashboard.tiles.membresHint')}
           icon="people-outline"
-          tone={colors.earthDeep}
+          tone={c.secondaireProfond}
           onPress={() => router.push('/membres')}
         />
         )}
@@ -331,7 +336,7 @@ export default function HomeScreen() {
           label={t('dashboard.tiles.cantique')}
           hint={t('dashboard.tiles.cantiqueHint')}
           icon="musical-notes-outline"
-          tone={colors.earth}
+          tone={c.secondaire}
           onPress={() => setComing('cantique')}
         />
         /*
@@ -347,7 +352,7 @@ export default function HomeScreen() {
           label={t('dashboard.tiles.compteRendu')}
           hint={t('dashboard.tiles.compteRenduHint')}
           icon="reader-outline"
-          tone={colors.earthDeep}
+          tone={c.secondaireProfond}
           comingSoon
           onPress={() => setComing('compte-rendu')}
         />*/}
@@ -383,6 +388,8 @@ function Tile({
   badge?: string;
   onPress: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <Pressable
@@ -398,21 +405,21 @@ function Tile({
           styles.tileIcon,
           primary
             ? {
-                backgroundColor: 'rgba(232,220,196,0.14)',
-                borderColor: 'rgba(232,220,196,0.22)',
+                backgroundColor: transparence(c.surAccent, 0.14),
+                borderColor: transparence(c.surAccent, 0.22),
                 borderWidth: 1,
               }
-            : { backgroundColor: tone + '1A' },
+            : { backgroundColor: transparence(tone, 0.1) },
         ]}
       >
-        <Ionicons name={icon} size={22} color={primary ? colors.white : tone} />
+        <Ionicons name={icon} size={22} color={primary ? c.surAccent : tone} />
       </View>
       <View>
-        <Text style={[styles.tileLabel, primary && { color: colors.white }]}>{label}</Text>
+        <Text style={[styles.tileLabel, primary && { color: c.surAccent }]}>{label}</Text>
         <Text
           style={[
             styles.tileHint,
-            primary && { color: 'rgba(242,233,210,0.65)' },
+            primary && { color: transparence(c.surAccent, 0.65) },
           ]}
         >
           {hint}
@@ -426,11 +433,11 @@ function Tile({
   );
 }
 
-const COMING_META: Record<ComingKind, { titleKey: string; bodyKey: string; icon: IoniconName; tone: string }> = {
-  cantique: { titleKey: 'dashboard.coming.cantiqueTitle', bodyKey: 'dashboard.coming.cantiqueBody', icon: 'musical-notes-outline', tone: colors.earth },
+const comingMeta = (c: PaletteTheme): Record<ComingKind, { titleKey: string; bodyKey: string; icon: IoniconName; tone: string }> => ({
+  cantique: { titleKey: 'dashboard.coming.cantiqueTitle', bodyKey: 'dashboard.coming.cantiqueBody', icon: 'musical-notes-outline', tone: c.secondaire },
   priere: { titleKey: 'dashboard.coming.priereTitle', bodyKey: 'dashboard.coming.priereBody', icon: 'hand-left-outline', tone: '#7A8B6F' },
-  'compte-rendu': { titleKey: 'dashboard.coming.compteRenduTitle', bodyKey: 'dashboard.coming.compteRenduBody', icon: 'reader-outline', tone: colors.earthDeep },
-};
+  'compte-rendu': { titleKey: 'dashboard.coming.compteRenduTitle', bodyKey: 'dashboard.coming.compteRenduBody', icon: 'reader-outline', tone: c.secondaireProfond },
+});
 
 // Cantiques (23/07) : la brique renvoie vers l'app CMFIPraise — liens stores officiels.
 const CMFIPRAISE_IOS = 'https://apps.apple.com/fr/app/cmfipraise/id6744709222';
@@ -443,9 +450,11 @@ function ComingSoonModal({
   kind: ComingKind | null;
   onClose: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   if (!kind) return null;
-  const c = COMING_META[kind];
+  const meta = comingMeta(c)[kind];
   const isCantique = kind === 'cantique';
 
   const openStore = () => {
@@ -457,15 +466,15 @@ function ComingSoonModal({
     <Modal transparent animationType="fade" visible={!!kind} onRequestClose={onClose}>
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
         <Pressable style={styles.modalCard} onPress={() => {}}>
-          <View style={[styles.modalIcon, { backgroundColor: c.tone + '1A' }]}>
-            <Ionicons name={c.icon} size={28} color={c.tone} />
+          <View style={[styles.modalIcon, { backgroundColor: transparence(meta.tone, 0.1) }]}>
+            <Ionicons name={meta.icon} size={28} color={meta.tone} />
           </View>
-          <Text style={styles.modalTitle}>{t(c.titleKey)}</Text>
-          <Text style={[styles.modalKicker, { color: c.tone }]}>
+          <Text style={styles.modalTitle}>{t(meta.titleKey)}</Text>
+          <Text style={[styles.modalKicker, { color: meta.tone }]}>
             {isCantique ? t('dashboard.coming.cantiqueKicker') : t('dashboard.comingSoonBadge')}
           </Text>
           <HandDivider style={{ marginVertical: 14, alignSelf: 'center', width: '80%' }} />
-          <Text style={styles.modalBody}>{t(c.bodyKey)}</Text>
+          <Text style={styles.modalBody}>{t(meta.bodyKey)}</Text>
           {isCantique ? (
             <>
               <Button
@@ -474,7 +483,7 @@ function ComingSoonModal({
                 fullWidth
                 height={50}
                 style={{ marginTop: 18 }}
-                iconLeft={<Ionicons name="download-outline" size={18} color={colors.white} />}
+                iconLeft={<Ionicons name="download-outline" size={18} color={c.surAccent} />}
               />
               <Button
                 label={t('dashboard.comingAck')}
@@ -541,19 +550,19 @@ function buildMonthLines(summary: DonationSummary | null): MonthLine[] {
     .sort((a, b) => b.total - a.total);
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 18,
   },
-  date: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
+  date: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3 },
   greeting: {
     fontFamily: fonts.serif,
     fontSize: 28,
     lineHeight: 32,
     marginTop: 4,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.45,
   },
   greetingItalic: { fontStyle: 'italic' },
@@ -562,34 +571,34 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     marginBottom: 18,
     borderRadius: 14,
-    backgroundColor: colors.parchmentDeep,
+    backgroundColor: c.pageProfonde,
     borderWidth: 1,
-    borderColor: 'rgba(42,38,32,0.06)',
+    borderColor: transparence(c.texte, 0.06),
   },
   verseText: {
     fontFamily: fonts.serif,
     fontStyle: 'italic',
     fontSize: 15,
     lineHeight: 22,
-    color: colors.mossDeep,
+    color: c.accentProfond,
   },
   verseRef: {
     marginTop: 4,
     fontFamily: fonts.sans,
     fontSize: 11.5,
-    color: colors.ink3,
+    color: c.texte3,
     letterSpacing: 0.5,
   },
   avatar: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: colors.moss,
+    backgroundColor: c.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    color: colors.white,
+    color: c.surAccent,
     fontFamily: fonts.serif,
     fontSize: 18,
   },
@@ -600,7 +609,7 @@ const styles = StyleSheet.create({
   hero: { marginTop: 18, paddingHorizontal: 22, paddingVertical: 22 },
   diffRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
   diffPct: { fontFamily: fonts.sans, fontWeight: '600', fontSize: 13 },
-  diffNote: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
+  diffNote: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3 },
   yearRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -611,26 +620,26 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: colors.hair,
+    borderTopColor: c.filet,
   },
   heroEmpty: {
     marginTop: 8,
     fontFamily: fonts.serif,
     fontStyle: 'italic',
     fontSize: 16,
-    color: colors.ink3,
+    color: c.texte3,
   },
   scopeCta: {
     marginTop: 18,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: colors.moss,
+    backgroundColor: c.accent,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
   },
-  scopeTitle: { fontFamily: fonts.serif, fontSize: 18, color: colors.white },
-  scopeSub: { fontFamily: fonts.sans, fontSize: 12, color: colors.parchment, opacity: 0.85 },
+  scopeTitle: { fontFamily: fonts.serif, fontSize: 18, color: c.surAccent },
+  scopeSub: { fontFamily: fonts.sans, fontSize: 12, color: c.page, opacity: 0.85 },
 
   tileGrid: {
     marginTop: 18,
@@ -650,14 +659,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   tileSurface: {
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: 'rgba(42,38,32,0.07)',
+    borderColor: transparence(c.texte, 0.07),
   },
   tilePrimary: {
-    backgroundColor: colors.mossSoft,
+    backgroundColor: c.accentDoux,
     borderWidth: 0,
-    shadowColor: colors.mossDeep,
+    shadowColor: c.accentProfond,
     shadowOpacity: 0.25,
     shadowOffset: { width: 0, height: 6 },
     shadowRadius: 12,
@@ -674,14 +683,14 @@ const styles = StyleSheet.create({
     fontFamily: fonts.serif,
     fontSize: 17,
     lineHeight: 20,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.2,
   },
   tileHint: {
     marginTop: 3,
     fontFamily: fonts.sans,
     fontSize: 11.5,
-    color: colors.ink3,
+    color: c.texte3,
   },
   comingPill: {
     position: 'absolute',
@@ -689,21 +698,21 @@ const styles = StyleSheet.create({
     right: 12,
     fontFamily: fonts.mono,
     fontSize: 9.5,
-    color: colors.ink3,
+    color: c.texte3,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 99,
-    backgroundColor: 'rgba(42,38,32,0.05)',
+    backgroundColor: transparence(c.texte, 0.05),
     borderWidth: 1,
-    borderColor: 'rgba(42,38,32,0.07)',
+    borderColor: transparence(c.texte, 0.07),
     overflow: 'hidden',
   },
   livePill: {
-    color: colors.white,
-    backgroundColor: colors.clay,
-    borderColor: colors.clay,
+    color: c.surAccent,
+    backgroundColor: c.alerte,
+    borderColor: c.alerte,
   },
 
   footerMark: {
@@ -711,7 +720,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
     fontFamily: fonts.mono,
     fontSize: 10.5,
-    color: colors.ink3,
+    color: c.texte3,
     letterSpacing: 1.4,
     textTransform: 'uppercase',
   },
@@ -723,13 +732,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   modalCard: {
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderRadius: radii.lg,
     paddingHorizontal: 22,
     paddingTop: 26,
     paddingBottom: 22,
     borderWidth: 1,
-    borderColor: 'rgba(42,38,32,0.07)',
+    borderColor: transparence(c.texte, 0.07),
   },
   modalIcon: {
     width: 56,
@@ -744,7 +753,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.serif,
     fontSize: 24,
     textAlign: 'center',
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.3,
   },
   modalKicker: {
@@ -759,8 +768,8 @@ const styles = StyleSheet.create({
   modalBody: {
     fontFamily: fonts.sans,
     fontSize: 14,
-    color: colors.ink2,
+    color: c.texte2,
     lineHeight: 22,
     textAlign: 'center',
   },
-});
+}));
