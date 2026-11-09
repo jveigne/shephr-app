@@ -22,6 +22,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import PushBridge from '@/components/push/PushBridge';
 import EventQueueSync from '@/components/EventQueueSync';
 import { loadContactSettings } from '@/services/contactApi';
@@ -77,6 +78,9 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <LanguageProvider>
           <AuthProvider>
+            {/* Thème (docs/theme-plan.md §4.2) — sous AuthProvider : à l'étape M5, il lira les
+                préférences du compte connecté. Étape M1 : choix local seulement. */}
+            <ThemeProvider>
             <StatusBar style="dark" />
             {/* Lot N4b (J-3 14/09) — push Expo : enregistrement de l'appareil, canaux Android,
                 routage du tap, invitation d'activation. Sous `AuthProvider` parce qu'il suit la
@@ -139,6 +143,7 @@ export default function RootLayout() {
               {/* D-OFF-10 (JP 27/10) : l'écran « Mes factures » (lot ABO5) est retiré — aucun
                   montant dans l'app ; factures par email (PDF) et sur le web « Mes abonnements ». */}
             </Stack>
+            </ThemeProvider>
           </AuthProvider>
         </LanguageProvider>
       </GestureHandlerRootView>
