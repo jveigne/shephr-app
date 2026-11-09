@@ -138,7 +138,7 @@ export function ExportsPage() {
           <div className="icon-wrap">
             <Icon name="info" size={16} />
           </div>
-          <div style={{ fontSize: 12.5, color: 'var(--ink-700)' }}>
+          <div style={{ fontSize: 12.5, color: 'var(--texte-2)' }}>
             {t('exports.columnsInfo')}
           </div>
         </div>

@@ -360,7 +360,7 @@ export function GoalsPage() {
       render: (l) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <strong>{goalName(l.category)}</strong>
-          <span style={{ fontSize: 12, color: 'var(--ink-400)' }}>
+          <span style={{ fontSize: 12, color: 'var(--texte-4)' }}>
             {l.category.unitType === 'CURRENCY'
               ? t('goals.amountUnit', { symbol: currencySymbol(currency) })
               : t('goals.countUnit', { label: l.category.unitLabel ?? '—' })}
@@ -397,7 +397,7 @@ export function GoalsPage() {
                 flex: 1,
                 height: 6,
                 borderRadius: 99,
-                background: 'rgba(42,38,32,0.08)',
+                background: 'color-mix(in srgb, var(--texte) 8%, transparent)',
                 overflow: 'hidden',
                 display: 'flex',
               }}
@@ -406,7 +406,7 @@ export function GoalsPage() {
                 style={{
                   width: `${basePct}%`,
                   height: '100%',
-                  background: 'var(--green-600, #2E5142)',
+                  background: 'var(--accent-doux, #2E5142)',
                 }}
               />
               {over && (
@@ -414,7 +414,7 @@ export function GoalsPage() {
                   style={{
                     width: `${overPct}%`,
                     height: '100%',
-                    background: 'var(--earth-600, #B07F54)',
+                    background: 'var(--secondaire-moyen, #B07F54)',
                   }}
                 />
               )}
@@ -434,7 +434,7 @@ export function GoalsPage() {
             <span
               style={{
                 fontSize: 12,
-                color: over ? 'var(--earth-700, #8E6B47)' : 'var(--ink-400)',
+                color: over ? 'var(--secondaire-profond, #8E6B47)' : 'var(--texte-4)',
                 fontWeight: over ? 600 : 400,
                 minWidth: 32,
               }}
@@ -571,7 +571,7 @@ export function GoalsPage() {
 
       <div className="content">
         {goalQ.isLoading || (hasUnit && unitQ.isLoading) ? (
-          <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
+          <p style={{ color: 'var(--texte-4)' }}>{t('common.loading')}</p>
         ) : noGoal ? (
           <EmptyNote
             title={t('goals.noActiveGoal')}
@@ -591,16 +591,16 @@ export function GoalsPage() {
               {/* Lot G2 : la date limite est PAR ANNÉE (yearDeadlines), mise en exergue. */}
               <p style={{ margin: 0, fontSize: 13.5 }}>
                 {!hasUnit ? null : submitted ? (
-                  <span style={{ color: 'var(--ink-400)' }}>
+                  <span style={{ color: 'var(--texte-4)' }}>
                     <Icon name="lock" size={12} /> {t('goals.pledgesSubmitted')}
                   </span>
                 ) : yearDeadline ? (
                   new Date(yearDeadline).getTime() < Date.now() ? (
-                    <strong style={{ color: 'var(--err, #B86A4A)' }}>
+                    <strong style={{ color: 'var(--alerte, #B86A4A)' }}>
                       {t('goals.deadlinePast', { date: fmtDateLabel(yearDeadline.slice(0, 10)) })}
                     </strong>
                   ) : (
-                    <strong style={{ color: 'var(--earth-700, #8E6B47)' }}>
+                    <strong style={{ color: 'var(--secondaire-profond, #8E6B47)' }}>
                       {t('goals.submitBefore', { date: fmtDateLabel(yearDeadline.slice(0, 10)) })}
                     </strong>
                   )
@@ -656,7 +656,7 @@ export function GoalsPage() {
                     rows={historyEntries.map((e) => ({ ...e, id: e.progress.id }))}
                     zebra
                     empty={
-                      <p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>
+                      <p style={{ color: 'var(--texte-4)', fontStyle: 'italic' }}>
                         {t('goals.noProgressRecorded')}
                       </p>
                     }
@@ -760,7 +760,7 @@ export function GoalsPage() {
           <tbody>
             {lines.map((l) => (
               <tr key={l.category.id}>
-                <td style={{ padding: '6px 0', color: 'var(--ink-400)' }}>{goalName(l.category)}</td>
+                <td style={{ padding: '6px 0', color: 'var(--texte-4)' }}>{goalName(l.category)}</td>
                 <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 600 }}>
                   {l.target != null ? fmtTarget(l, l.target, currency) : '—'}
                 </td>
@@ -1015,7 +1015,7 @@ function ProgressFormModal({
           </Select>
         </Field>
         {selected && (
-          <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-400)' }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--texte-4)' }}>
             {t('goals.pledgedPaidRemaining', {
               pledged: selected.target != null ? fmtTarget(selected, selected.target, currency) : t('common.none'),
               paid: fmtTarget(selected, selected.achieved, currency),
@@ -1204,13 +1204,13 @@ function PerimeterBlock({
   return (
     <div style={{ marginBottom: 24 }}>
       <h3 style={{ margin: '0 0 4px' }}>{node?.name ? t('goals.myPerimeterNamed', { name: node.name }) : t('goals.myPerimeter')}</h3>
-      <p style={{ margin: '0 0 10px', color: 'var(--ink-400)', fontSize: 13 }}>
+      <p style={{ margin: '0 0 10px', color: 'var(--texte-4)', fontSize: 13 }}>
         {t('goals.myPerimeterIntro')}
       </p>
       {aggQ.isLoading ? (
-        <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
+        <p style={{ color: 'var(--texte-4)' }}>{t('common.loading')}</p>
       ) : aggQ.isError ? (
-        <p style={{ color: 'var(--ink-400)' }}>{errMsg(aggQ.error, t('goals.perimeterInaccessible'))}</p>
+        <p style={{ color: 'var(--texte-4)' }}>{errMsg(aggQ.error, t('goals.perimeterInaccessible'))}</p>
       ) : (
         <Table columns={aggCols} rows={categories.map((c) => ({ id: c.id, category: c }))} zebra />
       )}
@@ -1264,13 +1264,13 @@ function AggregateSection({
   return (
     <div style={{ marginTop: 32 }}>
       <h3 style={{ margin: '0 0 4px' }}>{title}</h3>
-      <p style={{ margin: '0 0 10px', color: 'var(--ink-400)', fontSize: 13 }}>
+      <p style={{ margin: '0 0 10px', color: 'var(--texte-4)', fontSize: 13 }}>
         {t('goals.aggregateRule')}
       </p>
       {aggQ.isLoading ? (
-        <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
+        <p style={{ color: 'var(--texte-4)' }}>{t('common.loading')}</p>
       ) : aggQ.isError ? (
-        <p style={{ color: 'var(--ink-400)' }}>{errMsg(aggQ.error, t('goals.aggregateInaccessible'))}</p>
+        <p style={{ color: 'var(--texte-4)' }}>{errMsg(aggQ.error, t('goals.aggregateInaccessible'))}</p>
       ) : (
         <Table columns={aggCols} rows={categories.map((c) => ({ id: c.id, category: c }))} zebra />
       )}
@@ -1364,7 +1364,7 @@ function ZoneUnitsBlock({
             padding: 0,
             marginBottom: 8,
             cursor: 'pointer',
-            color: 'var(--green-700, #1E3A2F)',
+            color: 'var(--accent-moyen, #1E3A2F)',
             fontSize: 13,
             textDecoration: 'underline',
           }}
@@ -1373,12 +1373,12 @@ function ZoneUnitsBlock({
         </button>
       )}
       {!showingCityList && allSubmitted && (
-        <p style={{ margin: '0 0 8px', color: 'var(--green-600, #2E5142)', fontSize: 13 }}>
+        <p style={{ margin: '0 0 8px', color: 'var(--accent-doux, #2E5142)', fontSize: 13 }}>
           {t('goals.allUnitsSubmitted')}
         </p>
       )}
       {unitsQ.isLoading ? (
-        <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
+        <p style={{ color: 'var(--texte-4)' }}>{t('common.loading')}</p>
       ) : showingCityList ? (
         <div>
           {cityGroups.map((g, i) => {
@@ -1400,7 +1400,7 @@ function ZoneUnitsBlock({
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                   <strong style={{ flex: 1 }}>{g.name ?? t('goals.noCityLabel')}</strong>
-                  <span style={{ fontSize: 12, color: 'var(--ink-400)' }}>
+                  <span style={{ fontSize: 12, color: 'var(--texte-4)' }}>
                     {t('goals.colAssemblies')} : {g.units.length}
                   </span>
                   <Badge
@@ -1424,7 +1424,7 @@ function ZoneUnitsBlock({
                   <Icon name="chevRight" size={13} />
                 </div>
                 {citiesLocalitiesQ.isLoading || aggQ?.isLoading ? (
-                  <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-400)' }}>{t('common.loading')}</p>
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--texte-4)' }}>{t('common.loading')}</p>
                 ) : (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 22px', fontSize: 13 }}>
                     {catsByOrder.map((cat) => {
@@ -1432,7 +1432,7 @@ function ZoneUnitsBlock({
                       const eff = line?.effectiveAmount ?? line?.effectiveCount ?? 0;
                       return (
                         <span key={cat.id}>
-                          <span style={{ color: 'var(--ink-400)' }}>{goalName(cat)} : </span>
+                          <span style={{ color: 'var(--texte-4)' }}>{goalName(cat)} : </span>
                           <strong>{fmtCatValue(cat, eff, currency)}</strong>
                         </span>
                       );
@@ -1459,7 +1459,7 @@ function ZoneUnitsBlock({
                       border: 'none',
                       padding: 0,
                       cursor: 'pointer',
-                      color: 'var(--green-700, #1E3A2F)',
+                      color: 'var(--accent-moyen, #1E3A2F)',
                       fontWeight: 600,
                       textDecoration: 'underline',
                     }}
@@ -1488,7 +1488,7 @@ function ZoneUnitsBlock({
           rows={activeUnits.map((u) => ({ ...u, id: u.unitId }))}
           zebra
           empty={
-            <p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>
+            <p style={{ color: 'var(--texte-4)', fontStyle: 'italic' }}>
               {t('goals.noUnitInZone')}
             </p>
           }
@@ -1504,17 +1504,17 @@ function ZoneUnitsBlock({
         footer={<Button onClick={() => setDetailUnit(null)}>{t('common.close')}</Button>}
       >
         {detailQ.isLoading ? (
-          <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
+          <p style={{ color: 'var(--texte-4)' }}>{t('common.loading')}</p>
         ) : (
           <>
           {detailQ.data?.[0]?.leaderName && (
-            <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--ink-500, #4A443B)' }}>
+            <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--texte-3, #4A443B)' }}>
               {t('goals.unitLeaderInline', { name: detailQ.data[0].leaderName })}
             </p>
           )}
           <table style={{ width: '100%', fontSize: 14, borderSpacing: 0 }}>
             <thead>
-              <tr style={{ textAlign: 'left', color: 'var(--ink-400)', fontSize: 12 }}>
+              <tr style={{ textAlign: 'left', color: 'var(--texte-4)', fontSize: 12 }}>
                 <th style={{ padding: '4px 8px' }}>{t('goals.colCategory')}</th>
                 {/* RG-BQ-02 : ce n'est plus une déclaration de dirigeant mais la Σ des membres. */}
                 <th style={{ padding: '4px 8px', textAlign: 'right' }}>{t('goals.colMembersSum')}</th>
@@ -1538,14 +1538,14 @@ function ZoneUnitsBlock({
                     ? fmtAmount(d.achievedAmount ?? 0, goal.defaultCurrency)
                     : `${d.achievedCount ?? 0} ${cat?.unitLabel ?? ''}`.trim();
                 return (
-                  <tr key={d.categoryId} style={{ borderTop: '1px solid var(--line, rgba(42,38,32,0.08))' }}>
+                  <tr key={d.categoryId} style={{ borderTop: '1px solid var(--filet, color-mix(in srgb, var(--texte) 8%, transparent))' }}>
                     <td style={{ padding: '8px' }}>
                       {label}
                       {/* `locked` = TOUS les engagements des membres de cette catégorie sont soumis. */}
                       {d.locked && <Icon name="lock" size={11} />}
                     </td>
                     <td style={{ padding: '8px', textAlign: 'right' }}>{engaged}</td>
-                    <td style={{ padding: '8px', textAlign: 'right', color: 'var(--ink-400)' }}>{achieved}</td>
+                    <td style={{ padding: '8px', textAlign: 'right', color: 'var(--texte-4)' }}>{achieved}</td>
                   </tr>
                 );
               })}
@@ -1594,13 +1594,13 @@ function NationRegionsBlock({
   });
   const data = q.data ?? null;
   const catByCode = new Map(goal.categories.map((c) => [c.code, c]));
-  if (q.isLoading) return <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>;
+  if (q.isLoading) return <p style={{ color: 'var(--texte-4)' }}>{t('common.loading')}</p>;
   if (!data) return null;
   const levelLabel = data.regionLabel === 'STATE' ? t('views.statesHeading') : t('views.regionsHeading');
   return (
     <div style={{ marginTop: 18 }}>
       <h3 style={{ margin: '0 0 4px' }}>{levelLabel}{data.nationName ? ` — ${data.nationName}` : ''}</h3>
-      <p style={{ margin: '0 0 10px', color: 'var(--ink-400)', fontSize: 13 }}>{t('views.regionsIntro')}</p>
+      <p style={{ margin: '0 0 10px', color: 'var(--texte-4)', fontSize: 13 }}>{t('views.regionsIntro')}</p>
       {data.regions.map((r) => (
         <div key={r.regionId} className="card" style={{ padding: '12px 16px', marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
@@ -1628,16 +1628,16 @@ function NationRegionsBlock({
                 : `${l.achieved ?? 0} ${cat?.unitLabel ?? ''}`.trim();
               return (
                 <span key={l.categoryId}>
-                  <span style={{ color: 'var(--ink-400)' }}>{goalName(cat, l.categoryCode)} : </span>
+                  <span style={{ color: 'var(--texte-4)' }}>{goalName(cat, l.categoryCode)} : </span>
                   <strong>{effective}</strong>
-                  <span style={{ color: 'var(--ink-400)' }}> · {t('views.achievedInline', { value: achieved })}</span>
+                  <span style={{ color: 'var(--texte-4)' }}> · {t('views.achievedInline', { value: achieved })}</span>
                 </span>
               );
             })}
           </div>
         </div>
       ))}
-      <div className="card" style={{ padding: '12px 16px', background: 'var(--paper-2, #F7F4EE)' }}>
+      <div className="card" style={{ padding: '12px 16px', background: 'var(--surface-haute)' }}>
         <div style={{ marginBottom: 6 }}><strong>{t('views.nationTotal')}</strong></div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 22px', fontSize: 13 }}>
           {data.totals.map((l) => {
@@ -1650,9 +1650,9 @@ function NationRegionsBlock({
               : `${l.achieved ?? 0} ${cat?.unitLabel ?? ''}`.trim();
             return (
               <span key={l.categoryId}>
-                <span style={{ color: 'var(--ink-400)' }}>{goalName(cat, l.categoryCode)} : </span>
+                <span style={{ color: 'var(--texte-4)' }}>{goalName(cat, l.categoryCode)} : </span>
                 <strong>{effective}</strong>
-                <span style={{ color: 'var(--ink-400)' }}> · {t('views.achievedInline', { value: achieved })}</span>
+                <span style={{ color: 'var(--texte-4)' }}> · {t('views.achievedInline', { value: achieved })}</span>
               </span>
             );
           })}
@@ -1700,7 +1700,7 @@ function DeadlineEditor({ year, current }: { year: number; current: string | nul
           marginTop: 4,
           cursor: 'pointer',
           fontSize: 12.5,
-          color: 'var(--green-700, #1E3A2F)',
+          color: 'var(--accent-moyen, #1E3A2F)',
           textDecoration: 'underline',
         }}
       >
@@ -1789,16 +1789,16 @@ function GlobalSummarySection({ goal, currency, year, drill = true }: { goal: Ac
       )}
 
       {summaryQ.isLoading ? (
-        <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
+        <p style={{ color: 'var(--texte-4)' }}>{t('common.loading')}</p>
       ) : summaryQ.isError ? (
-        <p style={{ color: 'var(--ink-400)' }}>
+        <p style={{ color: 'var(--texte-4)' }}>
           {errMsg(summaryQ.error, t('goals.globalSummaryInaccessible'))}
         </p>
       ) : summary ? (
         <>
           {/* RG-BQ-06 : maille PERSONNE. `totalUnits` reste un décompte d'assemblées, il ne se
               mélange plus au ratio de soumission. */}
-          <p style={{ margin: '0 0 10px', color: 'var(--ink-400)', fontSize: 13 }}>
+          <p style={{ margin: '0 0 10px', color: 'var(--texte-4)', fontSize: 13 }}>
             {t('goals.membersSubmittedRatioLong', {
               submitted: summary.submittedMembers,
               total: summary.totalMembers,
@@ -1810,7 +1810,7 @@ function GlobalSummarySection({ goal, currency, year, drill = true }: { goal: Ac
             {summary.lateMembers > 0 && (
               <>
                 {' '}
-                <strong style={{ color: 'var(--err, #B86A4A)' }}>
+                <strong style={{ color: 'var(--alerte, #B86A4A)' }}>
                   {t('goals.lateMembers', { count: summary.lateMembers })}
                 </strong>
               </>
@@ -1837,7 +1837,7 @@ function GlobalSummarySection({ goal, currency, year, drill = true }: { goal: Ac
             <div key={continent.continentId} style={{ marginTop: 16 }}>
               <h4 style={{ margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 10 }}>
                 {continent.name}{' '}
-                <span style={{ fontWeight: 400, fontSize: 13, color: 'var(--ink-400)' }}>
+                <span style={{ fontWeight: 400, fontSize: 13, color: 'var(--texte-4)' }}>
                   {t('goals.continentSubmitted', {
                     submitted: continent.submittedMembers,
                     total: continent.totalMembers,
@@ -1901,7 +1901,7 @@ function DrillView({
     border: 'none',
     padding: 0,
     cursor: 'pointer',
-    color: 'var(--green-700, #1E3A2F)',
+    color: 'var(--accent-moyen, #1E3A2F)',
     fontSize: 13,
     textDecoration: 'underline',
   };
@@ -1927,7 +1927,7 @@ function DrillView({
       </p>
 
       {current.level === 'units' && current.unitStatus && (
-        <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--ink-400)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--texte-4)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           {current.unitStatus.localityName
             ? <span>{t('goals.localityPrefix', { name: current.unitStatus.localityName })}</span>
             : null}
@@ -1991,9 +1991,9 @@ function LevelAggregateBlock({
   const categories = [...goal.categories].sort((a, b) => a.displayOrder - b.displayOrder);
   const lineByCat = new Map((aggQ.data ?? []).map((l) => [l.categoryId, l]));
 
-  if (aggQ.isLoading) return <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>;
+  if (aggQ.isLoading) return <p style={{ color: 'var(--texte-4)' }}>{t('common.loading')}</p>;
   if (aggQ.isError) {
-    return <p style={{ color: 'var(--ink-400)' }}>{errMsg(aggQ.error, t('goals.aggregateInaccessible'))}</p>;
+    return <p style={{ color: 'var(--texte-4)' }}>{errMsg(aggQ.error, t('goals.aggregateInaccessible'))}</p>;
   }
 
   return (
@@ -2129,7 +2129,7 @@ function MembersGoalsBlock({
   });
 
   if (q.isLoading) {
-    return <p style={{ margin: '10px 0 0', color: 'var(--ink-400)', fontSize: 13 }}>{t('common.loading')}</p>;
+    return <p style={{ margin: '10px 0 0', color: 'var(--texte-4)', fontSize: 13 }}>{t('common.loading')}</p>;
   }
   if (q.isError || !q.data) return null;
 
@@ -2184,7 +2184,7 @@ function MembersGoalsBlock({
       label: goalName(catById.get(l.categoryId), l.categoryCode),
       render: (r: MemberRow) => {
         const v = r.values.get(l.categoryId);
-        return v != null ? fmt(l.categoryId, v) : <span style={{ color: 'var(--ink-400)' }}>—</span>;
+        return v != null ? fmt(l.categoryId, v) : <span style={{ color: 'var(--texte-4)' }}>—</span>;
       },
     } as Column<MemberRow>)),
     {
@@ -2227,7 +2227,7 @@ function MembersGoalsBlock({
     <div style={{ marginTop: 18 }}>
       <h4 style={{ margin: '0 0 4px' }}>{t('goals.membersGoalsTitle')}</h4>
       {/* Compteur « 7/12 membres ont soumis » (RG-BQ-06) — `pct` absorbe le cas 0 membre. */}
-      <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--ink-500, #4A443B)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--texte-3, #4A443B)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <strong><MembersSubmittedRatio u={data} /></strong>
         {data.lateMembers > 0 && (
           <Badge tone="err" dot>{t('goals.lateMembers', { count: data.lateMembers })}</Badge>
@@ -2240,7 +2240,7 @@ function MembersGoalsBlock({
           rows={memberRows}
           zebra
           empty={
-            <p style={{ color: 'var(--ink-400)', fontStyle: 'italic', margin: '6px 0 0' }}>
+            <p style={{ color: 'var(--texte-4)', fontStyle: 'italic', margin: '6px 0 0' }}>
               {t('goals.noMemberInUnit')}
             </p>
           }
@@ -2302,7 +2302,7 @@ function DrillCountries({ continentId, onOpen }: { continentId: string; onOpen: 
         rows={rows}
         onRowClick={(c) => onOpen(c.id, c.name)}
         zebra
-        empty={<p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>{t('goals.noCountryOnContinent')}</p>}
+        empty={<p style={{ color: 'var(--texte-4)', fontStyle: 'italic' }}>{t('goals.noCountryOnContinent')}</p>}
       />
     </div>
   );
@@ -2329,7 +2329,7 @@ function DrillZones({ countryId, onOpen }: { countryId: string; onOpen: (id: str
         rows={rows}
         onRowClick={(z) => onOpen(z.id, z.name)}
         zebra
-        empty={<p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>{t('goals.noZoneInCountry')}</p>}
+        empty={<p style={{ color: 'var(--texte-4)', fontStyle: 'italic' }}>{t('goals.noZoneInCountry')}</p>}
       />
     </div>
   );
@@ -2375,7 +2375,7 @@ function DrillCities({ zoneId, year, onOpen }: { zoneId: string; year: number; o
                   {l.late > 0 && <Badge tone="err" dot>{t('goals.lateMembers', { count: l.late })}</Badge>}
                 </span>
               ) : (
-                <span style={{ color: 'var(--ink-400)' }}>—</span>
+                <span style={{ color: 'var(--texte-4)' }}>—</span>
               ),
           },
           {
@@ -2388,7 +2388,7 @@ function DrillCities({ zoneId, year, onOpen }: { zoneId: string; year: number; o
         rows={rows}
         onRowClick={(l) => onOpen(l.id, l.name)}
         zebra
-        empty={<p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>{t('goals.noCityInZone')}</p>}
+        empty={<p style={{ color: 'var(--texte-4)', fontStyle: 'italic' }}>{t('goals.noCityInZone')}</p>}
       />
     </div>
   );
@@ -2437,7 +2437,7 @@ function DrillUnits({ zoneId, year, onOpen, cityName }: { zoneId: string; year: 
         onRowClick={(u) => onOpen(u)}
         zebra
         empty={
-          <p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>
+          <p style={{ color: 'var(--texte-4)', fontStyle: 'italic' }}>
             {cityName != null ? t('goals.noUnitInCity') : t('goals.noUnitInZone')}
           </p>
         }

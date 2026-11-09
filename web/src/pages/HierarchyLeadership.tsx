@@ -68,14 +68,14 @@ export function HierarchyLeadershipPage() {
         crumbs={[t('common.brand'), t('nav.hierarchy'), t('hierarchy.leadership.title')]}
       />
       <div className="content">
-        <Link to="/hierarchy" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--green-700)', fontWeight: 600, fontSize: 13.5, marginBottom: 14 }}>
+        <Link to="/hierarchy" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent-moyen)', fontWeight: 600, fontSize: 13.5, marginBottom: 14 }}>
           <Icon name="chevLeft" size={14} />
           {t('hierarchy.backToHome')}
         </Link>
         <p className="section-sub">{t('hierarchy.leadership.intro')}</p>
 
         {q.isLoading ? (
-          <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>
+          <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>
         ) : q.isError || !overview ? (
           <div className="card empty">
             <div className="icon-wrap"><Icon name="hierarchy" size={26} /></div>
@@ -156,7 +156,7 @@ function LeadershipSections({ overview }: { overview: SupervisionOverview }) {
           <Empty>{t('hierarchy.leadership.incomingEmpty')}</Empty>
         ) : (
           <>
-            <p style={{ margin: '0 0 8px', fontSize: 12.5, color: 'var(--ink-500)' }}>{t('hierarchy.leadership.incomingHint')}</p>
+            <p style={{ margin: '0 0 8px', fontSize: 12.5, color: 'var(--texte-3)' }}>{t('hierarchy.leadership.incomingHint')}</p>
             {overview.incoming.map((r) => (
               <PersonRow
                 key={r.id}
@@ -197,7 +197,7 @@ function LeadershipSections({ overview }: { overview: SupervisionOverview }) {
               <PersonRow key={p.id} person={p} />
             ))}
             {overview.outgoing.length > 0 && (
-              <div style={{ fontSize: 12.5, color: 'var(--ink-500)', margin: '10px 0 4px' }}>
+              <div style={{ fontSize: 12.5, color: 'var(--texte-3)', margin: '10px 0 4px' }}>
                 {t('hierarchy.leadership.outgoingTitle', { count: overview.outgoing.length })}
               </div>
             )}
@@ -266,7 +266,7 @@ function LeadershipSections({ overview }: { overview: SupervisionOverview }) {
             </>
           }
         >
-          <p style={{ margin: 0, color: 'var(--ink-700)', lineHeight: 1.55 }}>
+          <p style={{ margin: 0, color: 'var(--texte-2)', lineHeight: 1.55 }}>
             {confirm.kind === 'accept'
               ? t('hierarchy.leadership.confirm.acceptBody', { requester: confirm.request.requester.fullName, current: confirm.replaced })
               : confirm.kind === 'revoke'
@@ -345,13 +345,13 @@ function DesignateModal({ open, onClose }: { open: boolean; onClose: () => void 
       {debouncedQ.length >= 2 && (
         <div style={{ marginTop: 6 }}>
           {candidatesQ.isLoading ? (
-            <p style={{ color: 'var(--ink-400)', margin: 0 }}>{t('common.loading')}</p>
+            <p style={{ color: 'var(--texte-4)', margin: 0 }}>{t('common.loading')}</p>
           ) : candidatesQ.isError ? (
-            <p role="alert" style={{ color: 'var(--err)', margin: 0, fontSize: 13 }}>{supervisionErrorMessage(candidatesQ.error, t)}</p>
+            <p role="alert" style={{ color: 'var(--alerte)', margin: 0, fontSize: 13 }}>{supervisionErrorMessage(candidatesQ.error, t)}</p>
           ) : results.length === 0 ? (
-            <p style={{ color: 'var(--ink-400)', margin: 0, fontStyle: 'italic' }}>{t('hierarchy.leadership.noResult')}</p>
+            <p style={{ color: 'var(--texte-4)', margin: 0, fontStyle: 'italic' }}>{t('hierarchy.leadership.noResult')}</p>
           ) : (
-            <div style={{ border: '1px solid var(--line-soft, rgba(42,38,32,0.08))', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ border: '1px solid var(--filet-doux, color-mix(in srgb, var(--texte) 8%, transparent))', borderRadius: 10, overflow: 'hidden' }}>
               {results.map((p) => (
                 <button
                   key={p.id}
@@ -361,12 +361,12 @@ function DesignateModal({ open, onClose }: { open: boolean; onClose: () => void 
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
                     padding: '10px 14px', background: 'transparent', border: 'none', cursor: 'pointer',
-                    borderBottom: '1px solid var(--line-soft, rgba(42,38,32,0.06))', fontFamily: 'inherit',
+                    borderBottom: '1px solid var(--filet-doux, color-mix(in srgb, var(--texte) 6%, transparent))', fontFamily: 'inherit',
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, color: 'var(--ink-900, #1E1B16)' }}>{p.fullName}</div>
-                    <div style={{ fontSize: 12.5, color: 'var(--ink-500)' }}>{[personLine(p), p.email].filter(Boolean).join(' · ')}</div>
+                    <div style={{ fontWeight: 600, color: 'var(--texte, #1E1B16)' }}>{p.fullName}</div>
+                    <div style={{ fontSize: 12.5, color: 'var(--texte-3)' }}>{[personLine(p), p.email].filter(Boolean).join(' · ')}</div>
                   </div>
                   {(p.goalRole ?? p.donationRole) && <Badge tone="gray">{t(`roles.${p.goalRole ?? p.donationRole}`)}</Badge>}
                   {!p.active && <Badge tone="gray">{t('users.statusInactive')}</Badge>}
@@ -398,7 +398,7 @@ function Section({
 }
 
 function Empty({ children }: { children: ReactNode }) {
-  return <p style={{ margin: 0, color: 'var(--ink-500)', fontSize: 13.5 }}>{children}</p>;
+  return <p style={{ margin: 0, color: 'var(--texte-3)', fontSize: 13.5 }}>{children}</p>;
 }
 
 function PersonRow({
@@ -411,7 +411,7 @@ function PersonRow({
     <div
       style={{
         display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '8px 0',
-        borderTop: '1px solid var(--line-soft, rgba(42,38,32,0.06))',
+        borderTop: '1px solid var(--filet-doux, color-mix(in srgb, var(--texte) 6%, transparent))',
       }}
     >
       <Icon name="user" size={14} />
@@ -423,7 +423,7 @@ function PersonRow({
           {badge}
         </div>
         {(line || meta) && (
-          <div style={{ fontSize: 12.5, color: 'var(--ink-500)' }}>{[line, meta].filter(Boolean).join(' · ')}</div>
+          <div style={{ fontSize: 12.5, color: 'var(--texte-3)' }}>{[line, meta].filter(Boolean).join(' · ')}</div>
         )}
       </div>
       {actions && <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>{actions}</div>}

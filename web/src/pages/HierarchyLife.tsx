@@ -76,7 +76,7 @@ export function HierarchyLifePage() {
 
   let body;
   if (personalQ.isLoading || hierarchyQ.isLoading) {
-    body = <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>;
+    body = <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>;
   } else if (personalQ.isError || hierarchyQ.isError || !personal || !data) {
     body = (
       <div className="card empty">
@@ -94,7 +94,7 @@ export function HierarchyLifePage() {
       <>
         <HierarchySubscriptionStatus plan={hierarchyPlan} />
         <div className="card" style={{ padding: '12px 16px', marginBottom: 12 }}>
-          <div style={{ fontSize: 12.5, color: 'var(--ink-500)', marginBottom: 8 }}>{t('hierarchy.life.period')}</div>
+          <div style={{ fontSize: 12.5, color: 'var(--texte-3)', marginBottom: 8 }}>{t('hierarchy.life.period')}</div>
           <PeriodPicker period={period} setPeriod={setPeriod} />
         </div>
         <AssemblyStatsProvider roots={roots} isChain={false} entitled={entitled} onLocked={onLocked} period={period}>
@@ -119,13 +119,13 @@ export function HierarchyLifePage() {
         crumbs={[t('common.brand'), t('nav.hierarchy'), t('hierarchy.life.title')]}
       />
       <div className="content">
-        <Link to="/hierarchy" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--green-700)', fontWeight: 600, fontSize: 13.5, marginBottom: 14 }}>
+        <Link to="/hierarchy" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent-moyen)', fontWeight: 600, fontSize: 13.5, marginBottom: 14 }}>
           <Icon name="chevLeft" size={14} />
           {t('hierarchy.backToHome')}
         </Link>
         {/* D-ABO-29 (même mécanique que la ville) : l'annulation Stripe revient ici avec `?annule=1`. */}
         {canceled && (
-          <div role="status" style={{ background: 'var(--warn-bg)', color: 'var(--warn)', borderRadius: 'var(--radius)', padding: '12px 16px', fontSize: 14, marginBottom: 18, display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div role="status" style={{ background: 'var(--avertissement-teinte)', color: 'var(--avertissement)', borderRadius: 'var(--radius)', padding: '12px 16px', fontSize: 14, marginBottom: 18, display: 'flex', gap: 10, alignItems: 'center' }}>
             <Icon name="info" size={16} />
             <span style={{ flex: 1 }}>{t('hierarchy.plan.canceledBanner')}</span>
             <button

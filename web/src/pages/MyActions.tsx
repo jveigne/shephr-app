@@ -80,13 +80,13 @@ export function MyActionsPage() {
 
   const body = (() => {
     if (modulesQ.isLoading || (hasEvents && scopesQ.isLoading)) {
-      return <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>;
+      return <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>;
     }
     if (!hasEvents) {
       return <EventEmptyState title={t('events.moduleOff')} text={t('events.moduleOffHint')} />;
     }
     if (!scopes) {
-      return <p role="alert" style={{ color: 'var(--err)' }}>{eventErrorMessage(scopesQ.error, t)}</p>;
+      return <p role="alert" style={{ color: 'var(--alerte)' }}>{eventErrorMessage(scopesQ.error, t)}</p>;
     }
     if (!unitId) {
       return <EventEmptyState title={t('events.declare.noScope')} text={t('events.declare.noScopeHint')} />;
@@ -96,7 +96,7 @@ export function MyActionsPage() {
       <>
         <AssemblyCounter unitId={unitId} />
         {noTypes && (scopes.canDeclare || scopes.canPlan) && (
-          <p style={{ color: 'var(--ink-500)', fontSize: 13, marginTop: 16 }}>{t('events.declare.noTypesHint')}</p>
+          <p style={{ color: 'var(--texte-3)', fontSize: 13, marginTop: 16 }}>{t('events.declare.noTypesHint')}</p>
         )}
         {/* Contrat §3.12 : à venir = programmés à partir d'aujourd'hui LOCAL (§1.4), le plus proche en
             haut. Ses propres programmés à clôturer restent accessibles dans « Toutes mes actions ». */}
@@ -216,16 +216,16 @@ function AssemblyCounter({ unitId }: { unitId: string }) {
         <h2 className="section-title">{stats?.scope.name ?? t('events.member.assembly')}</h2>
         <div className="section-sub" style={{ margin: 0 }}>{t('events.member.counterSub')}</div>
         {stats && (
-          <div style={{ marginTop: 4, fontSize: 13, color: 'var(--green-800)' }}>
+          <div style={{ marginTop: 4, fontSize: 13, color: 'var(--accent)' }}>
             {t('events.member.yearCounters', { year, counts: fmtCounts(stats.total, EVANGELISM_COUNTERS, t, lang) })}
           </div>
         )}
       </div>
       <div style={{ marginLeft: 'auto', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         {statsQ.isLoading ? (
-          <p style={{ color: 'var(--ink-500)', margin: 0 }}>{t('common.loading')}</p>
+          <p style={{ color: 'var(--texte-3)', margin: 0 }}>{t('common.loading')}</p>
         ) : !stats ? (
-          <p role="alert" style={{ color: 'var(--err)', margin: 0 }}>{eventErrorMessage(statsQ.error, t)}</p>
+          <p role="alert" style={{ color: 'var(--alerte)', margin: 0 }}>{eventErrorMessage(statsQ.error, t)}</p>
         ) : (
           <>
             <EventCounter label={t('events.member.thisMonth', { month: fmtMonth(month, lang) })} value={fmtCount(monthCount, lang)} />
@@ -267,16 +267,16 @@ function MyOwnEvents({ onOpen }: { onOpen: (e: EventResponse) => void }) {
         <span className="muted" style={{ fontSize: 12.5 }}>{t('events.member.allSub')}</span>
       </div>
       {mineQ.isLoading ? (
-        <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>
+        <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>
       ) : !mine ? (
-        <p role="alert" style={{ color: 'var(--err)' }}>{eventErrorMessage(mineQ.error, t)}</p>
+        <p role="alert" style={{ color: 'var(--alerte)' }}>{eventErrorMessage(mineQ.error, t)}</p>
       ) : (
         <div className="card" style={{ opacity: mineQ.isPlaceholderData ? 0.6 : 1 }}>
           <EventsTable
             page={mine.events}
             onPage={setPage}
             onOpen={onOpen}
-            empty={<p style={{ margin: 0, padding: '16px 22px', color: 'var(--ink-500)', fontSize: 13 }}>{t('events.member.allEmpty')}</p>}
+            empty={<p style={{ margin: 0, padding: '16px 22px', color: 'var(--texte-3)', fontSize: 13 }}>{t('events.member.allEmpty')}</p>}
           />
         </div>
       )}
