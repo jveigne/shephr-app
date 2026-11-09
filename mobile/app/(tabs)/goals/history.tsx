@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   Modal,
   ActivityIndicator,
@@ -18,7 +17,7 @@ import Label from '@/components/Label';
 import Field from '@/components/Field';
 import Button from '@/components/Button';
 import Chip from '@/components/Chip';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { goalName } from '@/utils/goalName';
 import { useGoalsData } from '@/hooks/useGoalsData';
@@ -32,6 +31,8 @@ import {
   type ProgressResponse,
 } from '@/services/goalsApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallback;
 
 interface HistoryEntry {
@@ -40,6 +41,8 @@ interface HistoryEntry {
 }
 
 export default function HistoryScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   // RG-BQ-01 (16/08) : historique de MES avancements — plus de `unitId` d'assemblée.
@@ -104,12 +107,12 @@ export default function HistoryScreen() {
       withTabBar={false}
       paddingTop={insets.top ? 4 : 16}
       refreshControl={
-        <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
       <View style={styles.headerRow}>
         <Pressable onPress={() => goBack()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={24} color={colors.ink2} />
+          <Ionicons name="arrow-back" size={24} color={c.texte2} />
         </Pressable>
       </View>
 
@@ -133,7 +136,7 @@ export default function HistoryScreen() {
       )}
 
       {loading ? (
-        <ActivityIndicator color={colors.moss} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={c.accent} style={{ marginTop: 40 }} />
       ) : visible.length === 0 ? (
         <Text style={styles.emptyText}>{t('historyScreen.empty')}</Text>
       ) : (
@@ -165,14 +168,14 @@ export default function HistoryScreen() {
                   {editable && (
                     <>
                       <Pressable onPress={() => setEditing(entry)} hitSlop={8}>
-                        <Ionicons name="pencil-outline" size={18} color={colors.ink3} />
+                        <Ionicons name="pencil-outline" size={18} color={c.texte3} />
                       </Pressable>
                       <Pressable
                         onPress={() => onDelete(entry)}
                         hitSlop={8}
                         style={{ marginLeft: 12 }}
                       >
-                        <Ionicons name="trash-outline" size={18} color={colors.clay} />
+                        <Ionicons name="trash-outline" size={18} color={c.alerte} />
                       </Pressable>
                     </>
                   )}
@@ -215,6 +218,7 @@ function EditProgressModal({
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
+  const styles = useStyles();
   const { t } = useLanguage();
   const [value, setValue] = useState('');
   const [note, setNote] = useState('');
@@ -298,26 +302,26 @@ function EditProgressModal({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', marginBottom: 6 },
   title: {
     fontFamily: fonts.serif,
     fontSize: 28,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.5,
     marginTop: 2,
   },
   intro: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 6,
     lineHeight: 20,
   },
   emptyText: {
     fontFamily: fonts.sans,
     fontSize: 13.5,
-    color: colors.ink3,
+    color: c.texte3,
     fontStyle: 'italic',
     marginTop: 32,
   },
@@ -329,28 +333,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  entryValue: { fontFamily: fonts.serif, fontSize: 17, color: colors.ink },
-  entryMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2 },
+  entryValue: { fontFamily: fonts.serif, fontSize: 17, color: c.texte },
+  entryMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 2 },
   entryNote: {
     fontFamily: fonts.serif,
     fontSize: 12.5,
     fontStyle: 'italic',
-    color: colors.ink2,
+    color: c.texte2,
     marginTop: 4,
   },
   footnote: {
     textAlign: 'center',
     marginTop: 18,
     fontSize: 12,
-    color: colors.ink3,
+    color: c.texte3,
     fontFamily: fonts.sans,
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(22,41,31,0.45)',
+    backgroundColor: c.voile,
     justifyContent: 'center',
     padding: 20,
   },
   modalCard: { paddingHorizontal: 20, paddingVertical: 20 },
-  modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink },
-});
+  modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: c.texte },
+}));

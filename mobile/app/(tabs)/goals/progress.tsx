@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   TextInput,
   KeyboardAvoidingView,
@@ -19,7 +18,7 @@ import Label from '@/components/Label';
 import Field from '@/components/Field';
 import Button from '@/components/Button';
 import Chip from '@/components/Chip';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { goalName } from '@/utils/goalName';
 import { useGoalsData } from '@/hooks/useGoalsData';
@@ -28,9 +27,13 @@ import { currencySymbol, fmtAmount, fmtDateLong, toLocalDate } from '@/utils/for
 import { confirmDialog, notify } from '@/utils/dialogs';
 import { addProgress } from '@/services/goalsApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallback;
 
 export default function AddProgressScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   // RG-BQ-01 (16/08) : on ne déclare l'état que de SES propres objectifs — les paramètres `scope`
@@ -108,7 +111,7 @@ export default function AddProgressScreen() {
       <ScreenShell withTabBar={false} paddingTop={insets.top ? 4 : 16}>
         <View style={styles.headerRow}>
           <Pressable onPress={() => goBack()} hitSlop={10}>
-            <Ionicons name="arrow-back" size={24} color={colors.ink2} />
+            <Ionicons name="arrow-back" size={24} color={c.texte2} />
           </Pressable>
         </View>
 
@@ -118,7 +121,7 @@ export default function AddProgressScreen() {
         </Text>
 
         {loading ? (
-          <ActivityIndicator color={colors.moss} style={{ marginTop: 40 }} />
+          <ActivityIndicator color={c.accent} style={{ marginTop: 40 }} />
         ) : declared.length === 0 ? (
           <Text style={styles.emptyText}>
             {t('progress.noPledge')}
@@ -140,7 +143,7 @@ export default function AddProgressScreen() {
                       setValue('');
                     }}
                     iconLeft={
-                      <Ionicons name={meta.icon} size={13} color={on ? colors.white : meta.tone} />
+                      <Ionicons name={meta.icon} size={13} color={on ? c.surAccent : meta.tone} />
                     }
                   />
                 );
@@ -171,7 +174,7 @@ export default function AddProgressScreen() {
             )}
 
             <Card style={styles.amountCard}>
-              <Label style={{ color: colors.mossSoft, textAlign: 'center' }}>
+              <Label style={{ color: c.accentDoux, textAlign: 'center' }}>
                 {isCurrency
                   ? t('progress.amountGiven')
                   : t('progress.progressLabel', { unit: selected?.category.unitLabel ?? t('progress.unitFallback') })}
@@ -185,7 +188,7 @@ export default function AddProgressScreen() {
                   style={styles.amountInput}
                   maxLength={10}
                   placeholder={selected ? String(selected.achieved) : '0'}
-                  placeholderTextColor={colors.ink3}
+                  placeholderTextColor={c.texte3}
                 />
               </View>
             </Card>
@@ -193,7 +196,7 @@ export default function AddProgressScreen() {
             <View style={{ marginTop: 16 }}>
               <Label style={{ marginBottom: 8 }}>{t('progress.date')}</Label>
               <Card style={styles.dateRow}>
-                <Ionicons name="calendar-outline" size={20} color={colors.mossSoft} />
+                <Ionicons name="calendar-outline" size={20} color={c.accentDoux} />
                 <Text style={styles.dateText}>{fmtDateLong(date)}</Text>
                 <Text style={styles.dateChip}>{t('common.today')}</Text>
               </Card>
@@ -219,7 +222,7 @@ export default function AddProgressScreen() {
               fullWidth
               height={56}
               style={{ marginTop: 20 }}
-              iconLeft={<Ionicons name="checkmark" size={20} color={colors.white} />}
+              iconLeft={<Ionicons name="checkmark" size={20} color={c.surAccent} />}
             />
             <Text style={styles.footnote}>
               {deadlineIso
@@ -235,19 +238,19 @@ export default function AddProgressScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', marginBottom: 6 },
   title: {
     fontFamily: fonts.serif,
     fontSize: 28,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.5,
     marginTop: 2,
   },
   intro: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 6,
     lineHeight: 20,
     maxWidth: 320,
@@ -255,7 +258,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: fonts.sans,
     fontSize: 13.5,
-    color: colors.ink3,
+    color: c.texte3,
     fontStyle: 'italic',
     marginTop: 32,
     lineHeight: 20,
@@ -268,15 +271,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   ctxCol: { gap: 2 },
-  ctxValue: { fontFamily: fonts.serif, fontSize: 16, color: colors.ink },
+  ctxValue: { fontFamily: fonts.serif, fontSize: 16, color: c.texte },
   amountCard: { paddingVertical: 20, paddingHorizontal: 22, marginTop: 16, alignItems: 'center' },
   amountRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 8 },
-  cur: { fontFamily: fonts.serif, fontSize: 30, color: colors.ink3, marginRight: 4 },
+  cur: { fontFamily: fonts.serif, fontSize: 30, color: c.texte3, marginRight: 4 },
   amountInput: {
     fontFamily: fonts.serif,
     fontSize: 52,
     fontWeight: '500',
-    color: colors.ink,
+    color: c.texte,
     textAlign: 'center',
     minWidth: 120,
     letterSpacing: -1,
@@ -289,13 +292,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  dateText: { flex: 1, fontFamily: fonts.sans, fontSize: 15, fontWeight: '500', color: colors.ink },
-  dateChip: { fontFamily: fonts.sans, fontSize: 12, color: colors.earthDeep, fontWeight: '700' },
+  dateText: { flex: 1, fontFamily: fonts.sans, fontSize: 15, fontWeight: '500', color: c.texte },
+  dateChip: { fontFamily: fonts.sans, fontSize: 12, color: c.secondaireProfond, fontWeight: '700' },
   footnote: {
     textAlign: 'center',
     marginTop: 12,
     fontSize: 12,
-    color: colors.ink3,
+    color: c.texte3,
     fontFamily: fonts.sans,
   },
-});
+}));

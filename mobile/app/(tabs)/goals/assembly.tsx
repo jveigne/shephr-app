@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   ActivityIndicator,
   Linking,
@@ -15,7 +14,7 @@ import ScreenShell from '@/components/ScreenShell';
 import Card from '@/components/Card';
 import Label from '@/components/Label';
 import Button from '@/components/Button';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { confirmDialog, notify } from '@/utils/dialogs';
@@ -28,6 +27,8 @@ import {
 import { contactMailto, useContactSettings } from '@/services/contactApi';
 import SelectField from '@/components/SelectField';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /** Région « fictive » pour les villes sans région — voir le `NO_ZONE` de `app/structure.tsx`. */
 const NO_ZONE = '__no_zone__';
 
@@ -42,6 +43,8 @@ const NO_ZONE = '__no_zone__';
  * reste un acte d'administration (RG-BQ-09, back-office / secrétariat) — pas ici.
  */
 export default function ChangeAssemblyScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const { me, refreshMe } = useAuth();
   const { t } = useLanguage();
@@ -153,7 +156,7 @@ export default function ChangeAssemblyScreen() {
     <ScreenShell withTabBar={false} paddingTop={insets.top ? 4 : 16}>
       <View style={styles.headerRow}>
         <Pressable onPress={() => goBack()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={24} color={colors.ink2} />
+          <Ionicons name="arrow-back" size={24} color={c.texte2} />
         </Pressable>
         <Text style={styles.title}>{t('assembly.title')}</Text>
       </View>
@@ -161,7 +164,7 @@ export default function ChangeAssemblyScreen() {
 
       {me?.unitNames?.length ? (
         <Card variant="paper2" style={styles.currentCard}>
-          <Ionicons name="home-outline" size={18} color={colors.mossSoft} />
+          <Ionicons name="home-outline" size={18} color={c.accentDoux} />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Label>{t('assembly.current')}</Label>
             <Text style={styles.currentName}>{me.unitNames[0]}</Text>
@@ -170,12 +173,12 @@ export default function ChangeAssemblyScreen() {
       ) : null}
 
       <Card variant="tinted" style={styles.warnCard}>
-        <Ionicons name="information-circle-outline" size={18} color={colors.moss} />
+        <Ionicons name="information-circle-outline" size={18} color={c.accent} />
         <Text style={styles.warnText}>{t('assembly.pledgesFollow')}</Text>
       </Card>
 
       {loading ? (
-        <ActivityIndicator color={colors.moss} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={c.accent} style={{ marginTop: 40 }} />
       ) : (
         <>
           {/* Où chercher : nation → région → ville. Chaque niveau ouvre une liste cherchable
@@ -224,12 +227,12 @@ export default function ChangeAssemblyScreen() {
                         <Text style={styles.rowMeta}>{t('assembly.currentTag')}</Text>
                       )}
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+                    <Ionicons name="chevron-forward" size={16} color={c.texte3} />
                   </Card>
                 ))}
                 {cityUnits.length === 0 && <Text style={styles.empty}>{t('assembly.noAssembly')}</Text>}
               </View>
-              {saving && <ActivityIndicator color={colors.moss} style={{ marginTop: 18 }} />}
+              {saving && <ActivityIndicator color={c.accent} style={{ marginTop: 18 }} />}
             </>
           )}
 
@@ -242,7 +245,7 @@ export default function ChangeAssemblyScreen() {
                 label={t('join.contactWhatsapp')}
                 variant="soft"
                 onPress={() => Linking.openURL(contact.whatsappUrl).catch(() => {})}
-                iconLeft={<Ionicons name="logo-whatsapp" size={18} color={colors.mossDeep} />}
+                iconLeft={<Ionicons name="logo-whatsapp" size={18} color={c.accentProfond} />}
               />
               <Button
                 label={t('join.contactMail')}
@@ -250,7 +253,7 @@ export default function ChangeAssemblyScreen() {
                 onPress={() =>
                   Linking.openURL(contactMailto(t('assembly.contactMailSubject'))).catch(() => {})
                 }
-                iconLeft={<Ionicons name="mail-outline" size={18} color={colors.mossDeep} />}
+                iconLeft={<Ionicons name="mail-outline" size={18} color={c.accentProfond} />}
               />
             </View>
           </View>
@@ -260,27 +263,27 @@ export default function ChangeAssemblyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2 },
-  title: { flex: 1, fontFamily: fonts.serif, fontSize: 26, color: colors.ink, letterSpacing: -0.4 },
-  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4, lineHeight: 18 },
+  title: { flex: 1, fontFamily: fonts.serif, fontSize: 26, color: c.texte, letterSpacing: -0.4 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 4, lineHeight: 18 },
   currentCard: {
     marginTop: 16, paddingHorizontal: 16, paddingVertical: 13,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
-  currentName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink, marginTop: 2 },
+  currentName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.texte, marginTop: 2 },
   warnCard: {
     marginTop: 12, paddingHorizontal: 16, paddingVertical: 13,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
-  warnText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },
+  warnText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2, lineHeight: 18 },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingHorizontal: 16, paddingVertical: 13,
   },
-  rowName: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
-  rowMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.mossSoft, marginTop: 2 },
-  empty: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, fontStyle: 'italic', marginTop: 12 },
-  contactBlock: { marginTop: 26, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.hair },
-  contactHint: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, lineHeight: 18 },
-});
+  rowName: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.texte },
+  rowMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: c.accentDoux, marginTop: 2 },
+  empty: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, fontStyle: 'italic', marginTop: 12 },
+  contactBlock: { marginTop: 26, paddingTop: 16, borderTopWidth: 1, borderTopColor: c.filet },
+  contactHint: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, lineHeight: 18 },
+}));

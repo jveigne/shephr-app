@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 
 import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,7 @@ import Button from '@/components/Button';
 import Field from '@/components/Field';
 import Label from '@/components/Label';
 import ErrorBanner from '@/components/ErrorBanner';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { confirmDialog, notify } from '@/utils/dialogs';
 import {
@@ -20,6 +20,8 @@ import {
   type ReminderScopeOption,
 } from '@/services/goalsApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * « Relancer » — rappel GROUPÉ des personnes qui n'ont pas soumis (lot G3, cadrage JP 14/09,
  * `docs/goals-hierarchie-et-rappels.md` §3).
@@ -39,6 +41,8 @@ import {
  * « Mes disciples » : la relance de masse ministère-large n'est pas tranchée (Q3 du cadrage).
  */
 export default function RemindScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [options, setOptions] = useState<ReminderScopeOption[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -128,7 +132,7 @@ export default function RemindScreen() {
       <ScreenShell withTabBar={false}>
         <View style={{ alignItems: 'center', marginTop: 24 }}>
           <View style={styles.checkBubble}>
-            <Ionicons name="paper-plane-outline" size={32} color={colors.white} />
+            <Ionicons name="paper-plane-outline" size={32} color={c.surAccent} />
           </View>
           <Text style={styles.successTitle}>{t('goals.remind.doneTitle')}</Text>
           <Text style={styles.successHint}>
@@ -139,19 +143,19 @@ export default function RemindScreen() {
         <Card variant="paper2" style={styles.recap}>
           <ResultRow
             icon="paper-plane-outline"
-            tone={colors.moss}
+            tone={c.accent}
             label={t('goals.remind.resultSent')}
             value={done.sent}
           />
           <ResultRow
             icon="time-outline"
-            tone={colors.earthDeep}
+            tone={c.secondaireProfond}
             label={t('goals.remind.resultSkipped')}
             value={done.alreadyReminded}
           />
           <ResultRow
             icon="checkmark-circle-outline"
-            tone={colors.mossSoft}
+            tone={c.accentDoux}
             label={t('goals.remind.resultSubmitted')}
             value={done.alreadySubmitted}
           />
@@ -185,12 +189,12 @@ export default function RemindScreen() {
     <ScreenShell
       withTabBar={false}
       refreshControl={
-        <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
       <View style={styles.headerRow}>
         <Pressable onPress={() => goBack()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={24} color={colors.ink2} />
+          <Ionicons name="arrow-back" size={24} color={c.texte2} />
         </Pressable>
       </View>
 
@@ -198,7 +202,7 @@ export default function RemindScreen() {
       <Text style={styles.intro}>{t('goals.remind.intro')}</Text>
 
       {loading ? (
-        <ActivityIndicator color={colors.moss} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={c.accent} style={{ marginTop: 40 }} />
       ) : error ? (
         <ErrorBanner message={error} onRetry={onRefresh} />
       ) : (
@@ -248,7 +252,7 @@ export default function RemindScreen() {
                 <Ionicons
                   name={current.pending > 0 ? 'people-outline' : 'checkmark-done-outline'}
                   size={18}
-                  color={colors.mossSoft}
+                  color={c.accentDoux}
                 />
                 <Text style={styles.previewText}>
                   {current.pending > 0
@@ -278,7 +282,7 @@ export default function RemindScreen() {
                 fullWidth
                 height={58}
                 style={{ marginTop: 18 }}
-                iconLeft={<Ionicons name="paper-plane-outline" size={18} color={colors.white} />}
+                iconLeft={<Ionicons name="paper-plane-outline" size={18} color={c.surAccent} />}
               />
             </>
           )}
@@ -304,13 +308,15 @@ function ScopeRow({
   selected: boolean;
   onPress: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <Pressable onPress={onPress} style={[styles.scopeRow, selected && styles.scopeRowOn]}>
       <Ionicons
         name={selected ? 'radio-button-on' : 'radio-button-off'}
         size={20}
-        color={selected ? colors.moss : colors.ink3}
+        color={selected ? c.accent : c.texte3}
       />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.scopeLabel} numberOfLines={1}>
@@ -340,6 +346,7 @@ function ResultRow({
   label: string;
   value: number;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.resultRow}>
       <Ionicons name={icon} size={16} color={tone} />
@@ -349,26 +356,26 @@ function ResultRow({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', marginBottom: 6 },
   title: {
     fontFamily: fonts.serif,
     fontSize: 28,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.5,
     marginTop: 2,
   },
   intro: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 6,
     lineHeight: 20,
   },
   sectionHint: {
     fontFamily: fonts.sans,
     fontSize: 12.5,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 6,
     lineHeight: 18,
   },
@@ -380,19 +387,19 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.hair,
-    backgroundColor: colors.paper2,
+    borderColor: c.filet,
+    backgroundColor: c.surfaceHaute,
   },
-  scopeRowOn: { borderColor: colors.moss, backgroundColor: colors.mossTint },
-  scopeLabel: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
-  scopeCaption: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginTop: 2 },
+  scopeRowOn: { borderColor: c.accent, backgroundColor: c.accentTeinte },
+  scopeLabel: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.texte },
+  scopeCaption: { fontFamily: fonts.sans, fontSize: 12, color: c.texte3, marginTop: 2 },
   pendingPill: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: radii.sm,
-    backgroundColor: colors.mossTint2,
+    backgroundColor: c.accentTeinte2,
   },
-  pendingText: { fontFamily: fonts.mono, fontSize: 11, color: colors.mossDeep },
+  pendingText: { fontFamily: fonts.mono, fontSize: 11, color: c.accentProfond },
   previewCard: {
     marginTop: 20,
     paddingHorizontal: 16,
@@ -401,12 +408,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  previewText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2, lineHeight: 19 },
+  previewText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: c.texte2, lineHeight: 19 },
   messageField: { marginTop: 8, minHeight: 96, textAlignVertical: 'top' },
   footnote: {
     fontFamily: fonts.sans,
     fontSize: 11.5,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 10,
     lineHeight: 17,
   },
@@ -414,28 +421,28 @@ const styles = StyleSheet.create({
     width: 74,
     height: 74,
     borderRadius: 37,
-    backgroundColor: colors.moss,
+    backgroundColor: c.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   successTitle: {
     fontFamily: fonts.serif,
     fontSize: 25,
-    color: colors.ink,
+    color: c.texte,
     marginTop: 16,
     textAlign: 'center',
   },
   successHint: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 6,
     textAlign: 'center',
   },
   recap: { marginTop: 22, paddingHorizontal: 18, paddingVertical: 16 },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
-  resultLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2 },
-  resultValue: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink },
+  resultLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, color: c.texte2 },
+  resultValue: { fontFamily: fonts.serif, fontSize: 18, color: c.texte },
   namesCard: { marginTop: 14, paddingHorizontal: 16, paddingVertical: 14 },
-  names: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink2, marginTop: 6, lineHeight: 19 },
-});
+  names: { fontFamily: fonts.sans, fontSize: 13, color: c.texte2, marginTop: 6, lineHeight: 19 },
+}));

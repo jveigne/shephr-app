@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
 import Card from '@/components/Card';
@@ -7,7 +7,7 @@ import Label from '@/components/Label';
 import { UnitStatusBadge } from '@/components/GoalAggregates';
 import { GoalScreenTitle } from '@/components/GoalCards';
 import UnitMembersAggregate from '@/components/UnitMembersAggregate';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { goalName } from '@/utils/goalName';
@@ -21,6 +21,8 @@ import {
   type ZoneUnitStatus,
 } from '@/services/goalsApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * « Mes assemblées » — drill-down du dirigeant, en LECTURE SEULE.
  *
@@ -33,6 +35,8 @@ import {
  * compte (`me.assemblies`) : mieux vaut une liste sans badge qu'un écran vide.
  */
 export default function MyUnitsScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const { me } = useAuth();
   const [units, setUnits] = useState<ZoneUnitStatus[]>([]);
@@ -103,7 +107,7 @@ export default function MyUnitsScreen() {
     return (
       <ScreenShell>
         <View style={styles.centerBox}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       </ScreenShell>
     );
@@ -125,7 +129,7 @@ export default function MyUnitsScreen() {
   return (
     <ScreenShell
       refreshControl={
-        <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
       <GoalScreenTitle title={t('goals.title')} />
@@ -148,7 +152,7 @@ export default function MyUnitsScreen() {
             <Ionicons
               name={error === 'denied' ? 'lock-closed-outline' : 'cloud-offline-outline'}
               size={18}
-              color={colors.clay}
+              color={c.alerte}
             />
             <Text style={styles.errorTitle}>
               {t(error === 'denied' ? 'goalsAgg.deniedTitle' : 'goalsAgg.loadErrorTitle')}
@@ -181,7 +185,7 @@ export default function MyUnitsScreen() {
                   )}
                 </View>
                 {row.status && <UnitStatusBadge unit={row.status} />}
-                <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+                <Ionicons name="chevron-forward" size={16} color={c.texte3} />
               </Card>
             </Pressable>
           ))}
@@ -207,6 +211,8 @@ function UnitDetailScreen({
   year: number;
   onBack: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [detail, setDetail] = useState<UnitPledgeDetail[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -227,19 +233,19 @@ function UnitDetailScreen({
   return (
     <ScreenShell>
       <Pressable onPress={onBack} style={styles.backRow} hitSlop={8}>
-        <Ionicons name="chevron-back" size={18} color={colors.mossDeep} />
+        <Ionicons name="chevron-back" size={18} color={c.accentProfond} />
         <Text style={styles.backRowText}>{t('goals.myUnits.back')}</Text>
       </Pressable>
 
       <View style={styles.titleRow}>
-        <Ionicons name="home-outline" size={22} color={colors.mossSoft} />
+        <Ionicons name="home-outline" size={22} color={c.accentDoux} />
         <Text style={styles.title}>{unitName}</Text>
       </View>
       <Text style={styles.hint}>{t('goalsAgg.unitPledgesSub', { year })}</Text>
 
       <Card variant="paper2" style={styles.detailCard}>
         <Label style={{ marginBottom: 8 }}>{t('goalsAgg.unitPledgesTitle', { name: unitName })}</Label>
-        {loading && <ActivityIndicator color={colors.moss} />}
+        {loading && <ActivityIndicator color={c.accent} />}
         {!loading && (detail ?? []).length === 0 && (
           <Text style={styles.empty}>{t('goalsAgg.noPledgeInUnit')}</Text>
         )}
@@ -269,28 +275,28 @@ function UnitDetailScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  title: { flex: 1, fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4 },
+  title: { flex: 1, fontFamily: fonts.serif, fontSize: 28, color: c.texte, letterSpacing: -0.4 },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: 6, paddingVertical: 4 },
-  backRowText: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.mossDeep },
+  backRowText: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.accentProfond },
   viewChip: {
     alignSelf: 'flex-start',
     marginTop: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
   },
-  viewChipText: { fontFamily: fonts.sans, fontSize: 11.5, fontWeight: '600', color: colors.mossSoft },
+  viewChipText: { fontFamily: fonts.sans, fontSize: 11.5, fontWeight: '600', color: c.accentDoux },
   sectionRow: { flexDirection: 'row', alignItems: 'center', marginTop: 22 },
-  sectionTitle: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink },
-  hint: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 6, lineHeight: 18 },
-  empty: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, marginTop: 16, lineHeight: 19 },
+  sectionTitle: { fontFamily: fonts.serif, fontSize: 18, color: c.texte },
+  hint: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 6, lineHeight: 18 },
+  empty: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, marginTop: 16, lineHeight: 19 },
   errorCard: { paddingHorizontal: 16, paddingVertical: 14, marginTop: 16 },
   errorHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  errorTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '700', color: colors.clay, flex: 1 },
-  errorHint: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink2, marginTop: 6, lineHeight: 17 },
+  errorTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '700', color: c.alerte, flex: 1 },
+  errorHint: { fontFamily: fonts.sans, fontSize: 12, color: c.texte2, marginTop: 6, lineHeight: 17 },
   unitCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -298,22 +304,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  unitName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
-  unitCity: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginTop: 2 },
+  unitName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.texte },
+  unitCity: { fontFamily: fonts.sans, fontSize: 12, color: c.texte3, marginTop: 2 },
   detailCard: { marginTop: 16, paddingHorizontal: 16, paddingVertical: 14 },
   detailRow: {
     gap: 3,
     paddingTop: 8,
     marginTop: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(42,38,32,0.06)',
+    borderTopColor: transparence(c.texte, 0.06),
   },
   footnote: {
     fontFamily: fonts.sans,
     fontSize: 12,
-    color: colors.ink3,
+    color: c.texte3,
     textAlign: 'center',
     marginTop: 18,
   },
   centerBox: { alignItems: 'center', paddingTop: 80 },
-});
+}));

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +8,7 @@ import ScreenShell from '@/components/ScreenShell';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
 import HandDivider from '@/components/HandDivider';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { goalName } from '@/utils/goalName';
 import { useGoalsData } from '@/hooks/useGoalsData';
@@ -17,12 +17,16 @@ import { fmtAmount, fmtDate } from '@/utils/format';
 import { confirmDialog, notify } from '@/utils/dialogs';
 import { submitMyMemberPledges, type SubmitResponse } from '@/services/goalsApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Soumission INDIVIDUELLE (RG-BQ-06, JP 16/08) — chacun verrouille SES engagements. Il n'y a plus
  * de soumission « au nom de l'assemblée » : le paramètre `unitId` a disparu avec la route qui le
  * servait. Le suivi d'assemblée est devenu un compteur de personnes (« 7/12 »).
  */
 export default function SubmitScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const { year: yearParam } = useLocalSearchParams<{ year?: string }>();
@@ -73,7 +77,7 @@ export default function SubmitScreen() {
       <ScreenShell withTabBar={false} paddingTop={40}>
         <View style={{ alignItems: 'center' }}>
           <View style={styles.checkBubble}>
-            <Ionicons name="lock-closed" size={34} color={colors.white} />
+            <Ionicons name="lock-closed" size={34} color={c.surAccent} />
           </View>
           <Text style={styles.successTitle}>{t('submit.successTitle')}</Text>
           <Text style={styles.successHint}>
@@ -94,7 +98,7 @@ export default function SubmitScreen() {
     <ScreenShell withTabBar={false} paddingTop={insets.top ? 4 : 16}>
       <View style={styles.headerRow}>
         <Pressable onPress={() => goBack()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={24} color={colors.ink2} />
+          <Ionicons name="arrow-back" size={24} color={c.texte2} />
         </Pressable>
       </View>
 
@@ -104,7 +108,7 @@ export default function SubmitScreen() {
       </Text>
 
       {loading ? (
-        <ActivityIndicator color={colors.moss} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={c.accent} style={{ marginTop: 40 }} />
       ) : (
         <>
           <Card variant="paper2" style={styles.recap}>
@@ -123,7 +127,7 @@ export default function SubmitScreen() {
                 <View key={line.category.id} style={styles.recapRow}>
                   <Ionicons name={meta.icon} size={15} color={meta.tone} />
                   <Text style={styles.recapLabel}>{goalName(line.category)}</Text>
-                  <Text style={[styles.recapValue, line.target == null && { color: colors.ink3 }]}>
+                  <Text style={[styles.recapValue, line.target == null && { color: c.texte3 }]}>
                     {value}
                   </Text>
                 </View>
@@ -136,7 +140,7 @@ export default function SubmitScreen() {
           </Card>
 
           <Card variant="tinted" style={styles.warnCard}>
-            <Ionicons name="alert-circle-outline" size={18} color={colors.moss} />
+            <Ionicons name="alert-circle-outline" size={18} color={c.accent} />
             <Text style={styles.warnText}>
               {t('submit.warning')}
             </Text>
@@ -153,7 +157,7 @@ export default function SubmitScreen() {
               fullWidth
               height={58}
               style={{ marginTop: 20 }}
-              iconLeft={<Ionicons name="lock-closed-outline" size={19} color={colors.white} />}
+              iconLeft={<Ionicons name="lock-closed-outline" size={19} color={c.surAccent} />}
             />
           )}
         </>
@@ -162,19 +166,19 @@ export default function SubmitScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', marginBottom: 6 },
   title: {
     fontFamily: fonts.serif,
     fontSize: 28,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.5,
     marginTop: 2,
   },
   intro: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 6,
     lineHeight: 20,
     maxWidth: 320,
@@ -183,18 +187,18 @@ const styles = StyleSheet.create({
   recapHeader: {
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.ink3,
+    color: c.texte3,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
   recapRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 },
-  recapLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2 },
-  recapValue: { fontFamily: fonts.serif, fontSize: 16, color: colors.ink },
+  recapLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, color: c.texte2 },
+  recapValue: { fontFamily: fonts.serif, fontSize: 16, color: c.texte },
   verse: {
     fontFamily: fonts.serif,
     fontSize: 13,
     fontStyle: 'italic',
-    color: colors.mossSoft,
+    color: c.accentDoux,
     textAlign: 'center',
   },
   warnCard: {
@@ -205,36 +209,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  warnText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },
+  warnText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2, lineHeight: 18 },
   alreadyText: {
     textAlign: 'center',
     marginTop: 22,
     fontFamily: fonts.sans,
     fontSize: 13.5,
-    color: colors.ink3,
+    color: c.texte3,
   },
   checkBubble: {
     width: 78,
     height: 78,
     borderRadius: 39,
-    backgroundColor: colors.moss,
+    backgroundColor: c.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   successTitle: {
     fontFamily: fonts.serif,
     fontSize: 26,
-    color: colors.ink,
+    color: c.texte,
     marginTop: 18,
     textAlign: 'center',
   },
   successHint: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 8,
     textAlign: 'center',
     maxWidth: 300,
     lineHeight: 19,
   },
-});
+}));

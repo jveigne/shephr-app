@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,7 @@ import Label from '@/components/Label';
 import Amount from '@/components/Amount';
 import Chip from '@/components/Chip';
 import ErrorBanner from '@/components/ErrorBanner';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import {
   listMyMembers,
   listMyUnits,
@@ -21,6 +21,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { toLocalDate } from '@/utils/format';
 import { sumByCurrency, type CurrencyLine } from '@/utils/currencyTotals';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 type Period = 'month' | '3m' | '6m' | 'year';
 
 const PERIODS: Period[] = ['month', '3m', '6m', 'year'];
@@ -34,6 +36,8 @@ const PERIODS: Period[] = ['month', '3m', '6m', 'year'];
  * en euros ou en dollars.
  */
 export default function UnitDetailScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { unitId } = useLocalSearchParams<{ unitId: string }>();
   const { t } = useLanguage();
   const periodLabel = (k: Period) => t('history.periods.' + k);
@@ -83,7 +87,7 @@ export default function UnitDetailScreen() {
     return (
       <ScreenShell>
         <View style={{ marginTop: 60, alignItems: 'center' }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       </ScreenShell>
     );
@@ -95,7 +99,7 @@ export default function UnitDetailScreen() {
       <ScreenShell>
         <View style={styles.headerRow}>
           <Pressable onPress={() => goBack()} hitSlop={10}>
-            <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+            <Ionicons name="chevron-back" size={22} color={c.texte2} />
           </Pressable>
         </View>
         <ErrorBanner message={t('unit.loadError')} onRetry={load} />
@@ -122,7 +126,7 @@ export default function UnitDetailScreen() {
           explicitement (test 2.5 : aucun parcours d'invitation proposé sur mobile). */}
       <View style={styles.headerRow}>
         <Pressable onPress={() => goBack()} hitSlop={10}>
-          <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+          <Ionicons name="chevron-back" size={22} color={c.texte2} />
         </Pressable>
         <View style={{ flex: 1 }} />
       </View>
@@ -151,7 +155,7 @@ export default function UnitDetailScreen() {
 
       <View style={styles.statsRow}>
         <Card style={[styles.statCard, { flex: 1.6 }]}>
-          <Label style={{ color: colors.mossSoft }}>{t('unit.total')}</Label>
+          <Label style={{ color: c.accentDoux }}>{t('unit.total')}</Label>
           {totals.length === 0 ? (
             <Text style={styles.emptyLine}>{t('leader.noDataPeriod')}</Text>
           ) : (
@@ -163,11 +167,11 @@ export default function UnitDetailScreen() {
           )}
         </Card>
         <Card style={[styles.statCard, { flex: 1 }]}>
-          <Label style={{ color: colors.mossSoft }}>{t('unit.members')}</Label>
+          <Label style={{ color: c.accentDoux }}>{t('unit.members')}</Label>
           <Text style={styles.bigNum}>{members.length}</Text>
         </Card>
         <Card style={[styles.statCard, { flex: 1 }]}>
-          <Label style={{ color: colors.mossSoft }}>{t('unit.average')}</Label>
+          <Label style={{ color: c.accentDoux }}>{t('unit.average')}</Label>
           {averages.length === 0 ? (
             <Text style={styles.emptyLine}>—</Text>
           ) : (
@@ -181,7 +185,7 @@ export default function UnitDetailScreen() {
       </View>
 
       <View style={styles.privacyBox}>
-        <Ionicons name="shield-checkmark-outline" size={14} color={colors.mossSoft} />
+        <Ionicons name="shield-checkmark-outline" size={14} color={c.accentDoux} />
         <Text style={styles.privacyText}>
           {t('unit.privacyNote')}
         </Text>
@@ -195,7 +199,7 @@ export default function UnitDetailScreen() {
       <Card style={{ marginTop: 10, paddingVertical: 0 }}>
         {members.length === 0 ? (
           <View style={{ paddingHorizontal: 18, paddingVertical: 18 }}>
-            <Text style={{ fontFamily: fonts.sans, color: colors.ink3, fontStyle: 'italic' }}>
+            <Text style={{ fontFamily: fonts.sans, color: c.texte3, fontStyle: 'italic' }}>
               {t('unit.noMembersPeriod')}
             </Text>
           </View>
@@ -245,10 +249,10 @@ export default function UnitDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   iconChip: {
-    backgroundColor: 'rgba(42,38,32,0.05)',
+    backgroundColor: transparence(c.texte, 0.05),
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 99,
@@ -259,7 +263,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 99,
-    backgroundColor: 'rgba(201,149,107,0.20)',
+    backgroundColor: transparence(c.secondaire, 0.20),
   },
   typePillText: {
     fontFamily: fonts.sans,
@@ -267,39 +271,39 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
-    color: colors.earthDeep,
+    color: c.secondaireProfond,
   },
   extraCurrency: { marginTop: 4 },
-  emptyLine: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 6 },
+  emptyLine: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 6 },
   title: {
     fontFamily: fonts.serif,
     fontSize: 26,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.4,
     marginTop: 6,
     lineHeight: 30,
   },
   statsRow: { flexDirection: 'row', gap: 8, marginTop: 16 },
   statCard: { paddingHorizontal: 14, paddingVertical: 14 },
-  bigNum: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink, marginTop: 4 },
+  bigNum: { fontFamily: fonts.serif, fontSize: 22, color: c.texte, marginTop: 4 },
   privacyBox: {
     marginTop: 14,
     padding: 10,
     borderRadius: 12,
-    backgroundColor: 'rgba(30,58,47,0.06)',
+    backgroundColor: transparence(c.accent, 0.06),
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
   },
-  privacyText: { flex: 1, fontFamily: fonts.sans, fontSize: 11.5, color: colors.mossDeep, lineHeight: 18 },
+  privacyText: { flex: 1, fontFamily: fonts.sans, fontSize: 11.5, color: c.accentProfond, lineHeight: 18 },
   sectionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
     marginTop: 20,
   },
-  sectionTitle: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink },
-  sectionCount: { fontFamily: fonts.mono, fontSize: 12, color: colors.ink3 },
+  sectionTitle: { fontFamily: fonts.serif, fontSize: 18, color: c.texte },
+  sectionCount: { fontFamily: fonts.mono, fontSize: 12, color: c.texte3 },
   memberRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -307,16 +311,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 13,
   },
-  memberRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(42,38,32,0.06)' },
+  memberRowBorder: { borderBottomWidth: 1, borderBottomColor: transparence(c.texte, 0.06) },
   memberAvatar: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(30,58,47,0.10)',
+    backgroundColor: transparence(c.accent, 0.10),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  memberInitials: { fontFamily: fonts.serif, fontSize: 14, color: colors.mossSoft },
-  memberName: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
-  memberSub: { fontFamily: fonts.sans, fontSize: 11, color: colors.ink3, marginTop: 1 },
-});
+  memberInitials: { fontFamily: fonts.serif, fontSize: 14, color: c.accentDoux },
+  memberName: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.texte },
+  memberSub: { fontFamily: fonts.sans, fontSize: 11, color: c.texte3, marginTop: 1 },
+}));
