@@ -1381,7 +1381,40 @@
     "myAssemblyCreateRefused": "Création refusée",
     "myAssemblyCreateFailed": "Création impossible, réessayez.",
     "myAssemblyNameExists": "Ce nom est déjà pris",
-    "myAssemblyNameExistsHint": "Une assemblée porte déjà ce nom à {{city}} : cherchez-la dans la liste ci-dessus, ou choisissez un autre nom."
+    "myAssemblyNameExistsHint": "Une assemblée porte déjà ce nom à {{city}} : cherchez-la dans la liste ci-dessus, ou choisissez un autre nom.",
+    "appearance": {
+      "title": "Apparence",
+      "intro": "Choisissez l'apparence de l'Espace ministère. Le choix est enregistré sur votre compte et se retrouve sur l'application mobile.",
+      "modeSection": "Mode",
+      "modes": {
+        "auto": "Automatique",
+        "autoHelp": "Suit le réglage clair / sombre de votre appareil",
+        "clair": "Clair",
+        "clairHelp": "Fond parchemin, l'apparence habituelle",
+        "sombre": "Sombre",
+        "sombreHelp": "Fond sombre, texte clair : plus doux le soir",
+        "noirEtBlanc": "Noir et blanc",
+        "noirEtBlancHelp": "Aucune couleur, contraste maximal"
+      },
+      "accentSection": "Couleur d'accent",
+      "accents": {
+        "mousse": "Vert mousse",
+        "terre": "Terre",
+        "argile": "Argile",
+        "bleu": "Bleu",
+        "violet": "Violet",
+        "framboise": "Framboise"
+      },
+      "customAccent": "Ou votre couleur (code hexadécimal)",
+      "apply": "Appliquer",
+      "invalidHex": "Code invalide : utilisez le format #RRGGBB.",
+      "contrastNote": "La couleur est ajustée automatiquement si elle manque de contraste.",
+      "accentIgnored": "Le mode Noir et blanc n'utilise pas de couleur d'accent.",
+      "previewSection": "Aperçu",
+      "previewTitle": "Objectif de l'année",
+      "previewMeta": "Mon assemblée · 2026",
+      "previewButton": "Bouton principal"
+    }
   },
   "join": {
     "title": "Rejoindre mon assemblée",

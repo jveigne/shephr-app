@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import { Button, Field, Input, Modal, Select, TopBar } from '../components/ui';
 import { GeoPicker } from '../components/GeoPicker';
+import { AppearanceCard } from '../components/AppearanceCard';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
 import { canCreateAssembly, deleteMyAccount, primaryRoleKey, type Language } from '../services/authApi';
@@ -105,6 +106,9 @@ export function SettingsPage() {
             </div>
           )}
         </div>
+
+        {/* Thème (docs/theme-plan.md §4.3, W2) — mode et accent, compte connecté seulement (D4). */}
+        <AppearanceCard />
 
         {/* RG-BQ-13 — changer d'assemblée soi-même, sans demande ni valideur. */}
         <MyAssemblyCard />
