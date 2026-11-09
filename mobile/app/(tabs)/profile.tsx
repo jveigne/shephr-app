@@ -183,6 +183,13 @@ export default function ProfileScreen() {
         {/* Lot N4b (J-3 14/09) — l'entrée vers les réglages de notifications. Elle n'est pas
             décorative : une catégorie de push sans interrupteur atteignable est la cause
             numéro un de désinstallation, et c'est ici qu'on coupe « Rappels ». */}
+        {/* Thème (docs/theme-plan.md, étape M2) — écran Apparence : mode et couleur d'accent. */}
+        <Row
+          icon="color-palette-outline"
+          label={t('profile.appearance')}
+          value={t('profile.appearanceValue')}
+          onPress={() => router.push('/appearance' as unknown as Href)}
+        />
         <Row
           icon="notifications-outline"
           label={t('profile.notifications')}

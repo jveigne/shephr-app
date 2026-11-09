@@ -309,7 +309,9 @@
     "help": "Help",
     "contactHint": "A question, a blocker, or need a hand? Message us on WhatsApp — the fastest channel — or send us an email.",
     "contactWhatsappText": "Hello, I need help with Shephr.",
-    "contactMailSubject": "Shephr — support request"
+    "contactMailSubject": "Shephr — support request",
+    "appearance": "Appearance",
+    "appearanceValue": "Dark mode, colours"
   },
   "leader": {
     "title": "My scope",
@@ -2029,5 +2031,38 @@
       "name": "Nehemiah offer",
       "subtitle": "Tracking my whole city"
     }
+  },
+  "appearance": {
+    "title": "Appearance",
+    "intro": "Choose how the app looks. Your choice is saved to your account and follows you on the web.",
+    "modeSection": "Mode",
+    "modes": {
+      "auto": "Automatic",
+      "autoHelp": "Follows the phone's light / dark setting",
+      "clair": "Light",
+      "clairHelp": "Parchment background, the usual look",
+      "sombre": "Dark",
+      "sombreHelp": "Dark background, light text: easier at night",
+      "noirEtBlanc": "Black and white",
+      "noirEtBlancHelp": "No colour, maximum contrast"
+    },
+    "accentSection": "Accent colour",
+    "accents": {
+      "mousse": "Moss green",
+      "terre": "Earth",
+      "argile": "Clay",
+      "bleu": "Blue",
+      "violet": "Purple",
+      "framboise": "Raspberry"
+    },
+    "customAccent": "Or your own colour (hex code)",
+    "apply": "Apply",
+    "invalidHex": "Invalid code: use the #RRGGBB format.",
+    "contrastNote": "The colour is adjusted automatically if it lacks contrast.",
+    "accentIgnored": "Black and white mode does not use an accent colour.",
+    "previewSection": "Preview",
+    "previewTitle": "Goal of the year",
+    "previewMeta": "My assembly · 2026",
+    "previewButton": "Main button"
   }
 }
