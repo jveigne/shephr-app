@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import type { UserPreferences } from './preferencesApi';
 
 // --- Legacy admin-users role model (still used by adminApi/Users page; aligned later in Lot 1.2/4.3)
 export type UserRole = 'MEMBER' | 'LEADER' | 'ADMIN';
@@ -85,6 +86,12 @@ export interface MeResponse {
   cityNames: string[] | null;
   /** Noms des pays rattachés (DIRIGEANT_COORDINATEUR) ; vide sinon. */
   countryNames: string[] | null;
+  /**
+   * Thème de l'application — préférences d'affichage du compte (docs/theme-plan.md §4.1, W4).
+   * Champs à `null` si le compte n'a rien choisi ; absent sur un backend antérieur.
+   * Mirrors com.excellence.back.auth.preference.dto.UserPreferenceDto
+   */
+  preferences?: UserPreferences | null;
 }
 
 /** A role strictly above MEMBRE in a module. */
