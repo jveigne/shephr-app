@@ -1,9 +1,10 @@
 # Shephr — Thème (sombre, noir et blanc, couleur d'accent) synchronisé entre web et mobile
 
-> **Statut : spec corrigée le 06/11/2026 d'après la relecture de Jean Philippe
-> (`docs/theme-reco-philippe.md`), à valider.** Aucun code n'est écrit avant sa validation.
-> Rédigée par Catherine, sur la base de `main` de `shephr-app` et de `cmfipraise-backend`.
-> Les décisions B1 à B5 de Jean Philippe (06/11) sont reportées au §3.
+> **Statut : implémentée sur `feat/theme` (09/11/2026), en attente de relecture par Jean
+> Philippe.** Spec corrigée le 06/11/2026 d'après sa relecture (`docs/theme-reco-philippe.md`),
+> décisions B1 à B5 reportées au §3. Rédigée par Catherine, sur la base de `main` de
+> `shephr-app` et de `cmfipraise-backend`. **Le bilan de l'implémentation, avec les écarts à ce
+> document, est au §9** : là où ils divergent, le §9 prime.
 
 ---
 
@@ -411,6 +412,122 @@ modale « J'ai un code » : elles restent identiques au Clair, avec l'accent par
 - **Mode Automatique sur mobile** : attend une nouvelle version sur les stores (§4.2).
 - **Pas de temps réel** (D6) : une répercussion instantanée demanderait du push ou un websocket,
   hors de cette spec.
+
+---
+
+## 9. Bilan de l'implémentation (09/11/2026)
+
+### 9.1 Commits
+
+Un commit par étape, dans l'ordre du §6 (squash au merge seulement, consigne de JP) :
+
+| Dépôt | Commits |
+|---|---|
+| `cmfipraise-backend` | B1 (table `user_preference`, entité, repository, `ThemeMode`), B2 (service, `GET` / `PUT /me/preferences`, `preferences` dans `/me`, purge RGPD, tests) |
+| `shephr-app` (mobile) | M1, M2, M3, M4a, M4b, M4c, M4d, M4e, M5, puis `fix(theme)` (statuts du Suivi pastoral) |
+| `shephr-app` (web) | W1, W2, W3a, W3b, W3c, W3d, W4 |
+
+Vérification à chaque étape : `npx tsc --noEmit` de la surface touchée, captures Clair / Sombre /
+Noir et blanc, et comparaison **au pixel** du Clair avant / après sur le web (R2).
+
+### 9.2 Écarts à la spec
+
+**Backend**
+- Pas de `UserPreferenceControllerTest` : la recette HTTP (200, 400 `PREFERENCE_INVALID`) a été
+  faite à la main. Tests écrits : `UserPreferenceServiceImplTest` (13 cas), `me_exposeLesPreferencesDAffichage`
+  (`ChurchAuthServiceImplTest`), `prepare_purgeLesPreferencesDAffichage` (`SelfAccountDeletionExecutorTest`).
+
+**Mobile**
+- **Relecture au premier plan dans `ThemeContext`, pas dans `AuthContext`** (§4.2, D6) :
+  `AuthContext` n'est **pas modifié**. Le thème écoute lui-même `AppState` (relecture
+  `GET /me/preferences`) et `NetInfo` (renvoi de l'envoi en attente). Raison : ne pas toucher à la
+  restauration de session (Points d'attention n°5 du `CLAUDE.md`), et le thème n'a besoin que de
+  ses préférences.
+- `theme/colors.ts` **n'est pas modifié** : il reste la liste des constantes de marque ; la palette
+  Claire est construite à partir de lui dans `theme/palettes.ts`.
+- **Ajouté** : `theme/tonsDonnees.ts`, règle unique des couleurs de **données** (D8) — inchangées en
+  Clair, éclaircies jusqu'à 3:1 en Sombre, grises (`#666666`) en Noir et blanc. Le
+  `ThemeProvider` y déclare le thème résolu à chaque rendu ; `donationCategoryMeta`,
+  `goalCategoryMeta`, les statuts de `utils/demandes.tsx` et ceux du Suivi pastoral
+  (`app/(tabs)/care`, oubliés en M4e, corrigés par le commit `fix(theme)`) passent par elle.
+  Les signatures des constantes ne changent pas (pas de modification des 16 écrans appelants).
+- Hors périmètre initial de M4e, mêmes règles : la pastille dorée « responsable à désigner » de
+  `app/hierarchie/index.tsx` et la tuile vert sauge de `app/(tabs)/home.tsx`.
+
+**Web**
+- La section Apparence s'appelle `components/AppearanceCard.tsx` (et non `AppearanceSection.tsx`).
+- **D9 non appliqué** : pas de Vitest ni de `palettes.test.ts` (D9 n'a pas été validé). Les
+  calculs ont été vérifiés par script (valeurs du Sombre, contrastes).
+- **Noms des rôles CSS** (§4.3) : pour garder le Clair identique valeur pour valeur, chaque nuance
+  existante a son rôle — `--page`, `--page-profonde`, `--surface-basse`, `--surface`,
+  `--surface-haute` ; `--texte`, `--texte-corps`, `--texte-2` à `--texte-5` ; `--filet`,
+  `--filet-doux`, `--filet-fort` ; `--accent`, `--accent-profond`, `--accent-moyen`,
+  `--accent-doux`, `--accent-pale`, `--accent-teinte`, `--accent-teinte-douce`, `--sur-accent` ;
+  `--secondaire*` et `--sur-secondaire` (la terre) ; `--succes*`, `--avertissement*`,
+  `--alerte*` ; `--voile`. Correspondance jeton → rôle : `--parchment` → `--page`, `--ivory-card`
+  → `--surface`, `--ink-500` → `--texte-3`, `--green-800` → `--accent`, `--earth-500` →
+  `--secondaire`, `--err` → `--alerte`, etc. Les jetons de marque restent dans `:root` comme
+  constantes (la landing et `/offres` s'en servent).
+- **Barre latérale** : rôles `--barre` et `--sur-barre*` — l'accent en Clair, un fond neutre très
+  sombre en Sombre (un accent éclairci en fond de barre rendait le texte illisible), noir en Noir et
+  blanc. Même traitement pour le panneau de marque de la page de connexion et l'infobulle de la
+  carte des nations.
+- Transparences : `rgba(…)` remplacés par `color-mix(in srgb, var(--rôle) N%, transparent)`.
+- **Pages ajoutées aux lots** (absentes de l'annexe B) : W3a = tous les composants qui utilisaient
+  un jeton (28, dont `ui.tsx`, `Toast.tsx`, `YearPicker.tsx`, `CurrencyToggle.tsx`) et
+  `AppShell.tsx` ; W3b = `Signup`, `AcceptInvitation`, `ActivateAccount` ; W3c = `Pays`, `Zones`,
+  `Localites`, `Events`, `Exports`, `Placeholder`.
+- **Couleur de statut du Suivi pastoral** (`pages/MemberCare.tsx`, couleur choisie au back-office) :
+  même règle que le mobile, par `tonDonnee` de `theme/palettes.ts`.
+
+**Bugs existants trouvés en route**
+- `--ink-600` était utilisé (une cinquantaine de fois) sans **jamais avoir été défini** : le navigateur ignorait la
+  déclaration (couleur héritée) ou affichait le repli écrit à côté. Remplacé par `--texte-corps`
+  (sans repli) ou `--texte-2` (avec repli `#5A4B3A`) — rendu Clair inchangé.
+- De même `--paper` et `--paper-2`, jamais définis : remplacés par `--surface` et `--surface-haute`
+  (écart de teinte à peine visible).
+
+**Clair (R2)** : identique au pixel sur les pages comparées (Objectifs, Pays, Zones, Paramètres,
+Connexion, Tableau de bord, Membres, Hiérarchie, Vie d'assemblée, Suivi pastoral, Documents,
+Demandes), à trois détails près, voulus : le dégradé de l'en-tête (1/255), et sur quelques pages
+publiques (pastille « S », bouton de `/delete-account`, lecteur de document) le texte posé sur le
+vert passe du blanc pur à la crème de Shephr (`--sur-accent`), comme sur tous les boutons.
+
+### 9.3 Couleurs fixes, volontairement hors thème
+
+Bouton Apple (noir, charte Apple) et logo Google ; couleur de LED des notifications push ;
+journaux PDF (`utils/assemblyJournal.ts`, D8) ; page blanche du lecteur PDF ; rose « en retard »
+dans l'infobulle sombre de la carte des nations ; repère blanc de dépassement sur la barre de
+progression des Objectifs ; flèche des `<select>` du web (SVG en `data:` URI, gris moyen dans tous
+les modes) ; landing et `/offres` (D11).
+
+### 9.4 Points à faire valider par Jean Philippe
+
+1. **Accent par défaut en Sombre** : le vert mousse, éclairci jusqu'au contraste 4,5:1, donne un
+   vert-gris (`#81918B`), identique sur le web et le mobile. Le garder, ou fixer un vert plus franc ?
+2. **Bouton « douce » du mobile en Sombre** (ex. « Message us on WhatsApp ») : fond presque noir,
+   plus foncé que la carte. Laissé tel quel ; à reprendre si JP le souhaite.
+3. **D5 et D6** passent de « à valider » à **implémentés** tels qu'écrits au §3 (sous réserve de
+   l'écart mobile du §9.2).
+4. **D9** (Vitest) : non fait, à décider.
+
+### 9.5 Recette effectuée
+
+- **R4 / R5 — synchronisation** : web → mobile et mobile → web, avec le même compte, en local
+  (back, Expo web et Vite) : le thème suit au retour sur l'onglet, sans rechargement.
+- **R8 — hors ligne** (mobile, Expo web, réseau coupé par l'outil de développement) : le choix
+  s'applique, reste en attente, puis part au retour du réseau.
+- **R11 — API** : `GET` (valeurs nulles), `PUT` puis `GET` / `/me`, `400 PREFERENCE_INVALID` sur un
+  mode inconnu.
+- **R12 — sanity check des RDG** : revue du diff `main` → `feat/theme` (188 fichiers). Aucune
+  condition de rôle ou de module, aucun appel d'API existant et aucune navigation n'a changé ; les
+  seules lignes retirées hors couleurs sont des renommages de variables locales (`c` → `choix`,
+  `copie`, `enfant`, `devise`), des tables de couleurs devenues fonctions de la palette, et le
+  masquage du splash (qui attend en plus que le thème soit lu). Seul ajout de navigation : l'entrée
+  « Apparence » du Profil mobile.
+- **Restent à faire** sur appareil (build EAS) : R9 (mode Automatique natif, `userInterfaceStyle`)
+  et R10 (pas de flash au lancement natif) ; R13 (journaux PDF) et R14 (téléphone partagé) à
+  dérouler en recette.
 
 ---
 
