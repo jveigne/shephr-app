@@ -1,10 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { DeclarationStatus } from '@/services/donationApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Lot T7 (décision J-1, JP 14/09) — pastille de statut d'une déclaration.
  *
@@ -20,9 +22,11 @@ export default function DeclarationStatusPill({
   status: DeclarationStatus;
   size?: 'sm' | 'md';
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const verified = status === 'VERIFIE';
-  const tone = verified ? colors.moss : colors.earthDeep;
+  const tone = verified ? c.accent : c.secondaireProfond;
   const small = size === 'sm';
 
   return (
@@ -49,7 +53,7 @@ export default function DeclarationStatusPill({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -63,4 +67,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
   },
-});
+}));

@@ -1,13 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '@/components/Card';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { EventResponse } from '@/services/eventsApi';
 import { counterParts, eventLabel, fmtEventDates, isEnglishLang, isToClose, type CounterKey } from '@/utils/events';
 import type { Translate } from '@/utils/meetingReport';
 
+import { creerStyles } from '@/theme/creerStyles';
+import type { PaletteTheme } from '@/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Plan 14/10 (§6.3) — ligne d'évènement partagée par « Mes actions » (lot E6), l'agenda de
  * l'onglet « Évènements » (lot E7) et la vue du simple membre (D-EVT-14) : libellé (le libellé libre d'un type « Autre » prime), statut,
@@ -30,6 +33,7 @@ export function eventMetaLine(
  * (D-EVT-15, JP 14/10) sont toujours null pour un type qui ne l'est pas.
  */
 export function EventFigures({ counters }: { counters: Partial<Record<CounterKey, number | null>> }) {
+  const styles = useStyles();
   const { t } = useLanguage();
   const parts = counterParts(counters, t);
   if (parts.length === 0) return null;
@@ -41,11 +45,13 @@ export function EventFigures({ counters }: { counters: Partial<Record<CounterKey
  * null pour un type non évangélique (serveur), jamais envoyé pour un tel type (saisie).
  */
 export function EventPreacherLine({ preacher }: { preacher: string | null | undefined }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   if (!preacher) return null;
   return (
     <View style={styles.preacherRow}>
-      <Ionicons name="mic-outline" size={13} color={colors.moss} />
+      <Ionicons name="mic-outline" size={13} color={c.accent} />
       <Text style={styles.preacher} numberOfLines={1}>
         {t('events.mine.preacher', { name: preacher })}
       </Text>
@@ -62,6 +68,7 @@ export function EventPill({
   icon: React.ComponentProps<typeof Ionicons>['name'];
   text: string;
 }) {
+  const styles = useStyles();
   return (
     <View style={[styles.pill, { backgroundColor: tone + '16', borderColor: tone + '3A' }]}>
       <Ionicons name={icon} size={11} color={tone} />
@@ -76,18 +83,19 @@ export function EventPill({
  * (RG-ACT-07 : informatif, l'évènement reste compté).
  */
 export function EventStatusPills({ event, t }: { event: EventResponse; t: Translate }) {
+  const { couleurs: c } = useTheme();
   return (
     <>
       {event.status === 'PLANNED' &&
         (isToClose(event) ? (
-          <EventPill tone={colors.clay} icon="time-outline" text={t('events.agenda.toCloseBadge')} />
+          <EventPill tone={c.alerte} icon="time-outline" text={t('events.agenda.toCloseBadge')} />
         ) : (
-          <EventPill tone={colors.earthDeep} icon="calendar-outline" text={t('events.status.PLANNED')} />
+          <EventPill tone={c.secondaireProfond} icon="calendar-outline" text={t('events.status.PLANNED')} />
         ))}
       {event.status === 'CANCELLED' && (
-        <EventPill tone={colors.ink3} icon="close-circle-outline" text={t('events.status.CANCELLED')} />
+        <EventPill tone={c.texte3} icon="close-circle-outline" text={t('events.status.CANCELLED')} />
       )}
-      {event.toVerify && <EventPill tone={colors.clay} icon="flag-outline" text={t('events.mine.toVerify')} />}
+      {event.toVerify && <EventPill tone={c.alerte} icon="flag-outline" text={t('events.mine.toVerify')} />}
     </>
   );
 }
@@ -102,6 +110,8 @@ export function EventRow({
   mine?: boolean;
   onPress?: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   return (
     <Card style={styles.row} onPress={onPress}>
@@ -109,9 +119,9 @@ export function EventRow({
         <Text style={styles.rowTitle} numberOfLines={2}>
           {eventLabel(event, isEnglishLang(language))}
         </Text>
-        {mine && <EventPill tone={colors.moss} icon="person-outline" text={t('events.mine.ownBadge')} />}
+        {mine && <EventPill tone={c.accent} icon="person-outline" text={t('events.mine.ownBadge')} />}
         <EventStatusPills event={event} t={t} />
-        {onPress && <Ionicons name="chevron-forward" size={16} color={colors.ink3} style={styles.chevron} />}
+        {onPress && <Ionicons name="chevron-forward" size={16} color={c.texte3} style={styles.chevron} />}
       </View>
       {!!event.title && <Text style={styles.rowSub}>{event.title}</Text>}
       <Text style={styles.rowMeta}>
@@ -126,7 +136,8 @@ export function EventRow({
   );
 }
 
-export const eventRowStyles = StyleSheet.create({
+/** Styles de ligne partagés avec `EventQueueBlocks` : fabrique, pour suivre la palette. */
+export const eventRowStyles = (c: PaletteTheme) => ({
   row: { paddingHorizontal: 14, paddingVertical: 12, borderRadius: radii.md },
   rowHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' },
   rowTitle: {
@@ -134,20 +145,20 @@ export const eventRowStyles = StyleSheet.create({
     minWidth: 120,
     fontFamily: fonts.serif,
     fontSize: 16.5,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.2,
   },
-  rowMeta: { marginTop: 4, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, lineHeight: 18 },
-});
+  rowMeta: { marginTop: 4, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, lineHeight: 18 },
+} as const);
 
-const styles = StyleSheet.create({
-  ...eventRowStyles,
+const useStyles = creerStyles((c) => ({
+  ...eventRowStyles(c),
   chevron: { marginTop: 2 },
-  rowSub: { marginTop: 2, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
+  rowSub: { marginTop: 2, fontFamily: fonts.sans, fontSize: 13, color: c.texte2 },
   preacherRow: { marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  preacher: { flex: 1, fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink2 },
-  rowFigures: { marginTop: 4, fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: colors.mossSoft },
-  rowNote: { marginTop: 4, fontFamily: fonts.sans, fontSize: 11.5, fontStyle: 'italic', color: colors.ink3 },
+  preacher: { flex: 1, fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.texte2 },
+  rowFigures: { marginTop: 4, fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: c.accentDoux },
+  rowNote: { marginTop: 4, fontFamily: fonts.sans, fontSize: 11.5, fontStyle: 'italic', color: c.texte3 },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -158,4 +169,4 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   pillText: { fontFamily: fonts.sans, fontSize: 10.5, fontWeight: '600' },
-});
+}));

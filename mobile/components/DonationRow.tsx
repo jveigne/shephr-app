@@ -1,12 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDonationCategories } from '@/hooks/useDonationCategories';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { fmtDate, parseLocalDate } from '@/utils/format';
 import Amount from '@/components/Amount';
 import Card from '@/components/Card';
 
+import { creerStyles } from '@/theme/creerStyles';
 export interface DonationRowItem {
   id: string;
   category: string;
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export default function DonationRow({ donation, onPress, compact }: Props) {
+  const styles = useStyles();
   // Lot T5 — libellé ET apparence dérivés du référentiel serveur. Le hook partage un cache
   // mémoire entre toutes les lignes montées : une liste de 30 dons ne fait pas 30 requêtes.
   const { labelOf, metaOf } = useDonationCategories();
@@ -47,7 +49,7 @@ export default function DonationRow({ donation, onPress, compact }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -67,12 +69,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontWeight: '600',
     fontSize: 14.5,
-    color: colors.ink,
+    color: c.texte,
   },
   sub: {
     fontFamily: fonts.sans,
     fontSize: 12,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 2,
   },
-});
+}));

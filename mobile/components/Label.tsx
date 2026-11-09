@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { Text, StyleProp, TextStyle } from 'react-native';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Props {
   children: ReactNode;
@@ -8,7 +9,9 @@ interface Props {
   style?: StyleProp<TextStyle>;
 }
 
-export default function Label({ children, color = colors.ink3, style }: Props) {
+export default function Label({ children, color: couleurDemandee, style }: Props) {
+  const { couleurs: c } = useTheme();
+  const color = couleurDemandee ?? c.texte3;
   return (
     <Text
       style={[

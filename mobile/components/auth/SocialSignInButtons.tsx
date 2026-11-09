@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import Svg, { Path } from 'react-native-svg';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { notify } from '@/utils/dialogs';
 import { socialAuthErrorMessage } from '@/utils/socialAuthErrors';
 import { googleSignInEnabled, isAppleSignInAvailable } from '@/services/socialSignIn';
@@ -12,6 +12,8 @@ import type { MeResponse } from '@/services/authApi';
 import type { LinkConfirmationRequired } from '@/services/socialAuthApi';
 import LinkConfirmModal from '@/components/auth/LinkConfirmModal';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 interface Props {
   /** Session ouverte : même routage qu'après un login mot de passe. */
   onSignedIn: (me: MeResponse | null) => void;
@@ -28,6 +30,8 @@ const RADIUS = 12;
  * Rien n'est rendu sur web, ni si aucun des deux fournisseurs n'est disponible.
  */
 export default function SocialSignInButtons({ onSignedIn, disabled }: Props) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { loginWithGoogle, loginWithApple } = useAuth();
   const { t } = useLanguage();
   const [appleAvailable, setAppleAvailable] = useState(false);
@@ -83,7 +87,8 @@ export default function SocialSignInButtons({ onSignedIn, disabled }: Props) {
         >
           {pending === 'apple' ? (
             <View style={styles.appleLoading}>
-              <ActivityIndicator color={colors.white} />
+              {/* Bouton Apple : noir dans tous les thèmes (charte Apple, hors thème) — indicateur crème fixe. */}
+              <ActivityIndicator color="#F2E9D2" />
             </View>
           ) : (
             <AppleAuthentication.AppleAuthenticationButton
@@ -167,7 +172,7 @@ function GoogleLogo() {
 // Charte Google, variante claire : fond blanc, contour #747775, texte #1F1F1F.
 const GOOGLE_TEXT = '#1F1F1F';
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   root: { gap: 10, marginBottom: 6 },
   apple: { width: '100%', height: BUTTON_HEIGHT },
   appleLoading: {
@@ -200,6 +205,6 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 6,
   },
-  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(42,38,32,0.12)' },
-  dividerText: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3 },
-});
+  dividerLine: { flex: 1, height: 1, backgroundColor: transparence(c.texte, 0.12) },
+  dividerText: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3 },
+}));

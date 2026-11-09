@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Modal, Image, Linking, Platform, AppState, type AppStateStatus } from 'react-native';
+import { View, Text, Modal, Image, Linking, Platform, AppState, type AppStateStatus } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -24,6 +24,8 @@ import { confirmDialog, notify } from '@/utils/dialogs';
 import { abonnerRechargement, declarerGateOuverte } from '@/components/push/fileNotifications';
 import { useConduireParSource } from '@/components/push/routagePush';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Porte d'entrée des messages à l'ouverture — UNE seule modale à la fois, dans l'ordre :
  * 1) CAMPAGNES serveur (23/07, porté de CMFIPraise) : APP_UPDATE (mise à jour, forcée ou non,
@@ -43,6 +45,8 @@ const CAMPAIGN_SNOOZE_MS = 3 * 24 * 60 * 60 * 1000; // 3 jours
 type CampaignState = Record<string, { snoozedUntil: number }>;
 
 export default function NotificationGate() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const { isAuthenticated, me } = useAuth();
   // 16/09 — la modale mène enfin quelque part. Le routage par `source` existait déjà pour le tap
@@ -220,7 +224,7 @@ export default function NotificationGate() {
                 <Ionicons
                   name={isUpdate ? 'cloud-download-outline' : campaign.type === 'PROMO' ? 'gift-outline' : 'megaphone-outline'}
                   size={24}
-                  color={colors.moss}
+                  color={c.accent}
                 />
               </View>
             )}
@@ -301,7 +305,7 @@ export default function NotificationGate() {
         <View style={styles.backdrop}>
           <Card style={styles.card}>
             <View style={styles.iconBubble}>
-              <Ionicons name="people-circle-outline" size={26} color={colors.moss} />
+              <Ionicons name="people-circle-outline" size={26} color={c.accent} />
             </View>
             <Text style={styles.title}>{t('notifications.supervision.title')}</Text>
             <Text style={styles.message}>{t('notifications.supervision.message', { name: requesterName })}</Text>
@@ -367,7 +371,7 @@ export default function NotificationGate() {
       <View style={styles.backdrop}>
         <Card style={styles.card}>
           <View style={styles.iconBubble}>
-            <Ionicons name="notifications-outline" size={24} color={colors.moss} />
+            <Ionicons name="notifications-outline" size={24} color={c.accent} />
           </View>
           <Text style={styles.title}>{current.title}</Text>
           <Text style={styles.message}>{current.message}</Text>
@@ -389,10 +393,10 @@ export default function NotificationGate() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(22,41,31,0.5)',
+    backgroundColor: c.voile,
     justifyContent: 'center',
     padding: 24,
   },
@@ -401,7 +405,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: colors.mossTint2,
+    backgroundColor: c.accentTeinte2,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -414,14 +418,14 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fonts.serif,
     fontSize: 20,
-    color: colors.ink,
+    color: c.texte,
     marginTop: 14,
     textAlign: 'center',
   },
   message: {
     fontFamily: fonts.sans,
     fontSize: 13.5,
-    color: colors.ink2,
+    color: c.texte2,
     marginTop: 10,
     textAlign: 'center',
     lineHeight: 20,
@@ -429,7 +433,7 @@ const styles = StyleSheet.create({
   warning: {
     fontFamily: fonts.sans,
     fontSize: 12.5,
-    color: colors.clay,
+    color: c.alerte,
     marginTop: 10,
     textAlign: 'center',
     lineHeight: 18,
@@ -437,7 +441,7 @@ const styles = StyleSheet.create({
   counter: {
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 10,
   },
-});
+}));

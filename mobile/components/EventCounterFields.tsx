@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import Label from '@/components/Label';
 import Field from '@/components/Field';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { counterKeysFor, digitsOnly, type CounterDraft } from '@/utils/events';
 
+import { creerStyles } from '@/theme/creerStyles';
 /**
  * D-EVT-15 (JP 14/10, retour de l'évangéliste) — saisie des compteurs d'un évènement, partagée par
  * la déclaration (`app/events/declare`), la modification d'un réalisé (`EventForm`) et « Marquer
@@ -36,6 +37,7 @@ export default function EventCounterFields({
   /** Focus sur « Participants » à l'ouverture (clôture : c'est tout l'objet de l'écran). */
   autoFocus?: boolean;
 }) {
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <View style={styles.section}>
@@ -69,14 +71,14 @@ export default function EventCounterFields({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   section: { marginTop: 18 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 14 },
   // Deux par ligne : « Participants » et « Invités » (D-EVT-17) ouvrent toujours la grille.
   cell: { width: '47%', flexGrow: 0 },
   label: { marginBottom: 8 },
-  invalid: { borderColor: colors.clay },
-  fieldHint: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3 },
-  error: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12, color: colors.clay },
-  hint: { marginTop: 8, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, lineHeight: 17 },
-});
+  invalid: { borderColor: c.alerte },
+  fieldHint: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12, color: c.texte3 },
+  error: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12, color: c.alerte },
+  hint: { marginTop: 8, fontFamily: fonts.sans, fontSize: 12, color: c.texte3, lineHeight: 17 },
+}));

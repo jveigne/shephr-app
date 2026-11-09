@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii, transparence } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Bandeau d'échec explicite — Lot T4 (14/09).
  *
@@ -18,10 +20,12 @@ export default function ErrorBanner({
   message: string;
   onRetry?: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <View style={styles.banner}>
-      <Ionicons name="alert-circle-outline" size={18} color={colors.clay} />
+      <Ionicons name="alert-circle-outline" size={18} color={c.alerte} />
       <Text style={styles.text}>{message}</Text>
       {onRetry && (
         <Pressable onPress={onRetry} hitSlop={8}>
@@ -32,19 +36,19 @@ export default function ErrorBanner({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   banner: {
     marginTop: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: radii.md,
-    backgroundColor: 'rgba(184,106,74,0.10)',
+    backgroundColor: transparence(c.alerte, 0.10),
     borderWidth: 1,
-    borderColor: 'rgba(184,106,74,0.28)',
+    borderColor: transparence(c.alerte, 0.28),
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
-  text: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },
-  retry: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '700', color: colors.clay },
-});
+  text: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2, lineHeight: 18 },
+  retry: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '700', color: c.alerte },
+}));

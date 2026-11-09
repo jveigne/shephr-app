@@ -1,7 +1,9 @@
 import React, { ReactNode } from 'react';
-import { Pressable, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
-import { colors, fonts } from '@/theme';
+import { Pressable, Text, StyleProp, ViewStyle } from 'react-native';
+import { fonts, transparence } from '@/theme';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 interface Props {
   label: string;
   selected?: boolean;
@@ -12,16 +14,18 @@ interface Props {
 }
 
 export default function Chip({ label, selected, accent, iconLeft, onPress, style }: Props) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const bg = selected
     ? accent
-      ? colors.earth
-      : colors.moss
-    : 'rgba(42,38,32,0.045)';
-  const fg = selected ? colors.white : colors.ink2;
+      ? c.secondaire
+      : c.accent
+    : transparence(c.texte, 0.045);
+  const fg = selected ? c.surAccent : c.texte2;
   const borderColor = selected
     ? accent
-      ? colors.earthDeep
-      : colors.mossDeep
+      ? c.secondaireProfond
+      : c.accentProfond
     : 'transparent';
 
   return (
@@ -39,7 +43,7 @@ export default function Chip({ label, selected, accent, iconLeft, onPress, style
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -54,4 +58,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
-});
+}));

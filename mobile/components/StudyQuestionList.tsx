@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Pressable, Modal, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Field from '@/components/Field';
 import Button from '@/components/Button';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { fmtPoints } from '@/utils/format';
 import type {
@@ -16,6 +16,9 @@ import type {
 } from '@/services/assemblyApi';
 import type { Language } from '@/services/authApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import type { PaletteTheme } from '@/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Étude de l'assemblée (plan 21/10, §6.3) — les questions d'une leçon et une copie, sous les quatre
  * formes dont ont besoin la séance, les résultats et la progression :
@@ -94,11 +97,10 @@ function choicesOf(q: StudyQuestionView, t: Translate): { key: string; label: st
 }
 
 const VERDICTS: StudyVerdict[] = ['JUSTE', 'A_PRECISER', 'A_REVOIR'];
-const VERDICT_TONE: Record<StudyVerdict, string> = {
-  JUSTE: colors.moss,
-  A_PRECISER: colors.earthDeep,
-  A_REVOIR: colors.clay,
-};
+/** Couleur d'un avis, selon la palette du thème (en Noir et blanc, l'alerte reste rouge — D8). */
+function verdictTone(c: PaletteTheme): Record<StudyVerdict, string> {
+  return { JUSTE: c.accent, A_PRECISER: c.secondaireProfond, A_REVOIR: c.alerte };
+}
 
 export default function StudyQuestionList({
   questions,
@@ -127,6 +129,7 @@ export default function StudyQuestionList({
   /** Mode `adjust`, D-ETU-46 (JP 23/10) : avis du dirigeant sur une ouverte d'un rattrapage. */
   onVerdict?: (q: StudyQuestionView, verdict: StudyVerdict) => void;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.list}>
       {questions.map((q) => (
@@ -173,6 +176,8 @@ export function StudyCopySheet({
   onVerdict?: (q: StudyQuestionView, verdict: StudyVerdict) => Promise<boolean>;
   onClose: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const insets = useSafeAreaInsets();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -202,7 +207,7 @@ export function StudyCopySheet({
         >
           <View style={styles.sheetHead}>
             <Pressable onPress={onClose} hitSlop={10} accessibilityLabel={t('common.back')}>
-              <Ionicons name="close" size={24} color={colors.ink2} />
+              <Ionicons name="close" size={24} color={c.texte2} />
             </Pressable>
           </View>
           <Text style={styles.sheetKicker}>
@@ -263,6 +268,8 @@ function QuestionBlock({
   onAdjust?: (q: StudyQuestionView, points: number) => Promise<boolean>;
   onVerdict?: (q: StudyQuestionView, verdict: StudyVerdict) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const answered = isStudyAnswered(q, a);
   const sub = !!q.parentId;
@@ -287,7 +294,7 @@ function QuestionBlock({
           <Ionicons
             name={answered ? 'checkmark-circle' : 'ellipse-outline'}
             size={16}
-            color={answered ? colors.moss : colors.ink3}
+            color={answered ? c.accent : c.texte3}
           />
         </View>
         <Text style={styles.masked}>
@@ -339,7 +346,7 @@ function QuestionBlock({
         <View style={styles.verdictRow}>
           {VERDICTS.map((v) => {
             const selected = a?.verdict === v;
-            const tone = VERDICT_TONE[v];
+            const tone = verdictTone(c)[v];
             return (
               <Pressable
                 key={v}
@@ -353,7 +360,7 @@ function QuestionBlock({
                   { opacity: busy || disabled ? 0.5 : pressed ? 0.85 : 1 },
                 ]}
               >
-                <Text style={[styles.verdictText, { color: selected ? colors.white : tone }]}>
+                <Text style={[styles.verdictText, { color: selected ? c.surAccent : tone }]}>
                   {t(`study.verdict.${v}`)}
                 </Text>
               </Pressable>
@@ -362,7 +369,7 @@ function QuestionBlock({
         </View>
       )}
       {!verdictButtons && mode !== 'answer' && q.type === 'OUVERTE' && answered && (
-        <Text style={[styles.verdictLabel, a?.verdict ? { color: VERDICT_TONE[a.verdict] } : null]}>
+        <Text style={[styles.verdictLabel, a?.verdict ? { color: verdictTone(c)[a.verdict] } : null]}>
           {a?.verdict ? t(`study.verdict.${a.verdict}`) : t('study.question.noVerdict')}
         </Text>
       )}
@@ -383,6 +390,8 @@ function AnswerInput({
   disabled: boolean;
   onAnswer?: (q: StudyQuestionView, value: Pick<StudyAnswerView, 'valueText' | 'valueOptions' | 'done'>) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const set = (value: Partial<Pick<StudyAnswerView, 'valueText' | 'valueOptions' | 'done'>>) =>
     onAnswer?.(q, { valueText: null, valueOptions: null, done: false, ...value });
@@ -456,7 +465,9 @@ function ChoiceRow({
   tone?: string;
   note?: string | null;
 }) {
-  const color = tone ?? (selected ? colors.moss : colors.ink3);
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
+  const color = tone ?? (selected ? c.accent : c.texte3);
   const icon = multi
     ? selected
       ? 'checkbox'
@@ -472,7 +483,7 @@ function ChoiceRow({
       accessibilityState={{ checked: selected, disabled: disabled || !onPress }}
       style={({ pressed }) => [
         styles.choice,
-        selected && { borderColor: color, backgroundColor: colors.mossTint },
+        selected && { borderColor: color, backgroundColor: c.accentTeinte },
         { opacity: disabled && onPress ? 0.6 : pressed ? 0.85 : 1 },
       ]}
     >
@@ -493,6 +504,8 @@ function CorrectedAnswer({
   a: StudyAnswerValue | undefined;
   answered: boolean;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   if (q.type === 'EXERCICE') {
     return <Text style={styles.given}>{a?.done ? t('study.question.exerciseDoneMark') : t('study.question.exerciseNotDone')}</Text>;
@@ -512,15 +525,15 @@ function CorrectedAnswer({
   return (
     <View style={styles.choices}>
       {!answered && <Text style={styles.noAnswer}>{t('study.question.noAnswer')}</Text>}
-      {choicesOf(q, t).map((c) => {
-        const selected = chosen.includes(c.key);
-        const right = key ? key.includes(c.key) : null;
+      {choicesOf(q, t).map((choix) => {
+        const selected = chosen.includes(choix.key);
+        const right = key ? key.includes(choix.key) : null;
         // RG-ETU-05/06 : la note vient du serveur ; ici on ne fait que marquer les choix.
-        const tone = right == null ? undefined : selected ? (right ? colors.moss : colors.clay) : right ? colors.moss : undefined;
+        const tone = right == null ? undefined : selected ? (right ? c.accent : c.alerte) : right ? c.accent : undefined;
         const note =
           right == null ? null : selected && !right ? t('study.question.wrong') : !selected && right ? t('study.question.expected') : null;
         if (!selected && !right) return null;
-        return <ChoiceRow key={c.key} label={c.label} selected={selected} multi={multi} tone={tone} note={note} />;
+        return <ChoiceRow key={choix.key} label={choix.label} selected={selected} multi={multi} tone={tone} note={note} />;
       })}
     </View>
   );
@@ -528,6 +541,8 @@ function CorrectedAnswer({
 
 /** Réponse du manuel : clé(s) pour les fermées, texte pour les ouvertes / personnelles. */
 function ManualAnswer({ q, corrected }: { q: StudyQuestionView; corrected: boolean }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const closed = !isTextual(q) && q.type !== 'EXERCICE';
   if (closed) {
@@ -538,7 +553,7 @@ function ManualAnswer({ q, corrected }: { q: StudyQuestionView; corrected: boole
     const text = q.answerKey.map((k) => labels.find((c) => c.key === k)?.label ?? k).join(' · ');
     return (
       <View style={[styles.answerBox, styles.manualBox]}>
-        <Text style={[styles.answerBoxLabel, { color: colors.moss }]}>{t('study.question.manual')}</Text>
+        <Text style={[styles.answerBoxLabel, { color: c.accent }]}>{t('study.question.manual')}</Text>
         <Text style={styles.answerBoxText}>{text}</Text>
       </View>
     );
@@ -546,7 +561,7 @@ function ManualAnswer({ q, corrected }: { q: StudyQuestionView; corrected: boole
   if (!q.expectedAnswer) return null;
   return (
     <View style={[styles.answerBox, styles.manualBox]}>
-      <Text style={[styles.answerBoxLabel, { color: colors.moss }]}>{t('study.question.manual')}</Text>
+      <Text style={[styles.answerBoxLabel, { color: c.accent }]}>{t('study.question.manual')}</Text>
       <Text style={styles.answerBoxText}>{q.expectedAnswer}</Text>
     </View>
   );
@@ -563,11 +578,13 @@ function ScoreBadge({
   adjusted: boolean;
   pendingReview: boolean;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   return (
     <View style={styles.scoreBadgeRow}>
       {adjusted && <Text style={styles.tag}>{t('study.question.adjusted')}</Text>}
-      <Text style={[styles.scoreBadge, pendingReview && { color: colors.earthDeep }]}>
+      <Text style={[styles.scoreBadge, pendingReview && { color: c.secondaireProfond }]}>
         {t('study.score', { score: fmtPoints(points ?? (pendingReview ? null : 0), language), max: fmtPoints(max, language) })}
       </Text>
     </View>
@@ -583,6 +600,8 @@ function AdjustRow({
   a: StudyAnswerValue | undefined;
   onAdjust: (q: StudyQuestionView, points: number) => Promise<boolean>;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState('');
@@ -601,7 +620,7 @@ function AdjustRow({
         hitSlop={6}
         style={styles.adjustLink}
       >
-        <Ionicons name="create-outline" size={14} color={colors.moss} />
+        <Ionicons name="create-outline" size={14} color={c.accent} />
         <Text style={styles.adjustLinkText}>{t('study.results.adjust')}</Text>
       </Pressable>
     );
@@ -628,7 +647,7 @@ function AdjustRow({
         }}
       />
       <Pressable onPress={() => setOpen(false)} hitSlop={8} accessibilityLabel={t('common.cancel')}>
-        <Ionicons name="close" size={20} color={colors.ink3} />
+        <Ionicons name="close" size={20} color={c.texte3} />
       </Pressable>
     </View>
   );
@@ -649,6 +668,7 @@ export function studyLanguagesToMark(languages: Language[] | null | undefined, r
 
 /** D-ETU-26 (JP 21/10) — pastille `FR` / `EN` d'une unité dont la langue diffère de l'assemblée. */
 export function StudyLanguagePill({ language }: { language: Language }) {
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <Text
@@ -665,6 +685,7 @@ export function StudyLanguagePill({ language }: { language: Language }) {
  * ligne conservés (un `<Text>` React Native garde les `\n`). Rien si le texte est vide.
  */
 export function StudyNotesText({ title, text }: { title?: string; text: string | null | undefined }) {
+  const styles = useStyles();
   if (!text || !text.trim()) return null;
   return (
     <View style={styles.notesBlock}>
@@ -681,6 +702,7 @@ export function StudyNotesText({ title, text }: { title?: string; text: string |
  * `memberActions` (texte brut, D-ETU-37). Rien si la liste est vide.
  */
 export function StudyMemberActions({ actions, title }: { actions: string[] | null | undefined; title?: string }) {
+  const styles = useStyles();
   const { t } = useLanguage();
   const list = (actions ?? []).filter((a) => a && a.trim());
   if (list.length === 0) return null;
@@ -699,46 +721,46 @@ export function StudyMemberActions({ actions, title }: { actions: string[] | nul
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   notesBlock: { gap: 6 },
-  notesTitle: { fontFamily: fonts.serif, fontSize: 16, color: colors.ink, letterSpacing: -0.1 },
-  notesText: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 21, color: colors.ink2 },
+  notesTitle: { fontFamily: fonts.serif, fontSize: 16, color: c.texte, letterSpacing: -0.1 },
+  notesText: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 21, color: c.texte2 },
   actionRow: { flexDirection: 'row', gap: 8 },
-  actionBullet: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 21, color: colors.moss },
+  actionBullet: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 21, color: c.accent },
   list: { gap: 10 },
   card: {
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: radii.md,
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
     gap: 8,
   },
   // RG-ETU-20 : une sous-question (6.a) se lit sous son parent.
-  sub: { marginLeft: 18, borderLeftWidth: 3, borderLeftColor: colors.mossTint2 },
+  sub: { marginLeft: 18, borderLeftWidth: 3, borderLeftColor: c.accentTeinte2 },
   consigne: { paddingHorizontal: 4, paddingTop: 6, gap: 4 },
-  consigneText: { fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 15, lineHeight: 21, color: colors.ink2 },
+  consigneText: { fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 15, lineHeight: 21, color: c.texte2 },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  number: { fontFamily: fonts.mono, fontSize: 12, color: colors.clay, letterSpacing: 0.6 },
+  number: { fontFamily: fonts.mono, fontSize: 12, color: c.alerte, letterSpacing: 0.6 },
   tag: {
     fontFamily: fonts.mono,
     fontSize: 9.5,
-    color: colors.ink3,
+    color: c.texte3,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 99,
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
     overflow: 'hidden',
   },
-  pointsMax: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3 },
+  pointsMax: { fontFamily: fonts.sans, fontSize: 12, color: c.texte3 },
   scoreBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  scoreBadge: { fontFamily: fonts.mono, fontSize: 12.5, color: colors.moss },
-  statement: { fontFamily: fonts.sans, fontSize: 15, lineHeight: 21, color: colors.ink },
-  bible: { fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 13, color: colors.ink3 },
-  masked: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink2 },
+  scoreBadge: { fontFamily: fonts.mono, fontSize: 12.5, color: c.accent },
+  statement: { fontFamily: fonts.sans, fontSize: 15, lineHeight: 21, color: c.texte },
+  bible: { fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 13, color: c.texte3 },
+  masked: { fontFamily: fonts.sans, fontSize: 14, color: c.texte2 },
   choices: { gap: 6 },
   choice: {
     flexDirection: 'row',
@@ -748,33 +770,33 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: colors.hair,
-    backgroundColor: colors.paper2,
+    borderColor: c.filet,
+    backgroundColor: c.surfaceHaute,
   },
-  choiceText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, color: colors.ink, lineHeight: 19 },
+  choiceText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, color: c.texte, lineHeight: 19 },
   choiceNote: { fontFamily: fonts.sans, fontSize: 11.5, fontWeight: '600' },
   textInput: { minHeight: 84, fontSize: 15 },
-  given: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink2 },
-  noAnswer: { fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 14, color: colors.ink3 },
+  given: { fontFamily: fonts.sans, fontSize: 14, color: c.texte2 },
+  noAnswer: { fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 14, color: c.texte3 },
   answerBox: {
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: radii.sm,
-    backgroundColor: colors.paper2,
+    backgroundColor: c.surfaceHaute,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
     gap: 4,
   },
-  manualBox: { backgroundColor: colors.mossTint, borderColor: colors.mossTint2 },
+  manualBox: { backgroundColor: c.accentTeinte, borderColor: c.accentTeinte2 },
   answerBoxLabel: {
     fontFamily: fonts.sans,
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.6,
     textTransform: 'uppercase',
-    color: colors.ink3,
+    color: c.texte3,
   },
-  answerBoxText: { fontFamily: fonts.sans, fontSize: 14.5, lineHeight: 20, color: colors.ink },
+  answerBoxText: { fontFamily: fonts.sans, fontSize: 14.5, lineHeight: 20, color: c.texte },
   verdictRow: { flexDirection: 'row', gap: 8, marginTop: 2 },
   verdictBtn: {
     flex: 1,
@@ -784,33 +806,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   verdictText: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600' },
-  verdictLabel: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink3 },
+  verdictLabel: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.texte3 },
   adjustLink: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' },
-  adjustLinkText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.moss },
+  adjustLinkText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.accent },
   adjustRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   adjustField: { flex: 1, paddingVertical: 10 },
-  sheet: { flex: 1, backgroundColor: colors.parchment },
+  sheet: { flex: 1, backgroundColor: c.page },
   sheetHead: { flexDirection: 'row', justifyContent: 'flex-end' },
   sheetKicker: {
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.clay,
+    color: c.alerte,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  sheetTitle: { fontFamily: fonts.serif, fontSize: 26, color: colors.ink, letterSpacing: -0.4, marginTop: 4 },
-  sheetScore: { marginTop: 6, fontFamily: fonts.serif, fontSize: 30, color: colors.moss },
+  sheetTitle: { fontFamily: fonts.serif, fontSize: 26, color: c.texte, letterSpacing: -0.4, marginTop: 4 },
+  sheetScore: { marginTop: 6, fontFamily: fonts.serif, fontSize: 30, color: c.accent },
   catchUpPill: {
     fontFamily: fonts.mono,
     fontSize: 9.5,
-    color: colors.moss,
+    color: c.accent,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 99,
     borderWidth: 1,
-    borderColor: colors.moss,
+    borderColor: c.accent,
     overflow: 'hidden',
   },
   languagePill: {
@@ -818,11 +840,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.mono,
     fontSize: 10,
     letterSpacing: 0.6,
-    color: colors.earthDeep,
-    backgroundColor: colors.mossTint,
+    color: c.secondaireProfond,
+    backgroundColor: c.accentTeinte,
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 99,
     overflow: 'hidden',
   },
-});
+}));

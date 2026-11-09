@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '@/components/Card';
 import Label from '@/components/Label';
@@ -11,7 +11,7 @@ import SelectField from '@/components/SelectField';
 import EventCounterFields from '@/components/EventCounterFields';
 import EventPreacherField from '@/components/EventPreacherField';
 import { DatePickerModal } from '@/components/DeclarationForm';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   createEvent,
@@ -36,6 +36,8 @@ import {
 import { fmtIsoDay } from '@/utils/meetingReport';
 import { parseLocalDate, toLocalDate } from '@/utils/format';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Lot E7 (plan 14/10, §6.3) — formulaire d'évènement EN LIGNE, deux usages :
  * <ul>
@@ -83,6 +85,8 @@ export default function EventForm({
   event?: EventResponse;
   onSaved: (saved: EventResponse) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const english = isEnglishLang(language);
   const editing = mode === 'edit' && event != null ? event : null;
@@ -280,15 +284,15 @@ export default function EventForm({
         <View style={{ flex: 1 }}>
           <Label style={styles.sectionLabel}>{t('events.form.date')}</Label>
           <Card onPress={() => setPicking('start')} style={styles.dateCell}>
-            <Ionicons name="calendar-outline" size={18} color={colors.mossSoft} />
+            <Ionicons name="calendar-outline" size={18} color={c.accentDoux} />
             <Text style={styles.dateText}>{fmtIsoDay(eventDate, t)}</Text>
           </Card>
         </View>
         <View style={{ flex: 1 }}>
           <Label style={styles.sectionLabel}>{t('events.form.endDate')}</Label>
           <Card onPress={() => setPicking('end')} style={styles.dateCell}>
-            <Ionicons name="calendar-number-outline" size={18} color={colors.mossSoft} />
-            <Text style={[styles.dateText, !endDate && { color: colors.ink3 }]}>
+            <Ionicons name="calendar-number-outline" size={18} color={c.accentDoux} />
+            <Text style={[styles.dateText, !endDate && { color: c.texte3 }]}>
               {endDate ? fmtIsoDay(endDate, t) : t('events.form.endDateNone')}
             </Text>
           </Card>
@@ -314,7 +318,7 @@ export default function EventForm({
         />
       )}
       <View style={styles.banner}>
-        <Ionicons name="location-outline" size={16} color={colors.mossSoft} />
+        <Ionicons name="location-outline" size={16} color={c.accentDoux} />
         <Text style={styles.bannerText}>
           {target
             ? t(editing ? 'events.form.attachedTo' : 'events.form.plannedFor', {
@@ -371,7 +375,7 @@ export default function EventForm({
         fullWidth
         height={56}
         style={{ marginTop: 18 }}
-        iconLeft={<Ionicons name={editing ? 'checkmark' : 'calendar'} size={19} color={colors.white} />}
+        iconLeft={<Ionicons name={editing ? 'checkmark' : 'calendar'} size={19} color={c.surAccent} />}
       />
 
       <DatePickerModal
@@ -392,16 +396,16 @@ export default function EventForm({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   section: { marginTop: 18 },
   sectionLabel: { marginBottom: 8 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  fieldHint: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12, color: colors.clay },
+  fieldHint: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12, color: c.alerte },
   datesRow: { flexDirection: 'row', gap: 12 },
   dateCell: { paddingHorizontal: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dateText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, fontWeight: '500', color: colors.ink },
+  dateText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, fontWeight: '500', color: c.texte },
   clearEnd: { alignSelf: 'flex-end', marginTop: 8 },
-  link: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: colors.moss },
+  link: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: c.accent },
   banner: {
     marginTop: 14,
     flexDirection: 'row',
@@ -410,10 +414,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: radii.md,
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
   },
-  bannerText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },
+  bannerText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2, lineHeight: 18 },
   noteHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  counter: { fontFamily: fonts.mono, fontSize: 11, color: colors.ink3 },
+  counter: { fontFamily: fonts.mono, fontSize: 11, color: c.texte3 },
   noteField: { minHeight: 72, textAlignVertical: 'top' },
-});
+}));

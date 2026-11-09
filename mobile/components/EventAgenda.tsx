@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '@/components/Card';
@@ -8,7 +8,7 @@ import ErrorBanner from '@/components/ErrorBanner';
 import SelectField from '@/components/SelectField';
 import EventPeriodPicker from '@/components/EventPeriodPicker';
 import { EventRow } from '@/components/EventRow';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getMyEvents,
@@ -21,6 +21,8 @@ import {
 import { eventActionMessage } from '@/utils/eventErrors';
 import { addDaysLocal, defaultPeriod, monthLocal, periodBounds, todayLocal, type Period } from '@/utils/events';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Lot E7 (plan 14/10, §6.3) — AGENDA de l'onglet « Évènements » : trois blocs sur le nœud choisi
  * et son sous-arbre (contrat §3.5, « recettes d'agenda »), plus les évènements de ses ANCÊTRES en
@@ -50,6 +52,8 @@ export default function EventAgenda({
   /** Change à chaque « tirer pour rafraîchir » ou retour sur l'onglet : recharge les trois blocs. */
   refreshKey: number;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [nodeKey, setNodeKey] = useState(ALL);
   const [period, setPeriod] = useState<Period>(() => defaultPeriod('year'));
@@ -84,7 +88,7 @@ export default function EventAgenda({
       <AgendaBlock
         title={t('events.agenda.toClose')}
         sub={t('events.agenda.toCloseSub')}
-        tone={colors.clay}
+        tone={c.alerte}
         params={{ ...nodeParams, status: 'PLANNED', to: addDaysLocal(today, -1), order: 'ASC' }}
         empty={t('events.agenda.toCloseEmpty')}
         refreshKey={refreshKey}
@@ -92,7 +96,7 @@ export default function EventAgenda({
       <AgendaBlock
         title={t('events.agenda.upcoming')}
         sub={t('events.agenda.upcomingSub')}
-        tone={colors.earthDeep}
+        tone={c.secondaireProfond}
         params={{ ...nodeParams, status: 'PLANNED', from: today, order: 'ASC' }}
         empty={scopes.canPlan ? t('events.agenda.upcomingEmptyPlanner') : t('events.agenda.upcomingEmpty')}
         refreshKey={refreshKey}
@@ -106,7 +110,7 @@ export default function EventAgenda({
       {bounds ? (
         <AgendaBlock
           params={{ ...nodeParams, status: 'DONE', from: bounds.from, to: bounds.to, order: 'DESC' }}
-          tone={colors.moss}
+          tone={c.accent}
           empty={t('events.agenda.doneEmpty')}
           refreshKey={refreshKey}
         />
@@ -158,6 +162,8 @@ export function AgendaBlock({
   /** Doit être STABLE (`useCallback`) : il entre dans les dépendances du chargement. */
   onLoaded?: (events: EventResponse[]) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [page, setPage] = useState<Page<EventResponse> | null>(null);
   const [events, setEvents] = useState<EventResponse[]>([]);
@@ -259,7 +265,7 @@ export function AgendaBlock({
       )}
 
       {loading && !page ? (
-        <ActivityIndicator color={colors.moss} style={{ marginTop: 14 }} />
+        <ActivityIndicator color={c.accent} style={{ marginTop: 14 }} />
       ) : error && !page ? (
         <ErrorBanner message={error} onRetry={retry} />
       ) : (
@@ -267,7 +273,7 @@ export function AgendaBlock({
           {!!error && <ErrorBanner message={error} onRetry={retry} />}
           {events.length === 0 ? (
             <Card variant="paper2" style={styles.empty}>
-              <Ionicons name="calendar-clear-outline" size={20} color={colors.ink3} />
+              <Ionicons name="calendar-clear-outline" size={20} color={c.texte3} />
               <Text style={styles.emptyText}>{empty}</Text>
             </Card>
           ) : (
@@ -297,23 +303,23 @@ export function AgendaBlock({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   block: { marginTop: 6 },
   blockHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 22 },
-  blockTitle: { fontFamily: fonts.serif, fontSize: 20, color: colors.ink },
-  blockSub: { marginTop: 4, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, lineHeight: 17 },
+  blockTitle: { fontFamily: fonts.serif, fontSize: 20, color: c.texte },
+  blockSub: { marginTop: 4, fontFamily: fonts.sans, fontSize: 12, color: c.texte3, lineHeight: 17 },
   badge: {
     minWidth: 22,
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 99,
     overflow: 'hidden',
-    color: colors.white,
+    color: c.surAccent,
     fontFamily: fonts.sans,
     fontSize: 11.5,
     fontWeight: '700',
     textAlign: 'center',
   },
   empty: { paddingHorizontal: 16, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  emptyText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2, lineHeight: 19 },
-});
+  emptyText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: c.texte2, lineHeight: 19 },
+}));

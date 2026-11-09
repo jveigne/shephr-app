@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '@/components/Card';
@@ -8,7 +8,7 @@ import Field from '@/components/Field';
 import Label from '@/components/Label';
 import Button from '@/components/Button';
 import ErrorBanner from '@/components/ErrorBanner';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { confirmDialog } from '@/utils/dialogs';
@@ -19,6 +19,8 @@ import {
   type ReminderScopeResponse,
 } from '@/services/donationRemindersApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Lot T11 (docs/notifications.md §2.3) — « RELANCER » : le trésorier écrit d'un coup aux personnes
  * de son périmètre qui n'ont rien déclaré sur la période.
@@ -33,6 +35,8 @@ import {
  * effet immédiatement côté serveur, sans nouveau login.
  */
 export default function RelanceNonDeclarants({ nodeId }: { nodeId?: string }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const { isTreasurer } = useAuth();
 
@@ -75,7 +79,7 @@ export default function RelanceNonDeclarants({ nodeId }: { nodeId?: string }) {
   if (loading) {
     return (
       <Card style={styles.card}>
-        <ActivityIndicator color={colors.moss} />
+        <ActivityIndicator color={c.accent} />
       </Card>
     );
   }
@@ -119,7 +123,7 @@ export default function RelanceNonDeclarants({ nodeId }: { nodeId?: string }) {
   return (
     <Card style={styles.card}>
       <View style={styles.header}>
-        <Ionicons name="megaphone-outline" size={18} color={colors.moss} />
+        <Ionicons name="megaphone-outline" size={18} color={c.accent} />
         <Text style={styles.title}>{t('donationReminder.title')}</Text>
       </View>
       <Text style={styles.subtitle}>{t('donationReminder.subtitle')}</Text>
@@ -194,16 +198,16 @@ export default function RelanceNonDeclarants({ nodeId }: { nodeId?: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   card: { paddingHorizontal: 18, paddingVertical: 18, marginTop: 16 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  title: { fontFamily: fonts.serif, fontSize: 18, color: colors.mossDeep },
+  title: { fontFamily: fonts.serif, fontSize: 18, color: c.accentProfond },
   subtitle: {
     marginTop: 6,
     fontFamily: fonts.sans,
     fontSize: 12.5,
     lineHeight: 18,
-    color: colors.ink2,
+    color: c.texte2,
   },
   label: { marginTop: 16, marginBottom: 8 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -211,17 +215,17 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontFamily: fonts.sans,
     fontSize: 12,
-    color: colors.ink3,
+    color: c.texte3,
   },
   message: { minHeight: 80, textAlignVertical: 'top' },
   result: {
     marginTop: 16,
     padding: 14,
     borderRadius: radii.md,
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
     gap: 4,
   },
-  resultLine: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '700', color: colors.mossDeep },
-  resultMuted: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2 },
-  resultPeriod: { marginTop: 4, fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3 },
-});
+  resultLine: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '700', color: c.accentProfond },
+  resultMuted: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2 },
+  resultPeriod: { marginTop: 4, fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3 },
+}));

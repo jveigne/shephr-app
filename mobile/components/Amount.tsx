@@ -1,8 +1,9 @@
 import React from 'react';
 import { Text, View, StyleProp, TextStyle } from 'react-native';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { currencySymbol } from '@/utils/format';
 
+import { useTheme } from '@/contexts/ThemeContext';
 interface Props {
   value: number;
   currency?: string;
@@ -17,9 +18,11 @@ export default function Amount({
   currency = 'GBP',
   size = 24,
   showDecimals = false,
-  color = colors.ink,
+  color: couleurDemandee,
   style,
 }: Props) {
+  const { couleurs: c } = useTheme();
+  const color = couleurDemandee ?? c.texte;
   const whole = Math.floor(Math.abs(value));
   const decimals = (Math.abs(value) - whole).toFixed(2).slice(1);
   return (
@@ -29,7 +32,7 @@ export default function Amount({
           fontFamily: fonts.serif,
           fontWeight: '500',
           fontSize: size * 0.55,
-          color: colors.ink3,
+          color: c.texte3,
           marginRight: size * 0.05,
         }}
       >
@@ -55,7 +58,7 @@ export default function Amount({
           style={{
             fontFamily: fonts.serif,
             fontSize: size * 0.4,
-            color: colors.ink3,
+            color: c.texte3,
           }}
         >
           {decimals}

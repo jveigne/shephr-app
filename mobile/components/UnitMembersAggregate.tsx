@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '@/components/Card';
 import Label from '@/components/Label';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { fmtAmount } from '@/utils/format';
 import { notify } from '@/utils/dialogs';
@@ -14,6 +14,8 @@ import {
   type MembersAggregateResponse,
 } from '@/services/goalsApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Détail NOMINATIF d'une assemblée (RG-BQ-05/06) — réservé aux dirigeants dont le périmètre Goals
  * couvre l'assemblée. ⚠ Un simple membre reçoit 403 même sur la sienne : ne monter ce bloc que
@@ -46,6 +48,8 @@ export default function UnitMembersAggregate({
    */
   refreshToken?: string;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [data, setData] = useState<MembersAggregateResponse | null>(null);
@@ -120,7 +124,7 @@ export default function UnitMembersAggregate({
   return (
     <Card variant="paper2" style={styles.card}>
       <Pressable onPress={() => setExpanded((e) => !e)} style={styles.header} hitSlop={6}>
-        <Ionicons name="people-outline" size={18} color={colors.mossSoft} />
+        <Ionicons name="people-outline" size={18} color={c.accentDoux} />
         <Text style={styles.title}>
           {expanded ? t('goals.members.hide') : t('goals.members.show')}
         </Text>
@@ -134,12 +138,12 @@ export default function UnitMembersAggregate({
             </Text>
           </View>
         )}
-        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.ink3} />
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={c.texte3} />
       </Pressable>
 
       {expanded && (
         <View style={{ marginTop: 10 }}>
-          {loading && <ActivityIndicator color={colors.moss} />}
+          {loading && <ActivityIndicator color={c.accent} />}
           {!loading && denied && <Text style={styles.empty}>{t('goals.members.forbidden')}</Text>}
           {/* Échec autre qu'un refus : le dire. Sans ça, le bloc se dépliait sur du vide — l'appel
               avait échoué et rien ne le signalait. */}
@@ -230,56 +234,56 @@ export default function UnitMembersAggregate({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   card: { paddingHorizontal: 16, paddingVertical: 14, marginTop: 14 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  title: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
+  title: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.texte },
   counterPill: {
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
     paddingHorizontal: 9,
     paddingVertical: 3,
     borderRadius: 99,
   },
-  counterPillLate: { backgroundColor: 'rgba(201,149,107,0.22)' },
-  counterPillText: { fontFamily: fonts.sans, fontSize: 11, fontWeight: '700', color: colors.mossDeep },
-  counterPillTextLate: { color: colors.earthDeep },
-  counters: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },
-  lateSummary: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.clay, marginTop: 3 },
+  counterPillLate: { backgroundColor: transparence(c.secondaire, 0.22) },
+  counterPillText: { fontFamily: fonts.sans, fontSize: 11, fontWeight: '700', color: c.accentProfond },
+  counterPillTextLate: { color: c.secondaireProfond },
+  counters: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2, lineHeight: 18 },
+  lateSummary: { fontFamily: fonts.sans, fontSize: 12.5, color: c.alerte, marginTop: 3 },
   allSubmitted: {
-    fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: colors.mossSoft, marginTop: 8,
+    fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: c.accentDoux, marginTop: 8,
   },
-  empty: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, lineHeight: 18, marginTop: 8 },
+  empty: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, lineHeight: 18, marginTop: 8 },
   block: {
     marginTop: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(42,38,32,0.06)',
+    borderTopColor: transparence(c.texte, 0.06),
   },
   rosterRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 },
-  rosterName: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink },
-  rosterMeta: { fontFamily: fonts.sans, fontSize: 11, color: colors.ink3, marginTop: 1 },
+  rosterName: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.texte },
+  rosterMeta: { fontFamily: fonts.sans, fontSize: 11, color: c.texte3, marginTop: 1 },
   remindBtn: {
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 99,
-    backgroundColor: colors.mossTint2,
+    backgroundColor: c.accentTeinte2,
   },
-  remindText: { fontFamily: fonts.sans, fontSize: 11.5, fontWeight: '700', color: colors.mossDeep },
+  remindText: { fontFamily: fonts.sans, fontSize: 11.5, fontWeight: '700', color: c.accentProfond },
   latePill: {
-    fontFamily: fonts.mono, fontSize: 9, color: colors.clay, letterSpacing: 0.6,
+    fontFamily: fonts.mono, fontSize: 9, color: c.alerte, letterSpacing: 0.6,
     textTransform: 'uppercase', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99,
-    backgroundColor: 'rgba(176,90,62,0.13)', overflow: 'hidden',
+    backgroundColor: transparence(c.alerte, 0.13), overflow: 'hidden',
   },
   line: {
     marginTop: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(42,38,32,0.06)',
+    borderTopColor: transparence(c.texte, 0.06),
   },
   lineHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
-  lineCat: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
-  lineValue: { fontFamily: fonts.serif, fontSize: 17, color: colors.ink },
+  lineCat: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.texte },
+  lineValue: { fontFamily: fonts.serif, fontSize: 17, color: c.texte },
   memberRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  memberName: { flex: 1, fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3 },
-  memberValue: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink2, fontWeight: '600' },
-});
+  memberName: { flex: 1, fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3 },
+  memberValue: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte2, fontWeight: '600' },
+}));

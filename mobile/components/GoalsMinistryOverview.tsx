@@ -5,7 +5,7 @@ import ScreenShell from '@/components/ScreenShell';
 import Card from '@/components/Card';
 import Label from '@/components/Label';
 import { GoalScreenTitle } from '@/components/GoalCards';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { goalName } from '@/utils/goalName';
 import { fmtAmount, fmtDate } from '@/utils/format';
@@ -18,12 +18,16 @@ import {
   type NationStatus,
 } from '@/services/goalsApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Lot V1 — vues ministère-large mobile : « Présentation générale » (LEADER, lecture) et
  * « Secrétariat » (SECRETARIAT/SUPER_ADMIN — mêmes chiffres + deadline mise en avant ;
  * la gestion deadline/années se fait sur le web). Drill simplifié : totaux + nations.
  */
 export default function GoalsMinistryOverview({ secretariat }: { secretariat: boolean }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [goal, setGoal] = useState<ActiveGoal | null>(null);
   const [summary, setSummary] = useState<GlobalSummary | null>(null);
@@ -60,7 +64,7 @@ export default function GoalsMinistryOverview({ secretariat }: { secretariat: bo
 
   return (
     <ScreenShell
-      refreshControl={<RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <GoalScreenTitle title={t('goals.title')} />
       {/* Lot V1 : vue NOMMÉE à l'écran. */}
@@ -86,7 +90,7 @@ export default function GoalsMinistryOverview({ secretariat }: { secretariat: bo
 
       {deadlineIso && (
         <Card variant="paper2" style={styles.banner}>
-          <Ionicons name="time-outline" size={18} color={colors.earthDeep} />
+          <Ionicons name="time-outline" size={18} color={c.secondaireProfond} />
           <Text style={styles.bannerText}>
             {new Date(deadlineIso).getTime() < Date.now()
               ? t('goals.deadlinePast', { date: fmtDate(new Date(deadlineIso)) })
@@ -97,7 +101,7 @@ export default function GoalsMinistryOverview({ secretariat }: { secretariat: bo
       )}
 
       {loading ? (
-        <ActivityIndicator color={colors.moss} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={c.accent} style={{ marginTop: 40 }} />
       ) : (
         <>
           {summary && (
@@ -147,7 +151,7 @@ export default function GoalsMinistryOverview({ secretariat }: { secretariat: bo
                     {n.continentName ? ` · ${n.continentName}` : ''}
                   </Text>
                   {/* `submissionRate` est re-maillé PERSONNE côté serveur. */}
-                  <Text style={[styles.ratio, n.late && { color: colors.clay }]}>
+                  <Text style={[styles.ratio, n.late && { color: c.alerte }]}>
                     {t('views.submittedRatio', {
                       submitted: n.submittedMembers,
                       total: n.totalMembers,
@@ -164,39 +168,39 @@ export default function GoalsMinistryOverview({ secretariat }: { secretariat: bo
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   viewChip: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.earthDeep + '1F',
+    backgroundColor: c.secondaireProfond + '1F',
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginTop: 8,
   },
-  viewChipText: { fontFamily: fonts.sans, fontSize: 12, fontWeight: '600', color: colors.earthDeep },
-  subtitle: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, marginTop: 6 },
+  viewChipText: { fontFamily: fonts.sans, fontSize: 12, fontWeight: '600', color: c.secondaireProfond },
+  subtitle: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, marginTop: 6 },
   yearRow: { flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap' },
   yearChip: {
     borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6,
-    backgroundColor: colors.ink + '0D',
+    backgroundColor: c.texte + '0D',
   },
-  yearChipActive: { backgroundColor: colors.moss },
-  yearChipText: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
-  yearChipTextActive: { color: '#fff', fontWeight: '600' },
+  yearChipActive: { backgroundColor: c.accent },
+  yearChipText: { fontFamily: fonts.sans, fontSize: 13, color: c.texte2 },
+  yearChipTextActive: { color: c.surAccent, fontWeight: '600' },
   banner: {
     marginTop: 14, paddingHorizontal: 14, paddingVertical: 12,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
-  bannerText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },
+  bannerText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2, lineHeight: 18 },
   block: { marginTop: 14, paddingHorizontal: 16, paddingVertical: 14 },
-  ratio: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginBottom: 6 },
-  lateRatio: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.clay, marginBottom: 6 },
+  ratio: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginBottom: 6 },
+  lateRatio: { fontFamily: fonts.sans, fontSize: 12.5, color: c.alerte, marginBottom: 6 },
   lineText: { fontFamily: fonts.sans, fontSize: 13.5, marginTop: 4 },
-  lineLabel: { color: colors.ink3 },
-  lineValue: { color: colors.ink, fontWeight: '600' },
+  lineLabel: { color: c.texte3 },
+  lineValue: { color: c.texte, fontWeight: '600' },
   nationRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.ink + '14',
+    paddingVertical: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.texte + '14',
   },
-  nationName: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink, fontWeight: '500' },
-});
+  nationName: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte, fontWeight: '500' },
+}));

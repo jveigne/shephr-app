@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import Card from '@/components/Card';
 import Label from '@/components/Label';
 import { EventFigures, EventPill, EventPreacherLine, eventMetaLine, eventRowStyles } from '@/components/EventRow';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   dismissRejectedEvent,
@@ -16,6 +16,8 @@ import { eventFailureMessage } from '@/utils/eventErrors';
 import { fmtIsoDay } from '@/utils/meetingReport';
 import { isEnglishLang, typeLabel } from '@/utils/events';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Plan 14/10 (§6.3, lot E6) — la FILE HORS-LIGNE vue par son auteur, en tête de « Mes actions »
  * (dirigeant : ses évènements ; simple membre : la vue de son assemblée, D-EVT-14 JP 14/10) :
@@ -37,6 +39,8 @@ export default function EventQueueBlocks({
   /** `clientId` des évènements déjà affichés depuis le serveur. */
   savedClientIds: ReadonlySet<string>;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const isEnglish = isEnglishLang(language);
   const labelOf = (item: QueuedEvent) =>
@@ -64,7 +68,7 @@ export default function EventQueueBlocks({
           <View style={styles.blockHead}>
             <Label>{t('events.mine.pendingTitle', { count: pending.length })}</Label>
             {queue.syncing ? (
-              <ActivityIndicator size="small" color={colors.moss} />
+              <ActivityIndicator size="small" color={c.accent} />
             ) : (
               <Pressable onPress={() => void flushEventQueue()} hitSlop={8}>
                 <Text style={styles.link}>{t('events.mine.syncNow')}</Text>
@@ -96,6 +100,8 @@ function pendingReasonKey(item: QueuedEvent): string | null {
 }
 
 function PendingRow({ item, label }: { item: QueuedEvent; label: string }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const r = item.request;
   const reasonKey = pendingReasonKey(item);
@@ -105,7 +111,7 @@ function PendingRow({ item, label }: { item: QueuedEvent; label: string }) {
         <Text style={styles.rowTitle} numberOfLines={2}>
           {label}
         </Text>
-        <EventPill tone={colors.earthDeep} icon="cloud-upload-outline" text={t('events.mine.pending')} />
+        <EventPill tone={c.secondaireProfond} icon="cloud-upload-outline" text={t('events.mine.pending')} />
       </View>
       <Text style={styles.rowMeta}>{eventMetaLine(fmtIsoDay(r.eventDate, t), r.place, item.scopeName)}</Text>
       {/* D-EVT-16 (JP 14/10) : `preacher` n'est mis en file que pour un type évangélique ; absent
@@ -128,6 +134,8 @@ function RejectedRow({
   label: string;
   onDismiss: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const r = item.request;
   return (
@@ -136,27 +144,27 @@ function RejectedRow({
         <Text style={styles.rowTitle} numberOfLines={2}>
           {label}
         </Text>
-        <EventPill tone={colors.clay} icon="alert-circle-outline" text={t('events.mine.rejected')} />
+        <EventPill tone={c.alerte} icon="alert-circle-outline" text={t('events.mine.rejected')} />
       </View>
       <Text style={styles.rowMeta}>{eventMetaLine(fmtIsoDay(r.eventDate, t), r.place, item.scopeName)}</Text>
       <Text style={styles.rejectReason}>
         {eventFailureMessage(item.failure, t, t('errors.saveFailed'))}
       </Text>
       <Pressable onPress={onDismiss} hitSlop={8} style={{ alignSelf: 'flex-end', marginTop: 8 }}>
-        <Text style={[styles.link, { color: colors.clay }]}>{t('events.mine.dismiss')}</Text>
+        <Text style={[styles.link, { color: c.alerte }]}>{t('events.mine.dismiss')}</Text>
       </Pressable>
     </Card>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   block: { marginTop: 20, gap: 8 },
   blockHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  link: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: colors.moss },
-  ...eventRowStyles,
-  rowPending: { borderStyle: 'dashed', borderColor: colors.hairStrong },
+  link: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: c.accent },
+  ...eventRowStyles(c),
+  rowPending: { borderStyle: 'dashed', borderColor: c.filetFort },
   // Argile à 35 % d'opacité (0x59), même procédé que `EventPill` : la palette, sans couleur en dur.
-  rowRejected: { borderColor: colors.clay + '59' },
-  pendingReason: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12, color: colors.earthDeep, lineHeight: 17 },
-  rejectReason: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },
-});
+  rowRejected: { borderColor: c.alerte + '59' },
+  pendingReason: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12, color: c.secondaireProfond, lineHeight: 17 },
+  rejectReason: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2, lineHeight: 18 },
+}));

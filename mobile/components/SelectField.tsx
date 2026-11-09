@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, ScrollView } from 'react-native';
+import { View, Text, Pressable, Modal, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '@/components/Card';
 import Field from '@/components/Field';
 import Label from '@/components/Label';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /** Option affichable : tout objet porteur d'un id et d'un nom. */
 export interface SelectOption {
   id: string;
@@ -40,6 +42,8 @@ export default function SelectField<T extends SelectOption>({
    */
   inline?: boolean;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -54,7 +58,7 @@ export default function SelectField<T extends SelectOption>({
 
   const search = options.length >= SEARCH_FROM && (
     <View style={styles.pickerSearch}>
-      <Ionicons name="search" size={15} color={colors.ink3} />
+      <Ionicons name="search" size={15} color={c.texte3} />
       <Field
         value={query}
         onChangeText={setQuery}
@@ -84,7 +88,7 @@ export default function SelectField<T extends SelectOption>({
           >
             {o.name}
           </Text>
-          {pick?.id === o.id && <Ionicons name="checkmark" size={16} color={colors.moss} />}
+          {pick?.id === o.id && <Ionicons name="checkmark" size={16} color={c.accent} />}
         </Pressable>
       ))}
     </ScrollView>
@@ -103,7 +107,7 @@ export default function SelectField<T extends SelectOption>({
         >
           {pick ? pick.name : t('common.choose')}
         </Text>
-        <Ionicons name={open && inline ? 'chevron-up' : 'chevron-down'} size={16} color={colors.ink3} />
+        <Ionicons name={open && inline ? 'chevron-up' : 'chevron-down'} size={16} color={c.texte3} />
       </Pressable>
 
       {inline ? (
@@ -126,7 +130,7 @@ export default function SelectField<T extends SelectOption>({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   selectField: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -136,8 +140,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(42,38,32,0.15)',
-    backgroundColor: colors.paper,
+    borderColor: transparence(c.texte, 0.15),
+    backgroundColor: c.surface,
   },
   selectFieldDisabled: { opacity: 0.45 },
   inlinePanel: {
@@ -146,14 +150,14 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(42,38,32,0.12)',
-    backgroundColor: colors.paper2,
+    borderColor: transparence(c.texte, 0.12),
+    backgroundColor: c.surfaceHaute,
   },
-  selectValue: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: colors.ink },
-  selectPlaceholder: { color: colors.ink3 },
+  selectValue: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: c.texte },
+  selectPlaceholder: { color: c.texte3 },
   pickerBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(22,41,31,0.45)',
+    backgroundColor: c.voile,
     justifyContent: 'center',
     padding: 20,
   },
@@ -163,10 +167,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: 'rgba(42,38,32,0.15)',
+    borderColor: transparence(c.texte, 0.15),
     borderRadius: 10,
     paddingHorizontal: 12,
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
   },
   pickerSearchInput: {
     flex: 1,
@@ -181,16 +185,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 6,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(42,38,32,0.06)',
+    borderBottomColor: transparence(c.texte, 0.06),
   },
-  pickerName: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: colors.ink2 },
-  pickerNameActive: { color: colors.mossDeep, fontWeight: '600' },
-  cancelLink: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink3, fontWeight: '600' },
+  pickerName: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: c.texte2 },
+  pickerNameActive: { color: c.accentProfond, fontWeight: '600' },
+  cancelLink: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte3, fontWeight: '600' },
   emptyHint: {
     fontFamily: fonts.sans,
     fontSize: 12.5,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 12,
     lineHeight: 18,
   },
-});
+}));

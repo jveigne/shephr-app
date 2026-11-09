@@ -1,16 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, Modal } from 'react-native';
+import { View, Text, Pressable, TextInput, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '@/components/Card';
 import Label from '@/components/Label';
 import Field from '@/components/Field';
 import Button from '@/components/Button';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii, transparence } from '@/theme';
 import { useDonationCategories } from '@/hooks/useDonationCategories';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { fmtAmount, fmtDateLong } from '@/utils/format';
 import type { DeclarationLineRequest } from '@/services/donationApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Lot T7 (décision J-1, JP 14/09) — SAISIE D'UNE DÉCLARATION MULTI-RUBRIQUES.
  *
@@ -174,6 +176,8 @@ export default function DeclarationForm({
   lines,
   onLinesChange,
 }: Props) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const { categories, loading: catsLoading, labelOf, metaOf } = useDonationCategories();
   const [pickingDate, setPickingDate] = useState(false);
@@ -195,22 +199,22 @@ export default function DeclarationForm({
   return (
     <>
       <Card style={styles.totalCard}>
-        <Label style={{ color: colors.mossSoft, textAlign: 'center' }}>
+        <Label style={{ color: c.accentDoux, textAlign: 'center' }}>
           {t('declare.totalDeclared')}
         </Label>
         <Text style={styles.totalValue}>{fmtAmount(total, currency)}</Text>
         <Text style={styles.totalHint}>{t('declare.totalComputed')}</Text>
         <View style={styles.currencyRow}>
-          {DECLARATION_CURRENCIES.map((c) => (
+          {DECLARATION_CURRENCIES.map((devise) => (
             <Pressable
-              key={c}
-              onPress={() => onCurrencyChange(c)}
-              style={[styles.currencyBtn, c === currency && styles.currencyBtnOn]}
+              key={devise}
+              onPress={() => onCurrencyChange(devise)}
+              style={[styles.currencyBtn, devise === currency && styles.currencyBtnOn]}
             >
               <Text
-                style={[styles.currencyText, { color: c === currency ? colors.moss : colors.ink3 }]}
+                style={[styles.currencyText, { color: devise === currency ? c.accent : c.texte3 }]}
               >
-                {c}
+                {devise}
               </Text>
             </Pressable>
           ))}
@@ -221,10 +225,10 @@ export default function DeclarationForm({
       <View style={{ marginTop: 18 }}>
         <Label style={{ marginBottom: 8 }}>{t('declare.date')}</Label>
         <Card onPress={() => setPickingDate(true)} style={styles.dateRow}>
-          <Ionicons name="calendar-outline" size={20} color={colors.mossSoft} />
+          <Ionicons name="calendar-outline" size={20} color={c.accentDoux} />
           <Text style={styles.dateText}>{fmtDateLong(date)}</Text>
           {isToday(date) && <Text style={styles.dateChip}>{t('common.today')}</Text>}
-          <Ionicons name="chevron-down" size={16} color={colors.ink3} />
+          <Ionicons name="chevron-down" size={16} color={c.texte3} />
         </Card>
       </View>
 
@@ -263,7 +267,7 @@ export default function DeclarationForm({
                     style={[styles.lineAmount, filled && styles.lineAmountOn]}
                     maxLength={9}
                     placeholder="0"
-                    placeholderTextColor={colors.ink3}
+                    placeholderTextColor={c.texte3}
                     accessibilityLabel={`${line.category ? labelOf(line.category) : ''} — ${t('declare.amount')}`}
                   />
                 </View>
@@ -346,6 +350,8 @@ export function DatePickerModal({
   /** Lot E6 (14/10) : jours futurs sélectionnables (programmation). Défaut : passé uniquement. */
   allowFuture?: boolean;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [cursor, setCursor] = useState(() => startOfMonth(value));
 
@@ -383,7 +389,7 @@ export function DatePickerModal({
               hitSlop={8}
               style={styles.navBtn}
             >
-              <Ionicons name="chevron-back" size={18} color={colors.ink2} />
+              <Ionicons name="chevron-back" size={18} color={c.texte2} />
             </Pressable>
             <Text style={styles.pickerMonth}>
               {months[month]} {year}
@@ -394,7 +400,7 @@ export function DatePickerModal({
               disabled={!canGoNext}
               style={[styles.navBtn, !canGoNext && styles.navBtnOff]}
             >
-              <Ionicons name="chevron-forward" size={18} color={colors.ink2} />
+              <Ionicons name="chevron-forward" size={18} color={c.texte2} />
             </Pressable>
           </View>
 
@@ -453,33 +459,33 @@ export function DatePickerModal({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   totalCard: { paddingVertical: 22, paddingHorizontal: 22, marginTop: 18, alignItems: 'center' },
   totalValue: {
     fontFamily: fonts.serif,
     fontSize: 48,
     fontWeight: '500',
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -1,
     marginTop: 8,
   },
   totalHint: {
     fontFamily: fonts.sans,
     fontSize: 11.5,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 8,
     textAlign: 'center',
   },
   currencyRow: {
     flexDirection: 'row',
     marginTop: 12,
-    backgroundColor: 'rgba(42,38,32,0.05)',
+    backgroundColor: transparence(c.texte, 0.05),
     borderRadius: 99,
     padding: 3,
   },
   currencyBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99 },
   currencyBtnOn: {
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     shadowColor: 'rgba(0,0,0,0.08)',
     shadowOffset: { width: 0, height: 1 },
     shadowRadius: 3,
@@ -493,9 +499,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  dateText: { flex: 1, fontFamily: fonts.sans, fontSize: 15, fontWeight: '500', color: colors.ink },
-  dateChip: { fontFamily: fonts.sans, fontSize: 12, color: colors.earthDeep, fontWeight: '700' },
-  hint: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, paddingVertical: 10 },
+  dateText: { flex: 1, fontFamily: fonts.sans, fontSize: 15, fontWeight: '500', color: c.texte },
+  dateChip: { fontFamily: fonts.sans, fontSize: 12, color: c.secondaireProfond, fontWeight: '700' },
+  hint: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, paddingVertical: 10 },
   lineCard: { paddingHorizontal: 12, paddingVertical: 9 },
   lineRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   lineIcon: {
@@ -514,12 +520,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontSize: 13.5,
     fontWeight: '600',
-    color: colors.ink,
+    color: c.texte,
   },
   // Montant en retrait tant qu'il vaut zéro : la grille se lit d'un coup d'œil et les
   // rubriques effectivement servies ressortent seules.
-  lineCurrency: { fontFamily: fonts.serif, fontSize: 15, color: colors.ink3 },
-  lineCurrencyOn: { color: colors.ink2 },
+  lineCurrency: { fontFamily: fonts.serif, fontSize: 15, color: c.texte3 },
+  lineCurrencyOn: { color: c.texte2 },
   lineAmount: {
     // Largeur FIXE, pas un `minWidth` : le montant occupe une colonne constante (les chiffres
     // s'alignent d'une rubrique à l'autre) et ne réclame plus d'espace à l'intitulé.
@@ -529,23 +535,23 @@ const styles = StyleSheet.create({
     fontFamily: fonts.serif,
     fontSize: 19,
     fontWeight: '500',
-    color: colors.ink3,
+    color: c.texte3,
     paddingVertical: 0,
     letterSpacing: -0.3,
   },
-  lineAmountOn: { color: colors.ink, fontSize: 21 },
+  lineAmountOn: { color: c.texte, fontSize: 21 },
   lineNote: { marginTop: 8, paddingVertical: 8, fontSize: 13 },
   pickerBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(20,18,14,0.55)',
+    backgroundColor: c.voile,
     justifyContent: 'center',
     paddingHorizontal: 22,
   },
   pickerCard: {
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
     paddingHorizontal: 18,
     paddingTop: 20,
     paddingBottom: 16,
@@ -553,7 +559,7 @@ const styles = StyleSheet.create({
   pickerTitle: {
     fontFamily: fonts.serif,
     fontSize: 20,
-    color: colors.ink,
+    color: c.texte,
     textAlign: 'center',
     letterSpacing: -0.2,
   },
@@ -567,7 +573,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 8,
   },
-  catRowLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: colors.ink },
+  catRowLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: c.texte },
   pickerHead: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -580,7 +586,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontSize: 15,
     fontWeight: '600',
-    color: colors.ink,
+    color: c.texte,
     textTransform: 'capitalize',
   },
   navBtn: {
@@ -589,7 +595,7 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
   },
   navBtnOff: { opacity: 0.35 },
   weekRow: { flexDirection: 'row', marginTop: 12 },
@@ -598,7 +604,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: fonts.mono,
     fontSize: 10.5,
-    color: colors.ink3,
+    color: c.texte3,
     textTransform: 'uppercase',
   },
   dayGrid: { marginTop: 6 },
@@ -612,18 +618,18 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     fontFamily: fonts.sans,
     fontSize: 14,
-    color: colors.ink,
+    color: c.texte,
     overflow: 'hidden',
   },
-  dayTextOn: { backgroundColor: colors.moss, color: colors.white, fontWeight: '700' },
-  dayTextOff: { color: colors.ink3, opacity: 0.4 },
+  dayTextOn: { backgroundColor: c.accent, color: c.surAccent, fontWeight: '700' },
+  dayTextOff: { color: c.texte3, opacity: 0.4 },
   pickerHint: {
     marginTop: 10,
     fontFamily: fonts.sans,
     fontSize: 12,
     lineHeight: 18,
-    color: colors.ink3,
+    color: c.texte3,
     textAlign: 'center',
   },
   pickerActions: { flexDirection: 'row', gap: 10, marginTop: 14 },
-});
+}));

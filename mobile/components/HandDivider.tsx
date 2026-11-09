@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleProp, ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors } from '@/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Props {
   width?: number | `${number}%`;
@@ -14,10 +14,12 @@ interface Props {
 export default function HandDivider({
   width = '100%',
   height = 14,
-  color = colors.moss,
+  color: couleurDemandee,
   opacity = 0.35,
   style,
 }: Props) {
+  const { couleurs: c } = useTheme();
+  const color = couleurDemandee ?? c.accent;
   return (
     <View style={[{ width, height, alignItems: 'center', justifyContent: 'center' }, style]}>
       <Svg width="100%" height={height} viewBox="0 0 240 12" preserveAspectRatio="none">

@@ -1,28 +1,32 @@
 import React from 'react';
-import { TextInput, TextInputProps, StyleSheet } from 'react-native';
-import { colors, fonts } from '@/theme';
+import { TextInput, TextInputProps } from 'react-native';
+import { fonts } from '@/theme';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 export default function Field(props: TextInputProps) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   return (
     <TextInput
-      placeholderTextColor={colors.ink3}
+      placeholderTextColor={c.texte3}
       {...props}
       style={[styles.field, props.style]}
     />
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   field: {
     width: '100%',
-    backgroundColor: colors.paper2,
-    borderColor: colors.hair,
+    backgroundColor: c.surfaceHaute,
+    borderColor: c.filet,
     borderWidth: 1,
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 16,
     fontFamily: fonts.sans,
     fontSize: 16,
-    color: colors.ink,
+    color: c.texte,
   },
-});
+}));
