@@ -26,6 +26,7 @@ import { fmtDateLong } from '@/utils/format';
 import { fmtIsoDay } from '@/utils/meetingReport';
 
 import { creerStyles } from '@/theme/creerStyles';
+import { tonDonnee } from '@/theme/tonsDonnees';
 import { useTheme } from '@/contexts/ThemeContext';
 /** Nombre de présences affichées avant « Tout afficher ». */
 const ATTENDANCE_PREVIEW = 8;
@@ -184,6 +185,8 @@ export default function RecordDetailScreen() {
   const statusChanged = pickStatus !== record.currentStatusId;
   const noteChanged = noteDraft.trim() !== (record.note ?? '').trim();
   const shownAttendances = showAllAttendances ? attendances : attendances.slice(0, ATTENDANCE_PREVIEW);
+  // D8 : la couleur du statut (choisie au back-office) suit le thème — grise en Noir et blanc.
+  const tonStatut = record.currentStatusColor ? tonDonnee(record.currentStatusColor) : null;
 
   return (
     <ScreenShell>
@@ -191,9 +194,9 @@ export default function RecordDetailScreen() {
 
       <Text style={styles.name}>{record.fullName}</Text>
       {!!record.unitName && <Text style={styles.unit}>{record.unitName}</Text>}
-      <View style={[styles.statusPill, { backgroundColor: (record.currentStatusColor || c.accent) + '20' }]}>
-        <View style={[styles.dot, { backgroundColor: record.currentStatusColor || c.accent }]} />
-        <Text style={[styles.statusPillText, { color: record.currentStatusColor || c.accentDoux }]}>
+      <View style={[styles.statusPill, { backgroundColor: transparence(tonStatut ?? c.accent, 0.125) }]}>
+        <View style={[styles.dot, { backgroundColor: tonStatut ?? c.accent }]} />
+        <Text style={[styles.statusPillText, { color: tonStatut ?? c.accentDoux }]}>
           {record.currentStatusLabel ?? t('care.noStatus')}
         </Text>
       </View>

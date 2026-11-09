@@ -1,4 +1,4 @@
-import { ajusterPourContraste, SEUIL_GRAPHIQUE } from '@/theme/couleurs';
+import { ajusterPourContraste, estHexValide, SEUIL_GRAPHIQUE } from '@/theme/couleurs';
 import type { ModeResolu, PaletteTheme } from '@/theme/palettes';
 
 /**
@@ -24,6 +24,8 @@ export function declarerThemeDonnees(mode: ModeResolu, palette: PaletteTheme): v
 }
 
 export function tonDonnee(ton: string): string {
+  // Couleur venue du serveur (statut du Suivi pastoral) : une valeur qui n'est pas un hex reste telle quelle.
+  if (!estHexValide(ton)) return ton;
   if (modeCourant === 'noirEtBlanc') return GRIS_DONNEE;
   if (modeCourant === 'sombre') return ajusterPourContraste(ton, fondsCourants, SEUIL_GRAPHIQUE);
   return ton;

@@ -27,13 +27,15 @@ import { fmtDate } from '@/utils/format';
 import { fmtIsoDay } from '@/utils/meetingReport';
 
 import { creerStyles } from '@/theme/creerStyles';
+import { tonDonnee } from '@/theme/tonsDonnees';
 import { useTheme } from '@/contexts/ThemeContext';
 type Tab = 'records' | 'accountability';
 
 function StatusDot({ color }: { color: string | null }) {
   const { couleurs: c } = useTheme();
   const styles = useStyles();
-  return <View style={[styles.dot, { backgroundColor: color || c.accent }]} />;
+  // D8 : la couleur du statut (choisie au back-office) suit le thème — grise en Noir et blanc.
+  return <View style={[styles.dot, { backgroundColor: color ? tonDonnee(color) : c.accent }]} />;
 }
 
 function lastUpdated(iso: string | null, t: (k: string) => string): string {
