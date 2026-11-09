@@ -17,14 +17,18 @@ import Card from '@/components/Card';
 import Field from '@/components/Field';
 import Label from '@/components/Label';
 import Button from '@/components/Button';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { notify } from '@/utils/dialogs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import SocialSignInButtons from '@/components/auth/SocialSignInButtons';
 import { routeAfterLogin as goAfterLogin } from '@/utils/authRouting';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 export default function LoginScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const { login } = useAuth();
   const { t } = useLanguage();
@@ -67,7 +71,7 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.topRow}>
-            <Wordmark size={40} color={colors.mossDeep} />
+            <Wordmark size={40} color={c.accentProfond} />
             <LangSwitch />
           </View>
 
@@ -108,7 +112,7 @@ export default function LoginScreen() {
               loading={loading}
               fullWidth
               style={{ marginTop: 18 }}
-              iconRight={<Ionicons name="arrow-forward" size={18} color={colors.white} />}
+              iconRight={<Ionicons name="arrow-forward" size={18} color={c.surAccent} />}
             />
 
             <View style={styles.linksRow}>
@@ -135,7 +139,7 @@ export default function LoginScreen() {
                 onPress={() => router.push('/(auth)/signup')}
               >
                 {t('auth.newAccount')}
-                <Ionicons name="arrow-forward" size={14} color={colors.moss} />
+                <Ionicons name="arrow-forward" size={14} color={c.accent} />
               </Text>
             </View>
           </Card>
@@ -150,6 +154,7 @@ export default function LoginScreen() {
 }
 
 function Hills() {
+  const { couleurs: c } = useTheme();
   return (
     <Svg
       viewBox="0 0 402 380"
@@ -158,8 +163,8 @@ function Hills() {
     >
       <Defs>
         <LinearGradient id="hill1" x1="0" x2="0" y1="0" y2="1">
-          <Stop offset="0" stopColor="#2E5142" />
-          <Stop offset="1" stopColor="#1E3A2F" />
+          <Stop offset="0" stopColor={c.accentDoux} />
+          <Stop offset="1" stopColor={c.accent} />
         </LinearGradient>
       </Defs>
       <Path
@@ -169,17 +174,17 @@ function Hills() {
       />
       <Path
         d="M-10,260 C 60,200 180,310 260,250 S 380,220 420,260 L 420,400 L -10,400 Z"
-        fill="#1E3A2F"
+        fill={c.accent}
         opacity={0.09}
       />
-      <Circle cx="300" cy="120" r="42" fill="#C9956B" opacity={0.55} />
-      <Circle cx="300" cy="120" r="64" fill="#C9956B" opacity={0.18} />
+      <Circle cx="300" cy="120" r="42" fill={c.secondaire} opacity={0.55} />
+      <Circle cx="300" cy="120" r="64" fill={c.secondaire} opacity={0.18} />
     </Svg>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.parchment },
+const useStyles = creerStyles((c) => ({
+  root: { flex: 1, backgroundColor: c.page },
   scroll: {
     paddingHorizontal: 24,
     flexGrow: 1,
@@ -194,7 +199,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     fontSize: 18,
     lineHeight: 26,
-    color: colors.mossDeep,
+    color: c.accentProfond,
     marginTop: 14,
     maxWidth: 260,
   },
@@ -202,7 +207,7 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: fonts.serif,
     fontSize: 26,
-    color: colors.ink,
+    color: c.texte,
     marginBottom: 18,
     letterSpacing: -0.3,
   },
@@ -211,16 +216,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 14,
   },
-  linkSub: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
+  linkSub: { fontFamily: fonts.sans, fontSize: 13, color: c.texte2 },
   linkAccent: {
     fontFamily: fonts.sans,
     fontSize: 13,
     fontWeight: '600',
-    color: colors.earthDeep,
+    color: c.secondaireProfond,
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(42,38,32,0.08)',
+    backgroundColor: transparence(c.texte, 0.08),
     marginTop: 18,
   },
   signupRow: {
@@ -230,19 +235,19 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingTop: 16,
   },
-  signupHint: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
+  signupHint: { fontFamily: fonts.sans, fontSize: 13, color: c.texte2 },
   signupLink: {
     fontFamily: fonts.sans,
     fontSize: 13,
     fontWeight: '600',
-    color: colors.moss,
+    color: c.accent,
   },
   footer: {
     textAlign: 'center',
     marginTop: 18,
     fontSize: 11.5,
-    color: colors.ink3,
+    color: c.texte3,
     letterSpacing: 0.5,
     fontFamily: fonts.sans,
   },
-});
+}));

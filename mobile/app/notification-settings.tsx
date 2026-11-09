@@ -27,7 +27,6 @@ import {
   AppState,
   Linking,
   Pressable,
-  StyleSheet,
   Switch,
   Text,
   View,
@@ -40,7 +39,7 @@ import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { TOUT_ACTIVE, ecrirePreferences, lirePreferences } from '@/components/push/preferencesPush';
@@ -54,6 +53,8 @@ import {
 } from '@/components/push/usePushNotifications';
 import type { CategoriePush, PreferencesPush } from '@/services/pushApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Ordre d'affichage. « Rappels » d'abord : c'est la catégorie pour laquelle Shephr envoie
  * réellement, et celle que l'on vient couper ou rallumer.
@@ -65,6 +66,8 @@ const REGLAGES: { categorie: CategoriePush; titre: string; aide: string }[] = [
 ];
 
 export default function NotificationSettingsScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const { me } = useAuth();
 
@@ -185,7 +188,7 @@ export default function NotificationSettingsScreen() {
         accessibilityLabel={t('common.back')}
         style={styles.back}
       >
-        <Ionicons name="chevron-back" size={24} color={colors.moss} />
+        <Ionicons name="chevron-back" size={24} color={c.accent} />
       </Pressable>
 
       <Text style={styles.title}>{t('push.title')}</Text>
@@ -252,8 +255,8 @@ export default function NotificationSettingsScreen() {
               // accordée, c'est le bandeau ci-dessus qui porte le geste d'activation.
               disabled={!preferences || !accordee}
               onValueChange={(valeur) => void basculer(categorie, valeur)}
-              trackColor={{ false: colors.hairStrong, true: colors.mossSoft }}
-              thumbColor={colors.paper2}
+              trackColor={{ false: c.filetFort, true: c.accentDoux }}
+              thumbColor={c.surfaceHaute}
             />
           </View>
         ))}
@@ -266,19 +269,19 @@ export default function NotificationSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   back: { alignSelf: 'flex-start', paddingVertical: 4, paddingRight: 8 },
   title: {
     fontFamily: fonts.serif,
     fontSize: 26,
-    color: colors.ink,
+    color: c.texte,
     marginTop: 8,
   },
   intro: {
     fontFamily: fonts.sans,
     fontSize: 13.5,
     lineHeight: 20,
-    color: colors.ink2,
+    color: c.texte2,
     marginTop: 8,
     marginBottom: 18,
   },
@@ -287,14 +290,14 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontSize: 14,
     fontWeight: '600',
-    color: colors.ink,
+    color: c.texte,
     marginBottom: 4,
   },
   avisTexte: {
     fontFamily: fonts.sans,
     fontSize: 13,
     lineHeight: 19,
-    color: colors.ink2,
+    color: c.texte2,
   },
   liste: { paddingHorizontal: 18, paddingVertical: 2 },
   ligne: {
@@ -303,26 +306,26 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingVertical: 14,
   },
-  ligneSuivante: { borderTopWidth: 1, borderTopColor: colors.hair },
+  ligneSuivante: { borderTopWidth: 1, borderTopColor: c.filet },
   libelle: { flex: 1 },
   libelleTitre: {
     fontFamily: fonts.sans,
     fontSize: 14.5,
-    color: colors.ink,
+    color: c.texte,
   },
   libelleAide: {
     fontFamily: fonts.sans,
     fontSize: 12.5,
     lineHeight: 18,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 2,
   },
   pied: {
     fontFamily: fonts.sans,
     fontSize: 12.5,
     lineHeight: 18,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 16,
     paddingHorizontal: 4,
   },
-});
+}));
