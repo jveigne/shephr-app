@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   RefreshControl,
   ActivityIndicator,
@@ -13,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenShell from '@/components/ScreenShell';
 import Card from '@/components/Card';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { isSubCoordinatorLeader, MODULE_ROLE_LABELS } from '@/services/authApi';
@@ -35,6 +34,8 @@ import {
 } from '@/services/leadersApi';
 import { ENTITLEMENT_HIERARCHIE_SUIVI, getPersonalEntitlements } from '@/services/entitlementsApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Hiérarchie des dirigeants (Lot H3 — 21/07) : arbre du leadership renvoyé par le backend,
  * déjà scopé par rôle — sous-arbre pour un dirigeant, chaîne de dirigeants pour un membre,
@@ -76,10 +77,12 @@ function AccessCard({
   badge?: number;
   locked?: boolean;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <Card variant="paper2" style={styles.accessCard} onPress={onPress}>
-      <Ionicons name={icon} size={20} color={colors.mossDeep} />
+      <Ionicons name={icon} size={20} color={c.accentProfond} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <Text style={styles.unitName} numberOfLines={1}>{title}</Text>
@@ -95,9 +98,9 @@ function AccessCard({
         <Text style={styles.nodeMeta} numberOfLines={2}>{hint}</Text>
       </View>
       {locked ? (
-        <Ionicons name="lock-closed" size={16} color={colors.ink3} accessibilityLabel={t('hierarchy.home.lockedA11y')} />
+        <Ionicons name="lock-closed" size={16} color={c.texte3} accessibilityLabel={t('hierarchy.home.lockedA11y')} />
       ) : (
-        <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+        <Ionicons name="chevron-forward" size={16} color={c.texte3} />
       )}
     </Card>
   );
@@ -138,6 +141,8 @@ function flattenUnits(nodes: LeaderHierarchyNode[]): UnitEntry[] {
 }
 
 export default function HierarchieScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const { me } = useAuth();
   const { t } = useLanguage();
@@ -187,7 +192,7 @@ export default function HierarchieScreen() {
     return (
       <ScreenShell withTabBar={false}>
         <View style={{ alignItems: 'center', paddingTop: 80 }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       </ScreenShell>
     );
@@ -221,11 +226,11 @@ export default function HierarchieScreen() {
     <ScreenShell
       withTabBar={false}
       paddingTop={insets.top ? 4 : 16}
-      refreshControl={<RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={styles.headerRow}>
         <Pressable onPress={() => goBack()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={24} color={colors.ink2} />
+          <Ionicons name="arrow-back" size={24} color={c.texte2} />
         </Pressable>
         <Text style={styles.title}>{t('hierarchy.title')}</Text>
       </View>
@@ -235,7 +240,7 @@ export default function HierarchieScreen() {
           que ce qui est en dessous du dirigeant (JP 30/07). */}
       {data?.supervisor && (
         <View style={styles.reportsToRow}>
-          <Ionicons name="arrow-up" size={14} color={colors.earthDeep} />
+          <Ionicons name="arrow-up" size={14} color={c.secondaireProfond} />
           <Text style={styles.reportsToText} numberOfLines={2}>
             {t('hierarchy.reportsTo')} <Text style={styles.reportsToName}>{data.supervisor.fullName}</Text>
           </Text>
@@ -344,6 +349,8 @@ export default function HierarchieScreen() {
  * « mon leadership n'a rien engagé », ce qui serait faux.
  */
 function LeadershipTotals({ unitCount, memberCount }: { unitCount: number; memberCount: number }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [goal, setGoal] = useState<ActiveGoal | null>(null);
   const [lines, setLines] = useState<AggregateLine[] | null>(null);
@@ -371,7 +378,7 @@ function LeadershipTotals({ unitCount, memberCount }: { unitCount: number; membe
   return (
     <Card variant="tinted" style={styles.totalsCard}>
       <View style={styles.totalsHeader}>
-        <Ionicons name="trending-up-outline" size={18} color={colors.mossDeep} />
+        <Ionicons name="trending-up-outline" size={18} color={c.accentProfond} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={styles.totalsTitle}>{t('hierarchy.leadershipTitle', { year: goal.currentYear })}</Text>
           <Text style={styles.nodeMeta}>
@@ -417,6 +424,7 @@ function GoalPill({
   submitted: boolean | null;
   late: boolean | null;
 }) {
+  const styles = useStyles();
   const { t } = useLanguage();
   if (submitted == null) return null;
   if (submitted) {
@@ -435,6 +443,8 @@ function GoalPill({
 function LeaderNodeRow({ node, depth, meId }: {
   node: LeaderHierarchyNode; depth: number; meId: string | null;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [open, setOpen] = useState(depth < 2);
   const hasContent = node.children.length > 0 || node.units.length > 0;
@@ -449,7 +459,7 @@ function LeaderNodeRow({ node, depth, meId }: {
         <Ionicons
           name={hasContent ? (open ? 'chevron-down' : 'chevron-forward') : 'person-outline'}
           size={15}
-          color={colors.ink3}
+          color={c.texte3}
         />
         <View style={{ flex: 1, minWidth: 0 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -485,6 +495,8 @@ function LeaderNodeRow({ node, depth, meId }: {
 function UnitRow({ unit, depth, leaderName, hideLocality }: {
   unit: HierarchyUnitView; depth: number; leaderName?: string; hideLocality?: boolean;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const hasMembers = unit.members.length > 0;
@@ -496,7 +508,7 @@ function UnitRow({ unit, depth, leaderName, hideLocality }: {
         style={[styles.unitCard, { marginLeft: depth * 14 }]}
         onPress={hasMembers ? () => setOpen(!open) : undefined}
       >
-        <Ionicons name="home-outline" size={14} color={colors.earthDeep} />
+        <Ionicons name="home-outline" size={14} color={c.secondaireProfond} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <Text style={styles.unitName} numberOfLines={1}>
@@ -513,7 +525,7 @@ function UnitRow({ unit, depth, leaderName, hideLocality }: {
           </Text>
         </View>
         {hasMembers && (
-          <Ionicons name={open ? 'chevron-down' : 'chevron-forward'} size={14} color={colors.ink3} />
+          <Ionicons name={open ? 'chevron-down' : 'chevron-forward'} size={14} color={c.texte3} />
         )}
       </Card>
 
@@ -536,18 +548,18 @@ function UnitRow({ unit, depth, leaderName, hideLocality }: {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   totalsCard: { marginTop: 14, paddingHorizontal: 16, paddingVertical: 14 },
   totalsHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
-  totalsTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '700', color: colors.ink },
+  totalsTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '700', color: c.texte },
   totalsLine: {
     flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12,
-    marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(42,38,32,0.07)',
+    marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: transparence(c.texte, 0.07),
   },
-  totalsCat: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
-  totalsValue: { fontFamily: fonts.serif, fontSize: 17, color: colors.ink },
-  totalsEmpty: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, fontStyle: 'italic', marginTop: 10 },
-  totalsHint: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, lineHeight: 16, marginTop: 12 },
+  totalsCat: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: c.texte2 },
+  totalsValue: { fontFamily: fonts.serif, fontSize: 17, color: c.texte },
+  totalsEmpty: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, fontStyle: 'italic', marginTop: 10 },
+  totalsHint: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, lineHeight: 16, marginTop: 12 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2 },
   reportsToRow: {
     flexDirection: 'row',
@@ -557,53 +569,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: 'rgba(201,149,107,0.14)',
+    backgroundColor: transparence(c.secondaire, 0.14),
   },
-  reportsToText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
-  reportsToName: { fontWeight: '700', color: colors.ink },
+  reportsToText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: c.texte2 },
+  reportsToName: { fontWeight: '700', color: c.texte },
   accessCard: {
     marginTop: 12, paddingHorizontal: 14, paddingVertical: 14,
     flexDirection: 'row', alignItems: 'center', gap: 12,
   },
   badge: {
-    fontFamily: fonts.mono, fontSize: 10, fontWeight: '700', color: colors.white,
+    fontFamily: fonts.mono, fontSize: 10, fontWeight: '700', color: c.surAccent,
     minWidth: 20, textAlign: 'center', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99,
-    backgroundColor: colors.clay, overflow: 'hidden',
+    backgroundColor: c.alerte, overflow: 'hidden',
   },
   sectionKicker: {
-    fontFamily: fonts.mono, fontSize: 10.5, color: colors.ink3, letterSpacing: 1.1,
+    fontFamily: fonts.mono, fontSize: 10.5, color: c.texte3, letterSpacing: 1.1,
     textTransform: 'uppercase', marginTop: 22,
   },
   segmentRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
-  segment: { flex: 1, paddingVertical: 9, borderRadius: 99, backgroundColor: 'rgba(42,38,32,0.06)', alignItems: 'center' },
-  segmentActive: { backgroundColor: colors.moss },
-  segmentText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink2 },
-  segmentTextActive: { color: colors.white },
+  segment: { flex: 1, paddingVertical: 9, borderRadius: 99, backgroundColor: transparence(c.texte, 0.06), alignItems: 'center' },
+  segmentActive: { backgroundColor: c.accent },
+  segmentText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.texte2 },
+  segmentTextActive: { color: c.surAccent },
   groupCountry: {
-    fontFamily: fonts.serif, fontSize: 19, color: colors.ink, letterSpacing: -0.2,
+    fontFamily: fonts.serif, fontSize: 19, color: c.texte, letterSpacing: -0.2,
     marginTop: 12, marginBottom: 2,
   },
   groupZone: {
-    fontFamily: fonts.mono, fontSize: 10.5, color: colors.ink3, letterSpacing: 1.1,
+    fontFamily: fonts.mono, fontSize: 10.5, color: c.texte3, letterSpacing: 1.1,
     textTransform: 'uppercase', marginTop: 6, marginLeft: 2,
   },
   groupCity: {
-    fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.earthDeep,
+    fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.secondaireProfond,
     marginTop: 6, marginLeft: 8, marginBottom: 2,
   },
-  title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4 },
-  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4, lineHeight: 18 },
+  title: { fontFamily: fonts.serif, fontSize: 28, color: c.texte, letterSpacing: -0.4 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 4, lineHeight: 18 },
   nodeCard: { paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  nodeName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
-  nodeMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2 },
+  nodeName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.texte },
+  nodeMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 2 },
   unitCard: { paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  unitName: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.earthDeep },
+  unitName: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.secondaireProfond },
   memberRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 3 },
-  memberName: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink2, flexShrink: 1 },
+  memberName: { fontFamily: fonts.sans, fontSize: 13, color: c.texte2, flexShrink: 1 },
   youPill: {
-    fontFamily: fonts.mono, fontSize: 9, color: colors.white, letterSpacing: 0.6,
+    fontFamily: fonts.mono, fontSize: 9, color: c.surAccent, letterSpacing: 0.6,
     textTransform: 'uppercase', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99,
-    backgroundColor: colors.moss, overflow: 'hidden',
+    backgroundColor: c.accent, overflow: 'hidden',
   },
   needsLeaderPill: {
     fontFamily: fonts.mono, fontSize: 9, color: '#A9812C', letterSpacing: 0.6,
@@ -615,14 +627,14 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99,
     overflow: 'hidden',
   },
-  goalPillDone: { color: colors.mossDeep, backgroundColor: colors.mossTint2 },
-  goalPillPending: { color: colors.earthDeep, backgroundColor: 'rgba(201,149,107,0.22)' },
-  goalPillLate: { color: colors.clay, backgroundColor: 'rgba(176,90,62,0.13)' },
+  goalPillDone: { color: c.accentProfond, backgroundColor: c.accentTeinte2 },
+  goalPillPending: { color: c.secondaireProfond, backgroundColor: transparence(c.secondaire, 0.22) },
+  goalPillLate: { color: c.alerte, backgroundColor: transparence(c.alerte, 0.13) },
   inactivePill: {
-    fontFamily: fonts.mono, fontSize: 9, color: colors.ink3, letterSpacing: 0.6,
+    fontFamily: fonts.mono, fontSize: 9, color: c.texte3, letterSpacing: 0.6,
     textTransform: 'uppercase', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 99,
-    backgroundColor: 'rgba(42,38,32,0.05)', borderWidth: 1, borderColor: 'rgba(42,38,32,0.07)',
+    backgroundColor: transparence(c.texte, 0.05), borderWidth: 1, borderColor: transparence(c.texte, 0.07),
     overflow: 'hidden',
   },
-  empty: { fontFamily: fonts.serif, fontStyle: 'italic', color: colors.ink3, textAlign: 'center', paddingVertical: 20 },
-});
+  empty: { fontFamily: fonts.serif, fontStyle: 'italic', color: c.texte3, textAlign: 'center', paddingVertical: 20 },
+}));

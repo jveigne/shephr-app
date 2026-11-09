@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
@@ -12,7 +12,7 @@ import ErrorBanner from '@/components/ErrorBanner';
 import StudyCityLock from '@/components/StudyCityLock';
 import EventPeriodPicker from '@/components/EventPeriodPicker';
 import EventStatsDrill from '@/components/EventStatsDrill';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -54,6 +54,8 @@ import { fmtIsoDay } from '@/utils/meetingReport';
 import { goBack } from '@/utils/navigation';
 import { mergeCities, type CityEntry } from '@/utils/cityFollowUp';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 type StudyTab = 'overview' | 'members' | 'stats';
 type Tab = StudyTab | 'journal' | 'events';
 const TABS: Tab[] = ['overview', 'members', 'stats', 'journal', 'events'];
@@ -93,6 +95,8 @@ type Translate = (k: string, o?: any) => string;
  * Pas de react-query : useState + useFocusEffect.
  */
 export default function StudyCityScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const params = useLocalSearchParams<{ localityId?: string }>();
   const wanted = typeof params.localityId === 'string' && params.localityId ? params.localityId : null;
   const { t } = useLanguage();
@@ -201,11 +205,11 @@ export default function StudyCityScreen() {
   return (
     <ScreenShell
       withTabBar={false}
-      refreshControl={<RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={styles.headerRow}>
         <Pressable onPress={() => goBack()} hitSlop={10} accessibilityLabel={t('common.back')}>
-          <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+          <Ionicons name="chevron-back" size={22} color={c.texte2} />
         </Pressable>
       </View>
       <Text style={styles.kicker}>{kicker}</Text>
@@ -215,12 +219,12 @@ export default function StudyCityScreen() {
 
       {localities === null ? (
         <View style={styles.loadingBox}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       ) : localities.length === 0 ? (
         !listError && (
           <Card variant="paper2" style={styles.empty}>
-            <Ionicons name="business-outline" size={26} color={colors.ink3} />
+            <Ionicons name="business-outline" size={26} color={c.texte3} />
             <Text style={styles.emptyText}>{t('study.city.noCity')}</Text>
           </Card>
         )
@@ -240,7 +244,7 @@ export default function StudyCityScreen() {
                       <Ionicons
                         name="lock-closed"
                         size={12}
-                        color={l.localityId === localityId ? colors.white : colors.ink3}
+                        color={l.localityId === localityId ? c.surAccent : c.texte3}
                         accessibilityLabel={t('study.city.lockedCity')}
                       />
                     )
@@ -334,6 +338,8 @@ function StudyContent({
   onModule: (id: string | null) => void;
   onDenied: (localityId: string, d: { canSubscribe: boolean }) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   // Démonté (ville quittée, rafraîchissement) : ses requêtes en vol ne remontent plus de verrou.
   const alive = useRef(true);
@@ -397,7 +403,7 @@ function StudyContent({
         ) : (
           !error && (
             <View style={styles.loadingBox}>
-              <ActivityIndicator color={colors.moss} />
+              <ActivityIndicator color={c.accent} />
             </View>
           )
         )
@@ -430,6 +436,8 @@ function JournalTab({
   period: JournalPeriod;
   onPeriod: (p: JournalPeriod) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const [loaded, setLoaded] = useState<{ key: string; rows: UnitMeetingStats[]; todayIso: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -503,12 +511,12 @@ function JournalTab({
       {!agg ? (
         !error && (
           <View style={styles.loadingBox}>
-            <ActivityIndicator color={colors.moss} />
+            <ActivityIndicator color={c.accent} />
           </View>
         )
       ) : agg.unitCount === 0 ? (
         <Card variant="paper2" style={styles.empty}>
-          <Ionicons name="home-outline" size={26} color={colors.ink3} />
+          <Ionicons name="home-outline" size={26} color={c.texte3} />
           <Text style={styles.emptyText}>{t('study.city.noAssembly')}</Text>
         </Card>
       ) : (
@@ -550,7 +558,7 @@ function JournalTab({
             loading={generating}
             disabled={agg.meetingCount === 0}
             style={{ marginTop: 6 }}
-            iconLeft={<Ionicons name="document-text-outline" size={16} color={colors.moss} />}
+            iconLeft={<Ionicons name="document-text-outline" size={16} color={c.accent} />}
           />
         </>
       )}
@@ -560,6 +568,8 @@ function JournalTab({
 
 /** Une assemblée de la ville : réunions de la période, présence moyenne, fractions de pain, dernier CR. */
 function JournalUnitRow({ row, todayIso }: { row: UnitMeetingStats; todayIso: string }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const alert = isAlert(row, todayIso);
   // Plancher à 0 : un CR daté d'un jour à venir ne doit pas afficher « il y a -N j ».
@@ -584,7 +594,7 @@ function JournalUnitRow({ row, todayIso }: { row: UnitMeetingStats; todayIso: st
           {row.unitName}
         </Text>
         <Text style={styles.rowMeta}>{figures.join(' · ')}</Text>
-        <Text style={[styles.rowMeta, alert && { color: colors.clay }]}>{last}</Text>
+        <Text style={[styles.rowMeta, alert && { color: c.alerte }]}>{last}</Text>
       </View>
     </View>
   );
@@ -592,6 +602,8 @@ function JournalUnitRow({ row, todayIso }: { row: UnitMeetingStats; todayIso: st
 
 /** Période du journal (mois, trimestre, semestre, année ; flèches, jamais une période à venir). */
 function JournalPeriodPicker({ period, onPeriod }: { period: JournalPeriod; onPeriod: (p: JournalPeriod) => void }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const next = shiftJournalPeriod(period, 1);
   const canGoNext = !isFuturePeriod(next);
@@ -618,7 +630,7 @@ function JournalPeriodPicker({ period, onPeriod }: { period: JournalPeriod; onPe
           style={styles.navBtn}
           accessibilityLabel={t('hierarchy.life.previousPeriod')}
         >
-          <Ionicons name="chevron-back" size={16} color={colors.ink2} />
+          <Ionicons name="chevron-back" size={16} color={c.texte2} />
         </Pressable>
         <Text style={styles.periodText}>{label.charAt(0).toUpperCase() + label.slice(1)}</Text>
         <Pressable
@@ -628,7 +640,7 @@ function JournalPeriodPicker({ period, onPeriod }: { period: JournalPeriod; onPe
           style={[styles.navBtn, !canGoNext && { opacity: 0.3 }]}
           accessibilityLabel={t('hierarchy.life.nextPeriod')}
         >
-          <Ionicons name="chevron-forward" size={16} color={colors.ink2} />
+          <Ionicons name="chevron-forward" size={16} color={c.texte2} />
         </Pressable>
       </View>
     </Card>
@@ -641,12 +653,14 @@ function fmtInstantDay(iso: string | null, t: Translate): string {
 
 /** §7.4 — une carte par unité d'étude : chaque assemblée, ses leçons faites (✓) et sa dernière séance. */
 function OverviewTab({ overview, moduleId }: { overview: StudyLocalityOverview; moduleId: string | null }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const modules = overview.modules.filter((m) => !moduleId || m.moduleId === moduleId);
   if (overview.assemblies.length === 0 || modules.length === 0) {
     return (
       <Card variant="paper2" style={styles.empty}>
-        <Ionicons name="school-outline" size={26} color={colors.ink3} />
+        <Ionicons name="school-outline" size={26} color={c.texte3} />
         <Text style={styles.emptyText}>
           {overview.assemblies.length === 0 ? t('study.city.noAssembly') : t('study.progress.noModules')}
         </Text>
@@ -691,6 +705,7 @@ function OverviewTab({ overview, moduleId }: { overview: StudyLocalityOverview; 
 
 /** Une case par leçon (numéro), pleine si l'assemblée l'a faite (D-ETU-42). */
 function LessonCells({ module, done }: { module: StudyLocalityModule; done: number[] }) {
+  const styles = useStyles();
   const { t } = useLanguage();
   const lessons =
     module.lessons.length > 0
@@ -728,6 +743,8 @@ function MembersTab({
   overview: StudyLocalityOverview | null;
   onDenied: (d: { canSubscribe: boolean }) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const [status, setStatus] = useState<StudyMemberStatus | null>(null);
   const [unitId, setUnitId] = useState<string | null>(null);
@@ -795,12 +812,12 @@ function MembersTab({
       {rows === null ? (
         !error && (
           <View style={styles.loadingBox}>
-            <ActivityIndicator color={colors.moss} />
+            <ActivityIndicator color={c.accent} />
           </View>
         )
       ) : rows.length === 0 ? (
         <Card variant="paper2" style={styles.empty}>
-          <Ionicons name="people-outline" size={26} color={colors.ink3} />
+          <Ionicons name="people-outline" size={26} color={c.texte3} />
           <Text style={styles.emptyText}>{t('study.city.noMember')}</Text>
         </Card>
       ) : (
@@ -900,6 +917,8 @@ function StatsTab({
   moduleId: string | null;
   onDenied: (d: { canSubscribe: boolean }) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const [period, setPeriod] = useState<Period>('year');
   const [stats, setStats] = useState<StudyLocalityStats | null>(null);
@@ -950,7 +969,7 @@ function StatsTab({
 
       {loading && !stats ? (
         <View style={styles.loadingBox}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       ) : (
         stats && (
@@ -1004,29 +1023,31 @@ function StatsTab({
 }
 
 function Kpi({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.kpi}>
-      <Text style={[styles.kpiValue, alert && { color: colors.clay }]}>{value}</Text>
+      <Text style={[styles.kpiValue, alert && { color: c.alerte }]}>{value}</Text>
       <Text style={styles.kpiLabel}>{label}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   kicker: {
     marginTop: 10,
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.clay,
+    color: c.alerte,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4, marginTop: 4 },
+  title: { fontFamily: fonts.serif, fontSize: 28, color: c.texte, letterSpacing: -0.4, marginTop: 4 },
   loadingBox: { marginTop: 40, alignItems: 'center' },
   empty: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 22, alignItems: 'center', gap: 8 },
-  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2, lineHeight: 20, textAlign: 'center' },
-  muted: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
+  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte2, lineHeight: 20, textAlign: 'center' },
+  muted: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
   // Jusqu'à cinq onglets (Bertoua ×3, Journal, Évènements) : rangée défilante, pas de colonnes égales.
   tabsScroll: { marginTop: 16, flexGrow: 0 },
@@ -1034,18 +1055,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 4,
     borderRadius: radii.md,
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
     gap: 4,
   },
   tab: { paddingVertical: 9, paddingHorizontal: 14, borderRadius: radii.sm, alignItems: 'center' },
-  tabOn: { backgroundColor: colors.moss },
-  tabText: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '500', color: colors.ink2 },
-  tabTextOn: { color: colors.white },
+  tabOn: { backgroundColor: c.accent },
+  tabText: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '500', color: c.texte2 },
+  tabTextOn: { color: c.surAccent },
   block: { marginTop: 16, gap: 8 },
   blockLabel: { marginTop: 8 },
   assemblyCard: { paddingHorizontal: 14, paddingVertical: 12, gap: 8 },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  count: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.moss },
+  count: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.accent },
   cells: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
   cell: {
     minWidth: 26,
@@ -1054,13 +1075,13 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.paper2,
+    backgroundColor: c.surfaceHaute,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
   },
-  cellOn: { backgroundColor: colors.moss, borderColor: colors.mossDeep },
-  cellText: { fontFamily: fonts.mono, fontSize: 11.5, color: colors.ink3 },
-  cellTextOn: { color: colors.white },
+  cellOn: { backgroundColor: c.accent, borderColor: c.accentProfond },
+  cellText: { fontFamily: fonts.mono, fontSize: 11.5, color: c.texte3 },
+  cellTextOn: { color: c.surAccent },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1068,12 +1089,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: radii.md,
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
   },
-  rowTitle: { flex: 1, fontFamily: fonts.serif, fontSize: 16, color: colors.ink },
-  rowMeta: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 2 },
+  rowTitle: { flex: 1, fontFamily: fonts.serif, fontSize: 16, color: c.texte },
+  rowMeta: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 2 },
   pillRow: { flexDirection: 'row', marginTop: 6 },
   pill: {
     fontFamily: fonts.sans,
@@ -1084,10 +1105,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: 'hidden',
   },
-  pillOn: { color: colors.moss, backgroundColor: colors.mossTint2 },
-  pillOff: { color: colors.ink2, backgroundColor: colors.hair },
-  missed: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.clay, marginTop: 4 },
-  score: { fontFamily: fonts.mono, fontSize: 13.5, color: colors.moss },
+  pillOn: { color: c.accent, backgroundColor: c.accentTeinte2 },
+  pillOff: { color: c.texte2, backgroundColor: c.filet },
+  missed: { fontFamily: fonts.sans, fontSize: 12.5, color: c.alerte, marginTop: 4 },
+  score: { fontFamily: fonts.mono, fontSize: 13.5, color: c.accent },
   kpis: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   kpi: {
     flexBasis: '47%',
@@ -1095,27 +1116,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: radii.md,
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
   },
-  kpiValue: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink, letterSpacing: -0.3 },
-  kpiLabel: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 2 },
+  kpiValue: { fontFamily: fonts.serif, fontSize: 22, color: c.texte, letterSpacing: -0.3 },
+  kpiLabel: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 2 },
   monthRow: {
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: radii.md,
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
     gap: 6,
   },
   periodCard: { paddingHorizontal: 12, paddingVertical: 10 },
-  segments: { flexDirection: 'row', gap: 4, padding: 3, borderRadius: 10, backgroundColor: colors.mossTint },
+  segments: { flexDirection: 'row', gap: 4, padding: 3, borderRadius: 10, backgroundColor: c.accentTeinte },
   segment: { flex: 1, alignItems: 'center', paddingVertical: 6, borderRadius: 8 },
-  segmentOn: { backgroundColor: colors.moss },
-  segmentText: { fontFamily: fonts.sans, fontSize: 12, fontWeight: '600', color: colors.ink2 },
-  segmentTextOn: { color: colors.white },
+  segmentOn: { backgroundColor: c.accent },
+  segmentText: { fontFamily: fonts.sans, fontSize: 12, fontWeight: '600', color: c.texte2 },
+  segmentTextOn: { color: c.surAccent },
   periodRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 8 },
   navBtn: {
     width: 28,
@@ -1123,21 +1144,21 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
   },
-  periodText: { fontFamily: fonts.serif, fontSize: 16, color: colors.ink, minWidth: 140, textAlign: 'center' },
+  periodText: { fontFamily: fonts.serif, fontSize: 16, color: c.texte, minWidth: 140, textAlign: 'center' },
   alertBox: {
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.clay,
-    backgroundColor: colors.paper2,
+    borderColor: c.alerte,
+    backgroundColor: c.surfaceHaute,
   },
-  alertTitle: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '700', color: colors.clay },
-  alertNames: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, marginTop: 2, lineHeight: 17 },
+  alertTitle: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '700', color: c.alerte },
+  alertNames: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2, marginTop: 2, lineHeight: 17 },
   monthHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  monthName: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: colors.ink },
-  bar: { height: 6, borderRadius: 3, backgroundColor: colors.mossTint2, overflow: 'hidden' },
-  barFill: { height: 6, borderRadius: 3, backgroundColor: colors.moss },
-});
+  monthName: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: c.texte },
+  bar: { height: 6, borderRadius: 3, backgroundColor: c.accentTeinte2, overflow: 'hidden' },
+  barFill: { height: 6, borderRadius: 3, backgroundColor: c.accent },
+}));

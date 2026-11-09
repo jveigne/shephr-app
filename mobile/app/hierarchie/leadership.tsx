@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   ActivityIndicator,
   Share,
@@ -19,7 +18,7 @@ import Card from '@/components/Card';
 import Label from '@/components/Label';
 import Field from '@/components/Field';
 import Button from '@/components/Button';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { confirmDialog, notify } from '@/utils/dialogs';
 import { goBack } from '@/utils/navigation';
@@ -41,6 +40,8 @@ import {
   type SupervisionRequestView,
 } from '@/services/leadersApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Page 2 de la Hiérarchie, « Mon leadership » — D-HIE-01..07 (JP 28/10), GRATUITE. Remplace l'écran
  * `/superviseur` (supprimé). Axe : la CHAÎNE de supervision (`supervisor_id`), jamais la géographie.
@@ -69,6 +70,8 @@ const roleOf = (p: DiscipleshipPerson) => {
 };
 
 export default function MyLeadershipScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const tl = (k: string, o?: Record<string, unknown>) => t(`hierarchy.leadership.${k}`, o);
@@ -195,7 +198,7 @@ export default function MyLeadershipScreen() {
     return (
       <ScreenShell withTabBar={false}>
         <View style={{ alignItems: 'center', paddingTop: 80 }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       </ScreenShell>
     );
@@ -210,11 +213,11 @@ export default function MyLeadershipScreen() {
       <ScreenShell
         withTabBar={false}
         paddingTop={insets.top ? 4 : 16}
-        refreshControl={<RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <View style={styles.headerRow}>
           <Pressable onPress={() => goBack()} hitSlop={10}>
-            <Ionicons name="arrow-back" size={24} color={colors.ink2} />
+            <Ionicons name="arrow-back" size={24} color={c.texte2} />
           </Pressable>
           <Text style={styles.title}>{tl('title')}</Text>
         </View>
@@ -242,7 +245,7 @@ export default function MyLeadershipScreen() {
                 <Ionicons
                   name={supervisor ? 'swap-horizontal-outline' : 'person-add-outline'}
                   size={17}
-                  color={supervisor ? colors.ink2 : colors.white}
+                  color={supervisor ? c.texte2 : c.surAccent}
                 />
               }
             />
@@ -342,7 +345,7 @@ export default function MyLeadershipScreen() {
               height={46}
               style={{ marginTop: 12 }}
               disabled={busy !== null}
-              iconLeft={<Ionicons name="person-add-outline" size={17} color={colors.white} />}
+              iconLeft={<Ionicons name="person-add-outline" size={17} color={c.surAccent} />}
             />
           </>
         )}
@@ -386,7 +389,7 @@ export default function MyLeadershipScreen() {
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{tl('designate')}</Text>
               <Pressable onPress={() => setDesignOpen(false)} hitSlop={10} accessibilityLabel={t('common.cancel')}>
-                <Ionicons name="close" size={22} color={colors.ink2} />
+                <Ionicons name="close" size={22} color={c.texte2} />
               </Pressable>
             </View>
             <Text style={styles.subtitle}>{tl('designateHint')}</Text>
@@ -413,6 +416,7 @@ export default function MyLeadershipScreen() {
 }
 
 function PersonLine({ person, extra, pill }: { person: DiscipleshipPerson; extra?: string; pill?: string }) {
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <View>
@@ -452,6 +456,8 @@ function PersonSearch({
   /** R7 : texte (traduit) d'un refus de la recherche. */
   searchErrorText: (e: unknown) => string;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const [query, setQuery] = useState('');
   // R7 (RG-HIE-32, JP 29/10) : un refus (403, 422 NO_MINISTRY…) est une erreur, pas « Aucun résultat ».
   const [results, setResults] = useState<{ q: string; list: DiscipleshipPerson[]; error?: string } | null>(null);
@@ -490,21 +496,21 @@ function PersonSearch({
         autoFocus
       />
       <Text style={styles.hint}>{q.length > 0 && q.length < 2 ? tooShort : hint}</Text>
-      {searching && <ActivityIndicator color={colors.moss} style={{ marginTop: 12 }} />}
+      {searching && <ActivityIndicator color={c.accent} style={{ marginTop: 12 }} />}
       {searchError ? (
-        <Text style={[styles.empty, { color: colors.clay }]}>{searchError}</Text>
+        <Text style={[styles.empty, { color: c.alerte }]}>{searchError}</Text>
       ) : (
         current && current.length === 0 && <Text style={styles.empty}>{noResult}</Text>
       )}
       <View style={{ gap: 8, marginTop: 10 }}>
         {(current ?? []).map((p) => (
           <Pressable key={p.id} disabled={disabled} onPress={() => onPick(p)} style={styles.resultRow}>
-            <Ionicons name="person-outline" size={16} color={colors.ink3} />
+            <Ionicons name="person-outline" size={16} color={c.texte3} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles.name} numberOfLines={1}>{p.fullName}</Text>
               <Text style={styles.meta} numberOfLines={1}>{personLine(p)}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+            <Ionicons name="chevron-forward" size={16} color={c.texte3} />
           </Pressable>
         ))}
       </View>
@@ -514,6 +520,8 @@ function PersonSearch({
 
 /** Invitation à créer un compte (reprise de l'ancien écran « Mon superviseur »). */
 function InviteBox() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const shareInvitation = async () => {
     try {
@@ -525,7 +533,7 @@ function InviteBox() {
   return (
     <>
       <View style={styles.noteBox}>
-        <Ionicons name="information-circle-outline" size={16} color={colors.mossSoft} />
+        <Ionicons name="information-circle-outline" size={16} color={c.accentDoux} />
         <Text style={styles.noteText}>{t('supervisor.inviteHint')}</Text>
       </View>
       <Button
@@ -535,26 +543,26 @@ function InviteBox() {
         fullWidth
         height={46}
         style={{ marginTop: 10 }}
-        iconLeft={<Ionicons name="share-outline" size={17} color={colors.ink2} />}
+        iconLeft={<Ionicons name="share-outline" size={17} color={c.texte2} />}
       />
     </>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2 },
-  title: { fontFamily: fonts.serif, fontSize: 26, color: colors.ink, letterSpacing: -0.4, flex: 1 },
-  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4, lineHeight: 18 },
-  sectionTitle: { fontFamily: fonts.serif, fontSize: 19, color: colors.ink, marginTop: 22 },
+  title: { fontFamily: fonts.serif, fontSize: 26, color: c.texte, letterSpacing: -0.4, flex: 1 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 4, lineHeight: 18 },
+  sectionTitle: { fontFamily: fonts.serif, fontSize: 19, color: c.texte, marginTop: 22 },
   block: { marginTop: 10, paddingHorizontal: 16, paddingVertical: 16 },
   list: { gap: 8, marginTop: 10 },
   rowCard: { paddingHorizontal: 14, paddingVertical: 12 },
   actions: { flexDirection: 'row', gap: 10, marginTop: 12 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  name: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink, flexShrink: 1 },
-  meta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2 },
-  none: { fontFamily: fonts.serif, fontStyle: 'italic', color: colors.ink3 },
-  hint: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 8, lineHeight: 16 },
+  name: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.texte, flexShrink: 1 },
+  meta: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 2 },
+  none: { fontFamily: fonts.serif, fontStyle: 'italic', color: c.texte3 },
+  hint: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 8, lineHeight: 16 },
   resultRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -562,37 +570,37 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(42,38,32,0.04)',
+    backgroundColor: transparence(c.texte, 0.04),
   },
   noteBox: {
     marginTop: 16,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(30,58,47,0.06)',
+    backgroundColor: transparence(c.accent, 0.06),
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
   },
-  noteText: { flex: 1, fontFamily: fonts.sans, fontSize: 12, color: colors.mossDeep, lineHeight: 18 },
+  noteText: { flex: 1, fontFamily: fonts.sans, fontSize: 12, color: c.accentProfond, lineHeight: 18 },
   pill: {
     fontFamily: fonts.mono,
     fontSize: 9,
-    color: colors.ink3,
+    color: c.texte3,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 99,
-    backgroundColor: 'rgba(42,38,32,0.05)',
+    backgroundColor: transparence(c.texte, 0.05),
     borderWidth: 1,
-    borderColor: 'rgba(42,38,32,0.07)',
+    borderColor: transparence(c.texte, 0.07),
     overflow: 'hidden',
   },
-  pendingPill: { color: colors.earthDeep, backgroundColor: 'rgba(201,149,107,0.22)', borderWidth: 0 },
-  empty: { fontFamily: fonts.serif, fontStyle: 'italic', color: colors.ink3, textAlign: 'center', paddingVertical: 14 },
-  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(22,41,31,0.5)', justifyContent: 'flex-end' },
+  pendingPill: { color: c.secondaireProfond, backgroundColor: transparence(c.secondaire, 0.22), borderWidth: 0 },
+  empty: { fontFamily: fonts.serif, fontStyle: 'italic', color: c.texte3, textAlign: 'center', paddingVertical: 14 },
+  sheetBackdrop: { flex: 1, backgroundColor: transparence(c.accentProfond, 0.5), justifyContent: 'flex-end' },
   sheet: {
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 18,
@@ -600,5 +608,5 @@ const styles = StyleSheet.create({
     maxHeight: '85%',
   },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sheetTitle: { fontFamily: fonts.serif, fontSize: 21, color: colors.ink },
-});
+  sheetTitle: { fontFamily: fonts.serif, fontSize: 21, color: c.texte },
+}));

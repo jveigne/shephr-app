@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   ActivityIndicator,
   AppState,
@@ -27,7 +26,7 @@ import StudyQuestionList, {
   topLevelOf,
   type StudyAnswerValue,
 } from '@/components/StudyQuestionList';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii, transparence } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -59,6 +58,8 @@ import { fmtPoints } from '@/utils/format';
 import { confirmDialog, notify } from '@/utils/dialogs';
 import { goBack } from '@/utils/navigation';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Étude de l'assemblée (plan 21/10, §6.3) — UNE SÉANCE, un seul écran en trois temps selon
  * `status` (RG-ETU-01) :
@@ -126,6 +127,8 @@ function isCatchUpWriting(d: StudySessionDetail | null | undefined): boolean {
 }
 
 export default function StudySessionScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
   const sessionId = typeof id === 'string' ? id : '';
   const { t, language } = useLanguage();
@@ -477,7 +480,7 @@ export default function StudySessionScreen() {
   const header = (
     <View style={styles.headerRow}>
       <Pressable onPress={() => goBack()} hitSlop={10} accessibilityLabel={t('common.back')}>
-        <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+        <Ionicons name="chevron-back" size={22} color={c.texte2} />
       </Pressable>
     </View>
   );
@@ -487,7 +490,7 @@ export default function StudySessionScreen() {
       <ScreenShell withTabBar={false}>
         {header}
         <View style={styles.loadingBox}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       </ScreenShell>
     );
@@ -500,7 +503,7 @@ export default function StudySessionScreen() {
         <Text style={styles.kicker}>{t('study.tile.title')}</Text>
         {gone ? (
           <Card variant="paper2" style={styles.empty}>
-            <Ionicons name="close-circle-outline" size={26} color={colors.ink3} />
+            <Ionicons name="close-circle-outline" size={26} color={c.texte3} />
             <Text style={styles.emptyText}>{t('study.session.gone')}</Text>
           </Card>
         ) : (
@@ -549,7 +552,7 @@ export default function StudySessionScreen() {
 
         {offline && (
           <View style={styles.offline}>
-            <Ionicons name="cloud-offline-outline" size={16} color={colors.earthDeep} />
+            <Ionicons name="cloud-offline-outline" size={16} color={c.secondaireProfond} />
             <Text style={styles.offlineText}>
               {draft.pending.length ? t('study.session.offlinePending') : t('study.session.offline')}
             </Text>
@@ -588,7 +591,7 @@ export default function StudySessionScreen() {
                   {t('study.session.answered', { done: answeredCount, total: answerable.length })}
                 </Text>
                 {saveState !== 'idle' && (
-                  <Text style={[styles.counterText, saveState === 'failed' && { color: colors.clay }]}>
+                  <Text style={[styles.counterText, saveState === 'failed' && { color: c.alerte }]}>
                     {' · '}
                     {t(`study.session.save.${saveState}`)}
                   </Text>
@@ -613,7 +616,7 @@ export default function StudySessionScreen() {
             {detail.participant && hasAnything ? (
               <>
                 <Card variant="tinted" style={styles.notice}>
-                  <Ionicons name="swap-horizontal" size={20} color={colors.moss} />
+                  <Ionicons name="swap-horizontal" size={20} color={c.accent} />
                   <Text style={styles.noticeText}>{t('study.session.correctionHint')}</Text>
                 </Card>
                 <Text style={styles.written}>
@@ -632,7 +635,7 @@ export default function StudySessionScreen() {
               </>
             ) : (
               <Card variant="paper2" style={styles.empty}>
-                <Ionicons name="hourglass-outline" size={26} color={colors.ink3} />
+                <Ionicons name="hourglass-outline" size={26} color={c.texte3} />
                 <Text style={styles.emptyText}>
                   {detail.participant ? t('study.session.noAnswerCorrection') : t('study.session.readerHint')}
                 </Text>
@@ -645,7 +648,7 @@ export default function StudySessionScreen() {
           <>
             {/* D-ETU-44 (JP 23/10) : rattrapage — ni corrections ni réponses du manuel avant l'envoi. */}
             <Card variant="tinted" style={styles.notice}>
-              <Ionicons name="home-outline" size={20} color={colors.moss} />
+              <Ionicons name="home-outline" size={20} color={c.accent} />
               <Text style={styles.noticeText}>{t('study.session.catchUpHint')}</Text>
             </Card>
             <View style={styles.counter}>
@@ -653,7 +656,7 @@ export default function StudySessionScreen() {
                 {t('study.session.answered', { done: answeredCount, total: answerable.length })}
               </Text>
               {saveState !== 'idle' && (
-                <Text style={[styles.counterText, saveState === 'failed' && { color: colors.clay }]}>
+                <Text style={[styles.counterText, saveState === 'failed' && { color: c.alerte }]}>
                   {' · '}
                   {t(`study.session.save.${saveState}`)}
                 </Text>
@@ -668,7 +671,7 @@ export default function StudySessionScreen() {
               fullWidth
               height={50}
               style={{ marginTop: 18 }}
-              iconLeft={<Ionicons name="paper-plane-outline" size={18} color={colors.white} />}
+              iconLeft={<Ionicons name="paper-plane-outline" size={18} color={c.surAccent} />}
             />
           </>
         )}
@@ -677,7 +680,7 @@ export default function StudySessionScreen() {
           <>
             {detail.participant && (
               <Card style={styles.scoreCard}>
-                <Label style={{ color: colors.mossSoft }}>{t('study.session.myScore')}</Label>
+                <Label style={{ color: c.accentDoux }}>{t('study.session.myScore')}</Label>
                 {myCopy ? (
                   <Text style={styles.scoreBig}>
                     {t('study.score', { score: fmtPoints(myCopy.score, language), max: fmtPoints(myCopy.maxScore, language) })}
@@ -729,6 +732,8 @@ function StopAfterSheet({
   onClose: () => void;
   onConfirm: (lastQuestionNumber: string | null) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const top = topLevelOf(questions);
   const last = top[top.length - 1]?.number ?? null;
@@ -754,7 +759,7 @@ function StopAfterSheet({
                   <Ionicons
                     name={selected ? 'radio-button-on' : 'radio-button-off'}
                     size={18}
-                    color={selected ? colors.moss : colors.ink3}
+                    color={selected ? c.accent : c.texte3}
                   />
                   <Text style={styles.stopNumber}>{t('study.question.number', { number: q.number })}</Text>
                   <Text style={styles.stopStatement} numberOfLines={1}>
@@ -786,8 +791,10 @@ function StopAfterSheet({
 }
 
 function StatusPill({ status }: { status: StudySessionDetail['session']['status'] }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
-  const tone = status === 'TERMINEE' ? colors.ink3 : status === 'CORRECTION' ? colors.earthDeep : colors.moss;
+  const tone = status === 'TERMINEE' ? c.texte3 : status === 'CORRECTION' ? c.secondaireProfond : c.accent;
   return (
     <Text style={[styles.pill, { color: tone, borderColor: tone }]}>{t(`study.status.${status}`)}</Text>
   );
@@ -811,6 +818,8 @@ function LeaderPanel({
   onCancel: () => void;
   onFinish: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [notesOpen, setNotesOpen] = useState(false);
   const s = detail.session;
@@ -830,7 +839,7 @@ function LeaderPanel({
   return (
     <Card style={styles.leaderCard}>
       <View style={styles.leaderHead}>
-        <Label style={{ color: colors.mossSoft }}>{t('study.leader.panel')}</Label>
+        <Label style={{ color: c.accentDoux }}>{t('study.leader.panel')}</Label>
         {resultsOpen && (
           <Pressable onPress={openResults} hitSlop={8}>
             <Text style={styles.link}>{t('study.leader.results')}</Text>
@@ -843,7 +852,7 @@ function LeaderPanel({
           {/* RG-ETU-14b : le nombre de répondants est réservé au dirigeant (`copyCount`). */}
           <Text style={styles.leaderStat}>{t('study.leader.respondents', { count: s.copyCount })}</Text>
           <Pressable onPress={onToggleKey} hitSlop={6} style={styles.toggle}>
-            <Ionicons name={showKey ? 'eye-off-outline' : 'eye-outline'} size={16} color={colors.moss} />
+            <Ionicons name={showKey ? 'eye-off-outline' : 'eye-outline'} size={16} color={c.accent} />
             <Text style={styles.link}>{showKey ? t('study.leader.hideKey') : t('study.leader.showKey')}</Text>
           </Pressable>
           <Button label={t('study.leader.toCorrection')} onPress={onToCorrection} loading={busy} fullWidth height={48} style={{ marginTop: 12 }} />
@@ -875,7 +884,7 @@ function LeaderPanel({
             accessibilityRole="button"
             accessibilityState={{ expanded: notesOpen }}
           >
-            <Ionicons name={notesOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.moss} />
+            <Ionicons name={notesOpen ? 'chevron-up' : 'chevron-down'} size={16} color={c.accent} />
             <Text style={styles.link}>{t('study.leader.notes')}</Text>
           </Pressable>
           {notesOpen && (
@@ -891,20 +900,20 @@ function LeaderPanel({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   kicker: {
     marginTop: 10,
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.clay,
+    color: c.alerte,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  title: { fontFamily: fonts.serif, fontSize: 26, color: colors.ink, letterSpacing: -0.4, marginTop: 4 },
-  subtitle: { fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 15, color: colors.ink2, marginTop: 4 },
+  title: { fontFamily: fonts.serif, fontSize: 26, color: c.texte, letterSpacing: -0.4, marginTop: 4 },
+  subtitle: { fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 15, color: c.texte2, marginTop: 4 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10, marginBottom: 6 },
-  meta: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
+  meta: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: c.texte3 },
   pill: {
     fontFamily: fonts.mono,
     fontSize: 10,
@@ -918,7 +927,7 @@ const styles = StyleSheet.create({
   },
   loadingBox: { marginTop: 40, alignItems: 'center' },
   empty: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 24, alignItems: 'center', gap: 10 },
-  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2, lineHeight: 20, textAlign: 'center' },
+  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte2, lineHeight: 20, textAlign: 'center' },
   offline: {
     marginTop: 10,
     flexDirection: 'row',
@@ -927,43 +936,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: radii.sm,
-    backgroundColor: colors.earth + '1A',
+    backgroundColor: transparence(c.secondaire, 0.1),
   },
-  offlineText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2 },
+  offlineText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2 },
   counter: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 14, marginBottom: 10 },
-  counterText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.moss },
-  written: { marginTop: 14, marginBottom: 10, fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.moss },
-  hint: { marginTop: 14, marginBottom: 10, fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
+  counterText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.accent },
+  written: { marginTop: 14, marginBottom: 10, fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.accent },
+  hint: { marginTop: 14, marginBottom: 10, fontFamily: fonts.sans, fontSize: 13, color: c.texte3 },
   notice: { marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
-  noticeText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, lineHeight: 19, color: colors.ink2 },
+  noticeText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, lineHeight: 19, color: c.texte2 },
   leaderCard: { marginTop: 14, paddingHorizontal: 16, paddingVertical: 14 },
   leaderHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  leaderStat: { marginTop: 8, fontFamily: fonts.serif, fontSize: 18, color: colors.ink },
-  leaderHint: { marginTop: 2, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3 },
-  notes: { marginTop: 12, borderTopWidth: 1, borderTopColor: colors.hair, paddingTop: 4 },
+  leaderStat: { marginTop: 8, fontFamily: fonts.serif, fontSize: 18, color: c.texte },
+  leaderHint: { marginTop: 2, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3 },
+  notes: { marginTop: 12, borderTopWidth: 1, borderTopColor: c.filet, paddingTop: 4 },
   notesBody: { marginTop: 10, gap: 14 },
   actionsCard: { marginTop: 16, paddingHorizontal: 16, paddingVertical: 14 },
   toggle: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
-  link: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.moss },
+  link: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.accent },
   scoreCard: { marginTop: 16, paddingHorizontal: 20, paddingVertical: 20, alignItems: 'flex-start' },
-  scoreBig: { marginTop: 6, fontFamily: fonts.serif, fontSize: 44, color: colors.moss, letterSpacing: -0.6 },
-  scoreEmpty: { marginTop: 8, fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 16, color: colors.ink3 },
-  range: { marginTop: 6, fontFamily: fonts.mono, fontSize: 12, color: colors.moss, letterSpacing: 0.4 },
-  backdrop: { flex: 1, backgroundColor: colors.mossDeep + 'B3', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 48 },
+  scoreBig: { marginTop: 6, fontFamily: fonts.serif, fontSize: 44, color: c.accent, letterSpacing: -0.6 },
+  scoreEmpty: { marginTop: 8, fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 16, color: c.texte3 },
+  range: { marginTop: 6, fontFamily: fonts.mono, fontSize: 12, color: c.accent, letterSpacing: 0.4 },
+  backdrop: { flex: 1, backgroundColor: transparence(c.accentProfond, 0.7), justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 48 },
   modalCard: {
     maxHeight: '100%',
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderRadius: radii.lg,
     paddingHorizontal: 20,
     paddingTop: 22,
     paddingBottom: 18,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
   },
-  modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink, letterSpacing: -0.3 },
-  modalHint: { marginTop: 4, marginBottom: 12, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2, lineHeight: 19 },
+  modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: c.texte, letterSpacing: -0.3 },
+  modalHint: { marginTop: 4, marginBottom: 12, fontFamily: fonts.sans, fontSize: 13, color: c.texte2, lineHeight: 19 },
   modalScroll: { flexGrow: 0, flexShrink: 1 },
-  modalFoot: { marginTop: 14, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, lineHeight: 18 },
+  modalFoot: { marginTop: 14, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, lineHeight: 18 },
   stopList: { gap: 6, paddingBottom: 4 },
   stopRow: {
     flexDirection: 'row',
@@ -973,11 +982,11 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: colors.hair,
-    backgroundColor: colors.paper2,
+    borderColor: c.filet,
+    backgroundColor: c.surfaceHaute,
   },
-  stopRowOn: { borderColor: colors.moss, backgroundColor: colors.mossTint },
-  stopNumber: { fontFamily: fonts.mono, fontSize: 12.5, color: colors.clay },
-  stopStatement: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
-  stopLast: { fontFamily: fonts.sans, fontSize: 11.5, fontWeight: '600', color: colors.moss },
-});
+  stopRowOn: { borderColor: c.accent, backgroundColor: c.accentTeinte },
+  stopNumber: { fontFamily: fonts.mono, fontSize: 12.5, color: c.alerte },
+  stopStatement: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: c.texte2 },
+  stopLast: { fontFamily: fonts.sans, fontSize: 11.5, fontWeight: '600', color: c.accent },
+}));

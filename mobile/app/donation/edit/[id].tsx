@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -23,7 +22,7 @@ import DeclarationForm, {
   round2,
   type DraftLine,
 } from '@/components/DeclarationForm';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import {
   getDeclaration,
   updateDeclaration,
@@ -34,6 +33,8 @@ import { notify } from '@/utils/dialogs';
 import { declarationErrorMessage } from '@/utils/donationErrors';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Lot T7 (décision J-1, JP 14/09) — CORRIGER SA DÉCLARATION, TANT QU'ELLE EST « DÉCLARÉ ».
  *
@@ -47,6 +48,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
  * eux, chaque correction renumérote l'historique comptable.
  */
 export default function EditDeclarationScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -120,7 +123,7 @@ export default function EditDeclarationScreen() {
     return (
       <ScreenShell withTabBar={false}>
         <View style={{ marginTop: 60, alignItems: 'center' }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       </ScreenShell>
     );
@@ -142,7 +145,7 @@ export default function EditDeclarationScreen() {
       <ScreenShell withTabBar={false}>
         <Header title={t('declarations.editTitle')} />
         <View style={styles.locked}>
-          <Ionicons name="lock-closed-outline" size={18} color={colors.mossSoft} />
+          <Ionicons name="lock-closed-outline" size={18} color={c.accentDoux} />
           <Text style={styles.lockedText}>{t('declarations.lockedHint')}</Text>
         </View>
         <Button
@@ -164,7 +167,7 @@ export default function EditDeclarationScreen() {
       <ScreenShell withTabBar={false} paddingTop={insets.top ? 4 : 16}>
         <View style={styles.headerRow}>
           <Pressable onPress={() => goBack()} hitSlop={10}>
-            <Ionicons name="close" size={26} color={colors.ink2} />
+            <Ionicons name="close" size={26} color={c.texte2} />
           </Pressable>
           <Text style={styles.headerTitle}>{t('declarations.editTitle')}</Text>
           <View style={{ width: 26 }} />
@@ -186,7 +189,7 @@ export default function EditDeclarationScreen() {
           fullWidth
           height={58}
           style={{ marginTop: 22 }}
-          iconLeft={<Ionicons name="checkmark" size={20} color={colors.white} />}
+          iconLeft={<Ionicons name="checkmark" size={20} color={c.surAccent} />}
         />
 
         <Text style={styles.footnote}>{t('declarations.editableHint')}</Text>
@@ -196,10 +199,12 @@ export default function EditDeclarationScreen() {
 }
 
 function Header({ title }: { title: string }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.headerRow}>
       <Pressable onPress={() => goBack()} hitSlop={10}>
-        <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+        <Ionicons name="chevron-back" size={22} color={c.texte2} />
       </Pressable>
       <Text style={styles.headerTitle}>{title}</Text>
       <View style={{ width: 22 }} />
@@ -207,19 +212,19 @@ function Header({ title }: { title: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 6,
   },
-  headerTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink2 },
+  headerTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.texte2 },
   footnote: {
     textAlign: 'center',
     marginTop: 14,
     fontSize: 12,
-    color: colors.ink3,
+    color: c.texte3,
     fontFamily: fonts.sans,
     lineHeight: 18,
     paddingHorizontal: 24,
@@ -228,10 +233,10 @@ const styles = StyleSheet.create({
     marginTop: 22,
     padding: 14,
     borderRadius: 14,
-    backgroundColor: 'rgba(42,38,32,0.04)',
+    backgroundColor: transparence(c.texte, 0.04),
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
-  lockedText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },
-});
+  lockedText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2, lineHeight: 18 },
+}));

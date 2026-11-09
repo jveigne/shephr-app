@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   ActivityIndicator,
   RefreshControl,
@@ -22,7 +21,7 @@ import ErrorBanner from '@/components/ErrorBanner';
 import StudyCityLock from '@/components/StudyCityLock';
 import CalebAssemblyLock from '@/components/CalebAssemblyLock';
 import { StudyCopySheet } from '@/components/StudyQuestionList';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii, transparence } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -45,6 +44,8 @@ import { fmtIsoDay } from '@/utils/meetingReport';
 import { confirmDialog, notify } from '@/utils/dialogs';
 import { goBack } from '@/utils/navigation';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Étude de l'assemblée (plan 21/10, §6.3) — RÉSULTATS d'une séance.
  *
@@ -78,6 +79,8 @@ import { goBack } from '@/utils/navigation';
  * remplace l'erreur (contrat 27/10 §9.1), sans aucun paiement (D-ABO-13).
  */
 export default function StudyResultsScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
   const sessionId = typeof id === 'string' ? id : '';
   const { t, language } = useLanguage();
@@ -187,7 +190,7 @@ export default function StudyResultsScreen() {
   const header = (
     <View style={styles.headerRow}>
       <Pressable onPress={() => goBack()} hitSlop={10} accessibilityLabel={t('common.back')}>
-        <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+        <Ionicons name="chevron-back" size={22} color={c.texte2} />
       </Pressable>
     </View>
   );
@@ -197,7 +200,7 @@ export default function StudyResultsScreen() {
       <ScreenShell withTabBar={false}>
         {header}
         <View style={styles.loadingBox}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       </ScreenShell>
     );
@@ -242,7 +245,7 @@ export default function StudyResultsScreen() {
   return (
     <ScreenShell
       withTabBar={false}
-      refreshControl={<RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />}
     >
       {header}
       <Text style={styles.kicker}>{t('study.results.kicker')}</Text>
@@ -259,7 +262,7 @@ export default function StudyResultsScreen() {
 
       {toReview > 0 && (
         <Card variant="tinted" style={styles.reviewCard}>
-          <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.earthDeep} />
+          <Ionicons name="chatbubble-ellipses-outline" size={20} color={c.secondaireProfond} />
           <Text style={styles.reviewText}>{t('study.results.toReview', { count: toReview })}</Text>
         </Card>
       )}
@@ -278,7 +281,7 @@ export default function StudyResultsScreen() {
           height={46}
           style={{ marginTop: 16 }}
           disabled={results.withoutCopy.length === 0}
-          iconLeft={<Ionicons name="document-text-outline" size={18} color={colors.mossDeep} />}
+          iconLeft={<Ionicons name="document-text-outline" size={18} color={c.accentProfond} />}
           onPress={() => setPaperOpen(true)}
         />
       )}
@@ -289,29 +292,29 @@ export default function StudyResultsScreen() {
       <Label style={styles.blockLabel}>{t('study.results.copies', { count: results.copies.length })}</Label>
       {results.copies.length === 0 ? (
         <Card variant="paper2" style={styles.empty}>
-          <Ionicons name="people-outline" size={26} color={colors.ink3} />
+          <Ionicons name="people-outline" size={26} color={c.texte3} />
           <Text style={styles.emptyText}>{t('study.results.noCopies')}</Text>
         </Card>
       ) : (
         <View style={styles.list}>
-          {results.copies.map((c) => {
-            const paper = c.source === 'PAPIER';
-            const catchUp = c.source === 'RATTRAPAGE';
-            const mine = c.userId === me?.id;
+          {results.copies.map((copie) => {
+            const paper = copie.source === 'PAPIER';
+            const catchUp = copie.source === 'RATTRAPAGE';
+            const mine = copie.userId === me?.id;
             // RG-ETU-13 : le contenu d'une copie APP n'est lisible que par son auteur et le dirigeant.
             // D-BER-06 (JP 29/10) : modifier une note papier = pilotage ; ouvrir une copie APP = lecture.
             const onPress = leader
               ? paper
                 ? pilot
-                  ? () => setEditing(c)
+                  ? () => setEditing(copie)
                   : undefined
-                : () => void openCopy(c)
+                : () => void openCopy(copie)
               : mine && !paper
-                ? () => void openCopy(c)
+                ? () => void openCopy(copie)
                 : undefined;
             return (
               <Pressable
-                key={c.id}
+                key={copie.id}
                 onPress={onPress}
                 disabled={!onPress}
                 style={({ pressed }) => [styles.row, { opacity: pressed ? 0.9 : 1 }]}
@@ -319,26 +322,26 @@ export default function StudyResultsScreen() {
                 <View style={{ flex: 1 }}>
                   <View style={styles.nameRow}>
                     <Text style={styles.rowTitle} numberOfLines={1}>
-                      {c.displayName}
+                      {copie.displayName}
                     </Text>
                     {paper && <Text style={styles.paperPill}>{t('study.results.paper')}</Text>}
                     {catchUp && <Text style={[styles.paperPill, styles.catchUpPill]}>{t('study.results.catchUp')}</Text>}
                   </View>
-                  {leader && c.pendingReview && (
+                  {leader && copie.pendingReview && (
                     <Text style={styles.reviewMeta}>{t('study.results.pendingReview')}</Text>
                   )}
                   {!paper && (
-                    <Text style={styles.rowMeta}>{t('study.results.answeredCount', { count: c.answeredCount })}</Text>
+                    <Text style={styles.rowMeta}>{t('study.results.answeredCount', { count: copie.answeredCount })}</Text>
                   )}
                 </View>
-                {copyLoading === c.id ? (
-                  <ActivityIndicator color={colors.moss} />
+                {copyLoading === copie.id ? (
+                  <ActivityIndicator color={c.accent} />
                 ) : (
                   <Text style={styles.score}>
-                    {t('study.score', { score: fmtPoints(c.score, language), max: fmtPoints(c.maxScore, language) })}
+                    {t('study.score', { score: fmtPoints(copie.score, language), max: fmtPoints(copie.maxScore, language) })}
                   </Text>
                 )}
-                {onPress && <Ionicons name="chevron-forward" size={18} color={colors.ink3} />}
+                {onPress && <Ionicons name="chevron-forward" size={18} color={c.texte3} />}
               </Pressable>
             );
           })}
@@ -401,6 +404,7 @@ function PaperModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const options = results.withoutCopy.map((m) => ({ id: m.userId, name: m.fullName }));
   const [pick, setPick] = useState<{ id: string; name: string } | null>(null);
@@ -472,6 +476,7 @@ function EditPaperModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const styles = useStyles();
   const { t, language } = useLanguage();
   // Monté avec `key = copy.id` : la note initiale est reprise à chaque ouverture.
   const [score, setScore] = useState(copy ? fmtPoints(copy.score, language) : '');
@@ -541,24 +546,24 @@ function EditPaperModal({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   kicker: {
     marginTop: 10,
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.clay,
+    color: c.alerte,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  title: { fontFamily: fonts.serif, fontSize: 26, color: colors.ink, letterSpacing: -0.4, marginTop: 4 },
-  subtitle: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2, marginTop: 6 },
-  meta: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 2 },
+  title: { fontFamily: fonts.serif, fontSize: 26, color: c.texte, letterSpacing: -0.4, marginTop: 4 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte2, marginTop: 6 },
+  meta: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 2 },
   loadingBox: { marginTop: 40, alignItems: 'center' },
   blockLabel: { marginTop: 22, marginBottom: 8 },
-  muted: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3 },
+  muted: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3 },
   empty: { paddingHorizontal: 20, paddingVertical: 22, alignItems: 'center', gap: 8 },
-  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2, lineHeight: 20, textAlign: 'center' },
+  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte2, lineHeight: 20, textAlign: 'center' },
   list: { gap: 8 },
   row: {
     flexDirection: 'row',
@@ -567,43 +572,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: radii.md,
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
   },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  rowTitle: { flexShrink: 1, fontFamily: fonts.serif, fontSize: 16, color: colors.ink },
-  rowMeta: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 2 },
+  rowTitle: { flexShrink: 1, fontFamily: fonts.serif, fontSize: 16, color: c.texte },
+  rowMeta: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 2 },
   paperPill: {
     fontFamily: fonts.mono,
     fontSize: 9.5,
-    color: colors.earthDeep,
+    color: c.secondaireProfond,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 99,
     borderWidth: 1,
-    borderColor: colors.earth,
+    borderColor: c.secondaire,
     overflow: 'hidden',
   },
-  score: { fontFamily: fonts.mono, fontSize: 14, color: colors.moss },
-  catchUpPill: { color: colors.moss, borderColor: colors.moss },
-  range: { marginTop: 4, fontFamily: fonts.mono, fontSize: 12, color: colors.moss, letterSpacing: 0.4 },
+  score: { fontFamily: fonts.mono, fontSize: 14, color: c.accent },
+  catchUpPill: { color: c.accent, borderColor: c.accent },
+  range: { marginTop: 4, fontFamily: fonts.mono, fontSize: 12, color: c.accent, letterSpacing: 0.4 },
   reviewCard: { marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
-  reviewText: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, lineHeight: 19, color: colors.ink2 },
-  reviewMeta: { marginTop: 2, fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: colors.earthDeep },
-  backdrop: { flex: 1, backgroundColor: colors.mossDeep + 'B3', justifyContent: 'center', paddingHorizontal: 24 },
+  reviewText: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, lineHeight: 19, color: c.texte2 },
+  reviewMeta: { marginTop: 2, fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: c.secondaireProfond },
+  backdrop: { flex: 1, backgroundColor: transparence(c.accentProfond, 0.7), justifyContent: 'center', paddingHorizontal: 24 },
   modalCard: {
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderRadius: radii.lg,
     paddingHorizontal: 20,
     paddingTop: 22,
     paddingBottom: 18,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
   },
-  modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink, letterSpacing: -0.3 },
-  modalHint: { marginTop: 4, marginBottom: 12, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2, lineHeight: 19 },
-  invalid: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12.5, color: colors.clay },
-});
+  modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: c.texte, letterSpacing: -0.3 },
+  modalHint: { marginTop: 4, marginBottom: 12, fontFamily: fonts.sans, fontSize: 13, color: c.texte2, lineHeight: 19 },
+  invalid: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12.5, color: c.alerte },
+}));

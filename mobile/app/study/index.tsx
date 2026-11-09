@@ -2,7 +2,6 @@ import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   ActivityIndicator,
   RefreshControl,
@@ -26,7 +25,7 @@ import {
   StudyNotesText,
   studyLanguagesToMark,
 } from '@/components/StudyQuestionList';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii, transparence } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { isAttachedAccount } from '@/services/authApi';
@@ -55,6 +54,8 @@ import { goBack } from '@/utils/navigation';
 import { cityOpen, type CityEntry as CityFollowUpCity } from '@/utils/cityFollowUp';
 import { useCityFollowUp } from '@/hooks/useCityFollowUp';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Étude de l'assemblée (plan 21/10, §6.3) — ACCUEIL de la tuile « Le Message de Bertoua ».
  *
@@ -116,6 +117,8 @@ import { useCityFollowUp } from '@/hooks/useCityFollowUp';
  * </ul>
  */
 export default function StudyHomeScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const { me, hasStudy } = useAuth();
   const userId = me?.id ?? null;
@@ -313,12 +316,12 @@ export default function StudyHomeScreen() {
     <ScreenShell
       withTabBar={false}
       refreshControl={
-        active ? <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} /> : undefined
+        active ? <RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} /> : undefined
       }
     >
       <View style={styles.headerRow}>
         <Pressable onPress={() => goBack()} hitSlop={10} accessibilityLabel={t('common.back')}>
-          <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+          <Ionicons name="chevron-back" size={22} color={c.texte2} />
         </Pressable>
       </View>
       <Text style={styles.kicker}>{t('study.kicker')}</Text>
@@ -326,7 +329,7 @@ export default function StudyHomeScreen() {
 
       {!active ? (
         <Card variant="paper2" style={styles.empty}>
-          <Ionicons name="lock-closed-outline" size={26} color={colors.ink3} />
+          <Ionicons name="lock-closed-outline" size={26} color={c.texte3} />
           {/* D-ETU-50 (JP 27/10) : l'étude est gratuite — seul le rattachement manque ici. */}
           <Text style={styles.emptyText}>{t('study.home.joinRequired')}</Text>
           <Text style={styles.link} onPress={() => router.push('/(auth)/join')}>
@@ -335,7 +338,7 @@ export default function StudyHomeScreen() {
         </Card>
       ) : loading ? (
         <View style={styles.loadingBox}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       ) : (
         <>
@@ -385,7 +388,7 @@ export default function StudyHomeScreen() {
               fullWidth
               height={48}
               style={{ marginTop: 20 }}
-              iconLeft={<Ionicons name="trending-up-outline" size={18} color={colors.moss} />}
+              iconLeft={<Ionicons name="trending-up-outline" size={18} color={c.accent} />}
               onPress={() => router.push({ pathname: '/study/progress', params: { mine: '1' } })}
             />
           )}
@@ -552,6 +555,8 @@ function BriefingSheet({
   onClose: () => void;
   onConfirm: (startQuestionNumber: string | null) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const label = lessonLabelOf(t, briefing.lesson.number, briefing.lesson.title);
   // D-ETU-49 (JP 23/10) : sélecteur sur les numéros de premier niveau, défaut = suite de la leçon.
@@ -640,12 +645,12 @@ function BriefingSheet({
               <View style={{ gap: 6 }}>
                 <Text style={styles.startTitle}>{t('study.home.startFrom')}</Text>
                 <Text style={styles.rowMeta}>{t('study.home.covered', { ranges: briefing.pastRanges.join(' · ') })}</Text>
-                {choices.map((c) => {
-                  const selected = choice === c.key;
+                {choices.map((choix) => {
+                  const selected = choice === choix.key;
                   return (
                     <Pressable
-                      key={c.key}
-                      onPress={() => setChoice(c.key)}
+                      key={choix.key}
+                      onPress={() => setChoice(choix.key)}
                       accessibilityRole="radio"
                       accessibilityState={{ checked: selected }}
                       style={({ pressed }) => [styles.choiceRow, selected && styles.choiceRowOn, { opacity: pressed ? 0.85 : 1 }]}
@@ -653,9 +658,9 @@ function BriefingSheet({
                       <Ionicons
                         name={selected ? 'radio-button-on' : 'radio-button-off'}
                         size={18}
-                        color={selected ? colors.moss : colors.ink3}
+                        color={selected ? c.accent : c.texte3}
                       />
-                      <Text style={styles.choiceText}>{c.label}</Text>
+                      <Text style={styles.choiceText}>{choix.label}</Text>
                     </Pressable>
                   );
                 })}
@@ -709,6 +714,8 @@ function AssemblyPicker({
   selected: string | null;
   onSelect: (unitId: string) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <View style={styles.pickerBlock}>
@@ -737,7 +744,7 @@ function AssemblyPicker({
               <Text style={[styles.pickText, on && styles.pickTextOn]} numberOfLines={1}>
                 {a.unitName}
               </Text>
-              {locked && <Ionicons name="lock-closed" size={13} color={on ? colors.parchment : colors.ink3} />}
+              {locked && <Ionicons name="lock-closed" size={13} color={on ? c.page : c.texte3} />}
             </Pressable>
           );
         })}
@@ -758,6 +765,8 @@ function CurrentCard({
   language: StudyAssembly['language'];
   onPress: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <Card style={styles.currentCard} onPress={onPress}>
@@ -774,7 +783,7 @@ function CurrentCard({
       )}
       <View style={styles.currentCta}>
         <Text style={styles.currentCtaText}>{action}</Text>
-        <Ionicons name="chevron-forward" size={18} color={colors.white} />
+        <Ionicons name="chevron-forward" size={18} color={c.surAccent} />
       </View>
     </Card>
   );
@@ -782,6 +791,8 @@ function CurrentCard({
 
 /** D-ETU-44/45 (JP 23/10) — bloc « À rattraper » d'une assemblée. */
 function CatchUpBlock({ catchUps, onOpenSession }: { catchUps: StudyCatchUp[]; onOpenSession: (id: string) => void }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   if (catchUps.length === 0) return null;
   return (
@@ -819,6 +830,8 @@ function LeaderAssembly({
   onOpenSession: (id: string) => void;
   onStart: (unit: StudyUnitForAssembly, lesson: StudyLesson) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const current = assembly.currentSession;
   const catchUps = assembly.catchUps ?? [];
@@ -865,7 +878,7 @@ function LeaderAssembly({
 
       {!data ? (
         <View style={styles.loadingBox}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       ) : (
         <>
@@ -874,7 +887,7 @@ function LeaderAssembly({
           {/* RG-BER-20 (JP 29/10) : bouton principal sur la leçon suivante. */}
           {next && (
             <Card variant="tinted" style={styles.nextCard}>
-              <Label style={{ color: colors.mossSoft }}>{t('study.home.nextLesson')}</Label>
+              <Label style={{ color: c.accentDoux }}>{t('study.home.nextLesson')}</Label>
               <Text style={styles.nextTitle}>{lessonLabelOf(t, next.lesson.number, next.lesson.title)}</Text>
               <Text style={styles.rowMeta}>
                 {[next.unit.unit.code, next.unit.unit.name, next.lesson.portion].filter(Boolean).join(' · ')}
@@ -908,7 +921,7 @@ function LeaderAssembly({
                     accessibilityState={{ expanded: open }}
                   >
                     <View style={[styles.rowIcon, u.locked && styles.rowIconLocked]}>
-                      <Ionicons name={u.locked ? 'lock-closed-outline' : 'school-outline'} size={19} color={u.locked ? colors.ink3 : colors.moss} />
+                      <Ionicons name={u.locked ? 'lock-closed-outline' : 'school-outline'} size={19} color={u.locked ? c.texte3 : c.accent} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.rowTitle} numberOfLines={2}>
@@ -928,7 +941,7 @@ function LeaderAssembly({
                           : t('study.home.lessonsDone', { done, total: u.unit.lessons.length })}
                       </Text>
                     </View>
-                    <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.ink3} />
+                    <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={c.texte3} />
                   </Pressable>
                   {open && (
                     <View style={styles.lessons}>
@@ -958,7 +971,7 @@ function LeaderAssembly({
                             <Ionicons
                               name={isDone ? 'checkmark-circle' : status === 'inProgress' ? 'time-outline' : 'ellipse-outline'}
                               size={20}
-                              color={status === 'todo' ? colors.ink3 : colors.moss}
+                              color={status === 'todo' ? c.texte3 : c.accent}
                             />
                             <View style={{ flex: 1 }}>
                               <Text style={styles.lessonTitle}>{lessonLabelOf(t, l.number, l.title)}</Text>
@@ -976,7 +989,7 @@ function LeaderAssembly({
                               )}
                             </View>
                             {opening === l.chapterId ? (
-                              <ActivityIndicator color={colors.moss} />
+                              <ActivityIndicator color={c.accent} />
                             ) : actionable ? (
                               <Text style={styles.lessonAction}>
                                 {isDone ? t('study.home.redo') : status === 'inProgress' ? t('study.home.continue') : t('study.home.start')}
@@ -1000,7 +1013,7 @@ function LeaderAssembly({
             style={({ pressed }) => [styles.historyToggle, { opacity: pressed ? 0.85 : 1 }]}
           >
             <Text style={styles.historyText}>{t('study.home.history', { count: past.length })}</Text>
-            <Ionicons name={historyOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.moss} />
+            <Ionicons name={historyOpen ? 'chevron-up' : 'chevron-down'} size={18} color={c.accent} />
           </Pressable>
           {historyOpen &&
             (past.length === 0 ? (
@@ -1038,7 +1051,7 @@ function LeaderAssembly({
                           .join(' · ')}
                       </Text>
                     </View>
-                    {clickable && <Ionicons name="chevron-forward" size={18} color={colors.ink3} />}
+                    {clickable && <Ionicons name="chevron-forward" size={18} color={c.texte3} />}
                   </Pressable>
                   );
                 })}
@@ -1085,6 +1098,8 @@ function ParticipantSection({
   showName: boolean;
   onOpenSession: (id: string) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const current = assembly.currentSession;
   // D-ETU-44/45 (JP 23/10) : séances que l'appelant peut encore rattraper.
@@ -1101,7 +1116,7 @@ function ParticipantSection({
         />
       ) : catchUps.length === 0 ? (
         <Card variant="paper2" style={styles.empty}>
-          <Ionicons name="book-outline" size={26} color={colors.ink3} />
+          <Ionicons name="book-outline" size={26} color={c.texte3} />
           <Text style={styles.emptyTitle}>{t('study.home.noCurrent')}</Text>
           <Text style={styles.emptyText}>{t('study.home.noCurrentHint')}</Text>
         </Card>
@@ -1113,11 +1128,13 @@ function ParticipantSection({
 
 /** D-ETU-44 (JP 23/10) — une séance à rattraper : leçon, plage, date ; ouvre l'écran de séance. */
 function CatchUpRow({ item, onPress }: { item: StudyCatchUp; onPress: () => void }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.row, { opacity: pressed ? 0.9 : 1 }]}>
       <View style={styles.rowIcon}>
-        <Ionicons name="home-outline" size={19} color={colors.moss} />
+        <Ionicons name="home-outline" size={19} color={c.accent} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.rowTitle} numberOfLines={2}>
@@ -1139,6 +1156,8 @@ function CatchUpRow({ item, onPress }: { item: StudyCatchUp; onPress: () => void
  * cadenas si aucune ville n'ouvre droit (`entitled`). Jamais de mention de paiement (D-ABO-13).
  */
 function CityEntry({ localities }: { localities: CityFollowUpCity[] }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const locked = !localities.some(cityOpen);
   const only = localities.length === 1 ? localities[0] : null;
@@ -1151,7 +1170,7 @@ function CityEntry({ localities }: { localities: CityFollowUpCity[] }) {
       style={({ pressed }) => [styles.row, { marginTop: 20, opacity: pressed ? 0.9 : 1 }]}
     >
       <View style={styles.rowIcon}>
-        <Ionicons name="business-outline" size={18} color={colors.moss} />
+        <Ionicons name="business-outline" size={18} color={c.accent} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.rowTitle}>{t('study.city.entry')}</Text>
@@ -1160,22 +1179,24 @@ function CityEntry({ localities }: { localities: CityFollowUpCity[] }) {
         </Text>
       </View>
       {locked && (
-        <Ionicons name="lock-closed" size={16} color={colors.ink3} accessibilityLabel={t('study.city.lockedCity')} />
+        <Ionicons name="lock-closed" size={16} color={c.texte3} accessibilityLabel={t('study.city.lockedCity')} />
       )}
-      <Ionicons name="chevron-forward" size={18} color={colors.ink3} />
+      <Ionicons name="chevron-forward" size={18} color={c.texte3} />
     </Pressable>
   );
 }
 
 /** D-ETU-08 — vue d'ensemble des assemblées du périmètre (géographie), sans contenu de copie. */
 function Overview({ rows }: { rows: StudyAssemblyOverview[] }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <View style={styles.section}>
       <Label style={styles.blockLabel}>{t('study.home.overviewTitle')}</Label>
       {rows.length === 0 ? (
         <Card variant="paper2" style={styles.empty}>
-          <Ionicons name="map-outline" size={26} color={colors.ink3} />
+          <Ionicons name="map-outline" size={26} color={c.texte3} />
           <Text style={styles.emptyText}>{t('study.home.overviewEmpty')}</Text>
         </Card>
       ) : (
@@ -1202,7 +1223,7 @@ function Overview({ rows }: { rows: StudyAssemblyOverview[] }) {
                 </View>
               ))}
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.ink3} />
+            <Ionicons name="chevron-forward" size={18} color={c.texte3} />
           </Pressable>
         ))
       )}
@@ -1210,20 +1231,20 @@ function Overview({ rows }: { rows: StudyAssemblyOverview[] }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   kicker: {
     marginTop: 10,
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.clay,
+    color: c.alerte,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4, marginTop: 4 },
+  title: { fontFamily: fonts.serif, fontSize: 28, color: c.texte, letterSpacing: -0.4, marginTop: 4 },
   loadingBox: { marginTop: 40, alignItems: 'center' },
   section: { marginTop: 20, gap: 8 },
-  sectionLabel: { color: colors.mossSoft },
+  sectionLabel: { color: c.accentDoux },
   pickerBlock: { marginTop: 18, gap: 8 },
   pickerRow: { gap: 8, paddingRight: 8 },
   pickChip: {
@@ -1235,41 +1256,41 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.hair,
-    backgroundColor: colors.paper,
+    borderColor: c.filet,
+    backgroundColor: c.surface,
   },
-  pickChipOn: { borderColor: colors.moss, backgroundColor: colors.moss },
-  pickText: { flexShrink: 1, fontFamily: fonts.sans, fontSize: 14, color: colors.ink },
-  pickTextOn: { color: colors.white, fontWeight: '600' },
-  pickLive: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.earth },
-  pickLiveOn: { backgroundColor: colors.parchment },
+  pickChipOn: { borderColor: c.accent, backgroundColor: c.accent },
+  pickText: { flexShrink: 1, fontFamily: fonts.sans, fontSize: 14, color: c.texte },
+  pickTextOn: { color: c.surAccent, fontWeight: '600' },
+  pickLive: { width: 7, height: 7, borderRadius: 4, backgroundColor: c.secondaire },
+  pickLiveOn: { backgroundColor: c.page },
   nextCard: { marginTop: 14, paddingHorizontal: 16, paddingVertical: 14 },
-  nextTitle: { marginTop: 6, fontFamily: fonts.serif, fontSize: 19, color: colors.ink, letterSpacing: -0.2 },
-  lessonRowNext: { borderColor: colors.moss },
-  statusText: { fontFamily: fonts.mono, fontSize: 10.5, color: colors.ink3, letterSpacing: 0.6, textTransform: 'uppercase', marginTop: 2 },
-  statusTextOn: { color: colors.moss },
+  nextTitle: { marginTop: 6, fontFamily: fonts.serif, fontSize: 19, color: c.texte, letterSpacing: -0.2 },
+  lessonRowNext: { borderColor: c.accent },
+  statusText: { fontFamily: fonts.mono, fontSize: 10.5, color: c.texte3, letterSpacing: 0.6, textTransform: 'uppercase', marginTop: 2 },
+  statusTextOn: { color: c.accent },
   historyToggle: { marginTop: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 },
-  historyText: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: colors.moss },
+  historyText: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: c.accent },
   blockLabel: { marginTop: 14 },
-  muted: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
+  muted: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3 },
   empty: { marginTop: 4, paddingHorizontal: 20, paddingVertical: 22, alignItems: 'center', gap: 8 },
-  emptyTitle: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink },
-  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2, lineHeight: 20, textAlign: 'center' },
-  link: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: colors.moss, marginTop: 4 },
-  currentCard: { backgroundColor: colors.moss, paddingHorizontal: 18, paddingVertical: 16 },
+  emptyTitle: { fontFamily: fonts.serif, fontSize: 18, color: c.texte },
+  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte2, lineHeight: 20, textAlign: 'center' },
+  link: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: c.accent, marginTop: 4 },
+  currentCard: { backgroundColor: c.accent, paddingHorizontal: 18, paddingVertical: 16 },
   liveRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.earth },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: c.secondaire },
   liveText: {
     fontFamily: fonts.mono,
     fontSize: 10.5,
-    color: colors.parchment,
+    color: c.page,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
-  currentTitle: { marginTop: 8, fontFamily: fonts.serif, fontSize: 21, color: colors.white, letterSpacing: -0.2 },
-  currentSub: { marginTop: 2, fontFamily: fonts.sans, fontSize: 12.5, color: colors.parchment },
+  currentTitle: { marginTop: 8, fontFamily: fonts.serif, fontSize: 21, color: c.surAccent, letterSpacing: -0.2 },
+  currentSub: { marginTop: 2, fontFamily: fonts.sans, fontSize: 12.5, color: c.page },
   currentCta: { marginTop: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
-  currentCtaText: { fontFamily: fonts.sans, fontSize: 15, fontWeight: '600', color: colors.white },
+  currentCtaText: { fontFamily: fonts.sans, fontSize: 15, fontWeight: '600', color: c.surAccent },
   unitBlock: { gap: 6 },
   row: {
     flexDirection: 'row',
@@ -1278,9 +1299,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: radii.md,
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
   },
   rowIcon: {
     width: 38,
@@ -1288,15 +1309,15 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
   },
-  rowIconLocked: { backgroundColor: colors.paper2 },
-  rowTitle: { fontFamily: fonts.serif, fontSize: 16, color: colors.ink, letterSpacing: -0.1 },
-  rowMeta: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 2 },
+  rowIconLocked: { backgroundColor: c.surfaceHaute },
+  rowTitle: { fontFamily: fonts.serif, fontSize: 16, color: c.texte, letterSpacing: -0.1 },
+  rowMeta: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 2 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   pillRow: { flexDirection: 'row', marginTop: 4 },
   lessons: { marginLeft: 12, gap: 6 },
-  book: { fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 13.5, color: colors.ink2 },
+  book: { fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 13.5, color: c.texte2 },
   lessonRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1304,28 +1325,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: radii.sm,
-    backgroundColor: colors.paper2,
+    backgroundColor: c.surfaceHaute,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
   },
-  lessonTitle: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink },
-  lessonAction: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.moss },
-  backdrop: { flex: 1, backgroundColor: colors.mossDeep + 'B3', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 48 },
+  lessonTitle: { fontFamily: fonts.sans, fontSize: 14, color: c.texte },
+  lessonAction: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.accent },
+  backdrop: { flex: 1, backgroundColor: transparence(c.accentProfond, 0.7), justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 48 },
   modalCard: {
     maxHeight: '100%',
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderRadius: radii.lg,
     paddingHorizontal: 20,
     paddingTop: 22,
     paddingBottom: 18,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
   },
-  modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink, letterSpacing: -0.3 },
-  modalHint: { marginTop: 4, marginBottom: 14, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2, lineHeight: 19 },
+  modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: c.texte, letterSpacing: -0.3 },
+  modalHint: { marginTop: 4, marginBottom: 14, fontFamily: fonts.sans, fontSize: 13, color: c.texte2, lineHeight: 19 },
   modalScroll: { flexGrow: 0, flexShrink: 1 },
-  modalFoot: { marginTop: 14, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, lineHeight: 18 },
-  startTitle: { fontFamily: fonts.serif, fontSize: 16, color: colors.ink, letterSpacing: -0.1 },
+  modalFoot: { marginTop: 14, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, lineHeight: 18 },
+  startTitle: { fontFamily: fonts.serif, fontSize: 16, color: c.texte, letterSpacing: -0.1 },
   choiceRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1334,12 +1355,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: colors.hair,
-    backgroundColor: colors.paper2,
+    borderColor: c.filet,
+    backgroundColor: c.surfaceHaute,
   },
-  choiceRowOn: { borderColor: colors.moss, backgroundColor: colors.mossTint },
-  choiceText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, color: colors.ink },
-  previewRange: { fontFamily: fonts.mono, fontSize: 12.5, color: colors.moss, letterSpacing: 0.4 },
+  choiceRowOn: { borderColor: c.accent, backgroundColor: c.accentTeinte },
+  choiceText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, color: c.texte },
+  previewRange: { fontFamily: fonts.mono, fontSize: 12.5, color: c.accent, letterSpacing: 0.4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
   chip: {
     minWidth: 44,
@@ -1347,12 +1368,12 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: colors.hair,
-    backgroundColor: colors.paper2,
+    borderColor: c.filet,
+    backgroundColor: c.surfaceHaute,
     alignItems: 'center',
   },
-  chipDefault: { borderColor: colors.mossSoft },
-  chipOn: { borderColor: colors.moss, backgroundColor: colors.moss },
-  chipText: { fontFamily: fonts.mono, fontSize: 12.5, color: colors.ink2 },
-  chipTextOn: { color: colors.white },
-});
+  chipDefault: { borderColor: c.accentDoux },
+  chipOn: { borderColor: c.accent, backgroundColor: c.accent },
+  chipText: { fontFamily: fonts.mono, fontSize: 12.5, color: c.texte2 },
+  chipTextOn: { color: c.surAccent },
+}));
