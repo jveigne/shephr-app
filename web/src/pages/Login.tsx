@@ -92,22 +92,22 @@ export function LoginPage() {
         >
           <defs>
             <linearGradient id="hill" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#C9956B" stopOpacity="0.55" />
-              <stop offset="100%" stopColor="#C9956B" stopOpacity="0.15" />
+              <stop offset="0%" stopColor="var(--secondaire)" stopOpacity="0.55" />
+              <stop offset="100%" stopColor="var(--secondaire)" stopOpacity="0.15" />
             </linearGradient>
             <linearGradient id="hill2" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#F5ECD4" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="#F5ECD4" stopOpacity="0.05" />
+              <stop offset="0%" stopColor="var(--sur-barre-vif)" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="var(--sur-barre-vif)" stopOpacity="0.05" />
             </linearGradient>
           </defs>
-          <line x1="0" x2="360" y1="160" y2="160" stroke="rgba(245,236,212,0.18)" strokeWidth="1" />
-          <circle cx="270" cy="100" r="38" fill="#C9956B" opacity="0.35" />
-          <circle cx="270" cy="100" r="22" fill="#D9AE89" opacity="0.55" />
+          <line x1="0" x2="360" y1="160" y2="160" stroke="color-mix(in srgb, var(--surface-basse) 18%, transparent)" strokeWidth="1" />
+          <circle cx="270" cy="100" r="38" fill="var(--secondaire)" opacity="0.35" />
+          <circle cx="270" cy="100" r="22" fill="var(--secondaire-clair)" opacity="0.55" />
           <path d="M 0 160 Q 60 130 130 145 T 280 130 T 360 150 L 360 220 L 0 220 Z" fill="url(#hill2)" />
           <path d="M 0 175 Q 80 145 170 165 T 360 160 L 360 220 L 0 220 Z" fill="url(#hill)" />
           <path
             d="M 180 220 Q 178 200 185 185 Q 195 168 200 155"
-            stroke="#F5ECD4"
+            stroke="var(--sur-barre-vif)"
             strokeOpacity="0.35"
             strokeWidth="2"
             fill="none"
@@ -122,7 +122,7 @@ export function LoginPage() {
           onClick={() => navigate('/')}
           style={{
             position: 'absolute', top: 24, left: 24, display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--ink-500)',
+            background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--texte-3)',
             fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, padding: 6,
           }}
         >
@@ -174,7 +174,7 @@ export function LoginPage() {
                     background: 'transparent',
                     border: 'none',
                     cursor: 'pointer',
-                    color: 'var(--ink-400)',
+                    color: 'var(--texte-4)',
                     padding: 6,
                     display: 'grid',
                     placeItems: 'center',
@@ -191,7 +191,7 @@ export function LoginPage() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 7,
-                  color: 'var(--ink-700)',
+                  color: 'var(--texte-2)',
                   cursor: 'pointer',
                 }}
               >
@@ -225,7 +225,7 @@ export function LoginPage() {
           {/* D-PAY-06 (JP 28/10) : Google / Apple sur le web, chaque bouton masqué sans identifiant configuré. */}
           <SocialSignInButtons onSession={onSocialSession} onError={setError} disabled={loading} />
 
-          <div style={{ marginTop: 16, textAlign: 'center', fontSize: 14, color: 'var(--ink-600)' }}>
+          <div style={{ marginTop: 16, textAlign: 'center', fontSize: 14, color: 'var(--texte-corps)' }}>
             {t('login.invitedQuestion')}{' '}
             <button
               type="button"
@@ -239,7 +239,7 @@ export function LoginPage() {
             </button>
           </div>
 
-          <div style={{ marginTop: 8, textAlign: 'center', fontSize: 14, color: 'var(--ink-600)' }}>
+          <div style={{ marginTop: 8, textAlign: 'center', fontSize: 14, color: 'var(--texte-corps)' }}>
             {t('login.noAccountQuestion')}{' '}
             <button
               type="button"

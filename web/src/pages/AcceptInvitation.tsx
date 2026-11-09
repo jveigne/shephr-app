@@ -184,7 +184,7 @@ export function AcceptInvitationPage() {
                         background: 'transparent',
                         border: 'none',
                         cursor: 'pointer',
-                        color: 'var(--ink-400)',
+                        color: 'var(--texte-4)',
                         padding: 6,
                         display: 'grid',
                         placeItems: 'center',

@@ -234,7 +234,7 @@ export function ActivateAccountPage() {
                         background: 'transparent',
                         border: 'none',
                         cursor: 'pointer',
-                        color: 'var(--ink-400)',
+                        color: 'var(--texte-4)',
                         padding: 6,
                         display: 'grid',
                         placeItems: 'center',
@@ -281,7 +281,7 @@ export function ActivateAccountPage() {
                 }}
                 style={{
                   marginTop: 14, background: 'transparent', border: 'none', cursor: 'pointer',
-                  color: 'var(--ink-500)', fontFamily: 'var(--font-sans)', fontSize: 14, padding: 6,
+                  color: 'var(--texte-3)', fontFamily: 'var(--font-sans)', fontSize: 14, padding: 6,
                 }}
               >
                 {t('activate.changeCode')}

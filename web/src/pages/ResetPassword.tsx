@@ -190,8 +190,8 @@ export function ResetPasswordPage() {
         <div
           style={{
             display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-            border: '1px solid var(--green-100)', borderRadius: 'var(--radius)', background: 'var(--green-50)',
-            fontSize: 14, color: 'var(--ink-700)',
+            border: '1px solid var(--accent-teinte)', borderRadius: 'var(--radius)', background: 'var(--accent-teinte-douce)',
+            fontSize: 14, color: 'var(--texte-2)',
           }}
         >
           <Icon name="mail" size={15} />
@@ -203,7 +203,7 @@ export function ResetPasswordPage() {
             onClick={changeEmail}
             style={{
               background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
-              color: 'var(--green-700)', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600,
+              color: 'var(--accent-moyen)', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600,
             }}
           >
             {t('forgotPassword.changeEmail')}

@@ -21,7 +21,7 @@ export function ContactPage() {
 
       <div className="content">
         <div className="card" style={{ maxWidth: 560 }}>
-          <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: 'var(--ink-700)' }}>
+          <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: 'var(--texte-2)' }}>
             {t('contact.intro')}
           </p>
 
@@ -32,7 +32,7 @@ export function ContactPage() {
               rel="noreferrer"
               style={{
                 padding: '10px 18px', borderRadius: 'var(--radius, 10px)',
-                border: '1px solid var(--green-600)', color: 'var(--green-700)',
+                border: '1px solid var(--accent-doux)', color: 'var(--accent-moyen)',
                 fontWeight: 600, fontSize: 14, textDecoration: 'none',
               }}
             >
@@ -42,7 +42,7 @@ export function ContactPage() {
               href={contactMailto(t('nav.contactSubject'))}
               style={{
                 padding: '10px 18px', borderRadius: 'var(--radius, 10px)',
-                border: '1px solid var(--line-soft)', color: 'var(--ink-700)',
+                border: '1px solid var(--filet-doux)', color: 'var(--texte-2)',
                 fontWeight: 600, fontSize: 14, textDecoration: 'none',
               }}
             >

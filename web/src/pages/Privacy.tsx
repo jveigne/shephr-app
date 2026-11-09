@@ -10,11 +10,11 @@ import { contactMailto, contactWhatsapp, useContactSettings } from '../services/
 /** Bloc de section, calé sur la mise en forme de la page de suppression de compte. */
 function Section({ title, children, tone = 'card' }: { title: string; children: ReactNode; tone?: 'card' | 'deep' }) {
   const style = tone === 'deep'
-    ? { background: 'var(--parchment-deep)' }
-    : { background: 'var(--ivory-card)', border: '1px solid var(--line-soft)', boxShadow: 'var(--shadow-sm)' };
+    ? { background: 'var(--page-profonde)' }
+    : { background: 'var(--surface)', border: '1px solid var(--filet-doux)', boxShadow: 'var(--shadow-sm)' };
   return (
     <section style={{ ...style, borderRadius: 'var(--radius-lg)', padding: 'clamp(18px, 4vw, 26px)', marginBottom: 22 }}>
-      <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 14px' }}>
+      <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--accent)', margin: '0 0 14px' }}>
         {title}
       </h2>
       {children}
@@ -23,14 +23,14 @@ function Section({ title, children, tone = 'card' }: { title: string; children: 
 }
 
 function Para({ children }: { children: ReactNode }) {
-  return <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: '0 0 10px' }}>{children}</p>;
+  return <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--texte-2)', margin: '0 0 10px' }}>{children}</p>;
 }
 
 function List({ items }: { items: string[] }) {
   return (
     <ul style={{ margin: 0, paddingLeft: 22, display: 'flex', flexDirection: 'column', gap: 8 }}>
       {items.map((item) => (
-        <li key={item} style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--ink-700)' }}>{item}</li>
+        <li key={item} style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--texte-2)' }}>{item}</li>
       ))}
     </ul>
   );
@@ -46,35 +46,35 @@ export function PrivacyPage() {
   const tr = (prefix: string, keys: string[]) => keys.map((k) => t(`privacy.${prefix}.${k}`));
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--parchment)', fontFamily: 'var(--font-sans)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--page)', fontFamily: 'var(--font-sans)' }}>
       {/* Top bar */}
       <header style={{
-        position: 'sticky', top: 0, zIndex: 10, background: 'var(--parchment)',
-        borderBottom: '1px solid var(--line-soft)',
+        position: 'sticky', top: 0, zIndex: 10, background: 'var(--page)',
+        borderBottom: '1px solid var(--filet-doux)',
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '14px clamp(14px, 3vw, 24px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--green-600)', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>S</div>
-            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: 'var(--green-800)' }}>shephr</span>
+            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--accent-doux)', color: 'var(--sur-accent)', display: 'grid', placeItems: 'center', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>S</div>
+            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: 'var(--accent)' }}>shephr</span>
           </Link>
           <LangSwitch />
         </div>
       </header>
 
       <main style={{ maxWidth: 720, margin: '0 auto', padding: 'clamp(32px, 7vw, 56px) 20px clamp(40px, 8vw, 64px)' }}>
-        <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(26px, 7vw, 38px)', lineHeight: 1.15, letterSpacing: '-.02em', color: 'var(--green-900)', margin: '0 0 10px' }}>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(26px, 7vw, 38px)', lineHeight: 1.15, letterSpacing: '-.02em', color: 'var(--accent-profond)', margin: '0 0 10px' }}>
           {t('privacy.title')}
         </h1>
-        <p style={{ color: 'var(--ink-400)', fontSize: 14, margin: '0 0 20px' }}>{t('privacy.updated')}</p>
-        <p style={{ fontSize: 'clamp(15px, 4vw, 17px)', lineHeight: 1.6, color: 'var(--ink-700)', margin: '0 0 32px' }}>
+        <p style={{ color: 'var(--texte-4)', fontSize: 14, margin: '0 0 20px' }}>{t('privacy.updated')}</p>
+        <p style={{ fontSize: 'clamp(15px, 4vw, 17px)', lineHeight: 1.6, color: 'var(--texte-2)', margin: '0 0 32px' }}>
           {t('privacy.intro')}
         </p>
 
         <Section title={t('privacy.controllerTitle')}>
           <Para>{t('privacy.controllerText')}</Para>
-          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: 0 }}>
+          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--texte-2)', margin: 0 }}>
             {t('privacy.controllerContact')}{' '}
-            <a href={mailto} style={{ color: 'var(--green-700)', fontWeight: 600, wordBreak: 'break-all' }}>{contact.email}</a>
+            <a href={mailto} style={{ color: 'var(--accent-moyen)', fontWeight: 600, wordBreak: 'break-all' }}>{contact.email}</a>
           </p>
         </Section>
 
@@ -93,7 +93,7 @@ export function PrivacyPage() {
         <Section title={t('privacy.documentsTitle')}>
           <Para>{t('privacy.documentsIntro')}</Para>
           <List items={tr('documents', ['what', 'visitorId', 'noIp', 'account', 'use', 'optOut'])} />
-          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: '16px 0 0' }}>{t('privacy.documentsBasis')}</p>
+          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--texte-2)', margin: '16px 0 0' }}>{t('privacy.documentsBasis')}</p>
         </Section>
 
         <Section title={t('privacy.purposeTitle')}>
@@ -103,12 +103,12 @@ export function PrivacyPage() {
         {/* Le suivi pastoral touche à la vie religieuse : on le dit au lieu de le noyer. */}
         <Section title={t('privacy.sensitiveTitle')}>
           <Para>{t('privacy.sensitiveText')}</Para>
-          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: 0 }}>{t('privacy.sensitiveBasis')}</p>
+          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--texte-2)', margin: 0 }}>{t('privacy.sensitiveBasis')}</p>
         </Section>
 
         <Section title={t('privacy.visibilityTitle')}>
           <Para>{t('privacy.visibilityText')}</Para>
-          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: 0 }}>{t('privacy.visibilityScope')}</p>
+          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--texte-2)', margin: 0 }}>{t('privacy.visibilityScope')}</p>
         </Section>
 
         <Section title={t('privacy.sharingTitle')}>
@@ -118,29 +118,29 @@ export function PrivacyPage() {
 
         <Section title={t('privacy.retentionTitle')}>
           <Para>{t('privacy.retentionText')}</Para>
-          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: 0 }}>{t('privacy.retentionLegal')}</p>
+          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--texte-2)', margin: 0 }}>{t('privacy.retentionLegal')}</p>
         </Section>
 
         <Section title={t('privacy.rightsTitle')}>
           <Para>{t('privacy.rightsIntro')}</Para>
           <List items={tr('rights', ['access', 'rectify', 'delete', 'portability', 'object', 'complaint'])} />
-          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: '16px 0 0' }}>
+          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--texte-2)', margin: '16px 0 0' }}>
             {t('privacy.rightsHow')}{' '}
-            <Link to="/delete-account" style={{ color: 'var(--green-700)', fontWeight: 600 }}>{t('privacy.deleteLink')}</Link>
+            <Link to="/delete-account" style={{ color: 'var(--accent-moyen)', fontWeight: 600 }}>{t('privacy.deleteLink')}</Link>
           </p>
         </Section>
 
         <Section title={t('privacy.securityTitle')}>
           <Para>{t('privacy.securityText')}</Para>
-          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: 0 }}>{t('privacy.securityBreach')}</p>
+          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--texte-2)', margin: 0 }}>{t('privacy.securityBreach')}</p>
         </Section>
 
         <Section title={t('privacy.childrenTitle')}>
-          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: 0 }}>{t('privacy.childrenText')}</p>
+          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--texte-2)', margin: 0 }}>{t('privacy.childrenText')}</p>
         </Section>
 
         <Section title={t('privacy.changesTitle')}>
-          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: 0 }}>{t('privacy.changesText')}</p>
+          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--texte-2)', margin: 0 }}>{t('privacy.changesText')}</p>
         </Section>
 
         {/* Deux canaux, comme partout ailleurs : un visiteur sans client mail reste joignable. */}
@@ -151,13 +151,13 @@ export function PrivacyPage() {
               href={whatsapp}
               target="_blank"
               rel="noreferrer"
-              style={{ padding: '12px 24px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--green-600)', color: '#fff', fontWeight: 600, fontSize: 15, textDecoration: 'none' }}
+              style={{ padding: '12px 24px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--accent-doux)', color: 'var(--sur-accent)', fontWeight: 600, fontSize: 15, textDecoration: 'none' }}
             >
               {t('join.contactWhatsapp')}
             </a>
             <a
               href={mailto}
-              style={{ padding: '12px 24px', borderRadius: 'var(--radius)', border: '1px solid var(--line-soft)', background: 'transparent', color: 'var(--ink-700)', fontWeight: 600, fontSize: 15, textDecoration: 'none' }}
+              style={{ padding: '12px 24px', borderRadius: 'var(--radius)', border: '1px solid var(--filet-doux)', background: 'transparent', color: 'var(--texte-2)', fontWeight: 600, fontSize: 15, textDecoration: 'none' }}
             >
               {t('join.contactMail')}
             </a>
@@ -166,10 +166,10 @@ export function PrivacyPage() {
       </main>
 
       {/* Footer */}
-      <footer style={{ borderTop: '1px solid var(--line-soft)', background: 'var(--ivory)' }}>
+      <footer style={{ borderTop: '1px solid var(--filet-doux)', background: 'var(--surface-basse)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-          <span style={{ fontFamily: 'var(--font-serif)', fontSize: 16, color: 'var(--green-800)', fontWeight: 600 }}>shephr</span>
-          <Link to="/delete-account" style={{ color: 'var(--ink-400)', fontSize: 13, textDecoration: 'none' }}>
+          <span style={{ fontFamily: 'var(--font-serif)', fontSize: 16, color: 'var(--accent)', fontWeight: 600 }}>shephr</span>
+          <Link to="/delete-account" style={{ color: 'var(--texte-4)', fontSize: 13, textDecoration: 'none' }}>
             {t('landing.footer.deleteAccount')}
           </Link>
         </div>

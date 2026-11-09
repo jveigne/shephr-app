@@ -100,9 +100,9 @@ export function ForgotPasswordPage() {
         {error && <div className="err">{error}</div>}
       </form>
 
-      <div style={{ marginTop: 16, textAlign: 'center', fontSize: 14, color: 'var(--ink-500)' }}>
+      <div style={{ marginTop: 16, textAlign: 'center', fontSize: 14, color: 'var(--texte-3)' }}>
         {t('forgotPassword.rememberPassword')}{' '}
-        <Link to="/login" style={{ color: 'var(--green-700)', fontWeight: 600, textDecoration: 'none' }}>
+        <Link to="/login" style={{ color: 'var(--accent-moyen)', fontWeight: 600, textDecoration: 'none' }}>
           {t('login.signIn')}
         </Link>
       </div>

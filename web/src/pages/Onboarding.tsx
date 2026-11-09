@@ -44,8 +44,8 @@ const STATUS_TONE: Record<JoinRequestStatus, 'warn' | 'ok' | 'err' | 'gray'> = {
 };
 
 const cardStyle: React.CSSProperties = {
-  background: 'var(--ivory-card, #fff)',
-  border: '1px solid var(--line-soft, rgba(42,38,32,0.08))',
+  background: 'var(--surface, #fff)',
+  border: '1px solid var(--filet-doux, color-mix(in srgb, var(--texte) 8%, transparent))',
   borderRadius: 'var(--radius-lg, 14px)',
   padding: 'clamp(18px, 4vw, 26px)',
   boxShadow: 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06))',
@@ -121,7 +121,7 @@ export function OnboardingPage() {
 
   if (!ready) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: 'var(--ink-500)', fontFamily: 'var(--font-sans)' }}>
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: 'var(--texte-3)', fontFamily: 'var(--font-sans)' }}>
         {t('common.loading')}
       </div>
     );
@@ -129,12 +129,12 @@ export function OnboardingPage() {
   if (!isAuthenticated) return null;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--parchment)', fontFamily: 'var(--font-sans)' }}>
-      <header style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--parchment)', borderBottom: '1px solid var(--line-soft)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--page)', fontFamily: 'var(--font-sans)' }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--page)', borderBottom: '1px solid var(--filet-doux)' }}>
         <div style={{ maxWidth: 860, margin: '0 auto', padding: '14px clamp(14px, 3vw, 24px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--green-600)', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>S</div>
-            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: 'var(--green-800)' }}>shephr</span>
+            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--accent-doux)', color: 'var(--sur-accent)', display: 'grid', placeItems: 'center', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>S</div>
+            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: 'var(--accent)' }}>shephr</span>
           </div>
           <Button variant="ghost" iconL={<Icon name="logout" size={14} />} onClick={handleLogout}>
             {t('sidebar.logout')}
@@ -143,15 +143,15 @@ export function OnboardingPage() {
       </header>
 
       <main style={{ maxWidth: 720, margin: '0 auto', padding: 'clamp(26px, 6vw, 48px) 20px 60px' }}>
-        <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(24px, 6vw, 34px)', color: 'var(--green-900)', margin: '0 0 6px' }}>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(24px, 6vw, 34px)', color: 'var(--accent-profond)', margin: '0 0 6px' }}>
           {t('join.title')}
         </h1>
-        <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-600)', margin: '0 0 26px' }}>
+        <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--texte-corps)', margin: '0 0 26px' }}>
           {me?.fullName ? t('join.greeting', { name: me.fullName }) : t('join.subtitle')}
         </p>
 
         {mineQ.isLoading ? (
-          <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
+          <p style={{ color: 'var(--texte-4)' }}>{t('common.loading')}</p>
         ) : pending ? (
           <WaitingCard
             request={pending}
@@ -164,10 +164,10 @@ export function OnboardingPage() {
               <Badge tone="ok" dot>{t('join.status.APPROVED')}</Badge>
               <strong>{latest.assemblyName ?? latest.newAssemblyName ?? '—'}</strong>
             </div>
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 8px' }}>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--accent)', margin: '0 0 8px' }}>
               {t('join.approvedTitle')}
             </h2>
-            <p style={{ fontSize: 14.5, lineHeight: 1.6, color: 'var(--ink-600)', margin: '0 0 16px' }}>
+            <p style={{ fontSize: 14.5, lineHeight: 1.6, color: 'var(--texte-corps)', margin: '0 0 16px' }}>
               {t('join.approvedMsg')}
             </p>
             <Button variant="primary" disabled={reloading} onClick={reloadSession}>
@@ -177,15 +177,15 @@ export function OnboardingPage() {
         ) : (
           <>
             {latest?.status === 'REJECTED' && (
-              <div style={{ ...cardStyle, borderColor: 'var(--err, #B86A4A)' }}>
+              <div style={{ ...cardStyle, borderColor: 'var(--alerte, #B86A4A)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                   <Badge tone="err">{t('join.status.REJECTED')}</Badge>
                   <strong>{latest.assemblyName ?? latest.newAssemblyName ?? '—'}</strong>
                 </div>
                 {latest.decisionReason && (
-                  <p style={{ margin: '0 0 6px', fontSize: 13.5, color: 'var(--ink-600)' }}>{latest.decisionReason}</p>
+                  <p style={{ margin: '0 0 6px', fontSize: 13.5, color: 'var(--texte-corps)' }}>{latest.decisionReason}</p>
                 )}
-                <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ink-500)' }}>{t('join.rejectedRetry')}</p>
+                <p style={{ margin: 0, fontSize: 13.5, color: 'var(--texte-3)' }}>{t('join.rejectedRetry')}</p>
               </div>
             )}
             <SearchFlow
@@ -216,19 +216,19 @@ function WaitingCard({
   const name = request.assemblyName ?? request.newAssemblyName ?? '—';
   return (
     <div style={cardStyle}>
-      <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 12px' }}>
+      <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--accent)', margin: '0 0 12px' }}>
         {t('join.waitingTitle')}
       </h2>
       <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
         <Badge tone={STATUS_TONE[request.status]} dot>{t(`join.status.${request.status}`)}</Badge>
         <strong>{name}</strong>
-        {request.cityName && <span style={{ color: 'var(--ink-500)', fontSize: 13.5 }}>· {request.cityName}</span>}
+        {request.cityName && <span style={{ color: 'var(--texte-3)', fontSize: 13.5 }}>· {request.cityName}</span>}
         <Badge tone="earth">{t(`join.role.${request.requestedRole}`)}</Badge>
         {request.structureRequestId != null && (
           <Badge tone="gray">{t('join.newAssemblyBadge')}</Badge>
         )}
       </div>
-      <p style={{ fontSize: 14.5, lineHeight: 1.6, color: 'var(--ink-600)', margin: '0 0 16px' }}>
+      <p style={{ fontSize: 14.5, lineHeight: 1.6, color: 'var(--texte-corps)', margin: '0 0 16px' }}>
         {t('join.waitingMsg')}
       </p>
       <Button variant="ghost" iconL={<Icon name="x" size={14} />} disabled={cancelling} onClick={onCancel}>
@@ -372,11 +372,11 @@ function SearchFlow({
     <>
       {/* (1) Recherche */}
       <div style={cardStyle}>
-        <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 12px' }}>
+        <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--accent)', margin: '0 0 12px' }}>
           {t('join.searchTitle')}
         </h2>
         <div style={{ margin: '12px 0 0' }}>
-          <div style={{ fontSize: 12.5, color: 'var(--ink-500)', marginBottom: 8 }}>{t('join.browseTitle')}</div>
+          <div style={{ fontSize: 12.5, color: 'var(--texte-3)', marginBottom: 8 }}>{t('join.browseTitle')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: 10 }}>
             <Picker
               value={nationId}
@@ -424,11 +424,11 @@ function SearchFlow({
         {canSearch && (
           <div style={{ marginTop: 14 }}>
             {searchQ.isLoading ? (
-              <p style={{ color: 'var(--ink-400)', margin: 0 }}>{t('common.loading')}</p>
+              <p style={{ color: 'var(--texte-4)', margin: 0 }}>{t('common.loading')}</p>
             ) : results.length === 0 ? (
-              <p style={{ color: 'var(--ink-400)', margin: 0, fontStyle: 'italic' }}>{t('join.noResult')}</p>
+              <p style={{ color: 'var(--texte-4)', margin: 0, fontStyle: 'italic' }}>{t('join.noResult')}</p>
             ) : (
-              <div style={{ border: '1px solid var(--line-soft, rgba(42,38,32,0.08))', borderRadius: 10, overflow: 'hidden' }}>
+              <div style={{ border: '1px solid var(--filet-doux, color-mix(in srgb, var(--texte) 8%, transparent))', borderRadius: 10, overflow: 'hidden' }}>
                 {results.map((a) => (
                   <button
                     key={a.id}
@@ -437,12 +437,12 @@ function SearchFlow({
                     style={{
                       display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
                       padding: '10px 14px', background: 'transparent', border: 'none', cursor: 'pointer',
-                      borderBottom: '1px solid var(--line-soft, rgba(42,38,32,0.06))', fontFamily: 'inherit',
+                      borderBottom: '1px solid var(--filet-doux, color-mix(in srgb, var(--texte) 6%, transparent))', fontFamily: 'inherit',
                     }}
                   >
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, color: 'var(--ink-900, #1E1B16)' }}>{a.name}</div>
-                      <div style={{ fontSize: 12.5, color: 'var(--ink-500)' }}>
+                      <div style={{ fontWeight: 600, color: 'var(--texte, #1E1B16)' }}>{a.name}</div>
+                      <div style={{ fontSize: 12.5, color: 'var(--texte-3)' }}>
                         {[a.cityName, a.regionName, a.nationName].filter(Boolean).join(' · ')}
                       </div>
                     </div>
@@ -466,7 +466,7 @@ function SearchFlow({
             onClick={() => { setCreateStep('role'); setCreateOpen((v) => !v); }}
             style={{
               background: 'transparent', border: 'none', cursor: 'pointer', padding: 4,
-              color: 'var(--green-700, #1E3A2F)', fontFamily: 'inherit', fontSize: 14, fontWeight: 600,
+              color: 'var(--accent-moyen, #1E3A2F)', fontFamily: 'inherit', fontSize: 14, fontWeight: 600,
               textDecoration: 'underline',
             }}
           >
@@ -477,10 +477,10 @@ function SearchFlow({
 
       {createOpen && createStep === 'role' && (
         <div style={cardStyle}>
-          <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 6px' }}>
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--accent)', margin: '0 0 6px' }}>
             {t('join.notFound')}
           </h2>
-          <p style={{ margin: '0 0 16px', fontSize: 13.5, color: 'var(--ink-500)' }}>{t('join.notFoundStatusHint')}</p>
+          <p style={{ margin: '0 0 16px', fontSize: 13.5, color: 'var(--texte-3)' }}>{t('join.notFoundStatusHint')}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <Button onClick={() => setCreateStep('stop')} style={{ justifyContent: 'center' }}>
               {t('join.notFoundIamMember')}
@@ -494,10 +494,10 @@ function SearchFlow({
 
       {createOpen && createStep === 'stop' && (
         <div style={cardStyle}>
-          <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 6px' }}>
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--accent)', margin: '0 0 6px' }}>
             {t('join.memberDeadEndTitle')}
           </h2>
-          <p style={{ margin: '0 0 16px', fontSize: 14.5, color: 'var(--ink-600)', lineHeight: 1.6 }}>
+          <p style={{ margin: '0 0 16px', fontSize: 14.5, color: 'var(--texte-corps)', lineHeight: 1.6 }}>
             {t('join.memberDeadEndBody')}
           </p>
           <Button onClick={() => { setCreateStep('role'); setCreateOpen(false); }}>
@@ -508,10 +508,10 @@ function SearchFlow({
 
       {createOpen && createStep === 'form' && (
         <div style={cardStyle}>
-          <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 6px' }}>
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--accent)', margin: '0 0 6px' }}>
             {t('join.newAssemblyTitle')}
           </h2>
-          <p style={{ margin: '0 0 14px', fontSize: 13.5, color: 'var(--ink-500)' }}>{t('join.newAssemblySub')}</p>
+          <p style={{ margin: '0 0 14px', fontSize: 13.5, color: 'var(--texte-3)' }}>{t('join.newAssemblySub')}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* Nation → région → ville : on situe l'assemblée entièrement, pas seulement la ville.
                 Ces sélecteurs partagent l'état du parcours du haut : ce qui a déjà été choisi
@@ -557,8 +557,8 @@ function SearchFlow({
             </Button>
 
             {/* Nation / région / ville absente : on ne laisse pas l'utilisateur sans issue. */}
-            <div style={{ marginTop: 4, paddingTop: 14, borderTop: '1px solid var(--line-soft)' }}>
-              <div style={{ fontSize: 13.5, color: 'var(--ink-600)', lineHeight: 1.6, marginBottom: 10 }}>
+            <div style={{ marginTop: 4, paddingTop: 14, borderTop: '1px solid var(--filet-doux)' }}>
+              <div style={{ fontSize: 13.5, color: 'var(--texte-corps)', lineHeight: 1.6, marginBottom: 10 }}>
                 {t('join.missingPlaceHint')}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
@@ -566,13 +566,13 @@ function SearchFlow({
                   href={contact.whatsappUrl}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ padding: '10px 18px', borderRadius: 'var(--radius, 10px)', border: '1px solid var(--green-600)', color: 'var(--green-700)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}
+                  style={{ padding: '10px 18px', borderRadius: 'var(--radius, 10px)', border: '1px solid var(--accent-doux)', color: 'var(--accent-moyen)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}
                 >
                   {t('join.contactWhatsapp')}
                 </a>
                 <a
                   href={contactMailto(t('join.contactMailSubject'))}
-                  style={{ padding: '10px 18px', borderRadius: 'var(--radius, 10px)', border: '1px solid var(--line-soft)', color: 'var(--ink-700)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}
+                  style={{ padding: '10px 18px', borderRadius: 'var(--radius, 10px)', border: '1px solid var(--filet-doux)', color: 'var(--texte-2)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}
                 >
                   {t('join.contactMail')}
                 </a>
@@ -589,7 +589,7 @@ function SearchFlow({
               <div className="ttl">{t('join.declareLeaderTitle')}</div>
             </div>
             <div className="modal-body">
-              <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: 'var(--ink-700)' }}>
+              <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: 'var(--texte-2)' }}>
                 {t('join.declareLeaderBody')}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
@@ -626,7 +626,7 @@ function SearchFlow({
             <div className="modal-body">
               {confirmReplace ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: 'var(--ink-700)' }}>
+                  <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: 'var(--texte-2)' }}>
                     <Icon name="warning" size={14} />{' '}
                     {t('join.replaceLeaderBody', { name: picked.leaderName ?? t('join.theCurrentLeader') })}
                   </p>
@@ -651,7 +651,7 @@ function SearchFlow({
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {/* Le rattachement est immédiat : l'acte est nommé pour ce qu'il est, et le
                     choix du rôle EST la confirmation — un seul geste, zéro friction. */}
-                <p style={{ margin: '0 0 4px', fontSize: 13.5, color: 'var(--ink-500)', lineHeight: 1.55 }}>
+                <p style={{ margin: '0 0 4px', fontSize: 13.5, color: 'var(--texte-3)', lineHeight: 1.55 }}>
                   {t('join.confirmJoinHint')}
                 </p>
                 <Button
