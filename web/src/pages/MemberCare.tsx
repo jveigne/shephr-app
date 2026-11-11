@@ -60,7 +60,8 @@ function StatusPill({ label, color }: { label: string | null; color: string | nu
   return (
     <span style={{
       display: 'inline-block', padding: '2px 10px', borderRadius: 999, fontSize: 12,
-      background: (color ?? '#999') + '22', color: color ?? 'var(--ink-700)', border: `1px solid ${color ?? '#ccc'}`,
+      background: color ? color + '22' : 'var(--neutral-tint)', color: color ?? 'var(--ink-700)',
+      border: `1px solid ${color ?? 'var(--neutral-line)'}`,
     }}>{label}</span>
   );
 }
@@ -345,7 +346,7 @@ function RecordModal({ userId, statuses, onClose }: {
     onError: onWriteError,
   });
 
-  const section = { borderTop: '1px solid var(--line,#eee)', paddingTop: 12 } as const;
+  const section = { borderTop: '1px solid var(--line)', paddingTop: 12 } as const;
   const history = detail ? [...detail.history].reverse() : [];
 
   return (

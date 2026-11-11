@@ -7,7 +7,7 @@ import { Icon } from '../components/Icon';
 import { LangSwitch } from '../components/LangSwitch';
 import { VoucherRedeemModal, type VoucherCity } from '../components/VoucherRedeemModal';
 import { useAuth } from '../hooks/useAuth';
-import { hasMemberSpace, hasMinistryAccess } from '../services/authApi';
+import { hasMemberSpace, hasMinistryAccess, isUnattachedPerson } from '../services/authApi';
 import {
   checkout,
   getPublicPlans,
@@ -20,6 +20,7 @@ import {
 import {
   ENTITLEMENT_HIERARCHIE_SUIVI,
   PLAN_DIRIGEANT_HIERARCHIE,
+  PLAN_SUIVI_NATIONAL,
   getEntitlements,
   getPersonalEntitlements,
 } from '../services/entitlementsApi';
@@ -69,14 +70,24 @@ import { centsFor, currenciesOf, hasAnnualPrice, priceFor, pricesOf, useCurrency
 //    en anglais, € sinon, choix gardé — `utils/currency`) ; cartes, boutons et caisse dans la devise
 //    choisie, à partir des lignes `prices` du serveur (aucune conversion) ; offre sans la devise → EUR
 //    avec « Prix en euros uniquement ». Mobile Money et codes : FCFA, inchangés (D-CUR-08).
+//  - D-PAYS-05 / RG-PAYS-14 (JP 11/11, lot « conf-pays ») : TROISIÈME carte « Offre Josué » (`josue` /
+//    `SUIVI_NATIONAL`, `?offer=national`) — même structure que Caleb (droit PERSONNEL, caisse SANS ville, Mensuel /
+//    Annuel, carte, Mobile Money, « J'ai un code ») mais sur l'axe GÉOGRAPHIQUE : toutes les villes des nations dont
+//    le payeur est DIRIGEANT_COORDINATEUR (écart assumé à D-ABO-31). Paiement réservé à `canSubscribe` du plan
+//    `SUIVI_NATIONAL` de `/entitlements/personal` (RG-PAYS-15 : coordinateur seulement) ; sinon `offers.national.reserved`.
+//    Accroche Josué 1 : 3 (Louis Segond 1910), aucun nom du programme d'étude (D-MKT-02).
 // ---------------------------------------------------------------------------------------------
 
-type OfferKind = 'caleb' | 'nehemie';
+type OfferKind = 'caleb' | 'nehemie' | 'national';
+/** Offres personnelles (caisse sans ville) : Caleb (chaîne) et Josué (nation). */
+type PersonalKind = 'caleb' | 'national';
 
 const PLAN_OF: Record<OfferKind, string> = {
   caleb: PLAN_DIRIGEANT_HIERARCHIE,
   nehemie: 'EGLISE_VILLE',
+  national: PLAN_SUIVI_NATIONAL,
 };
+const OFFER_KINDS: OfferKind[] = ['caleb', 'nehemie', 'national'];
 
 /** Bénéfice d'une carte : clé i18n `offers.{carte}.features.{key}.{title,desc}` ; `soon` = « À venir ». */
 type Feature = { key: string; soon?: boolean };
@@ -96,6 +107,15 @@ const CALEB_FEATURES: Feature[] = [
   { key: 'announcements', soon: true },
   { key: 'documents', soon: true },
 ];
+// D-PAYS-05 (JP 11/11) : ce que Néhémie donne sur une ville, sur toutes les villes de la nation — sans aucun nom de plus.
+const NATIONAL_FEATURES: Feature[] = [
+  { key: 'allCities' },
+  { key: 'teaching' },
+  { key: 'journal' },
+  { key: 'evangelism' },
+  { key: 'exports' },
+  { key: 'personal' },
+];
 const NEHEMIE_FEATURES: Feature[] = [
   { key: 'cityStats' },
   { key: 'teaching' },
@@ -112,20 +132,21 @@ const NEHEMIE_FEATURES: Feature[] = [
 
 /** Cellule du tableau comparatif : texte (`offers.compare.rows.{row}.{col}`), « — » ou « À venir ». */
 type Cell = 'text' | 'dash' | 'soon';
-const COMPARE_ROWS: { key: string; free: Cell; caleb: Cell; nehemie: Cell }[] = [
-  { key: 'assembly', free: 'text', caleb: 'text', nehemie: 'text' },
-  { key: 'basics', free: 'text', caleb: 'text', nehemie: 'text' },
-  { key: 'stats', free: 'dash', caleb: 'text', nehemie: 'text' },
-  { key: 'reports', free: 'dash', caleb: 'text', nehemie: 'text' },
-  { key: 'memberCare', free: 'dash', caleb: 'text', nehemie: 'dash' },
-  { key: 'evangelism', free: 'text', caleb: 'text', nehemie: 'text' },
-  { key: 'exports', free: 'dash', caleb: 'text', nehemie: 'text' },
-  { key: 'shared', free: 'dash', caleb: 'text', nehemie: 'text' },
-  { key: 'storage', free: 'dash', caleb: 'soon', nehemie: 'soon' },
-  { key: 'monthly', free: 'dash', caleb: 'soon', nehemie: 'soon' },
+// D-PAYS-05 (JP 11/11) : colonne Josué (`offers.compare.rows.{row}.national`) — Member Care et partage restent Caleb.
+const COMPARE_ROWS: { key: string; free: Cell; caleb: Cell; nehemie: Cell; national: Cell }[] = [
+  { key: 'assembly', free: 'text', caleb: 'text', nehemie: 'text', national: 'text' },
+  { key: 'basics', free: 'text', caleb: 'text', nehemie: 'text', national: 'text' },
+  { key: 'stats', free: 'dash', caleb: 'text', nehemie: 'text', national: 'text' },
+  { key: 'reports', free: 'dash', caleb: 'text', nehemie: 'text', national: 'text' },
+  { key: 'memberCare', free: 'dash', caleb: 'text', nehemie: 'dash', national: 'dash' },
+  { key: 'evangelism', free: 'text', caleb: 'text', nehemie: 'text', national: 'text' },
+  { key: 'exports', free: 'dash', caleb: 'text', nehemie: 'text', national: 'text' },
+  { key: 'shared', free: 'dash', caleb: 'text', nehemie: 'text', national: 'dash' },
+  { key: 'storage', free: 'dash', caleb: 'soon', nehemie: 'soon', national: 'soon' },
+  { key: 'monthly', free: 'dash', caleb: 'soon', nehemie: 'soon', national: 'soon' },
 ];
 
-const FAQ_ITEMS = ['which', 'mobileMoney', 'commitment', 'period', 'app', 'study'];
+const FAQ_ITEMS = ['which', 'national', 'mobileMoney', 'commitment', 'period', 'app', 'study'];
 
 /** Largeur commune des sections (maquette : 1200 px, gouttière 16 px au téléphone). */
 const GUTTER = 'clamp(16px, 3vw, 24px)';
@@ -166,7 +187,7 @@ export function OffersPage() {
   const layoutSettled =
     ready && handoffSettled && !plansQ.isLoading && !(leader && (personalLoading || citiesLoading || contactFetching));
   useEffect(() => {
-    if (target !== 'caleb' && target !== 'nehemie') return;
+    if (target !== 'caleb' && target !== 'nehemie' && target !== 'national') return;
     if (!layoutSettled || scrolledRef.current === target) return;
     const id = window.setTimeout(() => {
       scrolledRef.current = target;
@@ -175,7 +196,8 @@ export function OffersPage() {
     return () => window.clearTimeout(id);
   }, [target, layoutSettled]);
 
-  const home = hasMinistryAccess(me) ? '/dashboard' : hasMemberSpace(me) ? '/my-goals' : '/join';
+  // RG-PAYS-22 (JP 11/11) : un compte « sans assemblée » revient sur ses évènements ouverts, pas sur /join.
+  const home = hasMinistryAccess(me) ? '/dashboard' : hasMemberSpace(me) ? '/my-goals' : isUnattachedPerson(me) ? '/open-events' : '/join';
   const who = me?.username ?? me?.email ?? me?.fullName ?? '';
 
   const actionsFor = (kind: OfferKind, dark: boolean): ReactNode =>
@@ -188,8 +210,8 @@ export function OffersPage() {
         {!leader ? (
           // D-PAY-07 : sans droit de souscrire, explication neutre — ni carte ni Mobile Money.
           <ReservedText kind={kind} />
-        ) : kind === 'caleb' ? (
-          <CalebActions publicPlan={planOf('caleb')} username={who} />
+        ) : kind === 'caleb' || kind === 'national' ? (
+          <PersonalActions kind={kind} publicPlan={planOf(kind)} username={who} />
         ) : (
           <NehemieActions publicPlan={planOf('nehemie')} username={who} />
         )}
@@ -266,14 +288,14 @@ export function OffersPage() {
             si les offres n'ont qu'une devise ou si aucun prix n'est montré. */}
         {showPrices && !plansQ.isLoading && (
           <div style={{ maxWidth: 1200, margin: '0 auto', padding: `0 ${GUTTER} 20px` }}>
-            <CurrencyToggle available={currenciesOf(planOf('caleb'), planOf('nehemie'))} align="center" />
+            <CurrencyToggle available={currenciesOf(planOf('caleb'), planOf('nehemie'), planOf('national'))} align="center" />
           </div>
         )}
 
         {/* Trois cartes (RG-MKT-03 / 04) — une colonne au téléphone. */}
         <section style={{ maxWidth: 1200, margin: '0 auto', padding: `0 ${GUTTER} 56px`, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 24, alignItems: 'start' }}>
           <FreeCard loggedIn={loggedIn} home={home} />
-          {(['caleb', 'nehemie'] as const).map((kind) => (
+          {OFFER_KINDS.map((kind) => (
             <PlanCard
               key={kind}
               kind={kind}
@@ -458,7 +480,8 @@ function PlanCard({
       }
     : {
         bg: 'var(--ivory-raised)',
-        border: '2px solid var(--earth-600)',
+        // D-PAYS-05 (JP 11/11) : Josué en carte claire bordée de la principale, Caleb bordé de terre.
+        border: kind === 'national' ? '2px solid var(--green-700)' : '2px solid var(--earth-600)',
         title: 'var(--green-900)',
         text: 'var(--ink-700)',
         verse: 'var(--earth-700)',
@@ -526,7 +549,8 @@ function PlanCard({
               )}
               <p style={{ margin: '6px 0 0', fontSize: 13, color: small }}>
                 {plan.localPriceLabel ? t('offers.price.local', { label: plan.localPriceLabel }) : t('offers.price.localNoLabel')}
-                {dark && <> · {t('offers.price.perCity')}</>} · {t('offers.price.noCommitment')}
+                {dark && <> · {t('offers.price.perCity')}</>}
+                {kind === 'national' && <> · {t('offers.price.perPerson')}</>} · {t('offers.price.noCommitment')}
               </p>
             </>
           ) : (
@@ -539,7 +563,12 @@ function PlanCard({
         <Trans i18nKey={`offers.${kind}.scope`} components={{ strong: <strong /> }} />
       </p>
 
-      <FeatureList prefix={`offers.${kind}.features`} items={kind === 'caleb' ? CALEB_FEATURES : NEHEMIE_FEATURES} dark={dark} accent={c.accent} />
+      <FeatureList
+        prefix={`offers.${kind}.features`}
+        items={kind === 'caleb' ? CALEB_FEATURES : kind === 'national' ? NATIONAL_FEATURES : NEHEMIE_FEATURES}
+        dark={dark}
+        accent={c.accent}
+      />
 
       <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>
     </article>
@@ -549,7 +578,7 @@ function PlanCard({
 /** Tableau comparatif (RG-MKT-09) — défilement horizontal DANS son conteneur, jamais de la page. */
 function CompareTable() {
   const { t } = useTranslation();
-  const cols = ['free', 'caleb', 'nehemie'] as const;
+  const cols = ['free', 'caleb', 'nehemie', 'national'] as const;
   const cell = (row: string, col: (typeof cols)[number], kind: Cell) =>
     kind === 'dash' ? (
       <span style={{ color: 'var(--ink-400)' }}>—</span>
@@ -565,13 +594,14 @@ function CompareTable() {
         {t('offers.compare.title')}
       </h2>
       <div style={{ overflowX: 'auto', background: 'var(--ivory-raised)', border: '1px solid var(--parchment-deep)', borderRadius: 16 }}>
-        <table style={{ width: '100%', minWidth: 620, borderCollapse: 'collapse', fontSize: 14 }}>
+        <table style={{ width: '100%', minWidth: 760, borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
             <tr style={{ color: 'var(--ink-500)' }}>
               <th style={th}>{t('offers.compare.head.feature')}</th>
               <th style={th}>{t('offers.compare.head.free')}</th>
               <th style={{ ...th, color: 'var(--earth-700)' }}>{t('offers.compare.head.caleb')}</th>
               <th style={{ ...th, color: 'var(--green-800)' }}>{t('offers.compare.head.nehemie')}</th>
+              <th style={{ ...th, color: 'var(--green-700)' }}>{t('offers.compare.head.national')}</th>
             </tr>
           </thead>
           <tbody>
@@ -736,8 +766,11 @@ function MobileMoneyButton({ message }: { message: string }) {
   );
 }
 
-/** Caleb — droit PERSONNEL (chaîne de supervision) : `GET /entitlements/personal` dit tout. */
-function CalebActions({ publicPlan, username }: { publicPlan: PublicPlan | undefined; username: string }) {
+/**
+ * Caleb — droit PERSONNEL (chaîne de supervision) — et, depuis D-PAYS-05 (JP 11/11), Josué (personnel, toutes les
+ * villes de sa nation) : `GET /entitlements/personal` dit tout (plan, `entitled`, `canSubscribe`, abonnement).
+ */
+function PersonalActions({ kind, publicPlan, username }: { kind: PersonalKind; publicPlan: PublicPlan | undefined; username: string }) {
   const { t, i18n } = useTranslation();
   const [voucherOpen, setVoucherOpen] = useState(false);
   const [period, setPeriod] = useState<BillingPeriod>('MONTHLY');
@@ -765,12 +798,14 @@ function CalebActions({ publicPlan, username }: { publicPlan: PublicPlan | undef
   if (personalQ.isLoading) return <p style={{ margin: 0, color: 'var(--ink-500)', fontSize: 13.5 }}>{t('common.loading')}</p>;
   if (personalQ.isError) return <LoadError onRetry={() => void personalQ.refetch()} retrying={personalQ.isFetching} />;
   const personal = personalQ.data;
-  const plan = personal?.plans.find((p) => p.planCode === PLAN_DIRIGEANT_HIERARCHIE) ?? null;
-  const entitled = !!personal?.codes.includes(ENTITLEMENT_HIERARCHIE_SUIVI);
+  const plan = personal?.plans.find((p) => p.planCode === PLAN_OF[kind]) ?? null;
+  // Josué : `PersonalPlan.entitled` (un abonnement de ce plan ouvre droit — jamais un accord), contrat §7.2 ;
+  // Caleb : le code personnel HIERARCHIE_SUIVI (accord CMCI compris, P-06).
+  const entitled = kind === 'national' ? !!plan?.entitled : !!personal?.codes.includes(ENTITLEMENT_HIERARCHIE_SUIVI);
   const sub = plan?.subscription ?? null;
   const localPriceLabel = plan?.localPriceLabel ?? publicPlan?.localPriceLabel ?? null;
   const voucherModal = (
-    <VoucherRedeemModal open={voucherOpen} onClose={() => setVoucherOpen(false)} plan="caleb" localPriceLabel={localPriceLabel} />
+    <VoucherRedeemModal open={voucherOpen} onClose={() => setVoucherOpen(false)} plan={kind} localPriceLabel={localPriceLabel} />
   );
   const voucherButton = (label: string) => (
     <Button variant="secondary" iconL={<Icon name="tag" size={14} />} style={{ justifyContent: 'center' }} onClick={() => setVoucherOpen(true)}>
@@ -782,8 +817,12 @@ function CalebActions({ publicPlan, username }: { publicPlan: PublicPlan | undef
     return (
       <>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <Badge tone="ok" dot>{t('offers.caleb.active')}</Badge>
-          <Link to="/hierarchy/vie" style={{ color: 'var(--green-700)', fontWeight: 600, fontSize: 13.5 }}>{t('billing.plan.backToHierarchy')}</Link>
+          <Badge tone="ok" dot>{t(`offers.${kind}.active`)}</Badge>
+          {kind === 'caleb' ? (
+            <Link to="/hierarchy/vie" style={{ color: 'var(--green-700)', fontWeight: 600, fontSize: 13.5 }}>{t('billing.plan.backToHierarchy')}</Link>
+          ) : (
+            <Link to="/study/city" style={{ color: 'var(--green-700)', fontWeight: 600, fontSize: 13.5 }}>{t('billing.plan.openCityFollowUp')}</Link>
+          )}
         </div>
         {/* §3.6 : un nouveau code prolonge un abonnement VOUCHER (le serveur décide). */}
         {sub?.source === 'VOUCHER' && voucherButton(t('offers.voucher.extend'))}
@@ -792,14 +831,14 @@ function CalebActions({ publicPlan, username }: { publicPlan: PublicPlan | undef
     );
   }
   if (sub?.status === 'PENDING') {
-    return <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 13.5 }}>{t('hierarchy.lock.pending')}</p>;
+    return <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 13.5 }}>{t(kind === 'caleb' ? 'hierarchy.lock.pending' : 'offers.national.pending')}</p>;
   }
   // Constat PAY (JP 29/10) : PAST_DUE hors grâce traité comme dans `LockedFeature` — le payeur d'un plan
   // personnel est toujours l'appelant : « Mettre à jour ma carte » (portail Stripe), ni carte ni Mobile Money.
   if (sub?.status === 'PAST_DUE') {
     return (
       <>
-        <p style={{ margin: 0, color: 'var(--err)', fontSize: 13.5 }}>{t('hierarchy.lock.pastDue')}</p>
+        <p style={{ margin: 0, color: 'var(--err)', fontSize: 13.5 }}>{t(kind === 'caleb' ? 'hierarchy.lock.pastDue' : 'offers.national.pastDue')}</p>
         {sub.source === 'STRIPE' && (
           <Button variant="primary" style={{ justifyContent: 'center' }} disabled={portalM.isPending} onClick={() => portalM.mutate(sub.reference)}>
             {t('cityStudy.lock.updateCard')}
@@ -810,7 +849,7 @@ function CalebActions({ publicPlan, username }: { publicPlan: PublicPlan | undef
     );
   }
   // D-PAY-07 : sans droit de souscrire (serveur), ni carte ni Mobile Money.
-  if (!plan || !plan.canSubscribe) return <ReservedText kind="caleb" />;
+  if (!plan || !plan.canSubscribe) return <ReservedText kind={kind} />;
   // Prix de la période choisie : centimes du serveur (`PersonalPlan.prices`), jamais recalculés
   // (RG-ABO-05) ; devise choisie, sinon EUR (RG-CUR-20).
   const sel = priceFor(pricesOf(plan), chosen);
@@ -847,7 +886,7 @@ function CalebActions({ publicPlan, username }: { publicPlan: PublicPlan | undef
       {checkoutM.isError && <p style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>{billingErrMsg(checkoutM.error, t)}</p>}
       {/* Constat MKT n°5 (JP 29/10) : le message ne porte QUE la formule choisie et son prix local. */}
       <MobileMoneyButton
-        message={mobileMoneyMessage(t, { offer: 'caleb', localPrice: localPriceForPeriod(localPriceLabel, mmPeriod), username, period: mmPeriod })}
+        message={mobileMoneyMessage(t, { offer: kind, localPrice: localPriceForPeriod(localPriceLabel, mmPeriod), username, period: mmPeriod })}
       />
       {voucherButton(t('offers.voucher.open'))}
       {voucherModal}

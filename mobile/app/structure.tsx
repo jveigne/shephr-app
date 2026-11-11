@@ -39,6 +39,7 @@ import {
 } from '@/services/adminApi';
 import { fetchUnassignedUnits } from '@/services/leadersApi';
 import { fmtDate } from '@/utils/format';
+import { alpha } from '@/theme/brandingPalette';
 
 type Level = 'countries' | 'zones' | 'localities' | 'units';
 
@@ -687,7 +688,7 @@ const styles = StyleSheet.create({
   historyBlock: { marginTop: 22, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.hair },
   historyHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   historyTitle: { fontFamily: fonts.serif, fontSize: 17, color: colors.ink },
-  backdrop: { flex: 1, backgroundColor: 'rgba(22,41,31,0.45)', justifyContent: 'center', padding: 20 },
+  backdrop: { flex: 1, backgroundColor: alpha(colors.mossDeep, 0.45), justifyContent: 'center', padding: 20 },
   // maxHeight : la modale « assemblée » porte désormais trois sélecteurs — sans plafond, elle
   // dépasserait l'écran sur les petits téléphones (le contenu défile dans la carte).
   modalCard: { paddingHorizontal: 20, paddingVertical: 20, maxHeight: '88%' },

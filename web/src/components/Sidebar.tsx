@@ -22,6 +22,8 @@ import { MySubscriptionsLink } from './MySubscriptionsLink';
 import { StudyLiveBadge } from './StudyLiveBadge';
 import { useStudyAccess, useStudyMenuVisible } from '../utils/studyAccess';
 import { listAssemblyLocalities, listStudyLocalities } from '../services/assemblyApi';
+import { BrandLogo, BrandName } from './BrandLogo';
+import { getFollowUpScope } from '../services/followUpsApi';
 
 interface NavChild {
   id: string;
@@ -144,6 +146,9 @@ export function Sidebar() {
   // D-DOC-14 levée (JP 27/10, D-WEB-03) : « Documents » = abonnement DOCUMENTS (RG-06) ET compte
   // rattaché (D-DOC-04), comme la tuile d'accueil mobile. Aucun flag de livraison.
   const hasDocuments = (modulesQ.data ?? []).includes('DOCUMENTS') && isAttachedAccount(me);
+  // D-PAYS-13 / RG-PAYS-32 (JP 11/11) : « Personnes à suivre » pour qui y a droit (géographie, décidé par le serveur).
+  const followUpScopeQ = useQuery({ queryKey: ['follow-ups', 'scope'], queryFn: getFollowUpScope, retry: false });
+  const hasFollowUps = followUpScopeQ.data?.canView === true;
 
   // Le /me ne porte ni la localité, ni — pour un DIRIGEANT_UNITE — la zone (zoneNames
   // n'est renseigné que pour le DIRIGEANT_SENIOR). On les résout par ID depuis l'unité du
@@ -221,9 +226,12 @@ export function Sidebar() {
       if (hasDocuments && sec.sectionKey === 'nav.section.pilotage') {
         items = [...items, { id: 'documents', labelKey: 'nav.documents', icon: 'fileText', to: '/documents' }];
       }
+      if (hasFollowUps && sec.sectionKey === 'nav.section.pilotage') {
+        items = [...items, { id: 'follow-ups', labelKey: 'nav.followUps', icon: 'user', to: '/follow-ups' }];
+      }
       return { ...sec, items };
     });
-  }, [hasMemberCare, hasAssembly, showStudy, hasStudyCity, studyCityLocked, hasEvents, hasDocuments, canSeeStructureChild]);
+  }, [hasMemberCare, hasAssembly, showStudy, hasStudyCity, studyCityLocked, hasEvents, hasDocuments, hasFollowUps, canSeeStructureChild]);
 
   const initials = (me?.fullName ?? 'A·')
     .split(' ')
@@ -255,9 +263,10 @@ export function Sidebar() {
       <span className="grain-overlay" />
       <div className="sidebar-inner">
         <div className="brand">
-          <div className="brand-mark">S</div>
+          {/* D-PAYS-03 / §5.5 (JP 11/11) : logo et nom du pays actif, sinon Shephr. */}
+          <BrandLogo />
           <div className="brand-text">
-            <span className="word">shephr</span>
+            <span className="word"><BrandName /></span>
             <span className="sub">{t('common.administration')}</span>
           </div>
         </div>
@@ -372,7 +381,7 @@ export function Sidebar() {
                       fontWeight: lang === l ? 700 : 600,
                     }}
                   >
-                    <span style={{ color: lang === l ? 'var(--green-800, #14241C)' : 'inherit' }}>
+                    <span style={{ color: lang === l ? 'var(--green-800)' : 'inherit' }}>
                       {l.toUpperCase()}
                     </span>
                   </button>

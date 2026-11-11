@@ -695,7 +695,7 @@ function ModuleGrid({ module: m, overview, lang }: { module: StudyLocalityModule
           r.numbers.has(l.number) ? (
             <span style={{ color: 'var(--ok)', fontWeight: 700 }} aria-label={t('cityStudy.overview.done')}>✓</span>
           ) : (
-            <span style={{ color: 'var(--ink-300, var(--ink-400))' }} aria-label={t('cityStudy.overview.notDone')}>–</span>
+            <span style={{ color: 'var(--ink-300)' }} aria-label={t('cityStudy.overview.notDone')}>–</span>
           ),
       }),
     ),
@@ -949,7 +949,14 @@ function SubscriptionTab({ city }: { city: CityEntry }) {
       {subs.map((s) => (
         <SubscriptionCard key={s.reference} sub={s} city={city} localPriceLabel={ent.plans[0]?.localPriceLabel ?? null} />
       ))}
-      {subs.length === 0 && suivi && (
+      {/* RG-PAYS-19 / contrat §7.3 (JP 11/11) : ville couverte par l'offre Josué de l'appelant. */}
+      {ent.nationalPlan && (
+        <p style={{ color: 'var(--ink-600)', fontSize: 14, margin: 0 }}>
+          {t('cityStudy.subscription.national')}{' '}
+          <Link to="/abonnements/mes-abonnements" style={{ color: 'var(--green-700)', fontWeight: 600 }}>{t('billing.menu')}</Link>
+        </p>
+      )}
+      {subs.length === 0 && suivi && !ent.nationalPlan && (
         // D-ABO-28 : droit ouvert sans plan de ville = « accord de ministère » (couverture sub_subscription).
         <p style={{ color: 'var(--ink-600)', fontSize: 14, margin: 0 }}>{t('cityStudy.subscription.agreement')}</p>
       )}

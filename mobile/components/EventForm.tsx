@@ -10,6 +10,7 @@ import ErrorBanner from '@/components/ErrorBanner';
 import SelectField from '@/components/SelectField';
 import EventCounterFields from '@/components/EventCounterFields';
 import EventPreacherField from '@/components/EventPreacherField';
+import ConsentCheck from '@/components/ConsentCheck';
 import { DatePickerModal } from '@/components/DeclarationForm';
 import { colors, fonts, radii } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -152,6 +153,8 @@ export default function EventForm({
   const [place, setPlace] = useState(editing?.place ?? '');
   const [counters, setCounters] = useState(() => counterDraft(editing));
   const [note, setNote] = useState(editing?.note ?? '');
+  // RG-PAYS-23 (JP 11/11) : « Ouvert à tous » — évènement PROGRAMMÉ de niveau pays ou ville seulement.
+  const [openToAll, setOpenToAll] = useState(!!editing?.openToAll);
   const [saving, setSaving] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -162,6 +165,10 @@ export default function EventForm({
     [nodes, t],
   );
 
+  const planned = !editing || editing.status === 'PLANNED';
+  const openLevel = target?.level === 'COUNTRY' || target?.level === 'LOCALITY';
+  /** La case n'est proposée (et `true` envoyé) que si le serveur l'accepterait (sinon 422 EVENT_OPEN_TO_ALL_INVALID). */
+  const openEligible = planned && openLevel;
   const labelMissing = !!type?.requiresLabel && customLabel.trim() === '';
   const endBeforeStart = endDate != null && endDate < eventDate;
   // D-EVT-17 (JP 14/10) : PATCH = remplacement complet, la saisie EST l'état résultant ; un
@@ -201,6 +208,13 @@ export default function EventForm({
                 baptisms: editing.baptisms,
               }),
           note: trimOrNull(note),
+          // RG-PAYS-23 : absent = inchangé. Un évènement ouvert déplacé vers une assemblée repasse à false ; un
+          // réalisé garde son « ouvert à tous » sans qu'on le renvoie (true y serait refusé).
+          ...(openEligible
+            ? { openToAll }
+            : !openLevel && editing.openToAll
+              ? { openToAll: false }
+              : {}),
         });
       } else {
         saved = await createEvent({
@@ -218,6 +232,7 @@ export default function EventForm({
           ...filledPreacher(preacher, type.evangelism),
           ...(place.trim() ? { place: place.trim() } : {}),
           ...(note.trim() ? { note: note.trim() } : {}),
+          ...(openEligible && openToAll ? { openToAll: true } : {}),
         });
       }
       onSaved(saved);
@@ -324,6 +339,15 @@ export default function EventForm({
         </Text>
       </View>
 
+      {/* RG-PAYS-23 (JP 11/11) : visible des personnes sans assemblée de ce pays / de cette ville, qui peuvent
+          s'y inscrire (« Je participe ») ; les réunions internes restent privées. */}
+      {openEligible && (
+        <View style={styles.section}>
+          <ConsentCheck checked={openToAll} onChange={setOpenToAll} label={t('events.form.openToAll')} />
+          <Text style={styles.openHint}>{t('events.form.openToAllHint')}</Text>
+        </View>
+      )}
+
       <View style={styles.section}>
         <Label style={styles.sectionLabel}>{t('events.declare.place')}</Label>
         <Field
@@ -416,4 +440,5 @@ const styles = StyleSheet.create({
   noteHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   counter: { fontFamily: fonts.mono, fontSize: 11, color: colors.ink3 },
   noteField: { minHeight: 72, textAlignVertical: 'top' },
+  openHint: { marginLeft: 32, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, lineHeight: 17 },
 });

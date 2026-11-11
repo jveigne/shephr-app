@@ -25,6 +25,8 @@ export type BillingPeriod = 'MONTHLY' | 'ANNUAL';
  * Mirrors com.excellence.back.billing.BillingDtos.CheckoutOrigin — D-PAY-04 / RG-PAY-36, JP 28/10 :
  * `OFFERS` = caisse ouverte depuis `/offres` ; le serveur compose alors l'annulation Stripe
  * `/offres?offer=caleb|nehemie&annule=1` (offre déduite du `planCode`). Absent → retours historiques.
+ * D-PAYS-05 / E-11 (JP 11/11) : offre Josué (`SUIVI_NATIONAL`) → annulation `/offres?offer=national&annule=1` avec ou
+ * sans `origin` (pas de page dédiée) ; portail → `/abonnements/mes-abonnements`.
  */
 export type CheckoutOrigin = 'OFFERS';
 /**
@@ -81,6 +83,7 @@ export interface BillingSubscription {
   /**
    * D-ABO-16 (JP 27/10) — plan de l'offre (`EGLISE_VILLE`, ou `DIRIGEANT_HIERARCHIE` pour le plan
    * personnel « Suivi de ma hiérarchie », sans ville), null pour l'offre « Frais de couverture ».
+   * D-PAYS-05 (JP 11/11) : ou `SUIVI_NATIONAL` (offre Josué, personnel, sans ville).
    */
   planCode: string | null;
   /** D-ABO-19 (JP 27/10) — ville couverte par un plan, null sinon. */
@@ -197,7 +200,7 @@ export async function downloadInvoicePdf(number: string) {
 
 /**
  * Mirrors com.excellence.back.billing.BillingDtos.PublicPlan — §3.8 du plan 05 : plans ACTIFS seulement
- * (Caleb `DIRIGEANT_HIERARCHIE`, Néhémie `EGLISE_VILLE` ; jamais `DONS`). Centimes TTC du serveur,
+ * (Caleb `DIRIGEANT_HIERARCHIE`, Néhémie `EGLISE_VILLE`, Josué `SUIVI_NATIONAL` depuis le 11/11 ; jamais `DONS`). Centimes TTC du serveur,
  * formatés côté client, jamais recalculés (RG-ABO-05). `localPriceLabel` = texte libre du back-office
  * (ex. « 1 000 FCFA / mois »), information seulement (D-OFF-08). `annualPriceCents` : renseigné pour
  * tout plan qui a une formule annuelle, Caleb compris depuis D-MKT-03 (JP 28/10).

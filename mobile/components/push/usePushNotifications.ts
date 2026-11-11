@@ -28,6 +28,7 @@ import * as Device from 'expo-device';
 import { getCalendars, getLocales } from 'expo-localization';
 import * as Notifications from 'expo-notifications';
 import { useNavigationContainerRef } from 'expo-router';
+import { colors } from '@/theme/colors';
 
 import {
   enregistrerAppareil,
@@ -196,7 +197,7 @@ export async function configurerCanauxAndroid(t: (cle: string) => string): Promi
         Notifications.setNotificationChannelAsync(CANAUX[categorie], {
           name: t(LIBELLES_CANAUX[categorie]),
           importance: Notifications.AndroidImportance.HIGH,
-          lightColor: '#1E3A2F',
+          lightColor: colors.moss,
         }),
       ),
     );

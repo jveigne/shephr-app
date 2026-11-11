@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, Platform, Linking } from 'react-native';
 import { router, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,13 +9,27 @@ import Label from '@/components/Label';
 import HandDivider from '@/components/HandDivider';
 import { colors, fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { canManageStructure, deleteMyAccount, roleLabel } from '@/services/authApi';
+import { canChangeCountry, deleteMyAccount, isUnattachedPerson, roleLabel } from '@/services/authApi';
+import SelectField from '@/components/SelectField';
+import PoweredBy from '@/components/PoweredBy';
+import {
+  countryErrorMessage,
+  fetchMyCities,
+  fetchPublicCountries,
+  optOutFollowUp,
+  patchMyCity,
+  type MeCity,
+  type PublicCountry,
+} from '@/services/countriesApi';
+import { readBrandingCache } from '@/theme/branding';
+import { isEnglishLang } from '@/utils/events';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { confirmDialog, notify } from '@/utils/dialogs';
 import { contactMailto, contactWhatsapp, useContactSettings } from '@/services/contactApi';
+import { alpha } from '@/theme/brandingPalette';
 
 export default function ProfileScreen() {
-  const { me, isLeader, logout } = useAuth();
+  const { me, isLeader, logout, refreshMe } = useAuth();
   // Coordonnées d'assistance pilotées depuis le back-office.
   const contact = useContactSettings();
   const { language, setLanguage, t } = useLanguage();
@@ -23,6 +37,65 @@ export default function ProfileScreen() {
   // D-OFF-10 (JP 27/10) : l'entrée « Mes factures » (plan 23/10 §6.2, lot ABO5) est retirée avec
   // l'écran — l'email avec le PDF suffit (D-ABO-08), l'historique reste sur le web « Mes
   // abonnements ». L'app n'affiche plus aucun montant d'abonnement ni de facture.
+
+  // ── Lot conf-pays (JP 11/11, contrat 11/11 §10.4) ─────────────────────────────────────────────────────────
+  // RG-PAYS-06 : « Pays » grisé si le compte est rattaché (pays imposé par l'assemblée / le périmètre).
+  const countryLocked = !!me && !canChangeCountry(me);
+  const unattached = isUnattachedPerson(me);
+  const countryIso = me?.countryIso ?? readBrandingCache().deviceCountry;
+  const [countries, setCountries] = useState<PublicCountry[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetchPublicCountries()
+      .then((list) => { if (live) setCountries(list); })
+      .catch(() => { if (live) setCountries([]); });
+    return () => { live = false; };
+  }, []);
+  const countryName = useMemo(() => {
+    if (!countryIso) return null;
+    const c = countries?.find((x) => x.code === countryIso);
+    return c ? (isEnglishLang(language) && c.nameEn) || c.name : countryIso;
+  }, [countries, countryIso, language]);
+
+  // RG-PAYS-21 : ville d'un compte sans assemblée (`PATCH /me/city`), facultative.
+  const [cities, setCities] = useState<MeCity[] | null>(null);
+  useEffect(() => {
+    if (!unattached) return;
+    let live = true;
+    fetchMyCities()
+      .then((list) => { if (live) setCities(list); })
+      .catch(() => { if (live) setCities([]); });
+    return () => { live = false; };
+  }, [unattached, me?.countryIso]);
+  const NO_CITY = '__none__';
+  const cityOptions = useMemo(
+    () => [
+      { id: NO_CITY, name: t('settings.city.none') },
+      ...(cities ?? []).map((c) => ({ id: c.id, name: c.regionName ? `${c.name} · ${c.regionName}` : c.name })),
+    ],
+    [cities, t],
+  );
+  const changeCity = async (id: string) => {
+    try {
+      await patchMyCity(id === NO_CITY ? null : id);
+      await refreshMe();
+    } catch (e) {
+      notify(t('settings.city.label'), countryErrorMessage(e, t));
+    }
+  };
+
+  // RG-PAYS-33 : « Ne plus être recontacté » — fiche → NE_SOUHAITE_PAS (posé par la personne seule).
+  const confirmOptOut = async () => {
+    const ok = await confirmDialog(t('settings.optOut.title'), t('settings.optOut.confirm'), t('settings.optOut.cta'), true);
+    if (!ok) return;
+    try {
+      await optOutFollowUp();
+      await refreshMe();
+      notify(t('settings.optOut.title'), t('settings.optOut.done'));
+    } catch (e) {
+      notify(t('settings.optOut.title'), countryErrorMessage(e, t));
+    }
+  };
 
   const initials = (me?.fullName ?? '')
     .split(' ')
@@ -101,7 +174,7 @@ export default function ProfileScreen() {
             </Text>
           </View>
           {me?.donationUnitId && (
-            <View style={[styles.pill, { backgroundColor: 'rgba(201,149,107,0.18)' }]}>
+            <View style={[styles.pill, { backgroundColor: alpha(colors.earth, 0.18) }]}>
               <Text style={[styles.pillText, { color: colors.earthDeep }]}>{t('profile.myUnit')}</Text>
             </View>
           )}
@@ -146,13 +219,25 @@ export default function ProfileScreen() {
       {/* RG-BQ-13 (JP 16/08) — on change d'assemblée SOI-MÊME, sans demande ni valideur. Le
           profil est l'endroit naturel : c'est là qu'on lit son rattachement. */}
       <Card style={{ paddingVertical: 0, marginTop: 12 }}>
-        <Row
-          icon="swap-horizontal-outline"
-          label={t('assembly.changeCta')}
-          value={t('assembly.changeHintShort')}
-          onPress={() => router.push('/(tabs)/goals/assembly')}
-          last
-        />
+        {unattached ? (
+          // RG-PAYS-20 (JP 11/11) : un compte sans assemblée peut demander un rattachement à tout moment (parcours
+          // existant `/join`).
+          <Row
+            icon="home-outline"
+            label={t('settings.joinAssembly')}
+            value={t('settings.joinAssemblyHint')}
+            onPress={() => router.push('/(auth)/join')}
+            last
+          />
+        ) : (
+          <Row
+            icon="swap-horizontal-outline"
+            label={t('assembly.changeCta')}
+            value={t('assembly.changeHintShort')}
+            onPress={() => router.push('/(tabs)/goals/assembly')}
+            last
+          />
+        )}
       </Card>
 
 {/*      {canManageStructure(me) && (
@@ -180,6 +265,14 @@ export default function ProfileScreen() {
           value={language === 'fr' ? 'Français' : 'English'}
           onPress={() => setLanguage(language === 'fr' ? 'en' : 'fr')}
         />
+        {/* RG-PAYS-06 (JP 11/11) : « Pays » → écran Pays ; grisé si rattaché. */}
+        <Row
+          icon="flag-outline"
+          label={t('settings.country.label')}
+          value={countryName ?? t('country.other')}
+          onPress={countryLocked ? undefined : () => router.push({ pathname: '/country', params: { from: 'settings' } } as never)}
+          disabled={countryLocked}
+        />
         {/* Lot N4b (J-3 14/09) — l'entrée vers les réglages de notifications. Elle n'est pas
             décorative : une catégorie de push sans interrupteur atteignable est la cause
             numéro un de désinstallation, et c'est ici qu'on coupe « Rappels ». */}
@@ -196,6 +289,32 @@ export default function ProfileScreen() {
 {/*        <Row icon="receipt-outline" label={t('profile.receipts')} value={t('profile.receiptsValue')} />
         <Row icon="shield-outline" label={t('profile.privacy')} value={t('profile.privacyValue')} last />*/}
       </Card>
+
+      {countryLocked && <Text style={styles.lockedHint}>{t('settings.country.lockedByAssembly')}</Text>}
+
+      {unattached && (
+        <>
+          <Label style={{ marginTop: 26, marginBottom: 8, paddingHorizontal: 4 }}>{t('settings.city.label')}</Label>
+          <SelectField
+            label={t('settings.city.label')}
+            options={cityOptions}
+            pick={cityOptions.find((o) => o.id === (me?.cityNodeId ?? NO_CITY)) ?? null}
+            onChange={(o) => void changeCity(o.id)}
+            disabled={cities == null}
+          />
+          {me?.contactConsent ? (
+            <Card style={{ paddingVertical: 0, marginTop: 12 }}>
+              <Row
+                icon="close-circle-outline"
+                label={t('settings.optOut.cta')}
+                value=""
+                onPress={() => void confirmOptOut()}
+                last
+              />
+            </Card>
+          ) : null}
+        </>
+      )}
 
       {/* Contactez-nous (JP 31/07) — mêmes canaux et même mise en forme que le bloc d'aide du
           rattachement à une assemblée : WhatsApp mis en avant, e-mail en second. */}
@@ -241,6 +360,8 @@ export default function ProfileScreen() {
       </Card>
 
       <Text style={styles.version}>{t('profile.version')}</Text>
+      {/* §4.5 (JP 11/11) : « propulsé par Shephr » en bas des réglages, seulement pour un pays actif. */}
+      <PoweredBy />
     </ScreenShell>
   );
 }
@@ -260,19 +381,23 @@ function Row({
   value,
   onPress,
   last,
+  disabled,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   value: string;
   onPress?: () => void;
   last?: boolean;
+  /** Réglage grisé (RG-PAYS-06 : pays imposé par l'assemblée). */
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       style={[
         styles.row,
-        { borderBottomWidth: last ? 0 : 1 },
+        { borderBottomWidth: last ? 0 : 1, opacity: disabled ? 0.5 : 1 },
       ]}
     >
       <View style={styles.rowIcon}>
@@ -280,7 +405,7 @@ function Row({
       </View>
       <Text style={styles.rowLabel}>{label}</Text>
       <Text style={styles.rowValue}>{value}</Text>
-      <Ionicons name="chevron-forward" size={14} color={colors.ink3} />
+      <Ionicons name={disabled ? 'lock-closed-outline' : 'chevron-forward'} size={14} color={colors.ink3} />
     </Pressable>
   );
 }
@@ -357,7 +482,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: 'rgba(30,58,47,0.07)',
+    backgroundColor: alpha(colors.moss, 0.07),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -408,6 +533,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
   },
   dangerText: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.clay },
+  lockedHint: { marginTop: 8, paddingHorizontal: 4, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, lineHeight: 17 },
   version: {
     textAlign: 'center',
     marginTop: 16,

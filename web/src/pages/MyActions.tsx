@@ -7,6 +7,8 @@ import { useToast } from '../components/Toast';
 import { EventForm } from '../components/EventForm';
 import { EventsBlock, EventsTable } from '../components/EventsTable';
 import { EventDetailModal } from '../components/EventDetail';
+import { OpenEventsList } from './OpenEvents';
+import { Link } from 'react-router-dom';
 import { EventCounter, EventEmptyState } from '../components/EventDeclare';
 import { FEATURES } from '../config/features';
 import { useAuth } from '../hooks/useAuth';
@@ -67,6 +69,7 @@ export function MyActionsPage() {
   const { push } = useToast();
   const [creating, setCreating] = useState<Creating>(null);
   const [opened, setOpened] = useState<EventResponse | null>(null);
+  const [openedOpenId, setOpenedOpenId] = useState<string | null>(null);
 
   const modulesQ = useQuery({ queryKey: ['accessible-modules'], queryFn: getAccessibleModules });
   const hasEvents = FEATURES.events && (modulesQ.data ?? []).includes('EVENTS');
@@ -161,7 +164,20 @@ export function MyActionsPage() {
           ) : undefined
         }
       />
-      <div className="content">{body}</div>
+      <div className="content">
+        {body}
+        {/* RG-PAYS-24 (JP 11/11) : exception à D-EVT-14 limitée aux évènements OUVERTS À TOUS de ma ville et de mon
+            pays — un membre rattaché les voit et peut s'y inscrire. */}
+        {hasEvents && (
+          <section style={{ marginTop: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+              <h2 className="section-title" style={{ fontSize: 18, margin: 0 }}>{t('events.open.title')}</h2>
+              <Link to="/open-events" style={{ fontSize: 13, fontWeight: 600, color: 'var(--green-700)' }}>{t('events.open.seeAll')}</Link>
+            </div>
+            <OpenEventsList limit={5} onOpen={setOpenedOpenId} />
+          </section>
+        )}
+      </div>
 
       {creating && scopes && types && (
         <Modal
@@ -186,6 +202,7 @@ export function MyActionsPage() {
       )}
       {/* Clôturer / annuler / modifier / supprimer : EventDetailModal invalide les DONNÉES du module. */}
       {opened && <EventDetailModal eventId={opened.id} initial={opened} onClose={() => setOpened(null)} />}
+      {openedOpenId && <EventDetailModal eventId={openedOpenId} onClose={() => setOpenedOpenId(null)} />}
     </>
   );
 }

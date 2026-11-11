@@ -10,6 +10,7 @@ import { safeDocumentNext } from '../utils/documents';
 import { isBillingPath, routeAfterLogin, safeNext } from '../utils/authRouting';
 import { SocialSignInButtons } from '../components/SocialSignInButtons';
 import type { AuthResponse, MeResponse } from '../services/authApi';
+import { BrandLogo, BrandName } from '../components/BrandLogo';
 
 export function LoginPage() {
   const { login, establishSession } = useAuth();
@@ -80,8 +81,8 @@ export function LoginPage() {
           title={t('login.backToHome')}
           style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
         >
-          <div className="brand-mark">S</div>
-          <span className="word">shephr</span>
+          <BrandLogo />
+          <span className="word"><BrandName /></span>
         </button>
 
         <svg
@@ -92,22 +93,22 @@ export function LoginPage() {
         >
           <defs>
             <linearGradient id="hill" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#C9956B" stopOpacity="0.55" />
-              <stop offset="100%" stopColor="#C9956B" stopOpacity="0.15" />
+              <stop offset="0%" style={{ stopColor: 'var(--earth-500)' }} stopOpacity="0.55" />
+              <stop offset="100%" style={{ stopColor: 'var(--earth-500)' }} stopOpacity="0.15" />
             </linearGradient>
             <linearGradient id="hill2" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#F5ECD4" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="#F5ECD4" stopOpacity="0.05" />
+              <stop offset="0%" style={{ stopColor: 'var(--on-primary-soft)' }} stopOpacity="0.3" />
+              <stop offset="100%" style={{ stopColor: 'var(--on-primary-soft)' }} stopOpacity="0.05" />
             </linearGradient>
           </defs>
-          <line x1="0" x2="360" y1="160" y2="160" stroke="rgba(245,236,212,0.18)" strokeWidth="1" />
-          <circle cx="270" cy="100" r="38" fill="#C9956B" opacity="0.35" />
-          <circle cx="270" cy="100" r="22" fill="#D9AE89" opacity="0.55" />
+          <line x1="0" x2="360" y1="160" y2="160" style={{ stroke: 'rgba(var(--on-primary-soft-rgb),0.18)' }} strokeWidth="1" />
+          <circle cx="270" cy="100" r="38" style={{ fill: 'var(--earth-500)' }} opacity="0.35" />
+          <circle cx="270" cy="100" r="22" style={{ fill: 'var(--earth-400)' }} opacity="0.55" />
           <path d="M 0 160 Q 60 130 130 145 T 280 130 T 360 150 L 360 220 L 0 220 Z" fill="url(#hill2)" />
           <path d="M 0 175 Q 80 145 170 165 T 360 160 L 360 220 L 0 220 Z" fill="url(#hill)" />
           <path
             d="M 180 220 Q 178 200 185 185 Q 195 168 200 155"
-            stroke="#F5ECD4"
+            style={{ stroke: 'var(--on-primary-soft)' }}
             strokeOpacity="0.35"
             strokeWidth="2"
             fill="none"
@@ -232,7 +233,7 @@ export function LoginPage() {
               onClick={() => navigate('/activate')}
               style={{
                 background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
-                color: 'var(--accent, #1E3A2F)', fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
+                color: 'var(--green-800)', fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
               }}
             >
               {t('login.activateCta')}
@@ -251,7 +252,7 @@ export function LoginPage() {
               }}
               style={{
                 background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
-                color: 'var(--accent, #1E3A2F)', fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
+                color: 'var(--green-800)', fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
               }}
             >
               {t('login.signupCta')}

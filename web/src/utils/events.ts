@@ -190,7 +190,10 @@ export function typeLabel(t: Pick<EventType, 'name' | 'nameEn'>, lang: string): 
 }
 
 /** Libellé d'un évènement : le libellé libre d'un type « Autre » prime sur le nom du type. */
-export function eventTypeLabel(e: EventResponse, lang: string): string {
+export function eventTypeLabel(
+  e: Pick<EventResponse, 'customLabel' | 'typeName' | 'typeNameEn'>,
+  lang: string,
+): string {
   return e.customLabel ?? typeLabel({ name: e.typeName, nameEn: e.typeNameEn }, lang);
 }
 
@@ -307,6 +310,11 @@ const KNOWN_CODES = new Set([
   'UNAUTHORIZED_ACCESS',
   'RESOURCE_NOT_FOUND',
   'SERVICE_UNAVAILABLE',
+  // Lot conf-pays (JP 11/11, contrat 11_11_2026/02 §1.1) : ouverts à tous, inscriptions, pointage.
+  'EVENT_OPEN_TO_ALL_INVALID',
+  'EVENT_REGISTRATION_CLOSED',
+  'EVENT_REGISTRATION_CANCELED',
+  'EVENT_REGISTRATION_CONSENT_REQUIRED',
 ]);
 
 /**

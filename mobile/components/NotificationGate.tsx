@@ -23,6 +23,7 @@ import {
 import { confirmDialog, notify } from '@/utils/dialogs';
 import { abonnerRechargement, declarerGateOuverte } from '@/components/push/fileNotifications';
 import { useConduireParSource } from '@/components/push/routagePush';
+import { alpha } from '@/theme/brandingPalette';
 
 /**
  * Porte d'entrée des messages à l'ouverture — UNE seule modale à la fois, dans l'ordre :
@@ -392,7 +393,7 @@ export default function NotificationGate() {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(22,41,31,0.5)',
+    backgroundColor: alpha(colors.mossDeep, 0.5),
     justifyContent: 'center',
     padding: 24,
   },

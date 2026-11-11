@@ -27,6 +27,7 @@ import type { MeResponse } from '@/services/authApi';
 import { resendFederatedLinkCode, type LinkConfirmationRequired } from '@/services/socialAuthApi';
 import { notify } from '@/utils/dialogs';
 import { linkConfirmErrorMessage, retryAfterSeconds } from '@/utils/socialAuthErrors';
+import { alpha } from '@/theme/brandingPalette';
 
 interface Props {
   challenge: LinkConfirmationRequired;
@@ -193,7 +194,7 @@ export default function LinkConfirmModal({ challenge, providerLabel, onSignedIn,
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(22,41,31,0.5)',
+    backgroundColor: alpha(colors.mossDeep, 0.5),
     justifyContent: 'center',
     padding: 24,
   },

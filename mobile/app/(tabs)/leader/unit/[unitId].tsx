@@ -20,6 +20,7 @@ import { getByUnit, type DonationByUnitStat } from '@/services/statsApi';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toLocalDate } from '@/utils/format';
 import { sumByCurrency, type CurrencyLine } from '@/utils/currencyTotals';
+import { alpha } from '@/theme/brandingPalette';
 
 type Period = 'month' | '3m' | '6m' | 'year';
 
@@ -259,7 +260,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 99,
-    backgroundColor: 'rgba(201,149,107,0.20)',
+    backgroundColor: alpha(colors.earth, 0.2),
   },
   typePillText: {
     fontFamily: fonts.sans,
@@ -286,7 +287,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     padding: 10,
     borderRadius: 12,
-    backgroundColor: 'rgba(30,58,47,0.06)',
+    backgroundColor: alpha(colors.moss, 0.06),
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
@@ -312,7 +313,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(30,58,47,0.10)',
+    backgroundColor: alpha(colors.moss, 0.1),
     alignItems: 'center',
     justifyContent: 'center',
   },

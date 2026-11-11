@@ -4,9 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { canDeclareEvents, hasMemberGoals } from '@/services/authApi';
+import { canDeclareEvents, hasMemberGoals, isUnattachedPerson } from '@/services/authApi';
 import { colors, fonts } from '@/theme';
 import NotificationGate from '@/components/NotificationGate';
+import { alpha } from '@/theme/brandingPalette';
 
 export default function TabLayout() {
   const { t, applyAccountLanguage } = useLanguage();
@@ -28,7 +29,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.moss,
         tabBarInactiveTintColor: colors.ink3,
         tabBarStyle: {
-          backgroundColor: 'rgba(245,236,216,0.96)',
+          backgroundColor: alpha(colors.paper, 0.96),
           borderTopWidth: 1,
           borderTopColor: 'rgba(42,38,32,0.08)',
           height: 60 + insets.bottom,
@@ -132,7 +133,8 @@ export default function TabLayout() {
           // dirigeants / LEADER / SECRETARIAT, vue de son assemblée pour le simple membre
           // (`!isLeader`, cf. `events/index.tsx`). Les boutons restent pilotés par le serveur
           // (`canPlan` / `canDeclare` de `/me/scopes`).
-          href: hasEvents && canDeclareEvents(me) ? '/(tabs)/events' : null,
+          // D-PAYS-10 / RG-PAYS-22 (JP 11/11) : aussi le compte SANS assemblée, en vue « ouverts à tous ».
+          href: hasEvents && (canDeclareEvents(me) || isUnattachedPerson(me)) ? '/(tabs)/events' : null,
           title: t('tabs.events'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="megaphone-outline" size={size} color={color} />

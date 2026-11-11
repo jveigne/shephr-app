@@ -50,7 +50,7 @@ function MinistryCard({ ministry }: { ministry: MinistryResponse }) {
     <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
       <div
         className="icon-wrap"
-        style={{ background: 'var(--green-700)', color: '#FBF5E4', width: 44, height: 44, borderRadius: 12 }}
+        style={{ background: 'var(--green-700)', color: 'var(--on-primary)', width: 44, height: 44, borderRadius: 12 }}
       >
         <Icon name="building" size={22} />
       </div>

@@ -20,7 +20,7 @@ export function LangSwitch() {
           style={{
             padding: '4px 12px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
             background: lang === l ? 'var(--green-600)' : 'transparent',
-            color: lang === l ? '#fff' : 'var(--ink-500)',
+            color: lang === l ? 'var(--on-primary-bright)' : 'var(--ink-500)',
           }}
         >{l.toUpperCase()}</button>
       ))}

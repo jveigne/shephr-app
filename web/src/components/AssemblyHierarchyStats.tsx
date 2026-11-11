@@ -341,7 +341,7 @@ export function AssemblyLastReportList({ roots }: { roots: LeaderHierarchyNode[]
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, width: '100%', flexWrap: 'wrap',
                   padding: '9px 0', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-                  font: 'inherit', borderTop: '1px solid var(--line-soft, rgba(42,38,32,0.08))',
+                  font: 'inherit', borderTop: '1px solid var(--line-soft)',
                 }}
               >
                 <Icon name="unit" size={15} />

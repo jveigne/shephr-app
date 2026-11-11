@@ -13,6 +13,7 @@ import {
   type ActiveGoal,
   type MembersAggregateResponse,
 } from '@/services/goalsApi';
+import { alpha } from '@/theme/brandingPalette';
 
 /**
  * Détail NOMINATIF d'une assemblée (RG-BQ-05/06) — réservé aux dirigeants dont le périmètre Goals
@@ -240,7 +241,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 99,
   },
-  counterPillLate: { backgroundColor: 'rgba(201,149,107,0.22)' },
+  counterPillLate: { backgroundColor: alpha(colors.earth, 0.22) },
   counterPillText: { fontFamily: fonts.sans, fontSize: 11, fontWeight: '700', color: colors.mossDeep },
   counterPillTextLate: { color: colors.earthDeep },
   counters: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },

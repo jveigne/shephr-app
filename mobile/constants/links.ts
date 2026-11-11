@@ -29,7 +29,9 @@ export function webReaderUrl(slug: string): string {
  * `05_Plan_Offres_Caleb_Nehemie.md` §8). `caleb` = suivi de ma hiérarchie (chaîne de supervision,
  * HIERARCHIE_SUIVI) ; `nehemie` = suivi de toute ma ville (géographie, EGLISE_VILLE).
  */
-export type OfferKey = 'caleb' | 'nehemie';
+// D-PAYS-05 (JP 11/11, contrat 11_11_2026/02 §7.1) : + `national` = offre Josué (suivi de toute ma nation, plan
+// personnel SUIVI_NATIONAL du coordinateur) — slug d'URL `/offres?offer=national`.
+export type OfferKey = 'caleb' | 'nehemie' | 'national';
 
 /**
  * `https://<SHARE_DOMAIN>/offres?offer=caleb|nehemie` — la page web fait défiler jusqu'à la carte

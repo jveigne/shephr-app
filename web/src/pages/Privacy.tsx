@@ -54,7 +54,7 @@ export function PrivacyPage() {
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '14px clamp(14px, 3vw, 24px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--green-600)', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>S</div>
+            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--green-600)', color: 'var(--on-primary-bright)', display: 'grid', placeItems: 'center', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>S</div>
             <span style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: 'var(--green-800)' }}>shephr</span>
           </Link>
           <LangSwitch />
@@ -111,6 +111,15 @@ export function PrivacyPage() {
           <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: 0 }}>{t('privacy.visibilityScope')}</p>
         </Section>
 
+        {/* Lot conf-pays (JP 11/11) — RG-PAYS-12 : appartenance à une assemblée visible de ses dirigeants (consentement à
+            la demande de rattachement) ; RG-PAYS-26 / 34 : recontact par l'église des personnes sans assemblée et des
+            inscrits aux évènements ouverts, destinataires, retrait du consentement, effacement à la suppression. */}
+        <Section title={t('privacy.recontactTitle')}>
+          <Para>{t('privacy.recontactIntro')}</Para>
+          <List items={tr('recontact', ['membership', 'purpose', 'data', 'recipients', 'withdraw', 'deletion'])} />
+          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: '16px 0 0' }}>{t('privacy.recontactBasis')}</p>
+        </Section>
+
         <Section title={t('privacy.sharingTitle')}>
           <Para>{t('privacy.sharingText')}</Para>
           <List items={tr('sharing', ['hosting', 'region', 'transfer'])} />
@@ -151,7 +160,7 @@ export function PrivacyPage() {
               href={whatsapp}
               target="_blank"
               rel="noreferrer"
-              style={{ padding: '12px 24px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--green-600)', color: '#fff', fontWeight: 600, fontSize: 15, textDecoration: 'none' }}
+              style={{ padding: '12px 24px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--green-600)', color: 'var(--on-primary-bright)', fontWeight: 600, fontSize: 15, textDecoration: 'none' }}
             >
               {t('join.contactWhatsapp')}
             </a>

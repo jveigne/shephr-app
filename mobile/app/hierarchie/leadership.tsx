@@ -40,6 +40,7 @@ import {
   type SupervisionOverview,
   type SupervisionRequestView,
 } from '@/services/leadersApi';
+import { alpha } from '@/theme/brandingPalette';
 
 /**
  * Page 2 de la Hiérarchie, « Mon leadership » — D-HIE-01..07 (JP 28/10), GRATUITE. Remplace l'écran
@@ -568,7 +569,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(30,58,47,0.06)',
+    backgroundColor: alpha(colors.moss, 0.06),
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
@@ -588,9 +589,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(42,38,32,0.07)',
     overflow: 'hidden',
   },
-  pendingPill: { color: colors.earthDeep, backgroundColor: 'rgba(201,149,107,0.22)', borderWidth: 0 },
+  pendingPill: { color: colors.earthDeep, backgroundColor: alpha(colors.earth, 0.22), borderWidth: 0 },
   empty: { fontFamily: fonts.serif, fontStyle: 'italic', color: colors.ink3, textAlign: 'center', paddingVertical: 14 },
-  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(22,41,31,0.5)', justifyContent: 'flex-end' },
+  sheetBackdrop: { flex: 1, backgroundColor: alpha(colors.mossDeep, 0.5), justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.paper,
     borderTopLeftRadius: 20,

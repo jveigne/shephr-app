@@ -9,7 +9,7 @@ import {
   Platform,
   RefreshControl,
 } from 'react-native';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
 import Card from '@/components/Card';
@@ -20,6 +20,7 @@ import ErrorBanner from '@/components/ErrorBanner';
 import EventForm from '@/components/EventForm';
 import EventCounterFields from '@/components/EventCounterFields';
 import EventPreacherField from '@/components/EventPreacherField';
+import EventRegistrationBlock from '@/components/EventRegistrationBlock';
 import { EventPill, EventStatusPills } from '@/components/EventRow';
 import { colors, fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -218,6 +219,7 @@ export default function EventDetailScreen() {
   }
 
   const label = eventLabel(event, english);
+  const restricted = !!event.restricted;
   // RG-EVT-05 : un évènement programmé ne se clôture qu'une fois sa date (locale) arrivée.
   const notYetHeld = event.eventDate > todayLocal();
   const canClose = event.canEdit && event.status === 'PLANNED';
@@ -294,7 +296,37 @@ export default function EventDetailScreen() {
         {event.status === 'DONE' && (
           <EventPill tone={colors.moss} icon="checkmark-circle-outline" text={t('events.status.DONE')} />
         )}
+        {/* RG-PAYS-23 (JP 11/11) : évènement ouvert à tous. */}
+        {!!event.openToAll && (
+          <EventPill tone={colors.earthDeep} icon="people-outline" text={t('events.open.badge')} />
+        )}
       </View>
+
+      {/* RG-PAYS-26 (JP 11/11) : « Je participe » / « Je ne participe plus » sur un évènement ouvert. */}
+      {!!event.openToAll && <EventRegistrationBlock event={event} onChanged={() => void load()} />}
+
+      {/* RG-PAYS-28 / 29 (JP 11/11) : l'organisateur et le SECRETARIAT (`canManageRegistrations`, serveur — E-15, JP 11/11) voient les inscrits et les pointe ;
+          inscrits / venus s'affichent À CÔTÉ des compteurs saisis à la main, sans les remplacer. */}
+      {(event.canManageRegistrations ?? event.canEdit) && !!event.openToAll && (
+        <Card
+          onPress={() => router.push({ pathname: '/events/registrations', params: { eventId: event.id } } as never)}
+          style={styles.registrations}
+        >
+          <Ionicons name="people-outline" size={20} color={colors.moss} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.registrationsTitle}>
+              {t('events.registration.listTitle', { count: event.registrationCount ?? 0 })}
+            </Text>
+            <Text style={styles.registrationsSub}>
+              {t('events.registration.counts', {
+                registered: event.registrationCount ?? 0,
+                attended: event.attendedCount ?? 0,
+              })}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+        </Card>
+      )}
 
       {/* D-EVT-16 (JP 14/10) : le prédicateur en évidence (toujours null hors type évangélique). */}
       {!!event.preacher && (
@@ -326,20 +358,26 @@ export default function EventDetailScreen() {
           label={t('events.detail.scope')}
           value={`${event.scopeName ?? '—'} · ${t(`events.levels.${event.scopeLevel}`)}`}
         />
-        <Row label={t('events.declare.place')} value={event.place} />
-        <Row label={t('events.declare.participants')} value={event.participants} />
-        {/* D-EVT-17 (JP 14/10) : invités, inclus dans les participants ; tout type. */}
-        <Row label={t('events.declare.guests')} value={event.guests} />
-        {/* D-EVT-15 (JP 14/10) : compteurs d'un type évangélique seulement (null sinon). */}
-        {event.evangelism &&
-          EVANGELISM_COUNTERS.map((key) => (
-            <Row key={key} label={t(`events.declare.${key}`)} value={event[key]} />
-          ))}
-        <Row label={t('events.declare.note')} value={event.note} />
-        <Row label={t('events.detail.author')} value={event.createdByName} last />
+        <Row label={t('events.declare.place')} value={event.place} last={restricted} />
+        {/* RG-PAYS-24 / écart E-04 (JP 11/11) : vue « ouvert à tous » restreinte — ni compteurs, ni prédicateur,
+            ni note, ni auteur. */}
+        {!restricted && (
+          <>
+            <Row label={t('events.declare.participants')} value={event.participants} />
+            {/* D-EVT-17 (JP 14/10) : invités, inclus dans les participants ; tout type. */}
+            <Row label={t('events.declare.guests')} value={event.guests} />
+            {/* D-EVT-15 (JP 14/10) : compteurs d'un type évangélique seulement (null sinon). */}
+            {event.evangelism &&
+              EVANGELISM_COUNTERS.map((key) => (
+                <Row key={key} label={t(`events.declare.${key}`)} value={event[key]} />
+              ))}
+            <Row label={t('events.declare.note')} value={event.note} />
+            <Row label={t('events.detail.author')} value={event.createdByName} last />
+          </>
+        )}
       </Card>
 
-      {event.status === 'DONE' && (
+      {!restricted && event.status === 'DONE' && (
         <Text style={styles.hint}>
           {event.counted
             ? event.toVerify
@@ -349,7 +387,7 @@ export default function EventDetailScreen() {
         </Text>
       )}
       {event.status === 'PLANNED' && <Text style={styles.hint}>{t('events.detail.plannedHint')}</Text>}
-      {!event.canEdit && <Text style={styles.hint}>{t('events.detail.readOnly')}</Text>}
+      {!event.canEdit && !restricted && <Text style={styles.hint}>{t('events.detail.readOnly')}</Text>}
 
       {/* Gestes : dans l'ordre du cycle de vie, la clôture d'abord */}
       <View style={styles.actions}>
@@ -561,6 +599,9 @@ const styles = StyleSheet.create({
   preacher: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   preacherLabel: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3 },
   preacherName: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink, letterSpacing: -0.2, marginTop: 1 },
+  registrations: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  registrationsTitle: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
+  registrationsSub: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginTop: 2 },
   flash: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
   flashText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
   detailCard: { marginTop: 16, paddingHorizontal: 16, paddingVertical: 4 },

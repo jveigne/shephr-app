@@ -353,6 +353,8 @@ export interface AssemblyLocality {
   entitled: boolean;
   /** RG-ABO-22 — le compte peut souscrire pour cette ville (web seulement : jamais lu pour un paiement ici). */
   canSubscribe: boolean;
+  /** RG-PAYS-19 (JP 11/11) — ville couverte par l'offre Josué de l'appelant (`entitled` vrai pour lui). Facultatif. */
+  national?: boolean;
 }
 
 /** Villes visibles du compte pour le journal de ville (D-ABO-21) ; vide pour un membre ou un dirigeant d'unité. */
@@ -1064,6 +1066,8 @@ export interface StudyLocalitySummary {
   /** RG-ABO-22 — ne sert sur l'app qu'à choisir le texte du verrou (aucun paiement, D-ABO-13). */
   canSubscribe: boolean;
   assemblyCount: number;
+  /** RG-PAYS-19 (JP 11/11) — ville couverte par l'offre Josué de l'appelant (`entitled` vrai pour lui). Facultatif. */
+  national?: boolean;
 }
 
 /** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyLocalityLesson */

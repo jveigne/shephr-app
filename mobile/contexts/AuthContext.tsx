@@ -41,6 +41,7 @@ import {
   type ResetPasswordPayload,
 } from '@/services/passwordResetApi';
 import { getAppleCredential, getGoogleIdToken, googleSignOut } from '@/services/socialSignIn';
+import { forgetAccountCountry } from '@/utils/brandingSync';
 
 /**
  * Issue d'une connexion Google / Apple : `cancelled` quand la personne a fermé la feuille du
@@ -340,6 +341,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Lot E6 — d'abord détacher la file : plus rien ne part sous l'identité qui s'en va.
     releaseEventQueue();
     await Promise.all([setAuthToken(null), clearCachedSession()]);
+    // Contrat conf-pays §5.4, déclencheur n°3 (JP 11/11) : le pays du compte est oublié, SANS rechargement —
+    // le thème de l'appareil revient au lancement suivant.
+    forgetAccountCountry();
     setMeStale(false);
     setState({ ready: true, token: null, user: null, me: null });
     // Session Google du SDK : sans cela, l'appui suivant reprendrait le même compte sans

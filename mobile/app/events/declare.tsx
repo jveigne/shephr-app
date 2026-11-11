@@ -542,13 +542,14 @@ const styles = StyleSheet.create({
     borderRadius: 99,
     overflow: 'hidden',
     backgroundColor: colors.earth,
-    color: colors.white,
+    // P1 conf-pays (JP 11/11) : texte sur l'accent → `onEarthBadge` (identique à `white` en Shephr).
+    color: colors.onEarthBadge,
     fontFamily: fonts.sans,
     fontSize: 11.5,
     fontWeight: '700',
     textAlign: 'center',
   },
-  mineBadgeAlert: { backgroundColor: colors.clay },
+  mineBadgeAlert: { backgroundColor: colors.clay, color: colors.white },
   kicker: {
     marginTop: 4,
     fontFamily: fonts.mono,

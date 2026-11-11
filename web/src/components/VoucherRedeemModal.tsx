@@ -19,7 +19,8 @@ import { billingErrMsg } from '../pages/Billing';
 //  `SUBSCRIPTION_ALREADY_ACTIVE`, prolongation d'un VOUCHER / MANUEL) : rien n'est recalculé ici.
 // ---------------------------------------------------------------------------------------------
 
-export type VoucherPlanKind = 'caleb' | 'nehemie';
+/** D-PAYS-05 (JP 11/11) : + `national` (offre Josué, plan personnel — sans ville, comme Caleb). */
+export type VoucherPlanKind = 'caleb' | 'nehemie' | 'national';
 
 export interface VoucherCity {
   localityId: string;
@@ -117,7 +118,7 @@ export function VoucherRedeemModal({
     },
   });
 
-  const title = t(plan === 'caleb' ? 'offers.voucher.titleCaleb' : 'offers.voucher.titleNehemie');
+  const title = t(plan === 'caleb' ? 'offers.voucher.titleCaleb' : plan === 'national' ? 'offers.voucher.titleNational' : 'offers.voucher.titleNehemie');
 
   if (receipt) {
     return (

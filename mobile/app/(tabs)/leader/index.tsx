@@ -24,6 +24,7 @@ import { listDeclarations } from '@/services/donationApi';
 import { useDonationCategories } from '@/hooks/useDonationCategories';
 import { fmtAmount, monthLabel, toLocalDate } from '@/utils/format';
 import { sumByCurrency, type CurrencyLine } from '@/utils/currencyTotals';
+import { alpha } from '@/theme/brandingPalette';
 
 /**
  * Écran « Trésorerie » (ex-« Mon périmètre ») — Lot T4, 14/09.
@@ -350,7 +351,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 12,
-    backgroundColor: 'rgba(201,149,107,0.20)',
+    backgroundColor: alpha(colors.earth, 0.2),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -360,7 +361,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 12,
-    backgroundColor: 'rgba(30,58,47,0.10)',
+    backgroundColor: alpha(colors.moss, 0.1),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -411,7 +412,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: 'rgba(201,149,107,0.20)',
+    backgroundColor: alpha(colors.earth, 0.2),
     alignItems: 'center',
     justifyContent: 'center',
   },

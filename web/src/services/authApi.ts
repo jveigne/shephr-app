@@ -85,6 +85,32 @@ export interface MeResponse {
   cityNames: string[] | null;
   /** Noms des pays rattachés (DIRIGEANT_COORDINATEUR) ; vide sinon. */
   countryNames: string[] | null;
+  // Lot conf-pays (JP 11/11, contrat 11_11_2026/02 §3.2) — champs ajoutés EN FIN de MeResponse :
+  /** RG-PAYS-04 — ISO 3166-1 alpha-2 du pays du COMPTE, calculé par le serveur. ≠ countryCode (indicatif). */
+  countryIso?: string | null;
+  /** RG-PAYS-05 — pays CHOISI par le compte (t_user.country_node_id), null s'il n'a rien choisi. */
+  countryNodeId?: string | null;
+  /** RG-PAYS-21 — ville déclarée par un compte sans assemblée (t_user.city_node_id) et son nom résolu. */
+  cityNodeId?: string | null;
+  cityNodeName?: string | null;
+  /** RG-PAYS-21 — User#isUnattachedPerson(). Seul point de décision ; les fronts lisent ce booléen. */
+  unattachedPerson?: boolean;
+  /** RG-PAYS-22 — une demande de rattachement PENDING existe pour ce compte (routage après connexion). */
+  pendingJoinRequest?: boolean;
+  /** RG-PAYS-26 — consentement de contact en cours : la case n'est plus demandée à l'inscription. */
+  contactConsent?: boolean;
+  /** RG-PAYS-06 — le pays (et la ville) sont imposés par l'assemblée / le périmètre : réglage grisé. */
+  countryLocked?: boolean;
+}
+
+/** RG-PAYS-21 (JP 11/11) — décidé par le serveur (MeResponse.unattachedPerson). Copie identique du mobile. */
+export function isUnattachedPerson(me: MeResponse | null): boolean { return !!me && me.unattachedPerson === true; }
+/** RG-PAYS-06 (JP 11/11) — réglage « Pays » / « Ville » modifiable. */
+export function canChangeCountry(me: MeResponse | null): boolean { return !!me && !me.countryLocked; }
+/** D-PAYS-09 (JP 11/11) — coordinateur national (offre Josué ; verrous → /offres?offer=national). */
+export function isNationalCoordinator(me: MeResponse | null): boolean {
+  return !!me && !me.superAdmin &&
+    (me.goalRole === 'DIRIGEANT_COORDINATEUR' || me.donationRole === 'DIRIGEANT_COORDINATEUR');
 }
 
 /** A role strictly above MEMBRE in a module. */
@@ -446,6 +472,11 @@ export interface RegisterRequest {
   fullName: string;
   phoneNumber?: string;
   countryCode?: string;
+  /**
+   * RG-PAYS-05 (JP 11/11) — pays choisi (ISO 2 lettres), posé sur `t_user.country_node_id` s'il est connu et
+   * actif dans la CMCI ; inconnu ou absent → ignoré sans erreur. ≠ `countryCode` (indicatif téléphonique).
+   */
+  countryIso?: string;
 }
 
 export async function register(payload: RegisterRequest) {

@@ -244,7 +244,7 @@ function ModuleTable({ module: m, units }: { module: StudyHierarchyModule; units
           r.done.has(l.id) ? (
             <span style={{ color: 'var(--ok)', fontWeight: 700 }} aria-label={t('hierarchy.study.done')}>✓</span>
           ) : (
-            <span style={{ color: 'var(--ink-300, var(--ink-400))' }} aria-label={t('hierarchy.study.notDone')}>–</span>
+            <span style={{ color: 'var(--ink-300)' }} aria-label={t('hierarchy.study.notDone')}>–</span>
           ),
       }),
     ),

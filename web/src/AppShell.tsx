@@ -1,3 +1,4 @@
+import { PoweredBy } from './components/PoweredBy';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -5,6 +6,10 @@ import { Sidebar } from './components/Sidebar';
 import { Icon } from './components/Icon';
 import { useAuth } from './hooks/useAuth';
 import { NotificationGate } from './components/NotificationGate';
+import { BrandName } from './components/BrandLogo';
+
+/** Pages d'accueil des shells (mention « propulsé par Shephr »). */
+const HOME_PATHS = ['/dashboard', '/goals', '/my-goals', '/open-events'];
 
 export function AppShell() {
   const navigate = useNavigate();
@@ -58,9 +63,12 @@ export function AppShell() {
           >
             <Icon name="menu" size={20} />
           </button>
-          <span className="mobile-topbar-title">Shephr</span>
+          {/* §5.5 (JP 11/11) : `shortName` du pays actif là où la place manque. */}
+          <span className="mobile-topbar-title"><BrandName short /></span>
         </div>
         <Outlet />
+        {/* Spec §4.5 (JP 11/11) : « propulsé par Shephr » en bas de l'accueil, pays actif seulement. */}
+        {HOME_PATHS.includes(location.pathname) && <PoweredBy />}
         {/* D-WEB-06 (JP 27/10) — Parité mobile → web : rappels et campagnes à l'ouverture. */}
         <NotificationGate />
       </main>

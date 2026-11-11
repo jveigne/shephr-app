@@ -38,6 +38,7 @@ import {
   type ZoneUnitStatus,
 } from '@/services/goalsApi';
 import { listCountries, listLocalities, listZones } from '@/services/orgApi';
+import { alpha } from '@/theme/brandingPalette';
 
 /** Regroupement d'assemblées par ville (localityName) — clé stable même sans localityId. */
 interface CityUnitsGroup {
@@ -795,7 +796,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(22,41,31,0.45)',
+    backgroundColor: alpha(colors.mossDeep, 0.45),
     justifyContent: 'center',
     padding: 20,
   },

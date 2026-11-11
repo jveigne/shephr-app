@@ -105,7 +105,7 @@
   },
   "privacy": {
     "title": "Politique de confidentialité",
-    "updated": "Dernière mise à jour : 18 octobre 2026",
+    "updated": "Dernière mise à jour : 11 novembre 2026",
     "intro": "Shephr est une plateforme de gestion pour les ministères et les églises. Cette politique explique quelles données nous collectons, pourquoi, qui peut les consulter et comment vous en gardez le contrôle. Elle s'applique à l'application mobile Shephr comme au site web.",
     "controllerTitle": "Qui est responsable de vos données",
     "controllerText": "Shephr est édité par JEXCELLENCE SAS, 9 rue des Colonnes, 75002 Paris, France, responsable du traitement des données décrites ici. Votre ministère ou votre église, qui décide des personnes à inscrire et des modules activés, en est responsable conjointement pour les données de ses membres.",
@@ -184,7 +184,18 @@
     "contactTitle": "Nous contacter",
     "contactText": "Une question sur vos données, une demande d'accès ou de suppression ? Écrivez-nous, nous vous répondons.",
     "mailSubject": "Shephr — question sur mes données personnelles",
-    "whatsappText": "Bonjour, j'ai une question sur la confidentialité de mes données Shephr."
+    "whatsappText": "Bonjour, j'ai une question sur la confidentialité de mes données Shephr.",
+    "recontactTitle": "Appartenance à une assemblée et recontact par l'église",
+    "recontactIntro": "Rejoindre une assemblée est facultatif. Selon vos choix, certaines informations sont partagées avec les responsables de l'église, toujours avec votre accord explicite (case à cocher, jamais pré-cochée).",
+    "recontact": {
+      "membership": "Appartenance à une assemblée : en demandant à rejoindre une assemblée, vous acceptez que cette appartenance (donnée sensible) soit visible par ses dirigeants. La date de votre accord est conservée.",
+      "purpose": "Recontact par l'église : si vous n'avez pas d'assemblée ou si vous vous inscrivez à un évènement ouvert à tous, vous pouvez accepter que les responsables de l'église vous recontactent.",
+      "data": "Données concernées : votre nom, votre téléphone, votre adresse e-mail, votre pays et votre ville, vos inscriptions et votre présence aux évènements, ainsi qu'une note de suivi.",
+      "recipients": "Destinataires : les organisateurs de l'évènement auquel vous êtes inscrit, les dirigeants de votre ville, de votre région et de votre nation, et le secrétariat. Les dirigeants d'assemblée n'y ont pas accès.",
+      "withdraw": "Retrait du consentement : à tout moment, « Ne plus être recontacté » dans vos réglages. Vos coordonnées ne sont alors plus affichées aux responsables ; vos inscriptions à venir restent visibles des organisateurs des évènements concernés.",
+      "deletion": "Suppression du compte : vos inscriptions et votre fiche de suivi sont supprimées."
+    },
+    "recontactBasis": "Base légale : votre consentement (article 9.2.a du RGPD pour l'appartenance religieuse), que vous pouvez retirer à tout moment."
   },
   "deleteAccount": {
     "title": "Suppression de votre compte Shephr",
@@ -300,7 +311,10 @@
     "studyLive": "En cours",
     "documents": "Documents",
     "studyCity": "Suivi de la ville",
-    "offers": "Offres"
+    "offers": "Offres",
+    "openEvents": "Évènements",
+    "followUps": "Personnes à suivre",
+    "noAssemblyRole": "Sans assemblée"
   },
   "sidebar": {
     "logout": "Déconnexion",
@@ -1381,7 +1395,36 @@
     "myAssemblyCreateRefused": "Création refusée",
     "myAssemblyCreateFailed": "Création impossible, réessayez.",
     "myAssemblyNameExists": "Ce nom est déjà pris",
-    "myAssemblyNameExistsHint": "Une assemblée porte déjà ce nom à {{city}} : cherchez-la dans la liste ci-dessus, ou choisissez un autre nom."
+    "myAssemblyNameExistsHint": "Une assemblée porte déjà ce nom à {{city}} : cherchez-la dans la liste ci-dessus, ou choisissez un autre nom.",
+    "country": {
+      "title": "Pays",
+      "label": "Pays",
+      "lockedByAssembly": "Votre pays est celui de votre assemblée.",
+      "saved": "Pays enregistré.",
+      "errors": {
+        "COUNTRY_UNKNOWN": "Ce pays n'est pas disponible.",
+        "CITY_NOT_IN_COUNTRY": "Cette ville n'est pas dans votre pays.",
+        "COUNTRY_LOCKED_BY_ASSEMBLY": "Votre pays est celui de votre assemblée.",
+        "CITY_LOCKED_BY_ASSEMBLY": "Votre ville est celle de votre assemblée."
+      }
+    },
+    "city": {
+      "label": "Ville",
+      "placeholder": "Choisir votre ville",
+      "search": "Rechercher une ville",
+      "none": "Je ne sais pas / plus tard",
+      "chooseCountryFirst": "Choisissez d'abord votre pays",
+      "saved": "Ville enregistrée."
+    },
+    "joinAssembly": "Rejoindre une assemblée",
+    "optOut": {
+      "button": "Ne plus être recontacté",
+      "confirmTitle": "Ne plus être recontacté ?",
+      "confirmBody": "Les responsables de l'église ne verront plus vos coordonnées pour vous recontacter.",
+      "hint": "Vos inscriptions à venir restent visibles des organisateurs de ces évènements. Vous pourrez redonner votre accord à votre prochaine inscription.",
+      "confirm": "Ne plus être recontacté",
+      "done": "C'est noté : vous ne serez plus recontacté."
+    }
   },
   "join": {
     "title": "Rejoindre mon assemblée",
@@ -1475,7 +1518,27 @@
     "pickNation": "Nation",
     "pickRegion": "Région",
     "pickCity": "Ville",
-    "filterInCity": "Filtrer dans {{city}}…"
+    "filterInCity": "Filtrer dans {{city}}…",
+    "consent": {
+      "label": "J'accepte que mon appartenance à cette assemblée soit visible par ses dirigeants."
+    },
+    "errors": {
+      "JOIN_CONSENT_REQUIRED": "Cochez la case de consentement pour envoyer votre demande.",
+      "COUNTRY_UNKNOWN": "Ce pays n'est pas disponible.",
+      "CITY_NOT_IN_COUNTRY": "Cette ville n'est pas dans le pays choisi.",
+      "COUNTRY_LOCKED_BY_ASSEMBLY": "Votre compte est déjà rattaché à une assemblée."
+    },
+    "noAssembly": {
+      "intro": "Vous ne faites pas encore partie d'une assemblée ? Votre compte reste utile : vous verrez les évènements ouverts à tous de votre ville et de votre pays.",
+      "cta": "Je n'ai pas d'assemblée",
+      "title": "Je n'ai pas d'assemblée",
+      "sub": "Indiquez votre pays et, si vous le souhaitez, votre ville. Vous pourrez demander à rejoindre une assemblée plus tard, depuis vos réglages.",
+      "cityLabel": "Ville",
+      "cityHint": "Facultatif.",
+      "consent": "J'accepte que les responsables de l'église voient mon nom et mes coordonnées pour me recontacter.",
+      "submit": "Continuer sans assemblée",
+      "backToSpace": "Retour à mes évènements"
+    }
   },
   "map": {
     "searchCountry": "Rechercher un pays…",
@@ -2161,7 +2224,9 @@
       "bannerDone": "Cette action sera enregistrée pour {{node}}.",
       "bannerPlanned": "Cet évènement sera programmé pour {{node}}.",
       "noScope": "Aucun niveau de l'arbre ne vous est ouvert pour cet enregistrement.",
-      "submitPlan": "Programmer"
+      "submitPlan": "Programmer",
+      "openToAll": "Ouvert à tous",
+      "openToAllHint": "Visible des personnes sans assemblée de ce pays ou de cette ville, qui pourront s'inscrire. Les réunions internes restent privées."
     },
     "declare": {
       "title": "Déclarer une action",
@@ -2311,7 +2376,48 @@
       "UNAUTHORIZED_ACCESS": "Vous n'avez pas les droits pour ce niveau ou cet évènement (votre périmètre a peut-être changé).",
       "RESOURCE_NOT_FOUND": "Élément introuvable : il a peut-être été supprimé.",
       "SERVICE_UNAVAILABLE": "Service momentanément indisponible. Rien n'a été enregistré : réessayez dans un instant.",
-      "network": "Connexion au serveur impossible. Vérifiez votre réseau puis réessayez."
+      "network": "Connexion au serveur impossible. Vérifiez votre réseau puis réessayez.",
+      "EVENT_OPEN_TO_ALL_INVALID": "« Ouvert à tous » n'est possible que pour un évènement programmé de niveau pays ou ville.",
+      "EVENT_REGISTRATION_CLOSED": "Les inscriptions sont fermées pour cet évènement.",
+      "EVENT_REGISTRATION_CANCELED": "Cette inscription a été annulée.",
+      "EVENT_REGISTRATION_CONSENT_REQUIRED": "Cochez la case de consentement pour vous inscrire."
+    },
+    "open": {
+      "title": "Évènements ouverts à tous",
+      "badge": "Ouvert à tous",
+      "tabOpen": "À venir",
+      "tabMine": "Mes inscriptions",
+      "sub": "Les évènements ouverts à tous de votre ville et de votre pays.",
+      "subWhere": "Les évènements ouverts à tous — {{where}}.",
+      "empty": "Aucun évènement ouvert à tous pour le moment.",
+      "mineEmpty": "Aucune inscription.",
+      "upcoming": "À venir",
+      "past": "Passées",
+      "cancelled": "Annulé",
+      "seeAll": "Tout voir",
+      "joinHint": "Vous souhaitez rejoindre une assemblée de maison ? Faites votre demande quand vous voulez."
+    },
+    "registration": {
+      "register": "Je participe",
+      "unregister": "Je ne participe plus",
+      "youParticipate": "Vous participez",
+      "registered": "Inscription enregistrée.",
+      "unregistered": "Inscription annulée.",
+      "failed": "Inscription impossible",
+      "consent": "J'accepte que les responsables de l'église voient mon nom et mes coordonnées pour me recontacter.",
+      "attended": "Présent",
+      "listTitle": "Inscriptions",
+      "summary": "{{registered}} inscrits · {{attended}} venus · {{absent}} absents · {{unmarked}} non pointés",
+      "counts": "{{registered}} inscrits · {{attended}} venus",
+      "markLater": "Le pointage s'ouvre le jour de l'évènement.",
+      "none": "Personne ne s'est encore inscrit.",
+      "unattached": "Sans assemblée",
+      "registeredOn": "Inscrit le {{date}}",
+      "came": "Venu",
+      "didNotCome": "Pas venu",
+      "unmarked": "—",
+      "attendance": "Présence",
+      "markFailed": "Pointage impossible"
     }
   },
   "documents": {
@@ -2515,7 +2621,8 @@
       "VOUCHER_EXPIRED": "La date limite d'utilisation de ce code est passée.",
       "VOUCHER_WRONG_MINISTRY": "Ce code a été émis pour un autre ministère.",
       "BILLING_LOCALITY_REQUIRED": "Choisissez la ville concernée.",
-      "MODULE_EXCLUSION_NOT_FREE": "Seul un module gratuit peut être désactivé pour un ministère."
+      "MODULE_EXCLUSION_NOT_FREE": "Seul un module gratuit peut être désactivé pour un ministère.",
+      "NOT_NATIONAL_LEADER": "L'offre Josué est réservée au dirigeant national (coordinateur)."
     },
     "plan": {
       "activated": "Le suivi de la ville est activé pour {{city}}.",
@@ -2523,7 +2630,10 @@
       "city": "Ville : {{name}}",
       "hierarchyActivated": "Le suivi de votre hiérarchie est activé.",
       "backToHierarchy": "Ouvrir ma hiérarchie",
-      "personal": "Abonnement personnel"
+      "personal": "Abonnement personnel",
+      "nationalActivated": "L'offre Josué est activée : le suivi de toutes les villes de votre nation est ouvert.",
+      "national": "Offre Josué — toutes les villes de votre nation",
+      "openCityFollowUp": "Ouvrir le suivi de la ville"
     }
   },
   "forgotPassword": {
@@ -2706,7 +2816,8 @@
       "manual": "Activé par l'équipe Shephr.",
       "unknownPayer": "un autre responsable",
       "invoices": "Mes factures",
-      "manage": "Gérer l'abonnement"
+      "manage": "Gérer l'abonnement",
+      "national": "Cette ville est couverte par votre offre Josué."
     },
     "unavailable": "Suivi de la ville indisponible",
     "unavailableHint": "Aucun des modules suivis à l'échelle de la ville (Vie d'assemblée, Le Message de Bertoua) n'est activé pour votre ministère.",
@@ -2894,7 +3005,8 @@
       "receiptUntil": "Activée jusqu’au {{date}} inclus.",
       "receiptNote": "Un email de confirmation vous a été envoyé. Aucune facture n’est émise pour un code d’activation.",
       "alreadyPaid": "Vous payez déjà cette offre par carte : vous n’avez pas besoin de code.",
-      "cityAlreadyOpen": "Le suivi de cette ville est déjà ouvert (abonnement d’un responsable ou accord de votre ministère) : aucun code n’est nécessaire."
+      "cityAlreadyOpen": "Le suivi de cette ville est déjà ouvert (abonnement d’un responsable ou accord de votre ministère) : aucun code n’est nécessaire.",
+      "titleNational": "Offre Josué — saisir un code d’activation"
     },
     "pay": {
       "title": "Payer",
@@ -2906,7 +3018,9 @@
         "caleb": "Bonjour, je souhaite souscrire l’offre {{offer}} ({{localPrice}}), en formule {{period}}. Mon identifiant Shephr : {{username}}.",
         "calebNoPrice": "Bonjour, je souhaite souscrire l’offre {{offer}}, en formule {{period}}. Mon identifiant Shephr : {{username}}.",
         "nehemie": "Bonjour, je souhaite souscrire l’offre {{offer}} ({{localPrice}}) pour la ville de {{city}}, en formule {{period}}. Mon identifiant Shephr : {{username}}.",
-        "nehemieNoPrice": "Bonjour, je souhaite souscrire l’offre {{offer}} pour la ville de {{city}}, en formule {{period}}. Mon identifiant Shephr : {{username}}."
+        "nehemieNoPrice": "Bonjour, je souhaite souscrire l’offre {{offer}} pour la ville de {{city}}, en formule {{period}}. Mon identifiant Shephr : {{username}}.",
+        "national": "Bonjour, je souhaite souscrire l’offre {{offer}} ({{localPrice}}), en formule {{period}}. Mon identifiant Shephr : {{username}}.",
+        "nationalNoPrice": "Bonjour, je souhaite souscrire l’offre {{offer}}, en formule {{period}}. Mon identifiant Shephr : {{username}}."
       },
       "periodWord": {
         "MONTHLY": "mensuelle",
@@ -2946,7 +3060,8 @@
       "local": "ou {{label}} en Mobile Money",
       "localNoLabel": "en Mobile Money auprès de votre relais",
       "noCommitment": "sans engagement",
-      "perCity": "par ville"
+      "perCity": "par ville",
+      "perPerson": "personnel"
     },
     "period": {
       "label": "Formule",
@@ -2960,30 +3075,35 @@
         "feature": "Fonctionnalité",
         "free": "Gratuit",
         "caleb": "Caleb",
-        "nehemie": "Néhémie"
+        "nehemie": "Néhémie",
+        "national": "Josué"
       },
       "rows": {
         "assembly": {
           "label": "Étude biblique, vie et suivi pastoral de son assemblée",
           "free": "Oui",
           "caleb": "Oui",
-          "nehemie": "Oui"
+          "nehemie": "Oui",
+          "national": "Oui"
         },
         "basics": {
           "label": "Objectifs, évènements, documents",
           "free": "Oui",
           "caleb": "Oui",
-          "nehemie": "Oui"
+          "nehemie": "Oui",
+          "national": "Oui"
         },
         "stats": {
           "label": "Statistiques au-delà de son assemblée",
           "caleb": "Votre chaîne",
-          "nehemie": "Votre ville"
+          "nehemie": "Votre ville",
+          "national": "Votre nation"
         },
         "reports": {
           "label": "Comptes rendus des autres assemblées",
           "caleb": "Oui",
-          "nehemie": "Journal sans noms"
+          "nehemie": "Journal sans noms",
+          "national": "Journal sans noms"
         },
         "memberCare": {
           "label": "Suivi pastoral des autres assemblées",
@@ -2993,17 +3113,20 @@
           "label": "Évangélisation détaillée",
           "free": "Jusqu’à la ville",
           "caleb": "Par dirigeant",
-          "nehemie": "Par assemblée"
+          "nehemie": "Par assemblée",
+          "national": "Par assemblée"
         },
         "exports": {
           "label": "Exports et rapports PDF",
           "caleb": "PDF",
-          "nehemie": "CSV et PDF"
+          "nehemie": "CSV et PDF",
+          "national": "CSV et PDF"
         },
         "shared": {
           "label": "Partagé par tous les responsables",
           "caleb": "Personnel",
-          "nehemie": "Oui"
+          "nehemie": "Oui",
+          "national": "Personnel"
         },
         "storage": {
           "label": "Stockage documentaire"
@@ -3039,9 +3162,129 @@
         "study": {
           "q": "L’étude biblique est-elle payante ?",
           "a": "Non. Faire l’étude dans son assemblée est gratuit pour tous. Seul le suivi au-delà de son assemblée fait partie des offres."
+        },
+        "national": {
+          "q": "À qui s’adresse l’offre Josué ?",
+          "a": "Au dirigeant national (coordinateur). Elle lui ouvre, à lui seul, le suivi de toutes les villes de sa nation. Les dirigeants de ville gardent Néhémie pour leur ville, et chaque dirigeant Caleb pour sa chaîne."
         }
       }
     },
-    "footer": "Versets : Louis Segond 1910 · Paiement par carte sécurisé par Stripe · Mobile Money auprès de votre relais"
+    "footer": "Versets : Louis Segond 1910 · Paiement par carte sécurisé par Stripe · Mobile Money auprès de votre relais",
+    "national": {
+      "name": "Offre Josué",
+      "tagline": "Le suivi de toute ma nation.",
+      "verse": "« Tout lieu que foulera la plante de votre pied, je vous le donne »",
+      "verseRef": "Josué 1 : 3",
+      "active": "Activée pour votre compte",
+      "short": "Josué",
+      "reserved": "Cette offre est réservée au dirigeant national (coordinateur).",
+      "audience": "Pour le dirigeant national",
+      "scope": "Suit <strong>toutes les villes de votre nation</strong>, pour vous seul : ce que Néhémie donne sur une ville, partout dans votre pays.",
+      "loginHint": "En un clic avec Google ou Apple. Ensuite : carte bancaire, Mobile Money ou code.",
+      "loginHintNoSocial": "Connectez-vous avec votre identifiant Shephr. Ensuite : carte bancaire, Mobile Money ou code.",
+      "pending": "Un paiement de l'offre Josué est en cours.",
+      "pastDue": "Le dernier paiement de l'offre Josué a échoué.",
+      "lockTitle": "Ou suivez toute votre nation — Offre Josué",
+      "lockIntro": "Pour vous seul, en tant que dirigeant national : le suivi de toutes les villes de votre pays, sans abonnement ville par ville.",
+      "features": {
+        "allCities": {
+          "title": "Toutes les villes de votre nation",
+          "desc": "chaque ville, sans abonnement ville par ville"
+        },
+        "teaching": {
+          "title": "Suivi de l’enseignement",
+          "desc": "où en est chaque assemblée, leçon par leçon"
+        },
+        "journal": {
+          "title": "Journal des villes",
+          "desc": "réunions et présences, sans aucun nom"
+        },
+        "evangelism": {
+          "title": "Évangélisation",
+          "desc": "le détail par assemblée, dans chaque ville"
+        },
+        "exports": {
+          "title": "Exports CSV et PDF",
+          "desc": "ville par ville"
+        },
+        "personal": {
+          "title": "Personnel",
+          "desc": "il n’ouvre rien aux autres comptes : chaque responsable garde ses propres offres"
+        }
+      }
+    }
+  },
+  "branding": {
+    "defaultName": "Shephr",
+    "wordmark": "shephr",
+    "markLetter": "S",
+    "poweredBy": "propulsé par Shephr",
+    "restartToApply": "Rechargez la page pour appliquer les couleurs de votre pays.",
+    "website": "Visiter notre site"
+  },
+  "country": {
+    "title": "Dans quel pays êtes-vous ?",
+    "placeholder": "Choisir votre pays",
+    "search": "Rechercher un pays",
+    "other": "Autre pays",
+    "continue": "Continuer",
+    "retry": "Réessayer",
+    "suggested": "Proposé",
+    "unavailable": "Liste des pays indisponible",
+    "signupHint": "Votre pays de résidence : l'application s'affiche à ses couleurs quand il en a."
+  },
+  "followUps": {
+    "title": "Personnes à suivre",
+    "sub": "Les personnes sans assemblée de votre ville, de votre région ou de votre pays qui ont accepté d'être recontactées. Appelez, écrivez, notez où vous en êtes.",
+    "noAccess": "Vous n'avez pas de personnes à suivre.",
+    "empty": "Aucune personne à suivre avec ces filtres.",
+    "status": {
+      "A_CONTACTER": "À contacter",
+      "CONTACTEE": "Contactée",
+      "INTEGREE": "Intégrée à une assemblée",
+      "NE_SOUHAITE_PAS": "Ne souhaite pas être recontactée"
+    },
+    "filters": {
+      "active": "À contacter et contactées",
+      "allCities": "Toutes les villes",
+      "withoutCity": "Sans ville",
+      "search": "Nom, téléphone ou e-mail",
+      "noShow": "Inscrits non venus",
+      "newThisMonth": "Nouveaux ce mois"
+    },
+    "cols": {
+      "person": "Personne",
+      "status": "Statut",
+      "events": "Évènements",
+      "lastContact": "Dernier contact",
+      "contact": "Relancer"
+    },
+    "eventsSummary": "{{registered}} inscriptions · {{attended}} venus · {{noShow}} absents",
+    "noCity": "Ville non indiquée",
+    "call": "Appeler",
+    "whatsapp": "WhatsApp",
+    "email": "E-mail",
+    "noContact": "Aucune coordonnée",
+    "saved": "Fiche enregistrée.",
+    "gone": "Cette fiche n'existe plus.",
+    "markContacted": "Marquer comme contactée",
+    "note": "Note",
+    "noteHint": "{{n}} caractères restants",
+    "registrations": "Inscriptions et présences",
+    "noRegistrations": "Aucune inscription.",
+    "consentOn": "Accord donné le {{date}}",
+    "lastContact": "dernier contact : {{date}}",
+    "updatedBy": "Modifiée par {{name}} le {{date}}",
+    "optedOutHint": "Cette personne a demandé à ne plus être recontactée : ses coordonnées ne sont plus affichées.",
+    "integratedHint": "Cette personne a rejoint une assemblée : le suivi pastoral prend le relais.",
+    "reg": {
+      "canceled": "Désinscrit",
+      "registered": "Inscrit"
+    },
+    "errors": {
+      "FOLLOW_UP_OPTED_OUT": "Cette personne a demandé à ne plus être recontactée.",
+      "FOLLOW_UP_STATUS_FORBIDDEN": "Ce statut ne peut pas être posé par un dirigeant.",
+      "UNAUTHORIZED_ACCESS": "Cette fiche n'est pas dans votre périmètre."
+    }
   }
 }

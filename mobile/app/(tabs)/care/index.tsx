@@ -25,6 +25,7 @@ import { useCalebAssemblyGate, type LockedAssembly } from '@/hooks/useCalebAssem
 import { confirmDialog, notify } from '@/utils/dialogs';
 import { fmtDate } from '@/utils/format';
 import { fmtIsoDay } from '@/utils/meetingReport';
+import { alpha } from '@/theme/brandingPalette';
 
 type Tab = 'records' | 'accountability';
 
@@ -409,7 +410,7 @@ function AccountabilityView({
             ? { label: t('care.badgeEmpty'), color: colors.ink3, bg: 'rgba(42,38,32,0.06)' }
             : row.late
             ? { label: t('care.badgeLate'), color: colors.clay, bg: 'rgba(184,106,74,0.12)' }
-            : { label: t('care.badgeUpToDate'), color: colors.mossSoft, bg: 'rgba(30,58,47,0.10)' };
+            : { label: t('care.badgeUpToDate'), color: colors.mossSoft, bg: alpha(colors.moss, 0.1) };
         return (
           <Card key={row.unitId} style={styles.ovCard}>
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -493,7 +494,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(30,58,47,0.08)',
+    backgroundColor: alpha(colors.moss, 0.08),
     alignItems: 'center',
     justifyContent: 'center',
   },

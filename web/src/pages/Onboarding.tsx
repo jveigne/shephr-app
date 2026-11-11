@@ -6,7 +6,7 @@ import { Icon } from '../components/Icon';
 import { Badge, Button, Field, Input, Picker, type PickerOption } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { hasMemberSpace, hasMinistryAccess, isAttachedAccount } from '../services/authApi';
+import { hasMemberSpace, hasMinistryAccess, isAttachedAccount, isUnattachedPerson } from '../services/authApi';
 import { safeDocumentNext } from '../utils/documents';
 import { fetchRequestContext, type RequestNodeOption } from '../services/structureRequestsApi';
 // Contact JExcellence — piloté depuis le back-office, même canal que la landing (JP 31/07).
@@ -21,6 +21,12 @@ import {
   type JoinRequestRole,
   type JoinRequestStatus,
 } from '../services/joinRequestsApi';
+import { BrandLogo, BrandName } from '../components/BrandLogo';
+import { useBranding, useDeviceCountry } from '../theme/BrandingProvider';
+import { ConsentCheck } from '../components/ConsentCheck';
+import { CountrySelect, suggestedCountry, usePublicCountries } from '../components/CountrySelect';
+import { CityPicker, NO_CITY } from '../components/CityPicker';
+import { declareNoAssembly } from '../services/countriesApi';
 
 // Feature B — onboarding /join : un utilisateur AUTHENTIFIÉ mais sans rattachement cherche son
 // assemblée (recherche + drill nation→région→ville), choisit son rôle, ou demande la création
@@ -44,11 +50,11 @@ const STATUS_TONE: Record<JoinRequestStatus, 'warn' | 'ok' | 'err' | 'gray'> = {
 };
 
 const cardStyle: React.CSSProperties = {
-  background: 'var(--ivory-card, #fff)',
-  border: '1px solid var(--line-soft, rgba(42,38,32,0.08))',
-  borderRadius: 'var(--radius-lg, 14px)',
+  background: 'var(--ivory-card)',
+  border: '1px solid var(--line-soft)',
+  borderRadius: 'var(--radius-lg)',
   padding: 'clamp(18px, 4vw, 26px)',
-  boxShadow: 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06))',
+  boxShadow: 'var(--shadow-sm)',
   marginBottom: 18,
 };
 
@@ -58,6 +64,7 @@ export function OnboardingPage() {
   const { push } = useToast();
   const queryClient = useQueryClient();
   const { ready, isAuthenticated, me, refreshMe, logout } = useAuth();
+  const branding = useBranding();
   // D-WEB-04 (JP 27/10) : arrivée depuis le mur d'un document (`?next=/d/{slug}`) — une fois le
   // rattachement effectif, retour sur le document (miroir de `routeHomeOrReturn` du mobile).
   const [searchParams] = useSearchParams();
@@ -133,8 +140,11 @@ export function OnboardingPage() {
       <header style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--parchment)', borderBottom: '1px solid var(--line-soft)' }}>
         <div style={{ maxWidth: 860, margin: '0 auto', padding: '14px clamp(14px, 3vw, 24px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--green-600)', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>S</div>
-            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: 'var(--green-800)' }}>shephr</span>
+            {/* §5.5 (JP 11/11) : logo et nom du pays actif (thème du pays sur /join), sinon Shephr. */}
+            {branding.logo ? <BrandLogo /> : (
+              <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--green-600)', color: 'var(--on-primary-bright)', display: 'grid', placeItems: 'center', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>{t('branding.markLetter')}</div>
+            )}
+            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: 'var(--green-800)' }}><BrandName /></span>
           </div>
           <Button variant="ghost" iconL={<Icon name="logout" size={14} />} onClick={handleLogout}>
             {t('sidebar.logout')}
@@ -149,6 +159,14 @@ export function OnboardingPage() {
         <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-600)', margin: '0 0 26px' }}>
           {me?.fullName ? t('join.greeting', { name: me.fullName }) : t('join.subtitle')}
         </p>
+        {/* RG-PAYS-20 : un compte déjà « sans assemblée » vient demander un rattachement — il peut repartir. */}
+        {isUnattachedPerson(me) && (
+          <div style={{ margin: '-14px 0 22px' }}>
+            <Button variant="ghost" iconL={<Icon name="chevRight" size={14} style={{ transform: 'rotate(180deg)' }} />} onClick={() => navigate('/open-events')}>
+              {t('join.noAssembly.backToSpace')}
+            </Button>
+          </div>
+        )}
 
         {mineQ.isLoading ? (
           <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
@@ -177,7 +195,7 @@ export function OnboardingPage() {
         ) : (
           <>
             {latest?.status === 'REJECTED' && (
-              <div style={{ ...cardStyle, borderColor: 'var(--err, #B86A4A)' }}>
+              <div style={{ ...cardStyle, borderColor: 'var(--err)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                   <Badge tone="err">{t('join.status.REJECTED')}</Badge>
                   <strong>{latest.assemblyName ?? latest.newAssemblyName ?? '—'}</strong>
@@ -193,6 +211,13 @@ export function OnboardingPage() {
               onAlreadyPending={() => invalidateMine()}
               onAlreadyAttached={() => void refreshMe()}
               onAttached={() => void reloadSession()}
+            />
+            {/* D-PAYS-10 / RG-PAYS-20 (JP 11/11) : le rattachement devient FACULTATIF. */}
+            <NoAssemblyFlow
+              onDone={async () => {
+                await refreshMe();
+                navigate(docNext ?? '/open-events', { replace: true });
+              }}
             />
           </>
         )}
@@ -296,6 +321,8 @@ function SearchFlow({
   /** Confirmation de la déclaration de direction, avant la saisie de la nouvelle assemblée. */
   const [confirmDeclare, setConfirmDeclare] = useState(false);
   const [newName, setNewName] = useState('');
+  /** RG-PAYS-12 (JP 11/11) : consentement RGPD, jamais pré-coché ; sans lui, aucun envoi. */
+  const [consent, setConsent] = useState(false);
 
   const createM = useMutation({
     mutationFn: createJoinRequest,
@@ -326,6 +353,10 @@ function SearchFlow({
         onAlreadyPending();
         return;
       }
+      if (code === 'JOIN_CONSENT_REQUIRED') {
+        push({ kind: 'error', title: t('join.errors.JOIN_CONSENT_REQUIRED') });
+        return;
+      }
       if (code === 'ALREADY_ATTACHED') {
         push({ kind: 'error', title: t('join.alreadyAttached'), msg: errMsg(err, '') || undefined });
         onAlreadyAttached();
@@ -336,8 +367,8 @@ function SearchFlow({
   });
 
   const submitExisting = (role: JoinRequestRole) => {
-    if (!picked) return;
-    createM.mutate({ assemblyNodeId: picked.id, requestedRole: role });
+    if (!picked || !consent) return;
+    createM.mutate({ assemblyNodeId: picked.id, requestedRole: role, consent });
   };
 
   /**
@@ -362,8 +393,8 @@ function SearchFlow({
   const declareNewAssemblyLeader = () => setConfirmDeclare(true);
 
   const submitNew = (role: JoinRequestRole) => {
-    if (!cityId || newName.trim().length === 0) return;
-    createM.mutate({ requestedRole: role, newAssembly: { cityId, name: newName.trim() } });
+    if (!cityId || newName.trim().length === 0 || !consent) return;
+    createM.mutate({ requestedRole: role, newAssembly: { cityId, name: newName.trim() }, consent });
   };
 
   const results = searchQ.data ?? [];
@@ -428,7 +459,7 @@ function SearchFlow({
             ) : results.length === 0 ? (
               <p style={{ color: 'var(--ink-400)', margin: 0, fontStyle: 'italic' }}>{t('join.noResult')}</p>
             ) : (
-              <div style={{ border: '1px solid var(--line-soft, rgba(42,38,32,0.08))', borderRadius: 10, overflow: 'hidden' }}>
+              <div style={{ border: '1px solid var(--line-soft)', borderRadius: 10, overflow: 'hidden' }}>
                 {results.map((a) => (
                   <button
                     key={a.id}
@@ -437,11 +468,11 @@ function SearchFlow({
                     style={{
                       display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
                       padding: '10px 14px', background: 'transparent', border: 'none', cursor: 'pointer',
-                      borderBottom: '1px solid var(--line-soft, rgba(42,38,32,0.06))', fontFamily: 'inherit',
+                      borderBottom: '1px solid var(--line-soft)', fontFamily: 'inherit',
                     }}
                   >
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, color: 'var(--ink-900, #1E1B16)' }}>{a.name}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--ink-900)' }}>{a.name}</div>
                       <div style={{ fontSize: 12.5, color: 'var(--ink-500)' }}>
                         {[a.cityName, a.regionName, a.nationName].filter(Boolean).join(' · ')}
                       </div>
@@ -466,7 +497,7 @@ function SearchFlow({
             onClick={() => { setCreateStep('role'); setCreateOpen((v) => !v); }}
             style={{
               background: 'transparent', border: 'none', cursor: 'pointer', padding: 4,
-              color: 'var(--green-700, #1E3A2F)', fontFamily: 'inherit', fontSize: 14, fontWeight: 600,
+              color: 'var(--green-700)', fontFamily: 'inherit', fontSize: 14, fontWeight: 600,
               textDecoration: 'underline',
             }}
           >
@@ -547,9 +578,10 @@ function SearchFlow({
                 placeholder={t('join.newAssemblyNamePlaceholder')}
               />
             </Field>
+            <ConsentCheck checked={consent} onChange={setConsent}>{t('join.consent.label')}</ConsentCheck>
             <Button
               variant="primary"
-              disabled={!cityId || newName.trim().length === 0 || createM.isPending}
+              disabled={!cityId || newName.trim().length === 0 || !consent || createM.isPending}
               onClick={() => submitNew('LEADER')}
               style={{ justifyContent: 'center' }}
             >
@@ -566,13 +598,13 @@ function SearchFlow({
                   href={contact.whatsappUrl}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ padding: '10px 18px', borderRadius: 'var(--radius, 10px)', border: '1px solid var(--green-600)', color: 'var(--green-700)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}
+                  style={{ padding: '10px 18px', borderRadius: 'var(--radius)', border: '1px solid var(--green-600)', color: 'var(--green-700)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}
                 >
                   {t('join.contactWhatsapp')}
                 </a>
                 <a
                   href={contactMailto(t('join.contactMailSubject'))}
-                  style={{ padding: '10px 18px', borderRadius: 'var(--radius, 10px)', border: '1px solid var(--line-soft)', color: 'var(--ink-700)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}
+                  style={{ padding: '10px 18px', borderRadius: 'var(--radius)', border: '1px solid var(--line-soft)', color: 'var(--ink-700)', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}
                 >
                   {t('join.contactMail')}
                 </a>
@@ -632,7 +664,7 @@ function SearchFlow({
                   </p>
                   <Button
                     variant="primary"
-                    disabled={createM.isPending}
+                    disabled={createM.isPending || !consent}
                     onClick={() => submitExisting('LEADER')}
                     style={{ justifyContent: 'center' }}
                   >
@@ -654,16 +686,17 @@ function SearchFlow({
                 <p style={{ margin: '0 0 4px', fontSize: 13.5, color: 'var(--ink-500)', lineHeight: 1.55 }}>
                   {t('join.confirmJoinHint')}
                 </p>
+                <ConsentCheck checked={consent} onChange={setConsent}>{t('join.consent.label')}</ConsentCheck>
                 <Button
                   variant="primary"
-                  disabled={createM.isPending}
+                  disabled={createM.isPending || !consent}
                   onClick={declareLeader}
                   style={{ justifyContent: 'center' }}
                 >
                   {t('join.confirmAsLeader')}
                 </Button>
                 <Button
-                  disabled={createM.isPending}
+                  disabled={createM.isPending || !consent}
                   onClick={() => submitExisting('MEMBER')}
                   style={{ justifyContent: 'center' }}
                 >
@@ -681,5 +714,80 @@ function SearchFlow({
         </div>
       )}
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
+//  « Je n'ai pas d'assemblée » — D-PAYS-10 / RG-PAYS-20 (JP 11/11, contrat §3.4 / §10.2). Pays prérempli
+//  (`me.countryIso`, sinon le choix du navigateur, sinon la langue), ville FACULTATIVE (« Je ne sais pas /
+//  plus tard »), consentement de suivi FACULTATIF et non coché (E-05 : sans lui, aucune fiche ; il sera demandé à la
+//  première inscription). → `PUT /me/no-assembly` → espace sans assemblée.
+// ---------------------------------------------------------------------------------------------
+
+function NoAssemblyFlow({ onDone }: { onDone: () => Promise<void> }) {
+  const { t } = useTranslation();
+  const { push } = useToast();
+  const { me } = useAuth();
+  const { deviceCountry } = useDeviceCountry();
+  const countriesQ = usePublicCountries();
+  const [open, setOpen] = useState(false);
+  const [country, setCountry] = useState('');
+  const [city, setCity] = useState(NO_CITY);
+  const [consent, setConsent] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  // Préremplissage une fois la liste connue (RG-PAYS-01 / contrat §10.2).
+  useEffect(() => {
+    if (country || !countriesQ.data) return;
+    const initial = me?.countryIso?.toUpperCase() ?? deviceCountry ?? suggestedCountry(countriesQ.data);
+    if (initial) setCountry(initial);
+  }, [countriesQ.data, me?.countryIso, deviceCountry, country]);
+
+  const submit = async () => {
+    if (!country) return;
+    setBusy(true);
+    try {
+      await declareNoAssembly({ countryIso: country, cityNodeId: city === NO_CITY ? null : city, consent });
+      await onDone();
+    } catch (err) {
+      const code = errCode(err);
+      const known = code && ['COUNTRY_UNKNOWN', 'CITY_NOT_IN_COUNTRY', 'COUNTRY_LOCKED_BY_ASSEMBLY'].includes(code);
+      push({ kind: 'error', title: known ? t(`join.errors.${code}`) : t('common.failure'), msg: known ? undefined : errMsg(err, t('common.error')) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <div style={{ ...cardStyle, textAlign: 'center' }}>
+        <p style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--ink-600)', lineHeight: 1.6 }}>{t('join.noAssembly.intro')}</p>
+        <Button onClick={() => setOpen(true)} style={{ justifyContent: 'center' }}>{t('join.noAssembly.cta')}</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={cardStyle}>
+      <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 6px' }}>
+        {t('join.noAssembly.title')}
+      </h2>
+      <p style={{ margin: '0 0 14px', fontSize: 13.5, color: 'var(--ink-500)', lineHeight: 1.55 }}>{t('join.noAssembly.sub')}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <Field label={t('settings.country.label')}>
+          <CountrySelect value={country} onChange={(iso) => { setCountry(iso); setCity(NO_CITY); }} />
+        </Field>
+        <Field label={t('join.noAssembly.cityLabel')} hint={t('join.noAssembly.cityHint')}>
+          <CityPicker countryIso={country || null} value={city} onChange={setCity} />
+        </Field>
+        <ConsentCheck checked={consent} onChange={setConsent}>{t('join.noAssembly.consent')}</ConsentCheck>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <Button variant="primary" disabled={!country || busy} onClick={() => void submit()} style={{ justifyContent: 'center' }}>
+            {busy ? t('common.loading') : t('join.noAssembly.submit')}
+          </Button>
+          <Button variant="ghost" onClick={() => setOpen(false)}>{t('common.cancel')}</Button>
+        </div>
+      </div>
+    </div>
   );
 }

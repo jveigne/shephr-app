@@ -7,8 +7,10 @@ import { ALPHA2_TO_NUMERIC } from '../utils/isoNumeric';
 // world-atlas (countries-110m) : géométries dont l'id = code ISO numérique.
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 
-const OUTSIDE = '#ECE4D2'; // pays hors ministère (pas de données)
-const STROKE = '#FBF5E4';
+// Lot conf-pays P1 (JP 11/11) : couleurs de marque par variables CSS (thème du pays). L'échelle rouge → vert de
+// `rateColor` est une couleur d'ÉTAT, jamais réécrite (RG-PAYS-09).
+const OUTSIDE = 'var(--parchment-soft)'; // pays hors ministère (pas de données)
+const STROKE = 'var(--ivory-card)';
 
 /** Échelle rouge → ambre → vert selon le taux de soumission [0..1]. */
 function rateColor(rate: number): string {
@@ -70,7 +72,7 @@ export function NationsMap({
     <div>
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
       <div
-        style={{ position: 'relative', flex: '1 1 680px', maxWidth: 880, background: 'var(--paper, #FBF5E4)', borderRadius: 12, overflow: 'hidden' }}
+        style={{ position: 'relative', flex: '1 1 680px', maxWidth: 880, background: 'var(--ivory-card)', borderRadius: 12, overflow: 'hidden' }}
         onMouseLeave={() => setHover(null)}
       >
         <ComposableMap
@@ -106,12 +108,12 @@ export function NationsMap({
                           cursor: nation ? 'pointer' : 'default',
                         },
                         hover: {
-                          fill: nation ? '#1E3A2F' : OUTSIDE,
+                          fill: nation ? 'var(--green-800)' : OUTSIDE,
                           stroke: STROKE,
                           strokeWidth: 0.5,
                           outline: 'none',
                         },
-                        pressed: { fill: '#1E3A2F', outline: 'none' },
+                        pressed: { fill: 'var(--green-800)', outline: 'none' },
                       }}
                     />
                   );
@@ -127,8 +129,8 @@ export function NationsMap({
               position: 'fixed',
               left: hover.x + 12,
               top: hover.y + 12,
-              background: 'var(--green-800, #14241C)',
-              color: '#FBF5E4',
+              background: 'var(--green-800)',
+              color: 'var(--on-primary)',
               padding: '8px 12px',
               borderRadius: 8,
               fontSize: 12,
@@ -148,7 +150,7 @@ export function NationsMap({
               })}
             </div>
             {hover.nation.late && (
-              <div style={{ color: '#F0B6A6', marginTop: 2 }}>
+              <div style={{ color: 'var(--err-on-dark)', marginTop: 2 }}>
                 {t('map.lateMembers', { count: hover.nation.lateMembers })}
               </div>
             )}
@@ -168,7 +170,7 @@ export function NationsMap({
             padding: '7px 12px',
             fontSize: 13,
             borderRadius: 8,
-            border: '1px solid var(--line, #E0D6C2)',
+            border: '1px solid var(--line)',
             marginBottom: 8,
           }}
         />
@@ -176,7 +178,7 @@ export function NationsMap({
           style={{
             maxHeight: 280,
             overflowY: 'auto',
-            border: '1px solid var(--line, #E0D6C2)',
+            border: '1px solid var(--line)',
             borderRadius: 10,
           }}
         >
@@ -204,8 +206,8 @@ export function NationsMap({
                   cursor: 'pointer',
                   background: 'transparent',
                   border: 'none',
-                  borderTop: i === 0 ? 'none' : '1px solid var(--line, #EFE7D6)',
-                  color: 'var(--ink-700, #3A2F25)',
+                  borderTop: i === 0 ? 'none' : '1px solid var(--line)',
+                  color: 'var(--ink-700)',
                 }}
               >
                 <i
@@ -221,7 +223,7 @@ export function NationsMap({
                   {n.name}
                 </span>
                 {n.late && (
-                  <span style={{ fontSize: 11, color: 'var(--err, #B23A2E)', flexShrink: 0 }}>{t('map.lateShort')}</span>
+                  <span style={{ fontSize: 11, color: 'var(--err)', flexShrink: 0 }}>{t('map.lateShort')}</span>
                 )}
                 <span style={{ color: 'var(--ink-400)', flexShrink: 0 }}>
                   {Math.round(n.submissionRate * 100)} %
@@ -248,7 +250,7 @@ export function NationsMap({
       {/* Nations en retard */}
       {deadlinePast && lateNations.length > 0 && (
         <div style={{ marginTop: 14 }}>
-          <h4 style={{ margin: '0 0 8px', color: 'var(--err, #B23A2E)' }}>
+          <h4 style={{ margin: '0 0 8px', color: 'var(--err)' }}>
             {t('map.lateNations', { count: lateNations.length })}
           </h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -261,17 +263,17 @@ export function NationsMap({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 8,
-                  background: '#FBEDE9',
-                  border: '1px solid #E7C3BA',
+                  background: 'var(--err-soft-bg)',
+                  border: '1px solid var(--err-soft-line)',
                   borderRadius: 999,
                   padding: '5px 12px',
                   fontSize: 13,
                   cursor: 'pointer',
-                  color: 'var(--ink-700, #3A2F25)',
+                  color: 'var(--ink-700)',
                 }}
               >
                 <strong>{n.name}</strong>
-                <span style={{ color: 'var(--err, #B23A2E)' }}>
+                <span style={{ color: 'var(--err)' }}>
                   {t('map.notSubmittedRatio', { late: n.lateMembers, total: n.totalMembers })}
                 </span>
               </button>
@@ -280,7 +282,7 @@ export function NationsMap({
         </div>
       )}
       {deadlinePast && lateNations.length === 0 && (
-        <p style={{ marginTop: 12, fontSize: 13, color: 'var(--ok, #2F8F5B)' }}>
+        <p style={{ marginTop: 12, fontSize: 13, color: 'var(--ok)' }}>
           {t('map.noLateNation')}
         </p>
       )}

@@ -41,6 +41,7 @@ import {
   type RequestNodeOption,
   type StructureRequestContext,
 } from '@/services/structureRequestsApi';
+import { alpha } from '@/theme/brandingPalette';
 
 /**
  * Membres (Lot S1 — 21/07) : annuaire du périmètre de la personne connectée. La liste est SCOPÉE
@@ -487,7 +488,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans, fontSize: 10.5, fontWeight: '700', color: colors.mossDeep,
     backgroundColor: colors.mossTint, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99,
   },
-  submittedPillPending: { color: colors.earthDeep, backgroundColor: 'rgba(201,149,107,0.22)' },
+  submittedPillPending: { color: colors.earthDeep, backgroundColor: alpha(colors.earth, 0.22) },
   inactivePill: {
     fontFamily: fonts.mono, fontSize: 9.5, color: colors.ink3, letterSpacing: 0.6,
     textTransform: 'uppercase', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 99,
@@ -495,7 +496,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   empty: { fontFamily: fonts.serif, fontStyle: 'italic', color: colors.ink3, textAlign: 'center', paddingVertical: 20 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(22,41,31,0.45)', justifyContent: 'center', padding: 20 },
+  backdrop: { flex: 1, backgroundColor: alpha(colors.mossDeep, 0.45), justifyContent: 'center', padding: 20 },
   modalCard: { paddingHorizontal: 20, paddingVertical: 20, maxHeight: '80%' },
   modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink },
   cancelLink: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink3 },

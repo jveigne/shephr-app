@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './Icon';
 import { LangSwitch } from './LangSwitch';
+import { BrandLogo, BrandName } from './BrandLogo';
 
 /**
  * Gabarit des pages publiques du parcours « Mot de passe oublié » (D-WEB-05, JP 27/10) : même
@@ -32,8 +33,8 @@ export function AuthPageLayout({
           title={t('login.backToHome')}
           style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
         >
-          <div className="brand-mark">S</div>
-          <span className="word">shephr</span>
+          <BrandLogo />
+          <span className="word"><BrandName /></span>
         </button>
         <svg
           viewBox="0 0 360 220"
@@ -44,13 +45,13 @@ export function AuthPageLayout({
         >
           <defs>
             <linearGradient id="pwHill" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#C9956B" stopOpacity="0.55" />
-              <stop offset="100%" stopColor="#C9956B" stopOpacity="0.15" />
+              <stop offset="0%" style={{ stopColor: 'var(--earth-500)' }} stopOpacity="0.55" />
+              <stop offset="100%" style={{ stopColor: 'var(--earth-500)' }} stopOpacity="0.15" />
             </linearGradient>
           </defs>
-          <line x1="0" x2="360" y1="160" y2="160" stroke="rgba(245,236,212,0.18)" strokeWidth="1" />
-          <circle cx="270" cy="100" r="38" fill="#C9956B" opacity="0.35" />
-          <circle cx="270" cy="100" r="22" fill="#D9AE89" opacity="0.55" />
+          <line x1="0" x2="360" y1="160" y2="160" style={{ stroke: 'rgba(var(--on-primary-soft-rgb),0.18)' }} strokeWidth="1" />
+          <circle cx="270" cy="100" r="38" style={{ fill: 'var(--earth-500)' }} opacity="0.35" />
+          <circle cx="270" cy="100" r="22" style={{ fill: 'var(--earth-400)' }} opacity="0.55" />
           <path d="M 0 175 Q 80 145 170 165 T 360 160 L 360 220 L 0 220 Z" fill="url(#pwHill)" />
         </svg>
       </div>

@@ -1,3 +1,4 @@
+import { BrandingWelcomeCard } from '../components/PoweredBy';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -88,6 +89,8 @@ export function DashboardPage() {
       />
 
       <div className="content">
+        {/* §5.5 (JP 11/11) : texte d'accueil du pays actif (et lien du site), rien en Shephr standard. */}
+        <BrandingWelcomeCard />
         <div
           style={{
             display: 'flex',

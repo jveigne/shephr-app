@@ -28,6 +28,8 @@ import { notify } from '@/utils/dialogs';
 import i18n from '@/utils/i18n/i18n';
 import { flagEmoji, sortedDialCountries, type DialCountry } from '@/constants/dialCodes';
 import type { MeResponse } from '@/services/authApi';
+import { alpha } from '@/theme/brandingPalette';
+import { readBrandingCache } from '@/theme/branding';
 
 /**
  * Inscription — écran unique : identité, email, téléphone (RG-ID-04/05), mot de passe confirmé.
@@ -101,6 +103,8 @@ export default function SignupScreen() {
         // l'unicité (indicatif, numéro) le jour où l'utilisateur renseignera son téléphone.
         phoneNumber: phoneProvided ? phone.trim() : undefined,
         countryCode: phoneProvided ? country?.dial : undefined,
+        // RG-PAYS-05 (JP 11/11) : le pays choisi sur l'appareil devient celui du compte (≠ indicatif ci-dessus).
+        countryIso: readBrandingCache().deviceCountry ?? undefined,
       });
       // Compte neuf : aucun rattachement possible → rattachement à une assemblée.
       router.replace('/(auth)/join');
@@ -411,10 +415,10 @@ function Hills() {
     >
       <Path
         d="M-10,130 C 80,80 160,180 240,130 S 380,80 420,120 L 420,250 L -10,250 Z"
-        fill="#1E3A2F"
+        fill={colors.moss}
         opacity={0.14}
       />
-      <Circle cx="320" cy="80" r="34" fill="#C9956B" opacity={0.4} />
+      <Circle cx="320" cy="80" r="34" fill={colors.earth} opacity={0.4} />
     </Svg>
   );
 }
@@ -464,14 +468,14 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: 'rgba(30,58,47,0.06)',
-    borderColor: 'rgba(30,58,47,0.15)',
+    backgroundColor: alpha(colors.moss, 0.06),
+    borderColor: alpha(colors.moss, 0.15),
   },
   emailCardText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, color: colors.ink },
   cancelLink: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink3, fontWeight: '600' },
   pickerBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(22,41,31,0.45)',
+    backgroundColor: alpha(colors.mossDeep, 0.45),
     justifyContent: 'center',
     padding: 20,
   },

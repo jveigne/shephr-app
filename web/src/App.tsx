@@ -44,6 +44,9 @@ import { SettingsPage } from './pages/Settings';
 import { ContactPage } from './pages/Contact';
 import { DocumentsPage } from './pages/Documents';
 import { FEATURES } from './config/features';
+import { BrandingProvider } from './theme/BrandingProvider';
+import { OpenEventsPage } from './pages/OpenEvents';
+import { FollowUpsPage } from './pages/FollowUps';
 
 // Lot D4 (plan Documents du 18/10) : lecteur public chargé à la demande — PDF.js et `qrcode` restent
 // hors du bundle de l'Espace ministère.
@@ -71,6 +74,9 @@ export function App() {
         {/* Bug JP 29/10 (« Offres » ouverte en bas) : haut de page à chaque changement de chemin. */}
         <ScrollToTop />
         <AuthProvider>
+          {/* D-PAYS-01 / §5.4 (JP 11/11) : thème du pays (compte, sinon navigateur), Shephr standard sur les
+              chemins neutres (RG-PAYS-07). Sous le routeur et la session : il lit la route et `me`. */}
+          <BrandingProvider>
           <ToastProvider>
             <Routes>
               {/* Landing publique : présentation + fonctionnalités + tarification. */}
@@ -135,6 +141,9 @@ export function App() {
                     (config/features.ts inchangé, JP-3) : gating = abonnement DOCUMENTS + compte rattaché, dans
                     la page et le menu. */}
                 <Route path="/my-documents" element={<DocumentsPage />} />
+                {/* RG-PAYS-22 (JP 11/11) : évènements ouverts à tous de mon pays et de ma ville + « Mes inscriptions »
+                    (`?tab=mine`) — seule page d'un compte SANS assemblée, ouverte aussi aux membres rattachés. */}
+                {FEATURES.events && <Route path="/open-events" element={<OpenEventsPage />} />}
                 <Route path="/member-settings" element={<SettingsPage />} />
                 <Route path="/member-contact" element={<ContactPage />} />
               </Route>
@@ -191,6 +200,10 @@ export function App() {
                     (retours Stripe) : inchangé. */}
                 <Route path="/study/city" element={<CityStudyPage />} />
                 <Route path="/member-care" element={<MemberCarePage />} />
+                {/* D-PAYS-13 (JP 11/11) : « Personnes à suivre » (comptes sans assemblée, géographie) — la page
+                    lit `GET /follow-ups/scope` et le serveur filtre chaque fiche. */}
+                <Route path="/follow-ups" element={<FollowUpsPage />} />
+                <Route path="/follow-ups/:userId" element={<FollowUpsPage />} />
                 {/* D-DOC-14 levée (JP 27/10, D-WEB-03) : espace Documents sur le web (gating dans la page). */}
                 <Route path="/documents" element={<DocumentsPage />} />
                 <Route path="/users" element={<UsersPage />} />
@@ -218,6 +231,7 @@ export function App() {
               </Route>
             </Routes>
           </ToastProvider>
+          </BrandingProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

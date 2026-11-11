@@ -34,6 +34,7 @@ import {
   type SupervisionOverview,
 } from '@/services/leadersApi';
 import { ENTITLEMENT_HIERARCHIE_SUIVI, getPersonalEntitlements } from '@/services/entitlementsApi';
+import { alpha } from '@/theme/brandingPalette';
 
 /**
  * Hiérarchie des dirigeants (Lot H3 — 21/07) : arbre du leadership renvoyé par le backend,
@@ -557,7 +558,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: 'rgba(201,149,107,0.14)',
+    backgroundColor: alpha(colors.earth, 0.14),
   },
   reportsToText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
   reportsToName: { fontWeight: '700', color: colors.ink },
@@ -616,7 +617,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   goalPillDone: { color: colors.mossDeep, backgroundColor: colors.mossTint2 },
-  goalPillPending: { color: colors.earthDeep, backgroundColor: 'rgba(201,149,107,0.22)' },
+  goalPillPending: { color: colors.earthDeep, backgroundColor: alpha(colors.earth, 0.22) },
   goalPillLate: { color: colors.clay, backgroundColor: 'rgba(176,90,62,0.13)' },
   inactivePill: {
     fontFamily: fonts.mono, fontSize: 9, color: colors.ink3, letterSpacing: 0.6,

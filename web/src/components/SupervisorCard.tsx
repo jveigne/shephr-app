@@ -116,7 +116,7 @@ export function SupervisorCard({ hideSupervisees = false }: { hideSupervisees?: 
       )}
 
       {searchOpen && (
-        <div style={{ marginTop: 14, borderTop: '1px solid var(--line-soft, rgba(42,38,32,0.08))', paddingTop: 14 }}>
+        <div style={{ marginTop: 14, borderTop: '1px solid var(--line-soft)', paddingTop: 14 }}>
           <Field
             label={t('supervisor.searchLabel')}
             hint={debouncedQ.length > 0 && debouncedQ.length < 2 ? t('supervisor.searchTooShort') : t('supervisor.searchHint')}
@@ -137,7 +137,7 @@ export function SupervisorCard({ hideSupervisees = false }: { hideSupervisees?: 
               ) : results.length === 0 ? (
                 <p style={{ color: 'var(--ink-400)', margin: 0, fontStyle: 'italic' }}>{t('supervisor.noResult')}</p>
               ) : (
-                <div style={{ border: '1px solid var(--line-soft, rgba(42,38,32,0.08))', borderRadius: 10, overflow: 'hidden' }}>
+                <div style={{ border: '1px solid var(--line-soft)', borderRadius: 10, overflow: 'hidden' }}>
                   {results.map((p) => (
                     <button
                       key={p.id}
@@ -147,11 +147,11 @@ export function SupervisorCard({ hideSupervisees = false }: { hideSupervisees?: 
                       style={{
                         display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
                         padding: '10px 14px', background: 'transparent', border: 'none', cursor: 'pointer',
-                        borderBottom: '1px solid var(--line-soft, rgba(42,38,32,0.06))', fontFamily: 'inherit',
+                        borderBottom: '1px solid var(--line-soft)', fontFamily: 'inherit',
                       }}
                     >
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600, color: 'var(--ink-900, #1E1B16)' }}>{p.fullName}</div>
+                        <div style={{ fontWeight: 600, color: 'var(--ink-900)' }}>{p.fullName}</div>
                         <div style={{ fontSize: 12.5, color: 'var(--ink-500)' }}>{personLine(p)}</div>
                       </div>
                       {(p.goalRole ?? p.donationRole) && (
@@ -172,7 +172,7 @@ export function SupervisorCard({ hideSupervisees = false }: { hideSupervisees?: 
               onClick={() => setInviteOpen((v) => !v)}
               style={{
                 background: 'transparent', border: 'none', cursor: 'pointer', padding: 4,
-                color: 'var(--green-700, #1E3A2F)', fontFamily: 'inherit', fontSize: 13.5,
+                color: 'var(--green-700)', fontFamily: 'inherit', fontSize: 13.5,
                 fontWeight: 600, textDecoration: 'underline',
               }}
             >
@@ -211,7 +211,7 @@ export function SupervisorCard({ hideSupervisees = false }: { hideSupervisees?: 
       )}
 
       {!hideSupervisees && disciples.length > 0 && (
-        <div style={{ marginTop: 16, borderTop: '1px solid var(--line-soft, rgba(42,38,32,0.08))', paddingTop: 12 }}>
+        <div style={{ marginTop: 16, borderTop: '1px solid var(--line-soft)', paddingTop: 12 }}>
           <div style={{ fontSize: 12.5, color: 'var(--ink-500)', marginBottom: 8 }}>
             {t('supervisor.superviseesTitle', { count: disciples.length })}
           </div>

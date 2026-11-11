@@ -2,6 +2,7 @@ import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, Field, Input, Picker } from './ui';
+import { ConsentCheck } from './ConsentCheck';
 import { Icon } from './Icon';
 import {
   createEvent,
@@ -136,6 +137,9 @@ export function EventForm({
   const [counts, setCounts] = useState(() => initialCountValues(isEdit ? event : undefined));
   const [note, setNote] = useState(isEdit ? event.note ?? '' : '');
   const [submitted, setSubmitted] = useState(false);
+  // RG-PAYS-23 (JP 11/11) : « Ouvert à tous » — évènement PROGRAMMÉ de niveau pays ou ville seulement (le serveur
+  // répond 422 EVENT_OPEN_TO_ALL_INVALID sinon). Un évènement ouvert qui devient DONE / CANCELLED le reste.
+  const [openToAll, setOpenToAll] = useState(isEdit ? event.openToAll === true : false);
 
   const type = typeOptions.find((ty) => ty.id === typeId) ?? null;
   const scope = nodes.find((n) => n.id === scopeId) ?? null;
@@ -145,6 +149,18 @@ export function EventForm({
   const evangelism = type?.evangelism === true;
   const countKeys = showCounts ? countKeysFor(evangelism) : [];
   const parsed = (k: EventCountKey) => parseCount(counts[k]);
+  const openLevel = scope?.level === 'COUNTRY' || scope?.level === 'LOCALITY';
+  const canOpenToAll = status === 'PLANNED' && openLevel;
+  /**
+   * Valeur envoyée : création → vrai seulement si permis ; modification d'un PLANNED → la case (forcée à faux hors
+   * pays / ville) ; modification d'un DONE / CANCELLED → absent = INCHANGÉ (contrat §8.2), SAUF un évènement
+   * ouvert déplacé hors pays / ville : `false` (contrat §14 E-13 — un état résultant ouvert exige COUNTRY / LOCALITY,
+   * sinon 422 EVENT_OPEN_TO_ALL_INVALID ; même règle que `mobile/components/EventForm.tsx`).
+   */
+  const openToAllBody = (): boolean | undefined => {
+    if (isEdit && status !== 'PLANNED') return !openLevel && event.openToAll ? false : undefined;
+    return canOpenToAll && openToAll;
+  };
 
   // Contrôles locaux, affichés après la première tentative d'envoi (spec §4.2 : le bouton reste
   // actif dès que type + date sont remplis, rien ne bloque la saisie elle-même).
@@ -194,6 +210,7 @@ export function EventForm({
           preacher: preacherBody,
           note: trimOrNull(note),
           ...countsBody,
+          openToAll: openToAllBody(),
         });
       }
       return createEvent({
@@ -210,6 +227,7 @@ export function EventForm({
         preacher: preacherBody,
         note: trimOrNull(note),
         ...countsBody,
+        openToAll: openToAllBody() ?? false,
       });
     },
     onSuccess: (saved) => {
@@ -363,6 +381,16 @@ export function EventForm({
       ) : nodes.length <= 1 ? (
         <ScopeBanner tone="warn">{t('events.form.noScope')}</ScopeBanner>
       ) : null}
+
+      {/* RG-PAYS-23 (JP 11/11) : visible des personnes sans assemblée du pays / de la ville, qui peuvent s'inscrire. */}
+      {canOpenToAll && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <ConsentCheck checked={openToAll} onChange={setOpenToAll}>
+            <strong>{t('events.form.openToAll')}</strong>
+          </ConsentCheck>
+          <span style={{ fontSize: 12.5, color: 'var(--ink-500)', paddingLeft: 30 }}>{t('events.form.openToAllHint')}</span>
+        </div>
+      )}
 
       {saveM.isError && (
         <div role="alert" style={{ color: 'var(--err)', fontSize: 13 }}>

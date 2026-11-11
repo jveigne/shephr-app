@@ -30,6 +30,7 @@ import {
   approveJoinRequest, cancelJoinRequest, fetchMyJoinRequests, fetchPendingJoinRequests,
   rejectJoinRequest, reviewableJoinRequests, type JoinRequestResponse,
 } from '@/services/joinRequestsApi';
+import { alpha } from '@/theme/brandingPalette';
 
 /**
  * Demandes de structure (RDG 22/07, restreintes par le RDG 25/07) : une demande ne porte plus
@@ -583,7 +584,7 @@ const styles = StyleSheet.create({
   itemName: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: colors.ink },
   itemMeta: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginTop: 2, lineHeight: 17 },
   empty: { fontFamily: fonts.serif, fontStyle: 'italic', color: colors.ink3, textAlign: 'center', paddingVertical: 20 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(22,41,31,0.45)', justifyContent: 'center', padding: 20 },
+  backdrop: { flex: 1, backgroundColor: alpha(colors.mossDeep, 0.45), justifyContent: 'center', padding: 20 },
   modalCard: { paddingHorizontal: 20, paddingVertical: 20, maxHeight: '88%' },
   modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

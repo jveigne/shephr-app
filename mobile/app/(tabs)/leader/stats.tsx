@@ -364,8 +364,8 @@ function BarChart({
     <Svg viewBox={`0 0 ${W} ${H}`} width="100%" height={170} style={{ marginTop: 8 }}>
       <Defs>
         <LinearGradient id="barGrad" x1="0" x2="0" y1="0" y2="1">
-          <Stop offset="0" stopColor="#2E5142" />
-          <Stop offset="1" stopColor="#1E3A2F" />
+          <Stop offset="0" stopColor={colors.mossSoft} />
+          <Stop offset="1" stopColor={colors.moss} />
         </LinearGradient>
       </Defs>
       {[0, 0.25, 0.5, 0.75, 1].map((p, i) => (

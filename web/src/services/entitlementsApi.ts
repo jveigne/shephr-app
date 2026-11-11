@@ -80,6 +80,11 @@ export interface EntitlementsResponse {
   subscriptions: LocalityPlanSubscription[];
   /** Offres de plan actives — renseigné seulement si `canSubscribe` (web seulement). */
   plans: PlanOffer[];
+  /**
+   * RG-PAYS-19 (JP 11/11, contrat 11_11_2026/02 §7.2) — codes de la ville couverts par l'offre Josué de l'APPELANT
+   * (onglet Abonnement : « Couvert par votre offre Josué »). En fin de record ; facultatif côté serveur antérieur.
+   */
+  nationalPlan: boolean;
 }
 
 /** §4.2 — `GET /api/church/entitlements?nodeId=` (tout compte connecté). */
@@ -95,6 +100,7 @@ export async function getEntitlements(nodeId: string): Promise<EntitlementsRespo
     canSubscribe: !!data?.canSubscribe,
     subscriptions: data?.subscriptions ?? [],
     plans: data?.plans ?? [],
+    nationalPlan: data?.nationalPlan === true,
   };
 }
 
@@ -136,6 +142,13 @@ export function studyCityAccessDenied(err: unknown): ModuleAccessDeniedDetails |
 export const ENTITLEMENT_HIERARCHIE_SUIVI = 'HIERARCHIE_SUIVI';
 /** Plan personnel « Suivi de ma hiérarchie » (offre `dirigeant-hierarchie`, mensuel ou annuel — D-MKT-03, JP 28/10). */
 export const PLAN_DIRIGEANT_HIERARCHIE = 'DIRIGEANT_HIERARCHIE';
+/**
+ * D-PAYS-05 (JP 11/11) — plan personnel « suivi national » (offre Josué, `josue`) : au PAYEUR seul, `ETUDE_SUIVI`,
+ * `JOURNAL` et `EVENEMENTS_SUIVI` sur toutes les villes des nations dont il est DIRIGEANT_COORDINATEUR (calculées par
+ * le serveur à la lecture, RG-PAYS-16). ⚠ Écart assumé à D-ABO-31 : personnel ET géographique. Souscription réservée
+ * au coordinateur (RG-PAYS-15, `canSubscribe` du serveur).
+ */
+export const PLAN_SUIVI_NATIONAL = 'SUIVI_NATIONAL';
 
 /** Mirrors com.excellence.back.subscription.entitlement.EntitlementDtos.PersonalPlanSubscription */
 export interface PersonalPlanSubscription {

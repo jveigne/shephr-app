@@ -184,7 +184,7 @@ function PdfPage({
       data-page={pageNumber}
       aria-label={t('documents.reader.pageLabel', { page: pageNumber })}
       style={{
-        position: 'relative', width, height, background: '#fff', borderRadius: 4,
+        position: 'relative', width, height, background: 'var(--white)', borderRadius: 4,
         boxShadow: 'var(--shadow-md)', overflow: 'hidden',
       }}
     >
@@ -250,7 +250,7 @@ function QrCode({ value }: { value: string }) {
 const storeBtnStyle = {
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 46,
   padding: '12px 20px', borderRadius: 'var(--radius)', fontWeight: 600, fontSize: 15,
-  textDecoration: 'none', border: 'none', background: 'var(--green-800)', color: '#fff',
+  textDecoration: 'none', border: 'none', background: 'var(--green-800)', color: 'var(--on-primary-bright)',
 } as const;
 
 function StoreButton({ store, onClick }: { store: 'ios' | 'android'; onClick?: () => void }) {
@@ -330,7 +330,7 @@ function Logo() {
     <div
       aria-hidden
       style={{
-        flexShrink: 0, width: 30, height: 30, borderRadius: 8, background: 'var(--green-600)', color: '#fff',
+        flexShrink: 0, width: 30, height: 30, borderRadius: 8, background: 'var(--green-600)', color: 'var(--on-primary-bright)',
         display: 'grid', placeItems: 'center', fontWeight: 700, fontFamily: 'var(--font-serif)',
       }}
     >S</div>

@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   },
   yearChipActive: { backgroundColor: colors.moss },
   yearChipText: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
-  yearChipTextActive: { color: '#fff', fontWeight: '600' },
+  yearChipTextActive: { color: colors.onMossBright, fontWeight: '600' },
   banner: {
     marginTop: 14, paddingHorizontal: 14, paddingVertical: 12,
     flexDirection: 'row', alignItems: 'center', gap: 10,

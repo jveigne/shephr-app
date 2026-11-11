@@ -6,6 +6,7 @@ import { Icon } from './Icon';
 import { useToast } from './Toast';
 import { EventCountFields, EventForm, EventPreacherField } from './EventForm';
 import { EventStatusBadges } from './EventsTable';
+import { EventRegistrationBlock, EventRegistrations } from './EventRegistrations';
 import {
   cancelEvent,
   deleteEvent,
@@ -163,7 +164,23 @@ export function EventDetailModal({
         />
       );
     }
-    return <EventDetailBody event={event} />;
+    return (
+      <>
+        <EventDetailBody event={event} />
+        {/* D-PAYS-12 (JP 11/11) : « Je participe » pour tout lecteur d'un évènement ouvert ; liste des inscrits et
+            pointage pour l'organisateur et le SECRETARIAT (`canManageRegistrations`, serveur — E-15, JP 11/11). */}
+        {event.openToAll && (
+          <EventRegistrationBlock
+            eventId={event.id}
+            status={event.status}
+            eventDate={event.eventDate}
+            myRegistration={event.myRegistration}
+            canRegister={event.canRegister}
+          />
+        )}
+        {event.openToAll && (event.canManageRegistrations ?? event.canEdit) && !event.restricted && <EventRegistrations eventId={event.id} />}
+      </>
+    );
   })();
 
   // RG-EVT-05 : un évènement programmé ne se clôture qu'une fois sa date arrivée.
@@ -288,15 +305,27 @@ function EventDetailBody({ event }: { event: EventResponse }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const dash = <span style={{ color: 'var(--ink-400)' }}>—</span>;
+  // §8.1 / E-04 (JP 11/11) : vue « ouvert à tous » limitée — ni compteurs, ni prédicateur, ni note, ni auteur.
+  const restricted = event.restricted === true;
   return (
     <div>
+      {event.openToAll && (
+        <div style={{ marginBottom: 8 }}>
+          <span className="badge green">{t('events.open.badge')}</span>
+          {(event.canManageRegistrations ?? event.canEdit) && event.registrationCount != null && (
+            <span style={{ marginLeft: 8, fontSize: 12.5, color: 'var(--ink-600)' }}>
+              {t('events.registration.counts', { registered: event.registrationCount, attended: event.attendedCount ?? 0 })}
+            </span>
+          )}
+        </div>
+      )}
       {event.title && <Row label={t('events.form.title')}>{event.title}</Row>}
       {event.customLabel && (
         <Row label={t('events.detail.type')}>{t('events.detail.otherType', { name: typeLabel({ name: event.typeName, nameEn: event.typeNameEn }, lang) })}</Row>
       )}
       <Row label={t('events.detail.date')}>{fmtEventDates(event, lang)}</Row>
       {/* D-EVT-16 (JP 14/10) : le prédicateur, en évidence juste après la date — type évangélique seulement. */}
-      {event.evangelism && (
+      {event.evangelism && !restricted && (
         <Row label={t('events.form.preacher')}>
           {event.preacher ? (
             <span style={{ fontFamily: 'var(--font-serif)', fontSize: 15.5, fontWeight: 600, color: 'var(--green-800)' }}>
@@ -314,14 +343,16 @@ function EventDetailBody({ event }: { event: EventResponse }) {
       <Row label={t('events.form.place')}>{event.place ?? dash}</Row>
       {/* D-EVT-17 : participants puis invités, tout type ; D-EVT-15 : conversions / restaurations /
           baptêmes n'existent que pour un type évangélique. */}
-      {countKeysFor(event.evangelism).map((k) => (
+      {!restricted && countKeysFor(event.evangelism).map((k) => (
         <Row key={k} label={t(`events.counters.${k}`)}>{event[k] ?? dash}</Row>
       ))}
-      <Row label={t('events.form.note')}>
-        {event.note ? <span style={{ whiteSpace: 'pre-wrap' }}>{event.note}</span> : dash}
-      </Row>
-      <Row label={t('events.detail.author')}>{event.createdByName}</Row>
-      {event.status === 'DONE' && (
+      {!restricted && (
+        <Row label={t('events.form.note')}>
+          {event.note ? <span style={{ whiteSpace: 'pre-wrap' }}>{event.note}</span> : dash}
+        </Row>
+      )}
+      {!restricted && <Row label={t('events.detail.author')}>{event.createdByName}</Row>}
+      {event.status === 'DONE' && !restricted && (
         <p style={{ margin: '12px 0 0', fontSize: 12.5, color: 'var(--ink-500)' }}>
           {event.counted
             ? event.toVerify
@@ -330,7 +361,7 @@ function EventDetailBody({ event }: { event: EventResponse }) {
             : t('events.detail.notCountedHint')}
         </p>
       )}
-      {!event.canEdit && (
+      {!event.canEdit && !restricted && (
         <p style={{ margin: '12px 0 0', fontSize: 12.5, color: 'var(--ink-500)' }}>{t('events.detail.readOnly')}</p>
       )}
     </div>

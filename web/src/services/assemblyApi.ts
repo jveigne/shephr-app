@@ -368,6 +368,11 @@ export interface AssemblyLocality {
   entitled: boolean;
   /** RG-ABO-22 — le compte peut souscrire pour cette ville (web seulement). */
   canSubscribe: boolean;
+  /**
+   * RG-PAYS-19 (JP 11/11) — ville couverte par l'offre Josué de l'APPELANT pour `JOURNAL` : `entitled` vrai et
+   * `canSubscribe` faux (pas de caisse Néhémie). En fin de record ; facultatif côté serveur antérieur.
+   */
+  national?: boolean;
 }
 
 /** Villes visibles du compte pour le journal de ville (D-ABO-21) ; vide pour un membre ou un dirigeant d'unité. */
@@ -987,6 +992,11 @@ export interface StudyLocalitySummary {
    * (422 `SUBSCRIPTION_ALREADY_ACTIVE`). Jamais déduit côté front. Toujours false pour le superAdmin.
    */
   agreement: boolean;
+  /**
+   * RG-PAYS-19 (JP 11/11) — ville couverte par l'offre Josué de l'APPELANT pour `ETUDE_SUIVI` : `entitled` vrai et
+   * `canSubscribe` faux. En fin de record ; facultatif côté serveur antérieur.
+   */
+  national?: boolean;
 }
 
 /** Mirrors com.excellence.back.assembly.AssemblyDtos.StudyLocalityLesson */

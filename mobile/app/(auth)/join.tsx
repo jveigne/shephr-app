@@ -43,8 +43,24 @@ import {
   type JoinRequestResponse,
   type JoinRequestedRole,
 } from '@/services/joinRequestsApi';
+import { alpha } from '@/theme/brandingPalette';
+import ConsentCheck from '@/components/ConsentCheck';
+import { readBrandingCache } from '@/theme/branding';
+import {
+  countryErrorMessage,
+  fetchMyCities,
+  fetchPublicCountries,
+  putNoAssembly,
+  type MeCity,
+  type PublicCountry,
+} from '@/services/countriesApi';
+import { isEnglishLang } from '@/utils/events';
 
-type Mode = 'search' | 'create' | 'code' | 'pending';
+// D-PAYS-10 (JP 11/11) : + 'noAssembly' — « Je n'ai pas d'assemblée » (pays, ville facultative, consentement).
+type Mode = 'search' | 'create' | 'code' | 'pending' | 'noAssembly';
+
+/** Choix « Je ne sais pas / plus tard » de la ville (RG-PAYS-20 : ville facultative). */
+const NO_CITY = '__none__';
 
 /**
  * Parcours « mon assemblée n'existe pas » (JP 30/07) : on qualifie D'ABORD le statut.
@@ -70,7 +86,7 @@ export default function JoinScreen() {
   const { t } = useLanguage();
   // Coordonnées d'aide (pays / région / ville manquants) — pilotées depuis le back-office.
   const contact = useContactSettings();
-  const { refreshMe } = useAuth();
+  const { refreshMe, me } = useAuth();
 
   const [booting, setBooting] = useState(true);
   const [mode, setMode] = useState<Mode>('search');
@@ -100,6 +116,10 @@ export default function JoinScreen() {
 
   const [submitting, setSubmitting] = useState(false);
 
+  // RG-PAYS-12 (JP 11/11, contrat §6) : consentement RGPD de la demande de rattachement — jamais pré-coché, aucune
+  // demande sans lui (400 JOIN_CONSENT_REQUIRED côté serveur).
+  const [joinConsent, setJoinConsent] = useState(false);
+
   useEffect(() => {
     (async () => {
       try {
@@ -115,12 +135,18 @@ export default function JoinScreen() {
       // Le drill nation→région→ville est affiché EN LIGNE sous la recherche (parité web) :
       // son référentiel est donc chargé au démarrage, plus à l'entrée dans un mode dédié.
       try {
-        setContext(await fetchRequestContext());
+        const ctx = await fetchRequestContext();
+        setContext(ctx);
+        // Spec §3 (JP 11/11) : pays pré-sélectionné — celui choisi sur le compte (mêmes ids nation / pays).
+        const home = me?.countryNodeId ? ctx.nations.find((n) => n.id === me.countryNodeId) ?? null : null;
+        if (home) setNation(home);
       } catch {
         setContext({ nations: [], regions: [], cities: [] });
       }
       setBooting(false);
     })();
+    // Lu une fois au montage (le pays du compte ne change pas pendant le rattachement).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Debounce commun aux deux voies (nom / ville).
@@ -166,9 +192,10 @@ export default function JoinScreen() {
     requestedRole: JoinRequestedRole;
     newAssembly?: { cityId: string; name: string };
   }) => {
+    if (!joinConsent) return;
     setSubmitting(true);
     try {
-      const r = await createJoinRequest(payload);
+      const r = await createJoinRequest({ ...payload, consent: true });
       setRoleTarget(null);
       // Se déclarer dirigeant d'une assemblée EXISTANTE est titularisé sur-le-champ (JP 30/07) :
       // le serveur renvoie alors la demande DÉJÀ approuvée — on entre dans l'app, sans attente.
@@ -187,8 +214,14 @@ export default function JoinScreen() {
       setMode('pending');
       notify(t('common.appName'), t('join.requestSent'));
     } catch (e: any) {
-      // Contrat 422 : JOIN_TARGET_REQUIRED / JOIN_REQUEST_ALREADY_PENDING / ALREADY_ATTACHED.
-      notify(t('common.appName'), e?.response?.data?.message ?? t('join.sendFailed'));
+      // Contrat 422 : JOIN_TARGET_REQUIRED / JOIN_REQUEST_ALREADY_PENDING / ALREADY_ATTACHED ; 400
+      // JOIN_CONSENT_REQUIRED (lot conf-pays) traduit.
+      notify(
+        t('common.appName'),
+        e?.response?.data?.error === 'JOIN_CONSENT_REQUIRED'
+          ? t('countryErrors.JOIN_CONSENT_REQUIRED')
+          : e?.response?.data?.message ?? t('join.sendFailed'),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -321,6 +354,17 @@ export default function JoinScreen() {
                 setMode('create');
               }}
               onCode={() => setMode('code')}
+              onNoAssembly={() => setMode('noAssembly')}
+            />
+          )}
+
+          {mode === 'noAssembly' && (
+            <NoAssemblySection
+              initialCountry={me?.countryIso ?? readBrandingCache().deviceCountry}
+              onDone={async () => {
+                await refreshMe();
+                void routeHomeOrReturn();
+              }}
             />
           )}
 
@@ -378,12 +422,18 @@ export default function JoinScreen() {
                 onChangeText={setNewName}
                 placeholder={t('join.newAssemblyNamePlaceholder')}
               />
+              <ConsentCheck
+                checked={joinConsent}
+                onChange={setJoinConsent}
+                label={t('join.consent.label')}
+                style={{ marginTop: 16 }}
+              />
               <Button
                 label={t('join.createAssembly')}
                 loading={submitting}
                 height={54}
-                style={{ marginTop: 20 }}
-                disabled={!city || newName.trim().length === 0}
+                style={{ marginTop: 14 }}
+                disabled={!city || newName.trim().length === 0 || !joinConsent}
                 onPress={() =>
                   city &&
                   submitJoin({
@@ -519,11 +569,19 @@ export default function JoinScreen() {
                 ? `${roleTarget.cityName} · ${roleTarget.regionName} · ${roleTarget.nationName}`
                 : ''}
             </Text>
-            <Label style={{ marginTop: 16, marginBottom: 8 }}>{t('join.confirmJoinHint')}</Label>
+            {/* RG-PAYS-12 (JP 11/11) : la case vient AVANT le choix du rôle, qui envoie la demande. */}
+            <ConsentCheck
+              checked={joinConsent}
+              onChange={setJoinConsent}
+              label={t('join.consent.label')}
+              style={{ marginTop: 14 }}
+            />
+            <Label style={{ marginTop: 12, marginBottom: 8 }}>{t('join.confirmJoinHint')}</Label>
             <View style={{ gap: 10 }}>
               <Button
                 label={t('join.confirmAsLeader')}
                 variant="soft"
+                disabled={!joinConsent}
                 loading={submitting}
                 onPress={() =>
                   roleTarget && onDeclareLeader(roleTarget)
@@ -532,6 +590,7 @@ export default function JoinScreen() {
               <Button
                 label={t('join.confirmAsMember')}
                 variant="soft"
+                disabled={!joinConsent}
                 loading={submitting}
                 onPress={() =>
                   roleTarget &&
@@ -573,6 +632,7 @@ function SearchSection({
   onPick,
   onNotFound,
   onCode,
+  onNoAssembly,
 }: {
   query: string;
   onQuery: (q: string) => void;
@@ -589,6 +649,7 @@ function SearchSection({
   onPick: (a: AssemblySearchResult) => void;
   onNotFound: () => void;
   onCode: () => void;
+  onNoAssembly: () => void;
 }) {
   const { t } = useLanguage();
   // Une recherche est « active » dès qu'une ville est choisie, ou dès 2 caractères saisis.
@@ -657,6 +718,143 @@ function SearchSection({
         <Ionicons name="key-outline" size={16} color={colors.earthDeep} />
         <Text style={styles.secondaryLinkText}>{t('join.hasJoinCode')}</Text>
       </Pressable>
+      {/* D-PAYS-10 / RG-PAYS-20 (JP 11/11) : le rattachement devient FACULTATIF. */}
+      <Pressable onPress={onNoAssembly} style={styles.secondaryLink}>
+        <Ionicons name="person-outline" size={16} color={colors.earthDeep} />
+        <Text style={styles.secondaryLinkText}>{t('join.noAssembly.cta')}</Text>
+      </Pressable>
+    </>
+  );
+}
+
+/**
+ * « Je n'ai pas d'assemblée » — D-PAYS-10 / RG-PAYS-20 (JP 11/11, contrat 11/11 §3.4 / §10.2). Pays (prérempli :
+ * pays du compte, sinon choix de l'appareil), ville FACULTATIVE (`GET /me/cities`, « Je ne sais pas / plus
+ * tard »), consentement de suivi FACULTATIF et non coché (écart E-05 : sans lui, aucune fiche ; il sera demandé à
+ * la première inscription), puis `PUT /me/no-assembly` → espace sans assemblée. Un rattachement reste possible plus
+ * tard depuis le profil (parcours existant).
+ */
+function NoAssemblySection({
+  initialCountry,
+  onDone,
+}: {
+  initialCountry: string | null;
+  onDone: () => Promise<void>;
+}) {
+  const { t, language } = useLanguage();
+  const english = isEnglishLang(language);
+  const [countries, setCountries] = useState<PublicCountry[] | null>(null);
+  const [countryIso, setCountryIso] = useState<string | null>(initialCountry);
+  const [cities, setCities] = useState<MeCity[] | null>(null);
+  const [cityId, setCityId] = useState<string>(NO_CITY);
+  const [consent, setConsent] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let live = true;
+    fetchPublicCountries()
+      .then((list) => {
+        if (!live) return;
+        setLoadFailed(false);
+        setCountries(list);
+        setCountryIso((cur) => (cur && list.some((c) => c.code === cur) ? cur : null));
+      })
+      .catch(() => {
+        if (!live) return;
+        setCountries([]);
+        setLoadFailed(true);
+      });
+    return () => { live = false; };
+  }, [attempt]);
+
+  useEffect(() => {
+    if (!countryIso) return;
+    let live = true;
+    fetchMyCities({ countryIso })
+      .then((list) => { if (live) setCities(list); })
+      .catch(() => { if (live) setCities([]); });
+    return () => { live = false; };
+  }, [countryIso]);
+
+  const pickCountry = (iso: string) => {
+    if (iso === countryIso) return;
+    setCities(null);
+    setCityId(NO_CITY);
+    setCountryIso(iso);
+  };
+
+  const countryOptions = useMemo(
+    () => (countries ?? []).map((c) => ({ id: c.code, name: (english && c.nameEn) || c.name })),
+    [countries, english],
+  );
+  const cityOptions = useMemo(
+    () => [
+      { id: NO_CITY, name: t('join.noAssembly.cityLater') },
+      ...(cities ?? []).map((c) => ({ id: c.id, name: c.regionName ? `${c.name} · ${c.regionName}` : c.name })),
+    ],
+    [cities, t],
+  );
+
+  const submit = async () => {
+    if (!countryIso || saving) return;
+    setSaving(true);
+    try {
+      await putNoAssembly({ countryIso, cityNodeId: cityId === NO_CITY ? null : cityId, consent });
+      await onDone();
+    } catch (e) {
+      notify(t('join.noAssembly.title'), countryErrorMessage(e, t));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <Text style={styles.title}>{t('join.noAssembly.title')}</Text>
+      <Text style={styles.subtitle}>{t('join.noAssembly.hint')}</Text>
+      {countries == null ? (
+        <ActivityIndicator color={colors.moss} style={{ marginTop: 18 }} />
+      ) : (
+        <View style={{ marginTop: 12 }}>
+          {loadFailed && (
+            <Pressable onPress={() => setAttempt((n) => n + 1)} style={styles.secondaryLink}>
+              <Ionicons name="refresh" size={16} color={colors.earthDeep} />
+              <Text style={styles.secondaryLinkText}>{t('country.retry')}</Text>
+            </Pressable>
+          )}
+          <SelectField
+            label={t('join.noAssembly.country')}
+            options={countryOptions}
+            pick={countryOptions.find((o) => o.id === countryIso) ?? null}
+            onChange={(o) => pickCountry(o.id)}
+          />
+          <SelectField
+            label={t('join.noAssembly.city')}
+            options={cityOptions}
+            pick={cityOptions.find((o) => o.id === cityId) ?? null}
+            onChange={(o) => setCityId(o.id)}
+            disabled={!countryIso || cities == null}
+          />
+        </View>
+      )}
+      <ConsentCheck
+        checked={consent}
+        onChange={setConsent}
+        label={t('join.noAssembly.consent')}
+        style={{ marginTop: 12 }}
+      />
+      <Text style={styles.emptyHint}>{t('join.noAssembly.consentHint')}</Text>
+      <Button
+        label={t('join.noAssembly.submit')}
+        loading={saving}
+        disabled={!countryIso}
+        height={54}
+        style={{ marginTop: 18 }}
+        onPress={() => void submit()}
+        iconRight={<Ionicons name="arrow-forward" size={18} color={colors.white} />}
+      />
     </>
   );
 }
@@ -746,10 +944,10 @@ function Hills() {
     >
       <Path
         d="M-10,130 C 80,80 160,180 240,130 S 380,80 420,120 L 420,250 L -10,250 Z"
-        fill="#1E3A2F"
+        fill={colors.moss}
         opacity={0.14}
       />
-      <Circle cx="320" cy="80" r="34" fill="#C9956B" opacity={0.4} />
+      <Circle cx="320" cy="80" r="34" fill={colors.earth} opacity={0.4} />
     </Svg>
   );
 }
@@ -816,7 +1014,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(201,149,107,0.14)',
+    backgroundColor: alpha(colors.earth, 0.14),
   },
   resultCard: {
     paddingHorizontal: 16,
@@ -834,7 +1032,7 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: '700',
     color: colors.earthDeep,
-    backgroundColor: 'rgba(201,149,107,0.22)',
+    backgroundColor: alpha(colors.earth, 0.22),
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 99,
@@ -872,7 +1070,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 13,
-    backgroundColor: 'rgba(201,149,107,0.18)',
+    backgroundColor: alpha(colors.earth, 0.18),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
@@ -891,7 +1089,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(22,41,31,0.45)',
+    backgroundColor: alpha(colors.mossDeep, 0.45),
     justifyContent: 'center',
     padding: 20,
   },

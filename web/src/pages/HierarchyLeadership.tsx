@@ -351,7 +351,7 @@ function DesignateModal({ open, onClose }: { open: boolean; onClose: () => void 
           ) : results.length === 0 ? (
             <p style={{ color: 'var(--ink-400)', margin: 0, fontStyle: 'italic' }}>{t('hierarchy.leadership.noResult')}</p>
           ) : (
-            <div style={{ border: '1px solid var(--line-soft, rgba(42,38,32,0.08))', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ border: '1px solid var(--line-soft)', borderRadius: 10, overflow: 'hidden' }}>
               {results.map((p) => (
                 <button
                   key={p.id}
@@ -361,11 +361,11 @@ function DesignateModal({ open, onClose }: { open: boolean; onClose: () => void 
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
                     padding: '10px 14px', background: 'transparent', border: 'none', cursor: 'pointer',
-                    borderBottom: '1px solid var(--line-soft, rgba(42,38,32,0.06))', fontFamily: 'inherit',
+                    borderBottom: '1px solid var(--line-soft)', fontFamily: 'inherit',
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, color: 'var(--ink-900, #1E1B16)' }}>{p.fullName}</div>
+                    <div style={{ fontWeight: 600, color: 'var(--ink-900)' }}>{p.fullName}</div>
                     <div style={{ fontSize: 12.5, color: 'var(--ink-500)' }}>{[personLine(p), p.email].filter(Boolean).join(' · ')}</div>
                   </div>
                   {(p.goalRole ?? p.donationRole) && <Badge tone="gray">{t(`roles.${p.goalRole ?? p.donationRole}`)}</Badge>}
@@ -411,7 +411,7 @@ function PersonRow({
     <div
       style={{
         display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '8px 0',
-        borderTop: '1px solid var(--line-soft, rgba(42,38,32,0.06))',
+        borderTop: '1px solid var(--line-soft)',
       }}
     >
       <Icon name="user" size={14} />

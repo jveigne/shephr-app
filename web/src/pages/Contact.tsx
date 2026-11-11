@@ -31,7 +31,7 @@ export function ContactPage() {
               target="_blank"
               rel="noreferrer"
               style={{
-                padding: '10px 18px', borderRadius: 'var(--radius, 10px)',
+                padding: '10px 18px', borderRadius: 'var(--radius)',
                 border: '1px solid var(--green-600)', color: 'var(--green-700)',
                 fontWeight: 600, fontSize: 14, textDecoration: 'none',
               }}
@@ -41,7 +41,7 @@ export function ContactPage() {
             <a
               href={contactMailto(t('nav.contactSubject'))}
               style={{
-                padding: '10px 18px', borderRadius: 'var(--radius, 10px)',
+                padding: '10px 18px', borderRadius: 'var(--radius)',
                 border: '1px solid var(--line-soft)', color: 'var(--ink-700)',
                 fontWeight: 600, fontSize: 14, textDecoration: 'none',
               }}

@@ -1,5 +1,5 @@
 import type { NavigateFunction } from 'react-router-dom';
-import { hasMemberSpace, hasMinistryAccess, type MeResponse } from '../services/authApi';
+import { hasMemberSpace, hasMinistryAccess, isUnattachedPerson, type MeResponse } from '../services/authApi';
 import { safeDocumentNext } from './documents';
 
 /**
@@ -58,8 +58,12 @@ export function routeAfterLogin(
   // TOUT compte, comme les pages d'abonnement. Un compte sans aucun rattachement passe d'abord par
   // `/join`, qui le renverra au document une fois rattaché (miroir de `services/returnTarget` mobile).
   const docNext = safeDocumentNext(nextPath);
+  // RG-PAYS-22 (JP 11/11, contrat §10.2) : un compte « sans assemblée » (décidé par le serveur) sans demande de
+  // rattachement en cours va sur SON espace — le document s'il en vient (aperçu + mur « Rejoindre »), sinon les
+  // évènements ouverts — au lieu de `/join`.
+  const unattachedHome = isUnattachedPerson(me) && !me.pendingJoinRequest;
   if (docNext) {
-    if (noAttachmentAtAll) {
+    if (noAttachmentAtAll && !unattachedHome) {
       navigate(`/join?next=${encodeURIComponent(docNext)}`, { replace: true });
       return 'join';
     }
@@ -74,6 +78,11 @@ export function routeAfterLogin(
   if (hasMemberSpace(me)) {
     // Feature A — MEMBRE Goals rattaché : espace minimal « Mes objectifs ».
     navigate(nextPath ?? '/my-goals', { replace: true });
+    return 'welcome';
+  }
+  if (unattachedHome) {
+    const allowed = nextPath && ['/open-events', '/member-settings', '/member-contact'].some((p) => nextPath.startsWith(p));
+    navigate(allowed ? nextPath : '/open-events', { replace: true });
     return 'welcome';
   }
   if (noAttachmentAtAll) {

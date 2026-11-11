@@ -11,20 +11,31 @@ import Amount from '@/components/Amount';
 import HandDivider from '@/components/HandDivider';
 import { colors, fonts, radii } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { canDeclareEvents, hasMemberGoals, isAttachedAccount } from '@/services/authApi';
+import { canDeclareEvents, hasMemberGoals, isAttachedAccount, isUnattachedPerson } from '@/services/authApi';
+import { getFollowUpScope } from '@/services/followUpsApi';
+import BrandLogo from '@/components/BrandLogo';
+import PoweredBy from '@/components/PoweredBy';
+import { getBranding } from '@/theme/branding';
 import { getSummary, type CurrencyTotal, type DonationSummary } from '@/services/statsApi';
 import { getStudyCatalog, getStudyMe } from '@/services/assemblyApi';
 import { fmtAmount, monthLabel } from '@/utils/format';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCityFollowUp } from '@/hooks/useCityFollowUp';
 import { cityOpen } from '@/utils/cityFollowUp';
+import { alpha } from '@/theme/brandingPalette';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 type ComingKind = 'cantique' | 'priere' | 'compte-rendu';
 
 export default function HomeScreen() {
   const { me, isLeader, isTreasurer, hasGoals, hasDonations, hasEvents, hasDocuments, hasStudy: hasStudyModule } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  // D-PAYS-01 (JP 11/11) : thème du pays figé pour la session (nom, texte d'accueil, logo).
+  const branding = getBranding(language);
+  // RG-PAYS-22 (JP 11/11) : compte sans assemblée — évènements ouverts, inscriptions, rattachement ; rien d'autre.
+  const unattached = isUnattachedPerson(me);
+  // RG-PAYS-32 (JP 11/11) : tuile « Personnes à suivre » si le serveur y donne droit (appel pour un dirigeant seul).
+  const [followUps, setFollowUps] = useState(false);
   const [summary, setSummary] = useState<DonationSummary | null>(null);
   const [summaryFailed, setSummaryFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -80,17 +91,30 @@ export default function HomeScreen() {
     load();
   }, [load]);
 
+  const loadFollowUps = useCallback(async () => {
+    if (!isLeader) {
+      setFollowUps(false);
+      return;
+    }
+    try {
+      setFollowUps((await getFollowUpScope()).canView);
+    } catch {
+      // Panne : la tuile garde son dernier état ; aucune alerte.
+    }
+  }, [isLeader]);
+
   useFocusEffect(
     useCallback(() => {
       load();
       void loadStudy();
-    }, [load, loadStudy]),
+      void loadFollowUps();
+    }, [load, loadStudy, loadFollowUps]),
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([load(), loadStudy(), reloadCities()]);
+      await Promise.all([load(), loadStudy(), reloadCities(), loadFollowUps()]);
     } finally {
       setRefreshing(false);
     }
@@ -119,6 +143,13 @@ export default function HomeScreen() {
         <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
+      {/* D-PAYS-01 / §5.5 (JP 11/11) : en-tête aux couleurs et au NOM du pays actif (jamais écrit en dur). */}
+      {!!branding.countryIso && (
+        <View style={styles.brandRow}>
+          <BrandLogo size={40} />
+          <Text style={styles.brandName} numberOfLines={1}>{branding.displayName}</Text>
+        </View>
+      )}
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
           <Text style={styles.date}>
@@ -135,6 +166,25 @@ export default function HomeScreen() {
           <Text style={styles.avatarText}>{initials || '·'}</Text>
         </Pressable>
       </View>
+
+      {/* Texte d'accueil du pays (§4.6, titre + texte) et lien du site s'il existe. */}
+      {!!branding.welcome && (
+        <View style={styles.welcomeCard}>
+          <Text style={styles.welcomeTitle}>{branding.welcome.title}</Text>
+          <Text style={styles.welcomeText}>{branding.welcome.text}</Text>
+          {!!branding.websiteUrl && (
+            <Pressable
+              onPress={() => Linking.openURL(branding.websiteUrl as string).catch(() => {})}
+              accessibilityRole="link"
+              hitSlop={6}
+              style={styles.welcomeLink}
+            >
+              <Text style={styles.welcomeLinkText}>{t('branding.website')}</Text>
+              <Ionicons name="open-outline" size={13} color={colors.moss} />
+            </Pressable>
+          )}
+        </View>
+      )}
 
      {/* <View style={styles.verseCard}>
         <Text style={styles.verseText}>
@@ -212,6 +262,46 @@ export default function HomeScreen() {
       )}
 
       <View style={styles.tileGrid}>
+        {/* RG-PAYS-22 (JP 11/11) : l'espace sans assemblée — évènements ouverts à tous de son pays et de sa ville,
+            ses inscriptions, et le rattachement (toujours possible plus tard). Aucune autre tuile. */}
+        {unattached && hasEvents && (
+        <Tile
+          label={t('dashboard.tiles.openEvents')}
+          hint={t('dashboard.tiles.openEventsHint')}
+          icon="people-outline"
+          tone={colors.moss}
+          primary
+          onPress={() => router.push('/(tabs)/events')}
+        />
+        )}
+        {unattached && hasEvents && (
+        <Tile
+          label={t('dashboard.tiles.myRegistrations')}
+          hint={t('dashboard.tiles.myRegistrationsHint')}
+          icon="hand-right-outline"
+          tone={colors.earthDeep}
+          onPress={() => router.push({ pathname: '/events/open', params: { tab: 'mine' } } as never)}
+        />
+        )}
+        {unattached && (
+        <Tile
+          label={t('dashboard.tiles.joinAssembly')}
+          hint={t('dashboard.tiles.joinAssemblyHint')}
+          icon="home-outline"
+          tone={colors.mossSoft}
+          onPress={() => router.push('/(auth)/join')}
+        />
+        )}
+        {/* RG-PAYS-32 (JP 11/11) : « Personnes à suivre » (comptes sans assemblée, géographie) — gratuit. */}
+        {followUps && (
+        <Tile
+          label={t('dashboard.tiles.followUps')}
+          hint={t('dashboard.tiles.followUpsHint')}
+          icon="person-add-outline"
+          tone={colors.clay}
+          onPress={() => router.push('/follow-ups' as never)}
+        />
+        )}
         {hasDonations && (
         <Tile
           label={t('dashboard.tiles.declare')}
@@ -302,6 +392,7 @@ export default function HomeScreen() {
     RDG 25/07 : le simple fidèle ne voit QUE « Créer une assemblée » (ex-Structure, recette
     15/09) et Cantiques (+ ses objectifs en haut) —
     Membres et Hiérarchie sont des outils de dirigeant, sans objet pour lui. */}
+        {!unattached && (
         <Tile
           label={t('dashboard.tiles.structure')}
           hint={t('dashboard.tiles.structureHint')}
@@ -309,6 +400,7 @@ export default function HomeScreen() {
           tone={colors.moss}
           onPress={() => router.push('/structure')}
         />
+        )}
         {isLeader && (
         <Tile
           label={t('dashboard.tiles.membres')}
@@ -323,23 +415,25 @@ export default function HomeScreen() {
           label={t('dashboard.tiles.hierarchie')}
           hint={t('dashboard.tiles.hierarchieHint')}
           icon="git-network-outline"
-          tone="#7A8B6F"
+          tone={colors.sage}
           onPress={() => router.push('/hierarchie')}
         />
         )}
-{        <Tile
+{        !unattached && (
+        <Tile
           label={t('dashboard.tiles.cantique')}
           hint={t('dashboard.tiles.cantiqueHint')}
           icon="musical-notes-outline"
           tone={colors.earth}
           onPress={() => setComing('cantique')}
         />
+        )
         /*
         <Tile
           label={t('dashboard.tiles.priere')}
           hint={t('dashboard.tiles.priereHint')}
           icon="hand-left-outline"
-          tone="#7A8B6F"
+          tone={colors.sage}
           comingSoon
           onPress={() => setComing('priere')}
         />
@@ -357,6 +451,9 @@ export default function HomeScreen() {
           filtrable, est l'objet de l'onglet « Déclarations ». La répéter ici allongeait l'écran
           sans rien apprendre, et reléguait les tuiles d'action au-dessus d'un long défilement. */}
 
+
+      {/* §4.5 (JP 11/11) : « propulsé par Shephr », non configurable, seulement pour un pays actif. */}
+      <PoweredBy />
 
       <ComingSoonModal kind={coming} onClose={() => setComing(null)} />
     </ScreenShell>
@@ -398,8 +495,8 @@ function Tile({
           styles.tileIcon,
           primary
             ? {
-                backgroundColor: 'rgba(232,220,196,0.14)',
-                borderColor: 'rgba(232,220,196,0.22)',
+                backgroundColor: alpha(colors.parchment, 0.14),
+                borderColor: alpha(colors.parchment, 0.22),
                 borderWidth: 1,
               }
             : { backgroundColor: tone + '1A' },
@@ -412,7 +509,7 @@ function Tile({
         <Text
           style={[
             styles.tileHint,
-            primary && { color: 'rgba(242,233,210,0.65)' },
+            primary && { color: alpha(colors.white, 0.65) },
           ]}
         >
           {hint}
@@ -428,7 +525,7 @@ function Tile({
 
 const COMING_META: Record<ComingKind, { titleKey: string; bodyKey: string; icon: IoniconName; tone: string }> = {
   cantique: { titleKey: 'dashboard.coming.cantiqueTitle', bodyKey: 'dashboard.coming.cantiqueBody', icon: 'musical-notes-outline', tone: colors.earth },
-  priere: { titleKey: 'dashboard.coming.priereTitle', bodyKey: 'dashboard.coming.priereBody', icon: 'hand-left-outline', tone: '#7A8B6F' },
+  priere: { titleKey: 'dashboard.coming.priereTitle', bodyKey: 'dashboard.coming.priereBody', icon: 'hand-left-outline', tone: colors.sage },
   'compte-rendu': { titleKey: 'dashboard.coming.compteRenduTitle', bodyKey: 'dashboard.coming.compteRenduBody', icon: 'reader-outline', tone: colors.earthDeep },
 };
 
@@ -548,6 +645,21 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   date: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
+  brandName: { flex: 1, fontFamily: fonts.serif, fontSize: 20, color: colors.moss, letterSpacing: -0.3 },
+  welcomeCard: {
+    marginBottom: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: colors.paper,
+    borderWidth: 1,
+    borderColor: colors.hair,
+  },
+  welcomeTitle: { fontFamily: fonts.serif, fontSize: 18, lineHeight: 23, color: colors.mossDeep, letterSpacing: -0.2 },
+  welcomeText: { marginTop: 6, fontFamily: fonts.sans, fontSize: 13.5, lineHeight: 20, color: colors.ink2 },
+  welcomeLink: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, alignSelf: 'flex-start' },
+  welcomeLinkText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.moss, textDecorationLine: 'underline' },
   greeting: {
     fontFamily: fonts.serif,
     fontSize: 28,

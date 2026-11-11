@@ -141,6 +141,13 @@ export function cityEventsAccessDenied(err: unknown): ModuleAccessDeniedDetails 
 
 export const ENTITLEMENT_HIERARCHIE_SUIVI = 'HIERARCHIE_SUIVI';
 
+/**
+ * D-PAYS-05 (JP 11/11, contrat 11_11_2026/02 §7.1) — plan personnel « suivi national » (offre Josué) : ouvre au
+ * coordinateur payeur ETUDE_SUIVI, JOURNAL et EVENEMENTS_SUIVI sur toutes les villes de ses nations. Sur l'app :
+ * nom de l'offre et « En savoir plus » seulement (D-ABO-13) — aucun prix, bouton ni champ de code.
+ */
+export const PLAN_SUIVI_NATIONAL = 'SUIVI_NATIONAL';
+
 /** Mirrors com.excellence.back.subscription.entitlement.EntitlementDtos.PersonalPlanSubscription */
 export interface PersonalPlanSubscription {
   reference: string;

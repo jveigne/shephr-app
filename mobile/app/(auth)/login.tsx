@@ -158,8 +158,8 @@ function Hills() {
     >
       <Defs>
         <LinearGradient id="hill1" x1="0" x2="0" y1="0" y2="1">
-          <Stop offset="0" stopColor="#2E5142" />
-          <Stop offset="1" stopColor="#1E3A2F" />
+          <Stop offset="0" stopColor={colors.mossSoft} />
+          <Stop offset="1" stopColor={colors.moss} />
         </LinearGradient>
       </Defs>
       <Path
@@ -169,11 +169,11 @@ function Hills() {
       />
       <Path
         d="M-10,260 C 60,200 180,310 260,250 S 380,220 420,260 L 420,400 L -10,400 Z"
-        fill="#1E3A2F"
+        fill={colors.moss}
         opacity={0.09}
       />
-      <Circle cx="300" cy="120" r="42" fill="#C9956B" opacity={0.55} />
-      <Circle cx="300" cy="120" r="64" fill="#C9956B" opacity={0.18} />
+      <Circle cx="300" cy="120" r="42" fill={colors.earth} opacity={0.55} />
+      <Circle cx="300" cy="120" r="64" fill={colors.earth} opacity={0.18} />
     </Svg>
   );
 }

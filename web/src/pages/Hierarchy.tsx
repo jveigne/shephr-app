@@ -96,7 +96,7 @@ function LeadershipTotals({ unitCount, memberCount }: { unitCount: number; membe
               key={category.id}
               style={{
                 display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12,
-                paddingTop: 6, borderTop: '1px solid var(--line-soft, rgba(42,38,32,0.08))',
+                paddingTop: 6, borderTop: '1px solid var(--line-soft)',
               }}
             >
               <span style={{ fontSize: 13, color: 'var(--ink-600)' }}>{goalName(category)}</span>
@@ -208,9 +208,9 @@ export function HierarchyPage() {
           <div
             style={{
               display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12,
-              padding: '10px 14px', borderRadius: 'var(--radius-md, 10px)',
-              background: 'var(--sand-50, rgba(201,149,107,0.10))',
-              border: '1px solid var(--line-soft, rgba(42,38,32,0.10))',
+              padding: '10px 14px', borderRadius: 'var(--radius)',
+              background: 'var(--earth-tint)',
+              border: '1px solid var(--line-soft)',
               fontSize: 13.5, color: 'var(--ink-700)',
             }}
           >
@@ -242,7 +242,7 @@ export function HierarchyPage() {
                       title={t('hierarchy.home.pendingBadge', { count: pending })}
                       style={{
                         minWidth: 22, height: 22, padding: '0 7px', borderRadius: 11, display: 'inline-grid',
-                        placeItems: 'center', background: 'var(--earth-700)', color: 'var(--parchment, #fff)',
+                        placeItems: 'center', background: 'var(--earth-700)', color: 'var(--parchment)',
                         fontSize: 12, fontWeight: 700,
                       }}
                     >
@@ -434,7 +434,7 @@ function UnitRow({ unit, depth }: { unit: HierarchyUnitView; depth: number }) {
           display: 'flex', alignItems: 'center', gap: 8, width: '100%',
           padding: '7px 14px', paddingLeft: 14 + depth * 22,
           background: 'none', border: 'none', cursor: hasMembers ? 'pointer' : 'default',
-          textAlign: 'left', font: 'inherit', color: 'var(--ink-700, inherit)',
+          textAlign: 'left', font: 'inherit', color: 'var(--ink-700)',
         }}
       >
         <span style={{ width: 16, display: 'inline-flex', color: 'var(--ink-500)' }}>

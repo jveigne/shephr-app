@@ -10,11 +10,12 @@ import EventAgenda from '@/components/EventAgenda';
 import EventStatsDrill from '@/components/EventStatsDrill';
 import EventPeriodPicker from '@/components/EventPeriodPicker';
 import EventMemberView from '@/components/EventMemberView';
+import EventOpenView from '@/components/EventOpenView';
 import { colors, fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useEventCatalog } from '@/hooks/useEventCatalog';
-import { isSecretariat } from '@/services/authApi';
+import { isSecretariat, isUnattachedPerson } from '@/services/authApi';
 import { defaultPeriod, periodBounds, type Period } from '@/utils/events';
 
 type Tab = 'agenda' | 'stats';
@@ -30,7 +31,9 @@ type Tab = 'agenda' | 'stats';
  * rattaché à une assemblée garde la vue dirigeant.
  */
 export default function EventsTabScreen() {
-  const { isLeader } = useAuth();
+  const { isLeader, me } = useAuth();
+  // D-PAYS-10 / RG-PAYS-22 (JP 11/11) : un compte sans assemblée n'a que la vue « ouverts à tous ».
+  if (isUnattachedPerson(me)) return <EventOpenView />;
   return isLeader ? <LeaderEventsTab /> : <EventMemberView />;
 }
 

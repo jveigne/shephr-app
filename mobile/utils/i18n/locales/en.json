@@ -210,7 +210,15 @@
       "eventsHint": "Evangelism",
       "documents": "Documents",
       "documentsHint": "Teachings to read and share",
-      "cityLocked": "Nehemiah offer"
+      "cityLocked": "Nehemiah offer",
+      "openEvents": "Events",
+      "openEventsHint": "Open to everyone",
+      "myRegistrations": "My registrations",
+      "myRegistrationsHint": "Upcoming events",
+      "joinAssembly": "Join an assembly",
+      "joinAssemblyHint": "Whenever you like",
+      "followUps": "People to follow up",
+      "followUpsHint": "No assembly"
     },
     "comingSoonBadge": "Coming soon",
     "comingAck": "Got it",
@@ -865,7 +873,21 @@
     "confirmAsLeader": "Confirm — I am the leader",
     "confirmAsMember": "Confirm — I am a member",
     "noOption": "No result.",
-    "filterLabel": "Filter the list"
+    "filterLabel": "Filter the list",
+    "consent": {
+      "label": "I agree that my membership of this assembly is visible to its leaders."
+    },
+    "noAssembly": {
+      "cta": "I don't have an assembly",
+      "title": "I don't have an assembly",
+      "hint": "Your account stays useful: you will see the events open to everyone in your country and city, and can register for them. You can join an assembly later from your profile.",
+      "country": "Country",
+      "city": "City (optional)",
+      "cityLater": "I don't know / later",
+      "consent": "I agree that church leaders may see my name and contact details in order to get back in touch with me.",
+      "consentHint": "Optional. Without this consent, nobody will contact you; you will be asked again when you first register for an event.",
+      "submit": "Continue without an assembly"
+    }
   },
   "hierarchy": {
     "title": "Hierarchy",
@@ -1413,7 +1435,11 @@
       "eventGone": "This event no longer exists: it may have been deleted.",
       "actionDenied": "You are not, or no longer, allowed to do this on this event.",
       "planDenied": "You cannot schedule an event there: it is outside your perimeter.",
-      "notFoundOnEdit": "The event, its type or its node no longer exists. Reopen the event."
+      "notFoundOnEdit": "The event, its type or its node no longer exists. Reopen the event.",
+      "EVENT_OPEN_TO_ALL_INVALID": "“Open to everyone” is only possible for a scheduled event at country or city level.",
+      "EVENT_REGISTRATION_CLOSED": "Registration for this event is closed.",
+      "EVENT_REGISTRATION_CANCELED": "This registration was cancelled: attendance cannot be marked.",
+      "EVENT_REGISTRATION_CONSENT_REQUIRED": "Tick the consent box to register."
     },
     "declare": {
       "kicker": "Evangelism",
@@ -1582,7 +1608,9 @@
       "plannedFor": "This event will be scheduled for {{node}}.",
       "attachedTo": "This event is attached to {{node}}.",
       "chooseScope": "Choose where to attach this event.",
-      "pickDateHintPlanned": "A scheduled event can be dated in the future."
+      "pickDateHintPlanned": "A scheduled event can be dated in the future.",
+      "openToAll": "Open to everyone",
+      "openToAllHint": "Visible to people without an assembly in this country or city, who will be able to register. Internal meetings stay private."
     },
     "plan": {
       "title": "Schedule an event",
@@ -1622,6 +1650,54 @@
       "unflag": "Remove “to verify”",
       "flagged": "Marked “to verify”.",
       "unflagged": "“To verify” removed."
+    },
+    "open": {
+      "badge": "Open to everyone",
+      "title": "Events open to everyone",
+      "subtitle": "Open events in your country and your city.",
+      "subtitleCity": "Open events in your country and in {{city}}.",
+      "tabs": {
+        "open": "Open to everyone",
+        "mine": "My registrations"
+      },
+      "empty": "No event open to everyone is scheduled for now.",
+      "mineEmpty": "You are not registered for any upcoming event.",
+      "memberLink": "Events open to everyone",
+      "memberLinkSub": "Those in your city and country, and your registrations"
+    },
+    "registration": {
+      "title": "Are you coming?",
+      "hint": "Register so the organisers know who is coming.",
+      "consent": "I agree that church leaders may see my name and contact details in order to get back in touch with me.",
+      "join": "I'm coming",
+      "leave": "I'm no longer coming",
+      "registered": "You are coming",
+      "registeredShort": "Registered",
+      "youAttended": "Your attendance has been recorded.",
+      "youMissed": "You were marked absent.",
+      "listTitle_one": "{{count}} registered",
+      "listTitle_other": "{{count}} registered",
+      "counts": "{{registered}} registered · {{attended}} attended — see the list and take attendance",
+      "screenTitle": "Registrations",
+      "denied": "Only the event's organisers can see who registered.",
+      "stat": {
+        "registered": "Registered",
+        "attended": "Attended",
+        "absent": "Absent",
+        "unmarked": "Not marked"
+      },
+      "markHint": "Mark each person as attended or not. The counts entered by hand do not change.",
+      "markLater": "Attendance opens on the day of the event.",
+      "empty": "Nobody has registered yet.",
+      "unattached": "No assembly",
+      "registeredOn": "registered on {{date}}",
+      "mark": {
+        "attended": "Attended",
+        "absent": "Did not come",
+        "unmarked": "—"
+      },
+      "canceledCount_one": "{{count}} registration cancelled.",
+      "canceledCount_other": "{{count}} registrations cancelled."
     }
   },
   "documents": {
@@ -2028,6 +2104,98 @@
     "nehemie": {
       "name": "Nehemiah offer",
       "subtitle": "Tracking my whole city"
+    },
+    "national": {
+      "name": "Joshua offer",
+      "subtitle": "Tracking my whole nation"
     }
+  },
+  "branding": {
+    "defaultName": "Shephr",
+    "poweredBy": "powered by Shephr",
+    "restartToApply": "Close and reopen the app to apply your country's colours.",
+    "website": "Visit the website"
+  },
+  "country": {
+    "title": "Which country are you in?",
+    "subtitle": "The app takes on the colours of your country's church when it has one. You can change this later in your profile.",
+    "loadFailed": "Could not load the list of countries. Check your connection.",
+    "search": "Search for a country…",
+    "suggested": "Suggested from your phone's settings",
+    "other": "Other country",
+    "otherHint": "Standard Shephr look",
+    "changeLater": "This choice only affects how the app looks: you can change it later.",
+    "continue": "Continue",
+    "retry": "Try again"
+  },
+  "settings": {
+    "country": {
+      "label": "Country",
+      "lockedByAssembly": "Your country is your assembly's country."
+    },
+    "city": {
+      "label": "City",
+      "none": "I don't know / later"
+    },
+    "joinAssembly": "Join an assembly",
+    "joinAssemblyHint": "Find my assembly",
+    "optOut": {
+      "title": "Do not contact me again",
+      "cta": "Do not contact me again",
+      "confirm": "Church leaders will no longer contact you. Your upcoming registrations stay visible to the organisers of those events. You can give your consent again by registering for an event.",
+      "done": "Noted: you will no longer be contacted."
+    }
+  },
+  "countryErrors": {
+    "COUNTRY_UNKNOWN": "This country is not available. Please choose another one.",
+    "CITY_NOT_IN_COUNTRY": "This city is not in your country. Please choose another one.",
+    "COUNTRY_LOCKED_BY_ASSEMBLY": "Your country is your assembly's country: it cannot be changed.",
+    "CITY_LOCKED_BY_ASSEMBLY": "Your city is your assembly's city: it cannot be changed.",
+    "JOIN_CONSENT_REQUIRED": "Tick the consent box to send your request.",
+    "FOLLOW_UP_OPTED_OUT": "This person asked not to be contacted again: their record can no longer be changed.",
+    "FOLLOW_UP_STATUS_FORBIDDEN": "This status cannot be set by a leader.",
+    "UNAUTHORIZED_ACCESS": "You do not have access to this record.",
+    "RESOURCE_NOT_FOUND": "This record no longer exists."
+  },
+  "followUps": {
+    "title": "People to follow up",
+    "subtitle": "People without an assembly in your city or country who agreed to be contacted.",
+    "call": "Call",
+    "whatsapp": "WhatsApp",
+    "email": "Email",
+    "filters": {
+      "toFollow": "To follow up",
+      "noShow": "Registered, did not come",
+      "newThisMonth": "New this month",
+      "city": "City",
+      "allCities": "All cities",
+      "withoutCity": "No city",
+      "search": "Name, phone or email…"
+    },
+    "status": {
+      "A_CONTACTER": "To contact",
+      "CONTACTEE": "Contacted",
+      "INTEGREE": "Joined an assembly",
+      "NE_SOUHAITE_PAS": "Does not wish to be contacted"
+    },
+    "statusLabel": "Status",
+    "empty": "Nobody to follow up for these filters.",
+    "noCity": "No city",
+    "counts": "{{registered}} registrations · {{attended}} attended · {{noShow}} absences",
+    "next": "next: {{date}}",
+    "loadFailed": "Could not load this record.",
+    "optedOutHint": "This person asked not to be contacted again: their contact details are no longer shown.",
+    "integratedHint": "This person joined an assembly: Member Care takes over.",
+    "noContact": "No contact details provided.",
+    "consentOn": "Consent given on {{date}}",
+    "lastContact": "last contact on {{date}}",
+    "updatedBy": "Updated by {{name}}",
+    "saved": "Record saved.",
+    "markContacted": "Mark as contacted",
+    "note": "Note",
+    "notePlaceholder": "What was said, next step…",
+    "registrations": "Registrations and attendance",
+    "noRegistrations": "No registration yet.",
+    "regCanceled": "Registration cancelled"
   }
 }

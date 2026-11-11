@@ -12,6 +12,7 @@ import {
   fetchMe,
   hasMemberSpace,
   hasMinistryAccess,
+  isUnattachedPerson,
   login as loginRequest,
   register as registerRequest,
   type MeResponse,
@@ -32,7 +33,10 @@ interface AuthContextValue extends AuthState {
   isAuthenticated: boolean;
   /** True when the user may access the Web Espace ministère (dirigeant+ or superAdmin). */
   canAccessWeb: boolean;
-  /** Feature A — espace membre minimal « Mes objectifs » (MEMBRE Goals rattaché à une assemblée). */
+  /**
+   * Feature A — espace membre minimal « Mes objectifs » (MEMBRE Goals rattaché à une assemblée) ; depuis RG-PAYS-22
+   * (JP 11/11) aussi le compte « sans assemblée » (menus filtrés).
+   */
   canAccessMemberSpace: boolean;
   login: (payload: { identifier: string; password: string }) => Promise<MeResponse>;
   /** Feature B — inscription libre : crée le compte puis ouvre la session (parcours `/join`). */
@@ -134,7 +138,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ...state,
     isAuthenticated: !!state.token,
     canAccessWeb: hasMinistryAccess(state.me),
-    canAccessMemberSpace: hasMemberSpace(state.me),
+    // RG-PAYS-22 (JP 11/11, contrat §10.3) : garde élargie au compte « sans assemblée » (décidé par le serveur) ;
+    // `MemberShell` ne lui ouvre que les évènements ouverts, les réglages et le contact.
+    canAccessMemberSpace: hasMemberSpace(state.me) || isUnattachedPerson(state.me),
     login,
     register,
     establishSession,

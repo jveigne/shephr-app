@@ -1,3 +1,4 @@
+import { BrandingWelcomeCard } from '../components/PoweredBy';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -415,6 +416,8 @@ export function MemberGoalsPage() {
       />
 
       <div className="content">
+        {/* §5.5 (JP 11/11) : texte d'accueil du pays actif (et lien du site), rien en Shephr standard. */}
+        <BrandingWelcomeCard />
         {/* L'espace membre n'a pas d'écran Hiérarchie : c'est ici que le fidèle déclare son
             faiseur de disciple (28/07). */}
 
@@ -453,11 +456,11 @@ export function MemberGoalsPage() {
               <h3 style={{ margin: '0 0 4px' }}>{goalName(goal)}</h3>
               <p style={{ margin: 0, fontSize: 13.5 }}>
                 {deadlinePast && yearDeadline ? (
-                  <strong style={{ color: 'var(--err, #B86A4A)' }}>
+                  <strong style={{ color: 'var(--err)' }}>
                     {t('memberGoals.deadlinePast', { date: fmtDateLabel(yearDeadline.slice(0, 10)) })}
                   </strong>
                 ) : yearDeadline ? (
-                  <strong style={{ color: 'var(--earth-700, #8E6B47)' }}>
+                  <strong style={{ color: 'var(--earth-700)' }}>
                     {t('goals.submitBefore', { date: fmtDateLabel(yearDeadline.slice(0, 10)) })}
                   </strong>
                 ) : null}
@@ -470,7 +473,7 @@ export function MemberGoalsPage() {
                 margin: '0 0 14px',
                 padding: '10px 14px',
                 borderRadius: 10,
-                background: 'var(--parchment-deep, #F2EDE2)',
+                background: 'var(--parchment-deep)',
                 fontSize: 13.5,
                 color: 'var(--ink-600)',
                 display: 'flex',
@@ -489,9 +492,9 @@ export function MemberGoalsPage() {
                   margin: '0 0 14px',
                   padding: '10px 14px',
                   borderRadius: 10,
-                  background: 'var(--green-50, #EAF1EC)',
+                  background: 'var(--green-50)',
                   fontSize: 13.5,
-                  color: 'var(--green-800, #14241C)',
+                  color: 'var(--green-800)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,

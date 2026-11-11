@@ -106,7 +106,7 @@ export function LandingPage() {
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '14px clamp(14px, 3vw, 24px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--green-600)', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>S</div>
+            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--green-600)', color: 'var(--on-primary-bright)', display: 'grid', placeItems: 'center', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>S</div>
             <span style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: 'var(--green-800)' }}>shephr</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -128,7 +128,7 @@ export function LandingPage() {
               onClick={() => navigate(loggedIn ? '/dashboard' : '/login')}
               style={{
                 padding: '8px 18px', borderRadius: 'var(--radius)', border: 'none', cursor: 'pointer',
-                background: 'var(--green-600)', color: '#fff', fontWeight: 600, fontSize: 14,
+                background: 'var(--green-600)', color: 'var(--on-primary-bright)', fontWeight: 600, fontSize: 14,
               }}
             >{loggedIn ? t('landing.nav.account') : t('landing.nav.login')}</button>
             </span>
@@ -155,7 +155,7 @@ export function LandingPage() {
           {/* Non connecté : l'inscription libre est l'action principale, la connexion vient ensuite. */}
           <button
             onClick={() => navigate(loggedIn ? '/dashboard' : '/signup')}
-            style={{ padding: '13px 26px', borderRadius: 'var(--radius)', border: 'none', cursor: 'pointer', background: 'var(--green-600)', color: '#fff', fontWeight: 600, fontSize: 15 }}
+            style={{ padding: '13px 26px', borderRadius: 'var(--radius)', border: 'none', cursor: 'pointer', background: 'var(--green-600)', color: 'var(--on-primary-bright)', fontWeight: 600, fontSize: 15 }}
           >{loggedIn ? t('landing.nav.account') : t('landing.hero.ctaSignup')}</button>
           {!loggedIn && (
             <button
@@ -216,7 +216,7 @@ export function LandingPage() {
           <div style={{ textAlign: 'center', marginBottom: 40 }}>
             <span style={{
               display: 'inline-block', padding: '5px 14px', borderRadius: 999, background: 'var(--green-600)',
-              color: '#fff', fontSize: 12, fontWeight: 600, letterSpacing: '.02em', marginBottom: 18,
+              color: 'var(--on-primary-bright)', fontSize: 12, fontWeight: 600, letterSpacing: '.02em', marginBottom: 18,
             }}>{t('landing.goals.kicker')}</span>
             <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(25px, 6.5vw, 34px)', lineHeight: 1.15, color: 'var(--green-900)', margin: '0 0 12px' }}>
               {t('landing.goals.title')}
@@ -258,7 +258,7 @@ export function LandingPage() {
           <div style={{ textAlign: 'center', marginTop: 34, visibility: ready ? 'visible' : 'hidden' }}>
             <button
               onClick={() => navigate(loggedIn ? '/goals' : '/signup')}
-              style={{ padding: '13px 28px', borderRadius: 'var(--radius)', border: 'none', cursor: 'pointer', background: 'var(--green-600)', color: '#fff', fontWeight: 600, fontSize: 15 }}
+              style={{ padding: '13px 28px', borderRadius: 'var(--radius)', border: 'none', cursor: 'pointer', background: 'var(--green-600)', color: 'var(--on-primary-bright)', fontWeight: 600, fontSize: 15 }}
             >{loggedIn ? t('landing.goals.cta') : t('landing.goals.ctaVisitor')}</button>
           </div>
         </div>
@@ -284,7 +284,7 @@ export function LandingPage() {
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
           {/* Deux canaux comme pour un utilisateur connecté : un visiteur sans client mail
               configuré restait sinon sans issue. WhatsApp en avant, e-mail en second. */}
-          <a href={whatsapp} target="_blank" rel="noreferrer" style={{ padding: '14px 30px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--green-600)', color: '#fff', fontWeight: 600, fontSize: 16, textDecoration: 'none', display: 'inline-block' }}>
+          <a href={whatsapp} target="_blank" rel="noreferrer" style={{ padding: '14px 30px', borderRadius: 'var(--radius)', border: 'none', background: 'var(--green-600)', color: 'var(--on-primary-bright)', fontWeight: 600, fontSize: 16, textDecoration: 'none', display: 'inline-block' }}>
             {t('join.contactWhatsapp')}
           </a>
           <a href={mailto} style={{ padding: '14px 30px', borderRadius: 'var(--radius)', border: '1px solid var(--line-soft)', background: 'transparent', color: 'var(--ink-700)', fontWeight: 600, fontSize: 16, textDecoration: 'none', display: 'inline-block' }}>

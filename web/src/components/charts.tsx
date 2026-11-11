@@ -71,9 +71,9 @@ export function AreaChart({
       >
         <defs>
           <linearGradient id="areaGreen" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#1E3A2F" stopOpacity="0.28" />
-            <stop offset="60%" stopColor="#1E3A2F" stopOpacity="0.08" />
-            <stop offset="100%" stopColor="#1E3A2F" stopOpacity="0" />
+            <stop offset="0%" style={{ stopColor: 'var(--green-800)' }} stopOpacity="0.28" />
+            <stop offset="60%" style={{ stopColor: 'var(--green-800)' }} stopOpacity="0.08" />
+            <stop offset="100%" style={{ stopColor: 'var(--green-800)' }} stopOpacity="0" />
           </linearGradient>
         </defs>
         {yTicks.map((v, i) => (
@@ -83,30 +83,32 @@ export function AreaChart({
               x2={w - padR}
               y1={y(v)}
               y2={y(v)}
-              stroke="#BFAB85"
+              style={{ stroke: 'var(--line-strong)' }}
               strokeOpacity="0.25"
               strokeDasharray={i === 0 ? '0' : '3 5'}
             />
-            <text x={padL - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="#7A6B55" fontFamily="Inter">
+            <text x={padL - 8} y={y(v) + 4} textAnchor="end" fontSize="11" style={{ fill: 'var(--ink-500)' }} fontFamily="Inter">
               {fmtShort(v)}
             </text>
           </g>
         ))}
         {areaD && <path d={areaD} fill="url(#areaGreen)" />}
-        {pathD && <path d={pathD} fill="none" stroke="#1E3A2F" strokeWidth="2" strokeLinecap="round" />}
+        {pathD && <path d={pathD} fill="none" style={{ stroke: 'var(--green-800)' }} strokeWidth="2" strokeLinecap="round" />}
         {pts.map((p, i) => (
           <circle
             key={i}
             cx={p[0]}
             cy={p[1]}
             r={i === hover ? 5 : 3}
-            fill={i === hover ? '#C9956B' : '#1E3A2F'}
-            stroke={i === hover ? '#FBF5E4' : 'transparent'}
+            style={{
+              fill: i === hover ? 'var(--earth-500)' : 'var(--green-800)',
+              stroke: i === hover ? 'var(--ivory-card)' : 'transparent',
+            }}
             strokeWidth="2"
           />
         ))}
         {data.map((d, i) => (
-          <text key={i} x={x(i)} y={h - 8} textAnchor="middle" fontSize="11" fill="#7A6B55" fontFamily="Inter">
+          <text key={i} x={x(i)} y={h - 8} textAnchor="middle" fontSize="11" style={{ fill: 'var(--ink-500)' }} fontFamily="Inter">
             {d.label}
           </text>
         ))}
@@ -116,7 +118,7 @@ export function AreaChart({
             x2={x(hover)}
             y1={padT}
             y2={padT + innerH}
-            stroke="#1E3A2F"
+            style={{ stroke: 'var(--green-800)' }}
             strokeOpacity="0.18"
             strokeDasharray="3 4"
           />
@@ -130,7 +132,7 @@ export function AreaChart({
             top: 4,
             transform: 'translateX(-50%)',
             background: 'var(--green-800)',
-            color: '#FBF5E4',
+            color: 'var(--on-primary)',
             padding: '8px 12px',
             borderRadius: 8,
             fontSize: 12,

@@ -579,13 +579,13 @@ function SearchExisting({
       />
       <div style={{
         marginTop: 6, maxHeight: 180, overflowY: 'auto',
-        border: '1px solid var(--line,#eee)', borderRadius: 8,
+        border: '1px solid var(--line)', borderRadius: 8,
       }}>
         {matches.slice(0, 30).map((o) => (
           <div
             key={o.id}
             onClick={() => onChange(o)}
-            style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--line,#f2f2f2)' }}
+            style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--line)' }}
           >
             {o.name}
           </div>

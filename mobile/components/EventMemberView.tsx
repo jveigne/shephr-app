@@ -195,6 +195,17 @@ export default function EventMemberView() {
 
           <EventQueueBlocks queue={queue} savedClientIds={savedClientIds} />
 
+          {/* RG-PAYS-24 (JP 11/11) : exception à D-EVT-14 limitée aux évènements OUVERTS À TOUS — le membre
+              rattaché voit aussi ceux de sa ville et de son pays, et peut s'y inscrire. */}
+          <Card onPress={() => router.push('/events/open' as never)} style={styles.openLink}>
+            <Ionicons name="people-outline" size={20} color={colors.moss} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.openTitle}>{t('events.open.memberLink')}</Text>
+              <Text style={styles.openSub}>{t('events.open.memberLinkSub')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+          </Card>
+
           {!!userId && (
             <>
               <AgendaBlock
@@ -247,6 +258,9 @@ const styles = StyleSheet.create({
   assembly: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
   assemblyName: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.moss },
   actions: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  openLink: { marginTop: 16, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  openTitle: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
+  openSub: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginTop: 2 },
   hint: { marginTop: 10, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, lineHeight: 17 },
   empty: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 24, alignItems: 'center', gap: 10 },
   emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2, lineHeight: 20, textAlign: 'center' },

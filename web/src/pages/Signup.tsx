@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { DIAL_COUNTRIES } from '../constants/dialCodes';
@@ -11,6 +11,9 @@ import { hasMemberSpace, hasMinistryAccess, isAttachedAccount, type AuthResponse
 import { safeDocumentNext } from '../utils/documents';
 import { isBillingPath, routeAfterLogin, safeNext } from '../utils/authRouting';
 import { SocialSignInButtons } from '../components/SocialSignInButtons';
+import { BrandLogo, BrandName } from '../components/BrandLogo';
+import { CountrySelect, OTHER_COUNTRY, suggestedCountry, usePublicCountries } from '../components/CountrySelect';
+import { useDeviceCountry } from '../theme/BrandingProvider';
 
 /**
  * Inscription libre côté Web (miroir de `mobile/app/(auth)/signup.tsx`) : identité, email,
@@ -57,6 +60,21 @@ export function SignupPage() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // RG-PAYS-05 / §5.5 (JP 11/11) : pays de résidence, prérempli par le choix du navigateur, sinon la langue
+  // (RG-PAYS-01) ; il pose `deviceCountry` (thème du pays sur la page) et part dans `countryIso`.
+  // ≠ `countryIso` ci-dessus, qui n'est que l'INDICATIF du téléphone.
+  const { deviceCountry, chooseDeviceCountry } = useDeviceCountry();
+  const countriesQ = usePublicCountries();
+  const [homeCountry, setHomeCountry] = useState(deviceCountry ?? '');
+  useEffect(() => {
+    if (homeCountry || !countriesQ.data) return;
+    const s = suggestedCountry(countriesQ.data);
+    if (s) setHomeCountry(s);
+  }, [countriesQ.data, homeCountry]);
+  const pickHomeCountry = (iso: string) => {
+    setHomeCountry(iso);
+    chooseDeviceCountry(iso === OTHER_COUNTRY ? null : iso);
+  };
 
   /** Un compte déjà rattaché va à son espace ; sinon il finit son inscription. */
   const routeAfterAuth = (me: MeResponse) => {
@@ -108,6 +126,7 @@ export function SignupPage() {
         phoneNumber: phoneDigits.length > 0 ? phone.trim() : undefined,
         countryCode:
           phoneDigits.length > 0 ? DIAL_COUNTRIES.find((c) => c.iso === countryIso)?.dial : undefined,
+        countryIso: homeCountry && homeCountry !== OTHER_COUNTRY ? homeCountry : undefined,
       });
       // Compte neuf : aucun rattachement possible → rattachement à une assemblée ; venu de /offres, retour
       // sur l'offre (D-FIX-3A).
@@ -187,8 +206,8 @@ export function SignupPage() {
 
         <div className="login-card">
           <div className="top" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-            <div className="brand-mark">S</div>
-            <span className="word">shephr</span>
+            <BrandLogo />
+            <span className="word"><BrandName /></span>
           </div>
 
           {mode === 'existing' ? (
@@ -276,6 +295,10 @@ export function SignupPage() {
                     autoComplete="email"
                     required
                   />
+                </Field>
+
+                <Field label={t('settings.country.label')} hint={t('country.signupHint')}>
+                  <CountrySelect value={homeCountry} onChange={pickHomeCountry} allowOther />
                 </Field>
 
                 {/* Pas de `hint` ni de `required` ici : le téléphone ne conditionne plus la

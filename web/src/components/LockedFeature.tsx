@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
-import { hasMinistryAccess, ledAssemblyIds, type MeResponse } from '../services/authApi';
+import { hasMinistryAccess, isNationalCoordinator, ledAssemblyIds, type MeResponse } from '../services/authApi';
 import { Badge, Button, Field, Input } from './ui';
 import { Icon } from './Icon';
 import {
   ENTITLEMENT_HIERARCHIE_SUIVI,
   PLAN_DIRIGEANT_HIERARCHIE,
+  PLAN_SUIVI_NATIONAL,
   getEntitlements,
   getPersonalEntitlements,
   type ModuleAccessDeniedDetails,
@@ -42,7 +43,7 @@ import { centsFor, currenciesOf, hasAnnualPrice, priceFor, pricesOf, useCurrency
 // ---------------------------------------------------------------------------------------------
 
 /** Lien « Voir les offres » des aperçus floutés (plan 05 §3.8) — la page /offres défile jusqu'à la carte. */
-function SeeOffersLink({ offer }: { offer: 'caleb' | 'nehemie' }) {
+function SeeOffersLink({ offer }: { offer: 'caleb' | 'nehemie' | 'national' }) {
   const { t } = useTranslation();
   return (
     <Link
@@ -62,7 +63,7 @@ function VoucherEntry({
   cityName,
   localPriceLabel,
 }: {
-  plan: 'caleb' | 'nehemie';
+  plan: 'caleb' | 'nehemie' | 'national';
   localityId?: string;
   cityName?: string | null;
   localPriceLabel: string | null | undefined;
@@ -141,6 +142,10 @@ export function LockedFeature({
   tab?: string;
 }) {
   const { t } = useTranslation();
+  const { me } = useAuth();
+  // RG-PAYS-19 / contrat §7.3 (JP 11/11) : sur une ville verrouillée, un coordinateur national se voit proposer
+  // l'offre Josué EN PLUS de Néhémie (le serveur dit `canSubscribe` du plan SUIVI_NATIONAL).
+  const coordinator = isNationalCoordinator(me);
   const cityId = denied.nodeId;
   const tabParam = tab ? `&tab=${encodeURIComponent(tab)}` : '';
   const cityHref = cityId ? `/study/city?localityId=${encodeURIComponent(cityId)}${tabParam}` : '/study/city';
@@ -167,10 +172,10 @@ export function LockedFeature({
   }
 
   return (
-    <div style={{ position: 'relative', minHeight: 360 }}>
+    <div style={{ position: 'relative', minHeight: coordinator ? 720 : 360 }}>
       <FakePreview />
       <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: 16 }}>
-        <div className="card" style={{ maxWidth: 480, width: '100%', padding: 'clamp(18px, 4vw, 26px)', boxShadow: 'var(--shadow-md, var(--shadow-sm))' }}>
+        <div className="card" style={{ maxWidth: 480, width: '100%', padding: 'clamp(18px, 4vw, 26px)', boxShadow: 'var(--shadow-md)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <Icon name="lock" size={18} style={{ color: 'var(--earth-700)' }} />
             <h2 style={{ margin: 0, fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 19, color: 'var(--green-800)' }}>
@@ -181,8 +186,30 @@ export function LockedFeature({
             <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>{t('cityStudy.lock.askPastor')}</p>
           )}
           <SeeOffersLink offer="nehemie" />
+          {coordinator && <NationalOfferBlock />}
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * D-PAYS-05 (JP 11/11) — bloc « Offre Josué » sous la caisse Néhémie d'une ville verrouillée : seulement si le plan
+ * `SUIVI_NATIONAL` de `/entitlements/personal` est `canSubscribe` pour l'appelant (ou un abonnement en cours à
+ * régulariser). Mensuel / Annuel, € / $, « J'ai un code » — mêmes briques que Caleb, sans ville.
+ */
+function NationalOfferBlock() {
+  const { t } = useTranslation();
+  const personalQ = useQuery({ queryKey: ['entitlements', 'personal'], queryFn: getPersonalEntitlements, retry: false });
+  const plan = personalQ.data?.plans.find((p) => p.planCode === PLAN_SUIVI_NATIONAL) ?? null;
+  const status = plan?.subscription?.status;
+  if (!plan || plan.entitled || !(plan.canSubscribe || status === 'PENDING' || status === 'PAST_DUE')) return null;
+  return (
+    <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+      <div style={{ fontFamily: 'var(--font-serif)', fontSize: 17, color: 'var(--green-800)', marginBottom: 4 }}>{t('offers.national.lockTitle')}</div>
+      <p style={{ margin: '0 0 12px', color: 'var(--ink-700)', fontSize: 13.5, lineHeight: 1.5 }}>{t('offers.national.lockIntro')}</p>
+      <PersonalLockActions plan={plan} kind="national" />
+      <SeeOffersLink offer="national" />
     </div>
   );
 }
@@ -482,7 +509,7 @@ export function HierarchyLockedFeature({ plan }: { plan: PersonalPlan | null }) 
     <div style={{ position: 'relative', minHeight: 340, marginBottom: 12 }}>
       <FakeHierarchyPreview />
       <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: 16 }}>
-        <div className="card" style={{ maxWidth: 480, width: '100%', padding: 'clamp(18px, 4vw, 26px)', boxShadow: 'var(--shadow-md, var(--shadow-sm))' }}>
+        <div className="card" style={{ maxWidth: 480, width: '100%', padding: 'clamp(18px, 4vw, 26px)', boxShadow: 'var(--shadow-md)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <Icon name="lock" size={18} style={{ color: 'var(--earth-700)' }} />
             <h2 style={{ margin: 0, fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 19, color: 'var(--green-800)' }}>
@@ -498,7 +525,7 @@ export function HierarchyLockedFeature({ plan }: { plan: PersonalPlan | null }) 
   );
 }
 
-function PersonalLockActions({ plan }: { plan: PersonalPlan | null }) {
+function PersonalLockActions({ plan, kind = 'caleb' }: { plan: PersonalPlan | null; kind?: 'caleb' | 'national' }) {
   const { t, i18n } = useTranslation();
   const portalM = useMutation({
     mutationFn: (reference: string) => openBillingPortal(reference),
@@ -522,12 +549,12 @@ function PersonalLockActions({ plan }: { plan: PersonalPlan | null }) {
 
   const sub = plan?.subscription ?? null;
   if (sub?.status === 'PENDING') {
-    return <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>{t('hierarchy.lock.pending')}</p>;
+    return <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>{t(kind === 'national' ? 'offers.national.pending' : 'hierarchy.lock.pending')}</p>;
   }
   if (sub?.status === 'PAST_DUE' && !plan?.entitled) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <p style={{ margin: 0, color: 'var(--err)', fontSize: 14 }}>{t('hierarchy.lock.pastDue')}</p>
+        <p style={{ margin: 0, color: 'var(--err)', fontSize: 14 }}>{t(kind === 'national' ? 'offers.national.pastDue' : 'hierarchy.lock.pastDue')}</p>
         {sub.source === 'STRIPE' && (
           <Button variant="primary" disabled={portalM.isPending} onClick={() => portalM.mutate(sub.reference)} style={{ justifyContent: 'center' }}>
             {t('cityStudy.lock.updateCard')}
@@ -597,7 +624,7 @@ function PersonalLockActions({ plan }: { plan: PersonalPlan | null }) {
       {checkoutM.isError && <p style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>{billingErrMsg(checkoutM.error, t)}</p>}
       <p style={{ margin: 0, color: 'var(--ink-400)', fontSize: 12 }}>{t('billing.offers.stripeNote')}</p>
       {/* D-OFF-08 (JP 27/10) : seconde voie, code d'activation (droit personnel, sans ville). */}
-      <VoucherEntry plan="caleb" localPriceLabel={plan.localPriceLabel} />
+      <VoucherEntry plan={kind} localPriceLabel={plan.localPriceLabel} />
     </div>
   );
 }

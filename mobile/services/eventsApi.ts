@@ -96,6 +96,24 @@ export interface EventCreateRequest {
   preacher?: string;
   /** ≤ 280 */
   note?: string;
+  /**
+   * RG-PAYS-23 (JP 11/11, contrat 11/11 §8.2) — « Ouvert à tous » : PLANNED de niveau COUNTRY / LOCALITY seulement
+   * (422 EVENT_OPEN_TO_ALL_INVALID sinon). null / absent = false.
+   */
+  openToAll?: boolean | null;
+}
+
+/** Mirrors com.excellence.back.events.EventDtos.EventRegistrationStatus (lot conf-pays, JP 11/11). */
+export type EventRegistrationStatus = 'REGISTERED' | 'CANCELED';
+
+/** Mirrors com.excellence.back.events.EventDtos.MyEventRegistration — mon inscription à un évènement ouvert. */
+export interface MyEventRegistration {
+  id: string;
+  status: EventRegistrationStatus;
+  /** Instant (création, ou réinscription). */
+  registeredAt: string;
+  /** null = non pointé ; vrai / faux après le pointage de l'organisateur. */
+  attended: boolean | null;
 }
 
 /** Mirrors com.excellence.back.events.EventDtos.EventResponse */
@@ -141,6 +159,103 @@ export interface EventResponse {
   doneAt: string | null;
   canEdit: boolean;
   canFlag: boolean;
+  // ── Lot conf-pays (JP 11/11, contrat 11/11 §8.2) — facultatifs : absents d'un serveur antérieur au lot ──
+  /** RG-PAYS-23 — évènement « Ouvert à tous ». */
+  openToAll?: boolean;
+  /**
+   * RG-PAYS-24 / écart E-04 — lu SEULEMENT au titre « ouvert à tous » : compteurs, prédicateur, note, auteur à
+   * null, aucun geste de gestion. Ne rien afficher de ces champs.
+   */
+  restricted?: boolean;
+  myRegistration?: MyEventRegistration | null;
+  /** RG-PAYS-26 — « Je participe » possible (calculé par le serveur). */
+  canRegister?: boolean;
+  /** Inscrits REGISTERED — non null seulement si canEdit && openToAll (RG-PAYS-29 : à côté des compteurs). */
+  registrationCount?: number | null;
+  /** Pointés venus — idem. */
+  attendedCount?: number | null;
+  /** E-15 (JP 11/11) — liste des inscrits et pointage : `canEdit` ou SECRETARIAT du ministère (serveur). Absent = `canEdit`. */
+  canManageRegistrations?: boolean;
+}
+
+/**
+ * Mirrors com.excellence.back.events.EventDtos.OpenEventResponse — `GET /events/open` et `/events/me/registrations`.
+ * RG-PAYS-24 : jamais de compteur, de prédicateur ni de statistique.
+ */
+export interface OpenEventResponse {
+  id: string;
+  typeId: string;
+  typeCode: string;
+  typeName: string;
+  typeNameEn: string | null;
+  evangelism: boolean;
+  customLabel: string | null;
+  title: string | null;
+  status: EventStatus;
+  eventDate: string;
+  endDate: string | null;
+  scopeLevel: 'COUNTRY' | 'LOCALITY';
+  scopeId: string;
+  scopeName: string;
+  place: string | null;
+  myRegistration: MyEventRegistration | null;
+  canRegister: boolean;
+}
+
+/** Mirrors com.excellence.back.events.EventDtos.EventRegistrationRequest — RG-PAYS-26. */
+export interface EventRegistrationRequest {
+  /**
+   * « J'accepte que les responsables de l'église voient mon nom et mes coordonnées pour me recontacter. »
+   * Exigé si `me.contactConsent` est faux (400 EVENT_REGISTRATION_CONSENT_REQUIRED sinon).
+   */
+  consent?: boolean | null;
+}
+
+/**
+ * Mirrors com.excellence.back.org.followup.FollowUpDtos.FollowUpStatus — repris ici pour `EventRegistrationRow`
+ * (même type que `services/followUpsApi.ts`).
+ */
+export type RegistrationFollowUpStatus = 'A_CONTACTER' | 'CONTACTEE' | 'INTEGREE' | 'NE_SOUHAITE_PAS';
+
+/** Mirrors com.excellence.back.events.EventDtos.EventRegistrationRow — RG-PAYS-28, réservé à `canEdit`. */
+export interface EventRegistrationRow {
+  id: string;
+  userId: string;
+  fullName: string;
+  /** t_user.phone_number / country_code (indicatif). */
+  phoneNumber: string | null;
+  phoneCountryCode: string | null;
+  /** User#contactEmail() */
+  email: string | null;
+  /** « sans assemblée », sinon `assemblyName` (assemblée de goalUnitId). */
+  unattached: boolean;
+  assemblyName: string | null;
+  status: EventRegistrationStatus;
+  registeredAt: string;
+  attended: boolean | null;
+  attendedAt: string | null;
+  attendedByName: string | null;
+  /** Seulement si l'appelant voit la fiche de suivi (§9), sinon null. */
+  followUpStatus: RegistrationFollowUpStatus | null;
+}
+
+/** Mirrors com.excellence.back.events.EventDtos.EventRegistrationsResponse */
+export interface EventRegistrationsResponse {
+  eventId: string;
+  registeredCount: number;
+  attendedCount: number;
+  absentCount: number;
+  unmarkedCount: number;
+  canceledCount: number;
+  /** §8.1 (date / statut) : pointage possible. */
+  canMarkAttendance: boolean;
+  /** REGISTERED seulement, tri par nom. */
+  items: EventRegistrationRow[];
+}
+
+/** Mirrors com.excellence.back.events.EventDtos.EventAttendanceRequest — null = « non pointé ». */
+export interface EventAttendanceRequest {
+  attended: boolean | null;
 }
 
 /** Mirrors org.springframework.data.domain.Page — seuls les champs utiles (§5 du contrat). */
@@ -201,6 +316,11 @@ export interface EventUpdateRequest {
   preacher: string | null;
   /** ≤ 280 */
   note: string | null;
+  /**
+   * RG-PAYS-23 (JP 11/11) — null / absent = INCHANGÉ (anciennes versions) ; true seulement si PLANNED et niveau
+   * COUNTRY / LOCALITY (422 EVENT_OPEN_TO_ALL_INVALID) ; repasser à false est toujours permis.
+   */
+  openToAll?: boolean | null;
 }
 
 /**
@@ -346,6 +466,11 @@ export const EVENT_ERROR_CODES = [
   'INVALID_SCOPE',
   'UNAUTHORIZED_ACCESS',
   'RESOURCE_NOT_FOUND',
+  // Lot conf-pays (JP 11/11, contrat 11/11 §1.1) — évènements ouverts, inscription, pointage.
+  'EVENT_OPEN_TO_ALL_INVALID',
+  'EVENT_REGISTRATION_CLOSED',
+  'EVENT_REGISTRATION_CANCELED',
+  'EVENT_REGISTRATION_CONSENT_REQUIRED',
 ];
 
 const BASE = '/api/church/events';
@@ -512,4 +637,53 @@ export async function getEventHierarchyStats(
     units: (data?.units ?? []).map((u) => ({ ...u, supervisorChain: u.supervisorChain ?? [] })),
     byLeader: data?.byLeader ?? [],
   };
+}
+
+// ---------------- Évènements ouverts à tous, inscriptions, pointage (lot conf-pays, JP 11/11) ----------------
+// D-PAYS-11 / 12 / 14 (contrat 11/11 §8) : gratuits (module EVENTS seulement). EN LIGNE uniquement — la file
+// hors-ligne (`eventQueue`) ne porte que les déclarations.
+
+/**
+ * RG-PAYS-24 — évènements ouverts de MON pays et de MA ville (PLANNED ou DONE dans [from, to] ; défaut serveur :
+ * aujourd'hui → + 365 j), 200 max. Lecture pour tout compte connecté, rattaché ou non.
+ */
+export async function listOpenEvents(params: { from?: string; to?: string } = {}): Promise<OpenEventResponse[]> {
+  const { data } = await apiClient.get<OpenEventResponse[]>(`${BASE}/open`, { params });
+  return Array.isArray(data) ? data : [];
+}
+
+/** « Mes inscriptions » : évènements où j'ai une inscription REGISTERED encore lisibles (`upcoming` par défaut). */
+export async function listMyRegistrations(when: 'upcoming' | 'past' = 'upcoming'): Promise<OpenEventResponse[]> {
+  const { data } = await apiClient.get<OpenEventResponse[]>(`${BASE}/me/registrations`, { params: { when } });
+  return Array.isArray(data) ? data : [];
+}
+
+/** « Je participe » (idempotent). 400 EVENT_REGISTRATION_CONSENT_REQUIRED, 422 EVENT_REGISTRATION_CLOSED. */
+export async function registerToEvent(id: string, payload: EventRegistrationRequest = {}): Promise<MyEventRegistration> {
+  const { data } = await apiClient.post<MyEventRegistration>(`${BASE}/${id}/registration`, payload);
+  return data;
+}
+
+/** « Je ne participe plus » (204, idempotent) tant que l'évènement n'a pas eu lieu. */
+export async function unregisterFromEvent(id: string): Promise<void> {
+  await apiClient.delete(`${BASE}/${id}/registration`);
+}
+
+/** Liste des inscrits — `canEdit` seulement (403 UNAUTHORIZED_ACCESS sinon). */
+export async function listEventRegistrations(id: string): Promise<EventRegistrationsResponse> {
+  const { data } = await apiClient.get<EventRegistrationsResponse>(`${BASE}/${id}/registrations`);
+  return { ...data, items: data?.items ?? [] };
+}
+
+/**
+ * Pointage venu / pas venu / non pointé (null). 422 EVENT_NOT_YET_HELD (programmé futur),
+ * EVENT_REGISTRATION_CLOSED (annulé), EVENT_REGISTRATION_CANCELED (inscription annulée).
+ */
+export async function markEventAttendance(
+  id: string,
+  registrationId: string,
+  payload: EventAttendanceRequest,
+): Promise<EventRegistrationRow> {
+  const { data } = await apiClient.patch<EventRegistrationRow>(`${BASE}/${id}/registrations/${registrationId}`, payload);
+  return data;
 }

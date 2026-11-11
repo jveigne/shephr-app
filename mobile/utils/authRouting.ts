@@ -1,5 +1,5 @@
 import { router, type Href } from 'expo-router';
-import type { MeResponse } from '@/services/authApi';
+import { isUnattachedPerson, type MeResponse } from '@/services/authApi';
 import { takeReturnTarget } from '@/services/returnTarget';
 
 /**
@@ -23,6 +23,13 @@ export function routeAfterLogin(me: MeResponse | null) {
     !me.goalUnitId &&
     !me.donationUnitId;
   if (unattached) {
+    // RG-PAYS-22 / D-PAYS-10 (JP 11/11, contrat 11/11 §10.2) : le rattachement est FACULTATIF — un compte qui a
+    // choisi « Je n'ai pas d'assemblée » (pays posé, décidé par le serveur) et n'a aucune demande en cours entre
+    // dans son espace sans assemblée (accueil, évènements ouverts) ; sinon le parcours `/join`, inchangé.
+    if (isUnattachedPerson(me) && !me?.pendingJoinRequest) {
+      void routeHomeOrReturn();
+      return;
+    }
     router.replace('/(auth)/join');
     return;
   }

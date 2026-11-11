@@ -39,13 +39,23 @@ export interface JoinRequestResponse {
   decisionReason: string | null;
   createdAt: string;
   decidedAt: string | null;
+  /** RG-PAYS-12 (JP 11/11) — consentement RGPD horodaté ; null pour une demande antérieure au lot conf-pays. */
+  consentAt?: string | null;
 }
 
-/** Exactement UN de assemblyNodeId / newAssembly (sinon 422 JOIN_TARGET_REQUIRED). */
+/**
+ * Mirrors com.excellence.back.org.joinrequest.dto.CreateJoinRequestRequest.
+ * Exactement UN de assemblyNodeId / newAssembly (sinon 422 JOIN_TARGET_REQUIRED).
+ */
 export interface CreateJoinRequestPayload {
   assemblyNodeId?: string;
   requestedRole: JoinRequestedRole;
   newAssembly?: { cityId: string; name: string };
+  /**
+   * RG-PAYS-12 (JP 11/11, contrat §6) — « J'accepte que mon appartenance à cette assemblée soit visible par ses
+   * dirigeants. » Obligatoire et vrai : sinon 400 JOIN_CONSENT_REQUIRED, contrôlé avant toute écriture.
+   */
+  consent: boolean;
 }
 
 export async function searchAssemblies(params: {
@@ -61,7 +71,7 @@ export async function searchAssemblies(params: {
   return data;
 }
 
-/** Erreurs 422 : JOIN_TARGET_REQUIRED, JOIN_REQUEST_ALREADY_PENDING, ALREADY_ATTACHED. */
+/** Erreurs 400 JOIN_CONSENT_REQUIRED ; 422 : JOIN_TARGET_REQUIRED, JOIN_REQUEST_ALREADY_PENDING, ALREADY_ATTACHED. */
 export async function createJoinRequest(
   payload: CreateJoinRequestPayload,
 ): Promise<JoinRequestResponse> {

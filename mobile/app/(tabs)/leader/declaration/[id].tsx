@@ -23,6 +23,7 @@ import {
 } from '@/services/donationApi';
 import { confirmDialog, notify } from '@/utils/dialogs';
 import { fmtAmount, fmtDateLong, parseLocalDate } from '@/utils/format';
+import { alpha } from '@/theme/brandingPalette';
 
 /**
  * Détail d'une déclaration, côté TRÉSORIER — Lot T8 (décision J-1, JP 14/09).
@@ -293,9 +294,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: radii.md,
-    backgroundColor: 'rgba(201,149,107,0.16)',
+    backgroundColor: alpha(colors.earth, 0.16),
     borderWidth: 1,
-    borderColor: 'rgba(167,117,75,0.30)',
+    borderColor: alpha(colors.earthDeep, 0.3),
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,

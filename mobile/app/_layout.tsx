@@ -26,8 +26,19 @@ import PushBridge from '@/components/push/PushBridge';
 import EventQueueSync from '@/components/EventQueueSync';
 import { loadContactSettings } from '@/services/contactApi';
 import { configureGoogleSignIn } from '@/services/socialSignIn';
+import { colors } from '@/theme/colors';
+import { useBrandingRefresh } from '@/hooks/useBrandingRefresh';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+/**
+ * Lot conf-pays (contrat 11/11 §5.4) — relecture de la configuration du pays et bascule sur le pays du compte
+ * (RG-PAYS-04). Sous `AuthProvider` parce qu'elle suit `me` ; ne rend rien.
+ */
+function BrandingRefresh() {
+  useBrandingRefresh();
+  return null;
+}
 
 export default function RootLayout() {
   const [appReady, setAppReady] = useState(false);
@@ -87,8 +98,12 @@ export default function RootLayout() {
             {/* Lot E6 (14/10) — vidage de la file hors-ligne des déclarations d'action
                 (RG-ACT-08) : démarrage, retour au premier plan, retour du réseau. Ne rend rien. */}
             <EventQueueSync />
-            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#E8DCC4' } }}>
+            <BrandingRefresh />
+            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.parchment } }}>
               <Stack.Screen name="index" />
+              {/* Lot conf-pays (D-PAYS-01, JP 11/11) : « Dans quel pays êtes-vous ? » — premier lancement
+                  (`index`) et réglages (`?from=settings`). */}
+              <Stack.Screen name="country" options={{ animation: 'fade' }} />
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
               <Stack.Screen
@@ -125,6 +140,12 @@ export default function RootLayout() {
                 options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
               />
               <Stack.Screen name="events/[id]" options={{ animation: 'slide_from_right' }} />
+              {/* Lot conf-pays (D-PAYS-11 / 12 / 13, JP 11/11) : évènements ouverts à tous, inscrits et
+                  pointage d'un évènement, « Personnes à suivre ». */}
+              <Stack.Screen name="events/open" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="events/registrations" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="follow-ups/index" options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="follow-ups/[userId]" options={{ animation: 'slide_from_right' }} />
               {/* Documents (plan 18/10, §6.3) : le lecteur d'un lien universel `/d/{slug}` — atteint
                   aussi sans session (aperçu + mur, RG-DOC-01) — et l'espace Documents de l'accueil
                   (D-DOC-14) se poussent depuis la droite. */}

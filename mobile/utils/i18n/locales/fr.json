@@ -210,7 +210,15 @@
       "eventsHint": "Évangélisation",
       "documents": "Documents",
       "documentsHint": "Enseignements à lire et partager",
-      "cityLocked": "Offre Néhémie"
+      "cityLocked": "Offre Néhémie",
+      "openEvents": "Évènements",
+      "openEventsHint": "Ouverts à tous",
+      "myRegistrations": "Mes inscriptions",
+      "myRegistrationsHint": "Évènements à venir",
+      "joinAssembly": "Rejoindre une assemblée",
+      "joinAssemblyHint": "Quand vous voulez",
+      "followUps": "Personnes à suivre",
+      "followUpsHint": "Sans assemblée"
     },
     "comingSoonBadge": "Bientôt disponible",
     "comingAck": "D'accord",
@@ -865,7 +873,21 @@
     "confirmAsLeader": "Confirmer — je suis le dirigeant",
     "confirmAsMember": "Confirmer — je suis un membre",
     "noOption": "Aucun résultat.",
-    "filterLabel": "Filtrer la liste"
+    "filterLabel": "Filtrer la liste",
+    "consent": {
+      "label": "J'accepte que mon appartenance à cette assemblée soit visible par ses dirigeants."
+    },
+    "noAssembly": {
+      "cta": "Je n'ai pas d'assemblée",
+      "title": "Je n'ai pas d'assemblée",
+      "hint": "Vous gardez un compte utile : vous verrez les évènements ouverts à tous de votre pays et de votre ville, et pourrez vous y inscrire. Vous pourrez rejoindre une assemblée plus tard depuis votre profil.",
+      "country": "Pays",
+      "city": "Ville (facultatif)",
+      "cityLater": "Je ne sais pas / plus tard",
+      "consent": "J'accepte que les responsables de l'église voient mon nom et mes coordonnées pour me recontacter.",
+      "consentHint": "Facultatif. Sans cet accord, personne ne vous recontactera ; il vous sera redemandé à votre première inscription à un évènement.",
+      "submit": "Continuer sans assemblée"
+    }
   },
   "hierarchy": {
     "title": "Hiérarchie",
@@ -1413,7 +1435,11 @@
       "eventGone": "Cet évènement n'existe plus : il a peut-être été supprimé.",
       "actionDenied": "Vous n'avez pas, ou plus, le droit de faire cette opération sur cet évènement.",
       "planDenied": "Vous ne pouvez pas programmer d'évènement à cet endroit : il n'est pas dans votre périmètre.",
-      "notFoundOnEdit": "L'évènement, son type ou son lieu de rattachement n'existe plus. Rouvrez l'évènement."
+      "notFoundOnEdit": "L'évènement, son type ou son lieu de rattachement n'existe plus. Rouvrez l'évènement.",
+      "EVENT_OPEN_TO_ALL_INVALID": "« Ouvert à tous » n'est possible que pour un évènement programmé de niveau pays ou ville.",
+      "EVENT_REGISTRATION_CLOSED": "Les inscriptions à cet évènement sont closes.",
+      "EVENT_REGISTRATION_CANCELED": "Cette inscription a été annulée : elle ne peut pas être pointée.",
+      "EVENT_REGISTRATION_CONSENT_REQUIRED": "Cochez la case de consentement pour vous inscrire."
     },
     "declare": {
       "kicker": "Évangélisation",
@@ -1582,7 +1608,9 @@
       "plannedFor": "Cet évènement sera programmé pour {{node}}.",
       "attachedTo": "Cet évènement est rattaché à {{node}}.",
       "chooseScope": "Choisissez où rattacher cet évènement.",
-      "pickDateHintPlanned": "Un évènement programmé peut être daté dans le futur."
+      "pickDateHintPlanned": "Un évènement programmé peut être daté dans le futur.",
+      "openToAll": "Ouvert à tous",
+      "openToAllHint": "Visible des personnes sans assemblée de ce pays ou de cette ville, qui pourront s'y inscrire. Les réunions internes restent privées."
     },
     "plan": {
       "title": "Programmer un évènement",
@@ -1622,6 +1650,54 @@
       "unflag": "Retirer « à vérifier »",
       "flagged": "Marqué « à vérifier ».",
       "unflagged": "Marqueur « à vérifier » retiré."
+    },
+    "open": {
+      "badge": "Ouvert à tous",
+      "title": "Évènements ouverts à tous",
+      "subtitle": "Les évènements ouverts de votre pays et de votre ville.",
+      "subtitleCity": "Les évènements ouverts de votre pays et de {{city}}.",
+      "tabs": {
+        "open": "Ouverts à tous",
+        "mine": "Mes inscriptions"
+      },
+      "empty": "Aucun évènement ouvert à tous n'est programmé pour le moment.",
+      "mineEmpty": "Vous n'êtes inscrit à aucun évènement à venir.",
+      "memberLink": "Évènements ouverts à tous",
+      "memberLinkSub": "Ceux de votre ville et de votre pays, et vos inscriptions"
+    },
+    "registration": {
+      "title": "Vous venez ?",
+      "hint": "Inscrivez-vous pour que les organisateurs sachent qui vient.",
+      "consent": "J'accepte que les responsables de l'église voient mon nom et mes coordonnées pour me recontacter.",
+      "join": "Je participe",
+      "leave": "Je ne participe plus",
+      "registered": "Vous participez",
+      "registeredShort": "Inscrit",
+      "youAttended": "Votre présence a été notée.",
+      "youMissed": "Vous avez été noté absent.",
+      "listTitle_one": "{{count}} inscrit",
+      "listTitle_other": "{{count}} inscrits",
+      "counts": "{{registered}} inscrits · {{attended}} venus — voir la liste et pointer",
+      "screenTitle": "Inscrits",
+      "denied": "Seuls les organisateurs de l'évènement voient ses inscrits.",
+      "stat": {
+        "registered": "Inscrits",
+        "attended": "Venus",
+        "absent": "Absents",
+        "unmarked": "Non pointés"
+      },
+      "markHint": "Pointez chaque inscrit : venu ou pas venu. Les compteurs saisis à la main ne changent pas.",
+      "markLater": "Le pointage s'ouvre le jour de l'évènement.",
+      "empty": "Personne ne s'est encore inscrit.",
+      "unattached": "Sans assemblée",
+      "registeredOn": "inscrit le {{date}}",
+      "mark": {
+        "attended": "Venu",
+        "absent": "Pas venu",
+        "unmarked": "—"
+      },
+      "canceledCount_one": "{{count}} inscription annulée.",
+      "canceledCount_other": "{{count}} inscriptions annulées."
     }
   },
   "documents": {
@@ -2028,6 +2104,98 @@
     "nehemie": {
       "name": "Offre Néhémie",
       "subtitle": "Le suivi de toute ma ville"
+    },
+    "national": {
+      "name": "Offre Josué",
+      "subtitle": "Le suivi de toute ma nation"
     }
+  },
+  "branding": {
+    "defaultName": "Shephr",
+    "poweredBy": "propulsé par Shephr",
+    "restartToApply": "Fermez puis rouvrez l'application pour appliquer les couleurs de votre pays.",
+    "website": "Visiter le site"
+  },
+  "country": {
+    "title": "Dans quel pays êtes-vous ?",
+    "subtitle": "L'application s'affiche aux couleurs de l'église de votre pays quand elle en a une. Vous pourrez changer ce choix dans votre profil.",
+    "loadFailed": "Impossible de charger la liste des pays. Vérifiez votre connexion.",
+    "search": "Rechercher un pays…",
+    "suggested": "Proposé d'après les réglages de votre téléphone",
+    "other": "Autre pays",
+    "otherHint": "Affichage Shephr standard",
+    "changeLater": "Ce choix ne sert qu'à l'affichage : vous pourrez le modifier plus tard.",
+    "continue": "Continuer",
+    "retry": "Réessayer"
+  },
+  "settings": {
+    "country": {
+      "label": "Pays",
+      "lockedByAssembly": "Votre pays est celui de votre assemblée."
+    },
+    "city": {
+      "label": "Ville",
+      "none": "Je ne sais pas / plus tard"
+    },
+    "joinAssembly": "Rejoindre une assemblée",
+    "joinAssemblyHint": "Trouver mon assemblée",
+    "optOut": {
+      "title": "Ne plus être recontacté",
+      "cta": "Ne plus être recontacté",
+      "confirm": "Les responsables de l'église ne vous recontacteront plus. Vos inscriptions à venir restent visibles des organisateurs des évènements concernés. Vous pourrez redonner votre accord en vous inscrivant à un évènement.",
+      "done": "C'est noté : vous ne serez plus recontacté."
+    }
+  },
+  "countryErrors": {
+    "COUNTRY_UNKNOWN": "Ce pays n'est pas proposé. Choisissez-en un autre.",
+    "CITY_NOT_IN_COUNTRY": "Cette ville n'appartient pas à votre pays. Choisissez-en une autre.",
+    "COUNTRY_LOCKED_BY_ASSEMBLY": "Votre pays est celui de votre assemblée : il ne peut pas être modifié.",
+    "CITY_LOCKED_BY_ASSEMBLY": "Votre ville est celle de votre assemblée : elle ne peut pas être modifiée.",
+    "JOIN_CONSENT_REQUIRED": "Cochez la case de consentement pour envoyer votre demande.",
+    "FOLLOW_UP_OPTED_OUT": "Cette personne a demandé à ne plus être recontactée : sa fiche ne peut plus être modifiée.",
+    "FOLLOW_UP_STATUS_FORBIDDEN": "Ce statut ne peut pas être posé par un responsable.",
+    "UNAUTHORIZED_ACCESS": "Vous n'avez pas accès à cette fiche.",
+    "RESOURCE_NOT_FOUND": "Cette fiche n'existe plus."
+  },
+  "followUps": {
+    "title": "Personnes à suivre",
+    "subtitle": "Les personnes sans assemblée de votre ville ou de votre pays qui ont accepté d'être recontactées.",
+    "call": "Appeler",
+    "whatsapp": "WhatsApp",
+    "email": "E-mail",
+    "filters": {
+      "toFollow": "À suivre",
+      "noShow": "Inscrits non venus",
+      "newThisMonth": "Nouveaux ce mois",
+      "city": "Ville",
+      "allCities": "Toutes les villes",
+      "withoutCity": "Sans ville",
+      "search": "Nom, téléphone ou e-mail…"
+    },
+    "status": {
+      "A_CONTACTER": "À contacter",
+      "CONTACTEE": "Contactée",
+      "INTEGREE": "Intégrée à une assemblée",
+      "NE_SOUHAITE_PAS": "Ne souhaite pas être recontactée"
+    },
+    "statusLabel": "Statut",
+    "empty": "Personne à suivre pour ces filtres.",
+    "noCity": "Sans ville",
+    "counts": "{{registered}} inscriptions · {{attended}} venues · {{noShow}} absences",
+    "next": "prochain : {{date}}",
+    "loadFailed": "Impossible de charger cette fiche.",
+    "optedOutHint": "Cette personne a demandé à ne plus être recontactée : ses coordonnées ne sont plus affichées.",
+    "integratedHint": "Cette personne a rejoint une assemblée : Member Care prend le relais.",
+    "noContact": "Aucune coordonnée renseignée.",
+    "consentOn": "Accord donné le {{date}}",
+    "lastContact": "dernier contact le {{date}}",
+    "updatedBy": "Mise à jour par {{name}}",
+    "saved": "Fiche enregistrée.",
+    "markContacted": "Marquer comme contactée",
+    "note": "Note",
+    "notePlaceholder": "Ce qui a été dit, la prochaine étape…",
+    "registrations": "Inscriptions et présences",
+    "noRegistrations": "Aucune inscription pour le moment.",
+    "regCanceled": "Inscription annulée"
   }
 }

@@ -6,6 +6,7 @@ import Field from '@/components/Field';
 import Label from '@/components/Label';
 import { colors, fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { alpha } from '@/theme/brandingPalette';
 
 /** Option affichable : tout objet porteur d'un id et d'un nom. */
 export interface SelectOption {
@@ -153,7 +154,7 @@ const styles = StyleSheet.create({
   selectPlaceholder: { color: colors.ink3 },
   pickerBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(22,41,31,0.45)',
+    backgroundColor: alpha(colors.mossDeep, 0.45),
     justifyContent: 'center',
     padding: 20,
   },

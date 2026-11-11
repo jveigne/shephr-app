@@ -1,3 +1,4 @@
+import { BrandingWelcomeCard } from '../components/PoweredBy';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -397,7 +398,7 @@ export function GoalsPage() {
                 flex: 1,
                 height: 6,
                 borderRadius: 99,
-                background: 'rgba(42,38,32,0.08)',
+                background: 'var(--track)',
                 overflow: 'hidden',
                 display: 'flex',
               }}
@@ -406,7 +407,7 @@ export function GoalsPage() {
                 style={{
                   width: `${basePct}%`,
                   height: '100%',
-                  background: 'var(--green-600, #2E5142)',
+                  background: 'var(--green-600)',
                 }}
               />
               {over && (
@@ -414,7 +415,7 @@ export function GoalsPage() {
                   style={{
                     width: `${overPct}%`,
                     height: '100%',
-                    background: 'var(--earth-600, #B07F54)',
+                    background: 'var(--earth-600)',
                   }}
                 />
               )}
@@ -426,7 +427,7 @@ export function GoalsPage() {
                     top: 0,
                     bottom: 0,
                     width: 2,
-                    background: 'rgba(255,255,255,0.85)',
+                    background: 'var(--white-85)',
                   }}
                 />
               )}
@@ -434,7 +435,7 @@ export function GoalsPage() {
             <span
               style={{
                 fontSize: 12,
-                color: over ? 'var(--earth-700, #8E6B47)' : 'var(--ink-400)',
+                color: over ? 'var(--earth-700)' : 'var(--ink-400)',
                 fontWeight: over ? 600 : 400,
                 minWidth: 32,
               }}
@@ -570,6 +571,8 @@ export function GoalsPage() {
       {canBulkRemind && <BulkReminderModal open={bulkRemindOpen} onClose={() => setBulkRemindOpen(false)} />}
 
       <div className="content">
+        {/* §5.5 (JP 11/11) : texte d'accueil du pays actif (et lien du site), rien en Shephr standard. */}
+        <BrandingWelcomeCard />
         {goalQ.isLoading || (hasUnit && unitQ.isLoading) ? (
           <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
         ) : noGoal ? (
@@ -596,11 +599,11 @@ export function GoalsPage() {
                   </span>
                 ) : yearDeadline ? (
                   new Date(yearDeadline).getTime() < Date.now() ? (
-                    <strong style={{ color: 'var(--err, #B86A4A)' }}>
+                    <strong style={{ color: 'var(--err)' }}>
                       {t('goals.deadlinePast', { date: fmtDateLabel(yearDeadline.slice(0, 10)) })}
                     </strong>
                   ) : (
-                    <strong style={{ color: 'var(--earth-700, #8E6B47)' }}>
+                    <strong style={{ color: 'var(--earth-700)' }}>
                       {t('goals.submitBefore', { date: fmtDateLabel(yearDeadline.slice(0, 10)) })}
                     </strong>
                   )
@@ -1364,7 +1367,7 @@ function ZoneUnitsBlock({
             padding: 0,
             marginBottom: 8,
             cursor: 'pointer',
-            color: 'var(--green-700, #1E3A2F)',
+            color: 'var(--green-700)',
             fontSize: 13,
             textDecoration: 'underline',
           }}
@@ -1373,7 +1376,7 @@ function ZoneUnitsBlock({
         </button>
       )}
       {!showingCityList && allSubmitted && (
-        <p style={{ margin: '0 0 8px', color: 'var(--green-600, #2E5142)', fontSize: 13 }}>
+        <p style={{ margin: '0 0 8px', color: 'var(--green-600)', fontSize: 13 }}>
           {t('goals.allUnitsSubmitted')}
         </p>
       )}
@@ -1459,7 +1462,7 @@ function ZoneUnitsBlock({
                       border: 'none',
                       padding: 0,
                       cursor: 'pointer',
-                      color: 'var(--green-700, #1E3A2F)',
+                      color: 'var(--green-700)',
                       fontWeight: 600,
                       textDecoration: 'underline',
                     }}
@@ -1508,7 +1511,7 @@ function ZoneUnitsBlock({
         ) : (
           <>
           {detailQ.data?.[0]?.leaderName && (
-            <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--ink-500, #4A443B)' }}>
+            <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--ink-500)' }}>
               {t('goals.unitLeaderInline', { name: detailQ.data[0].leaderName })}
             </p>
           )}
@@ -1538,7 +1541,7 @@ function ZoneUnitsBlock({
                     ? fmtAmount(d.achievedAmount ?? 0, goal.defaultCurrency)
                     : `${d.achievedCount ?? 0} ${cat?.unitLabel ?? ''}`.trim();
                 return (
-                  <tr key={d.categoryId} style={{ borderTop: '1px solid var(--line, rgba(42,38,32,0.08))' }}>
+                  <tr key={d.categoryId} style={{ borderTop: '1px solid var(--line)' }}>
                     <td style={{ padding: '8px' }}>
                       {label}
                       {/* `locked` = TOUS les engagements des membres de cette catégorie sont soumis. */}
@@ -1637,7 +1640,7 @@ function NationRegionsBlock({
           </div>
         </div>
       ))}
-      <div className="card" style={{ padding: '12px 16px', background: 'var(--paper-2, #F7F4EE)' }}>
+      <div className="card" style={{ padding: '12px 16px', background: 'var(--ivory-mist)' }}>
         <div style={{ marginBottom: 6 }}><strong>{t('views.nationTotal')}</strong></div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 22px', fontSize: 13 }}>
           {data.totals.map((l) => {
@@ -1700,7 +1703,7 @@ function DeadlineEditor({ year, current }: { year: number; current: string | nul
           marginTop: 4,
           cursor: 'pointer',
           fontSize: 12.5,
-          color: 'var(--green-700, #1E3A2F)',
+          color: 'var(--green-700)',
           textDecoration: 'underline',
         }}
       >
@@ -1810,7 +1813,7 @@ function GlobalSummarySection({ goal, currency, year, drill = true }: { goal: Ac
             {summary.lateMembers > 0 && (
               <>
                 {' '}
-                <strong style={{ color: 'var(--err, #B86A4A)' }}>
+                <strong style={{ color: 'var(--err)' }}>
                   {t('goals.lateMembers', { count: summary.lateMembers })}
                 </strong>
               </>
@@ -1901,7 +1904,7 @@ function DrillView({
     border: 'none',
     padding: 0,
     cursor: 'pointer',
-    color: 'var(--green-700, #1E3A2F)',
+    color: 'var(--green-700)',
     fontSize: 13,
     textDecoration: 'underline',
   };
@@ -2227,7 +2230,7 @@ function MembersGoalsBlock({
     <div style={{ marginTop: 18 }}>
       <h4 style={{ margin: '0 0 4px' }}>{t('goals.membersGoalsTitle')}</h4>
       {/* Compteur « 7/12 membres ont soumis » (RG-BQ-06) — `pct` absorbe le cas 0 membre. */}
-      <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--ink-500, #4A443B)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--ink-500)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <strong><MembersSubmittedRatio u={data} /></strong>
         {data.lateMembers > 0 && (
           <Badge tone="err" dot>{t('goals.lateMembers', { count: data.lateMembers })}</Badge>

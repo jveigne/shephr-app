@@ -2,7 +2,7 @@
   "expo": {
     "name": "shephr",
     "slug": "shephr",
-    "version": "0.3.6",
+    "version": "0.4.0",
     "sdkVersion": "57.0.0",
     "extra": {
       "API_URL": "https://cmfipraise-prod-production.up.railway.app",
@@ -102,6 +102,9 @@
       "@config-plugins/react-native-blob-util",
       "@config-plugins/react-native-pdf"
     ],
+    "updates": {
+      "enabled": false
+    },
     "experiments": {
       "typedRoutes": true
     },

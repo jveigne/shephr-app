@@ -1,3 +1,4 @@
+import { PLAN_SUIVI_NATIONAL } from '../services/entitlementsApi';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -7,7 +8,7 @@ import { Icon } from '../components/Icon';
 import { LangSwitch } from '../components/LangSwitch';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { hasMemberSpace, hasMinistryAccess } from '../services/authApi';
+import { hasMemberSpace, hasMinistryAccess, isUnattachedPerson } from '../services/authApi';
 import {
   downloadInvoicePdf,
   getMySubscription,
@@ -103,7 +104,7 @@ export function BillingLayout({ children }: { children: ReactNode }) {
       <header style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--parchment)', borderBottom: '1px solid var(--line-soft)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '14px clamp(16px, 3vw, 24px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--green-600)', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>S</div>
+            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--green-600)', color: 'var(--on-primary-bright)', display: 'grid', placeItems: 'center', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>S</div>
             <span style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: 'var(--green-800)' }}>shephr</span>
           </Link>
           <LangSwitch />
@@ -162,6 +163,8 @@ function useHomePath(): string {
   const { me } = useAuth();
   if (hasMinistryAccess(me)) return '/dashboard';
   if (hasMemberSpace(me)) return '/my-goals';
+  // RG-PAYS-22 (JP 11/11) : compte « sans assemblée » → son espace (évènements ouverts).
+  if (isUnattachedPerson(me)) return '/open-events';
   return '/join';
 }
 
@@ -210,8 +213,15 @@ export function BillingReturnPage() {
   // JP 27/10 — plan PERSONNEL « Suivi de ma hiérarchie » (sans ville) : retour vers la Hiérarchie,
   // page 3 « Vie de mon leadership » depuis D-HIE-01 (JP 28/10).
   // Plan personnel = formule sans ville (D-ABO-33), pas un code en dur : une autre offre USER marche aussi.
-  const hierarchyPlan = !!sub?.planCode && !sub.localityId;
-  const cityLink = hierarchyPlan ? (
+  // D-PAYS-05 (JP 11/11, contrat §7.3) : l'offre Josué (`SUIVI_NATIONAL`, personnelle ET géographique) est reconnue
+  // AVANT la règle « personnel = Caleb » — lien vers le suivi de la ville (toutes les villes de sa nation).
+  const nationalPlan = sub?.planCode === PLAN_SUIVI_NATIONAL;
+  const hierarchyPlan = !nationalPlan && !!sub?.planCode && !sub.localityId;
+  const cityLink = nationalPlan ? (
+    <Link to="/study/city" style={{ color: 'var(--green-700)', fontWeight: 600 }}>
+      {t('billing.plan.openCityFollowUp')}
+    </Link>
+  ) : hierarchyPlan ? (
     <Link to="/hierarchy/vie" style={{ color: 'var(--green-700)', fontWeight: 600 }}>
       {t('billing.plan.backToHierarchy')}
     </Link>
@@ -242,7 +252,9 @@ export function BillingReturnPage() {
             avec un lien vers /study/city. L'ouverture du droit vient du webhook (RG-ABO-25) : on ne
             l'affiche qu'une fois l'abonnement relu ACTIVE / PAST_DUE. */}
         <Banner tone="ok">
-          {hierarchyPlan
+          {nationalPlan
+            ? t('billing.plan.nationalActivated')
+            : hierarchyPlan
             ? t('billing.plan.hierarchyActivated')
             : sub.planCode
             ? t('billing.plan.activated', { city: sub.localityName ?? '—' })
@@ -453,7 +465,16 @@ function SubscriptionCard({
           </div>
         )}
         {sub.ministryName && <div style={{ color: 'var(--ink-600)', fontSize: 13 }}>{t('billing.mine.ministry', { name: sub.ministryName })}</div>}
-        {!!sub.planCode && !sub.localityId && (
+        {sub.planCode === PLAN_SUIVI_NATIONAL && (
+          // D-PAYS-05 (JP 11/11) : offre Josué — personnelle, toutes les villes de la nation du payeur.
+          <div style={{ color: 'var(--ink-600)', fontSize: 13 }}>
+            {t('billing.plan.national')}{' · '}
+            <Link to="/study/city" style={{ color: 'var(--green-700)', fontWeight: 600 }}>
+              {t('billing.plan.openCityFollowUp')}
+            </Link>
+          </div>
+        )}
+        {!!sub.planCode && !sub.localityId && sub.planCode !== PLAN_SUIVI_NATIONAL && (
           // JP 27/10 — plan personnel : le bénéficiaire est le payeur ; lien vers la Hiérarchie.
           <div style={{ color: 'var(--ink-600)', fontSize: 13 }}>
             {t('billing.plan.personal')}{' · '}

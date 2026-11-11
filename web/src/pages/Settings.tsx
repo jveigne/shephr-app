@@ -7,7 +7,12 @@ import { Button, Field, Input, Modal, Select, TopBar } from '../components/ui';
 import { GeoPicker } from '../components/GeoPicker';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { canCreateAssembly, deleteMyAccount, primaryRoleKey, type Language } from '../services/authApi';
+import { canChangeCountry, canCreateAssembly, deleteMyAccount, isUnattachedPerson, primaryRoleKey, type Language } from '../services/authApi';
+import { CountrySelect } from '../components/CountrySelect';
+import { CityPicker, NO_CITY } from '../components/CityPicker';
+import { PoweredBy } from '../components/PoweredBy';
+import { optOutFollowUp, setMyCity, setMyCountry } from '../services/countriesApi';
+import { useDeviceCountry } from '../theme/BrandingProvider';
 import {
   changeMyAssembly,
   createUnit,
@@ -80,7 +85,7 @@ export function SettingsPage() {
                 justifyContent: 'space-between',
                 gap: 16,
                 padding: '8px 0',
-                borderBottom: '1px solid var(--line-soft, rgba(42,38,32,0.06))',
+                borderBottom: '1px solid var(--line-soft)',
                 fontSize: 14,
               }}
             >
@@ -106,17 +111,21 @@ export function SettingsPage() {
           )}
         </div>
 
-        {/* RG-BQ-13 — changer d'assemblée soi-même, sans demande ni valideur. */}
-        <MyAssemblyCard />
+        {/* RG-PAYS-06 / RG-PAYS-21 (JP 11/11) : pays (et ville d'un compte sans assemblée). */}
+        <CountryCityCard />
+
+        {/* RG-BQ-13 — changer d'assemblée soi-même, sans demande ni valideur. Compte « sans assemblée » :
+            rattachement par le parcours existant /join (RG-PAYS-20), dans la carte ci-dessus. */}
+        {!isUnattachedPerson(me) && <MyAssemblyCard />}
 
         {/* Zone dangereuse */}
-        <h3 style={{ margin: '0 0 10px', color: 'var(--err, #B86A4A)' }}>{t('settings.dangerZone')}</h3>
+        <h3 style={{ margin: '0 0 10px', color: 'var(--err)' }}>{t('settings.dangerZone')}</h3>
         <div
           className="card"
           style={{
             padding: '18px 20px',
             maxWidth: 560,
-            border: '1px solid var(--err, #B86A4A)',
+            border: '1px solid var(--err)',
           }}
         >
           <p style={{ margin: '0 0 14px', fontSize: 13.5, lineHeight: 1.55, color: 'var(--ink-600)' }}>
@@ -133,6 +142,8 @@ export function SettingsPage() {
             {t('settings.deleteAccount')}
           </Button>
         </div>
+        {/* Spec §4.5 (JP 11/11) : « propulsé par Shephr » en bas des réglages, pays actif seulement. */}
+        <PoweredBy />
       </div>
 
       <Modal
@@ -336,7 +347,7 @@ function MyAssemblyCard() {
           <p
             style={{
               margin: 0, padding: '10px 14px', borderRadius: 10,
-              background: 'var(--parchment-deep, #F2EDE2)', fontSize: 13.5,
+              background: 'var(--parchment-deep)', fontSize: 13.5,
               color: 'var(--ink-600)', lineHeight: 1.55,
             }}
           >
@@ -428,12 +439,125 @@ function MyAssemblyCard() {
           {noUnitListed && (
             <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-500)' }}>
               {t('settings.myAssemblyNoneListed')}{' '}
-              <a href={contactMailto(t('settings.myAssemblySupportSubject'))} style={{ color: 'var(--green-700, #1E3A2F)' }}>
+              <a href={contactMailto(t('settings.myAssemblySupportSubject'))} style={{ color: 'var(--green-700)' }}>
                 {t('settings.myAssemblyContactSupport')}
               </a>
             </p>
           )}
         </div>
+      </Modal>
+    </>
+  );
+}
+
+/**
+ * Pays et ville du compte — lot « conf-pays » (contrat §5.5 / §10.3, JP 11/11).
+ * - RG-PAYS-06 : « Pays » grisé si le compte est rattaché (`countryLocked`, serveur) — « Votre pays est celui de
+ *   votre assemblée. » ; sinon `PATCH /me/country` puis `refreshMe` (le thème suit sans recharger).
+ * - Compte « sans assemblée » (RG-PAYS-21 / 33) : Ville (`PATCH /me/city`), « Rejoindre une assemblée » (→ /join),
+ *   « Ne plus être recontacté » (`POST /me/follow-up/opt-out`, confirmation).
+ */
+function CountryCityCard() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { me, refreshMe } = useAuth();
+  const { push } = useToast();
+  const { chooseDeviceCountry } = useDeviceCountry();
+  const [busy, setBusy] = useState(false);
+  const [optOutOpen, setOptOutOpen] = useState(false);
+  const locked = !canChangeCountry(me);
+  const unattached = isUnattachedPerson(me);
+  const country = me?.countryIso?.toUpperCase() ?? '';
+
+  const fail = (err: unknown) => {
+    const code = errCode(err);
+    const known = code && ['COUNTRY_UNKNOWN', 'CITY_NOT_IN_COUNTRY', 'COUNTRY_LOCKED_BY_ASSEMBLY', 'CITY_LOCKED_BY_ASSEMBLY'].includes(code);
+    push({ kind: 'error', title: known ? t(`settings.country.errors.${code}`) : t('common.failure'), msg: known ? undefined : errMsg(err, t('common.error')) });
+  };
+
+  const changeCountry = async (iso: string) => {
+    if (!iso || iso === country) return;
+    setBusy(true);
+    try {
+      await setMyCountry(iso);
+      chooseDeviceCountry(iso);
+      await refreshMe();
+      push({ kind: 'ok', title: t('settings.country.saved') });
+    } catch (err) {
+      fail(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const changeCity = async (id: string) => {
+    setBusy(true);
+    try {
+      await setMyCity(id === NO_CITY ? null : id);
+      await refreshMe();
+      push({ kind: 'ok', title: t('settings.city.saved') });
+    } catch (err) {
+      fail(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const optOut = async () => {
+    setBusy(true);
+    try {
+      await optOutFollowUp();
+      await refreshMe();
+      setOptOutOpen(false);
+      push({ kind: 'ok', title: t('settings.optOut.done') });
+    } catch (err) {
+      push({ kind: 'error', title: t('common.failure'), msg: errMsg(err, t('common.error')) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <h3 style={{ margin: '0 0 10px' }}>{t('settings.country.title')}</h3>
+      <div className="card" style={{ padding: '18px 20px', marginBottom: 28, maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <Field label={t('settings.country.label')} hint={locked ? t('settings.country.lockedByAssembly') : undefined}>
+          <CountrySelect value={country} onChange={(iso) => void changeCountry(iso)} disabled={locked || busy} />
+        </Field>
+        {unattached && (
+          <>
+            <Field label={t('settings.city.label')}>
+              <CityPicker
+                countryIso={country || null}
+                value={me?.cityNodeId ?? NO_CITY}
+                onChange={(id) => void changeCity(id)}
+                disabled={busy}
+              />
+            </Field>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, paddingTop: 4 }}>
+              <Button variant="primary" iconL={<Icon name="users" size={14} />} onClick={() => navigate('/join')}>
+                {t('settings.joinAssembly')}
+              </Button>
+              {me?.contactConsent && (
+                <Button variant="ghost" onClick={() => setOptOutOpen(true)}>{t('settings.optOut.button')}</Button>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+      <Modal
+        open={optOutOpen}
+        onClose={() => setOptOutOpen(false)}
+        title={t('settings.optOut.confirmTitle')}
+        sub={t('settings.optOut.confirmBody')}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setOptOutOpen(false)}>{t('common.cancel')}</Button>
+            <Button variant="primary" disabled={busy} onClick={() => void optOut()}>{t('settings.optOut.confirm')}</Button>
+          </>
+        }
+      >
+        <p style={{ margin: 0, fontSize: 13.5, color: 'var(--ink-600)', lineHeight: 1.55 }}>{t('settings.optOut.hint')}</p>
       </Modal>
     </>
   );

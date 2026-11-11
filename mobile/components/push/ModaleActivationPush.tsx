@@ -33,6 +33,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { abonnerGate, gateEstOuverte } from '@/components/push/fileNotifications';
 import { invitationDejaVue, marquerInvitationVue } from '@/components/push/preferencesPush';
 import { activerNotifications, estSupporte, lireEtatPermission } from '@/components/push/usePushNotifications';
+import { alpha } from '@/theme/brandingPalette';
 
 export default function ModaleActivationPush() {
   const { t, language } = useLanguage();
@@ -138,7 +139,7 @@ export default function ModaleActivationPush() {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(22,41,31,0.5)',
+    backgroundColor: alpha(colors.mossDeep, 0.5),
     justifyContent: 'center',
     padding: 24,
   },

@@ -1,16 +1,18 @@
+import { PoweredBy } from './components/PoweredBy';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './components/Icon';
 import { FEATURES } from './config/features';
-import { getAccessibleModules, isAttachedAccount } from './services/authApi';
+import { getAccessibleModules, isAttachedAccount, isUnattachedPerson } from './services/authApi';
 import { useAuth } from './hooks/useAuth';
 import { NotificationGate } from './components/NotificationGate';
 import { setLanguage } from './i18n';
 import { MySubscriptionsLink } from './components/MySubscriptionsLink';
 import { StudyLiveBadge } from './components/StudyLiveBadge';
 import { useStudyAccess, useStudyMenuVisible } from './utils/studyAccess';
+import { BrandLogo, BrandName } from './components/BrandLogo';
 
 /**
  * Feature A — shell MINIMAL de l'espace membre (MEMBRE Goals rattaché à une assemblée).
@@ -22,6 +24,9 @@ import { useStudyAccess, useStudyMenuVisible } from './utils/studyAccess';
  * couvre), « Réglages » et la déconnexion — aucun élargissement :
  * la garde d'AppShell (canAccessWeb / hasMinistryAccess) n'est pas touchée.
  */
+/** Pages d'accueil des shells (mention « propulsé par Shephr »). */
+const HOME_PATHS = ['/dashboard', '/goals', '/my-goals', '/open-events'];
+
 export function MemberShell() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -43,13 +48,20 @@ export function MemberShell() {
   // D-DOC-14 levée (JP 27/10, D-WEB-03) : « Documents » = abonnement DOCUMENTS ET compte rattaché.
   const hasDocuments = (modulesQ.data ?? []).includes('DOCUMENTS') && isAttachedAccount(me);
   const lang = i18n.language.startsWith('en') ? 'en' : 'fr';
+  // RG-PAYS-22 (JP 11/11, contrat §10.3) : compte « sans assemblée » — seules les routes ci-dessous lui sont
+  // ouvertes ; toute autre route du shell le renvoie sur les évènements ouverts (garde par chemin).
+  const unattached = isUnattachedPerson(me);
+  const UNATTACHED_PATHS = ['/open-events', '/member-settings', '/member-contact'];
+  const pathAllowed = !unattached || UNATTACHED_PATHS.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`));
 
   useEffect(() => {
     if (!ready) return;
     if (!isAuthenticated || !canAccessMemberSpace) {
       navigate('/login', { replace: true });
+      return;
     }
-  }, [ready, isAuthenticated, canAccessMemberSpace, navigate]);
+    if (!pathAllowed) navigate('/open-events', { replace: true });
+  }, [ready, isAuthenticated, canAccessMemberSpace, pathAllowed, navigate]);
 
   // Fermer le tiroir à chaque navigation (mobile).
   useEffect(() => {
@@ -72,7 +84,7 @@ export function MemberShell() {
     );
   }
 
-  if (!isAuthenticated || !canAccessMemberSpace) return null;
+  if (!isAuthenticated || !canAccessMemberSpace || !pathAllowed) return null;
 
   const handleLogout = async () => {
     await logout();
@@ -92,15 +104,17 @@ export function MemberShell() {
         <span className="grain-overlay" />
         <div className="sidebar-inner">
           <div className="brand">
-            <div className="brand-mark">S</div>
+            {/* D-PAYS-03 / §5.5 (JP 11/11) : logo et nom du pays actif, sinon Shephr. */}
+            <BrandLogo />
             <div className="brand-text">
-              <span className="word">shephr</span>
+              <span className="word"><BrandName /></span>
               <span className="sub">{t('memberGoals.spaceLabel')}</span>
             </div>
           </div>
 
           <nav className="nav">
             <div>
+              {!unattached && (
               <NavLink
                 to="/my-goals"
                 className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
@@ -108,7 +122,8 @@ export function MemberShell() {
                 <Icon name="sparkle" size={18} />
                 <span>{t('memberGoals.title')}</span>
               </NavLink>
-              {hasAssembly && (
+              )}
+              {hasAssembly && !unattached && (
                 <NavLink
                   to="/my-assembly"
                   className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
@@ -117,7 +132,7 @@ export function MemberShell() {
                   <span>{t('assembly.memberNav')}</span>
                 </NavLink>
               )}
-              {showStudy && (
+              {showStudy && !unattached && (
                 <NavLink
                   to="/my-study"
                   className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
@@ -127,7 +142,7 @@ export function MemberShell() {
                   <StudyLiveBadge enabled={showStudy} />
                 </NavLink>
               )}
-              {hasEvents && (
+              {hasEvents && !unattached && (
                 <NavLink
                   to="/my-actions"
                   className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
@@ -136,7 +151,18 @@ export function MemberShell() {
                   <span>{t('events.member.title')}</span>
                 </NavLink>
               )}
-              {hasDocuments && (
+              {/* RG-PAYS-24 (JP 11/11) : évènements ouverts à tous de mon pays et de ma ville — seule entrée
+                  métier d'un compte sans assemblée, en plus pour un membre rattaché. */}
+              {(hasEvents || (unattached && FEATURES.events)) && (
+                <NavLink
+                  to="/open-events"
+                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                >
+                  <Icon name="calendar" size={18} />
+                  <span>{t('nav.openEvents')}</span>
+                </NavLink>
+              )}
+              {hasDocuments && !unattached && (
                 <NavLink
                   to="/my-documents"
                   className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
@@ -170,7 +196,7 @@ export function MemberShell() {
             <div className="who">
               <div className="nm">{me?.fullName ?? '—'}</div>
               <div className="rl">
-                {t('roles.MEMBRE')}
+                {unattached ? t('nav.noAssemblyRole') : t('roles.MEMBRE')}
                 <span style={{ marginLeft: 6, display: 'inline-flex', gap: 2, fontSize: 10, fontWeight: 600 }}>
                   {(['fr', 'en'] as const).map((l) => (
                     <button
@@ -189,7 +215,7 @@ export function MemberShell() {
                         fontWeight: lang === l ? 700 : 600,
                       }}
                     >
-                      <span style={{ color: lang === l ? 'var(--green-800, #14241C)' : 'inherit' }}>
+                      <span style={{ color: lang === l ? 'var(--green-800)' : 'inherit' }}>
                         {l.toUpperCase()}
                       </span>
                     </button>
@@ -223,9 +249,11 @@ export function MemberShell() {
           >
             <Icon name="menu" size={20} />
           </button>
-          <span className="mobile-topbar-title">Shephr</span>
+          <span className="mobile-topbar-title"><BrandName short /></span>
         </div>
         <Outlet />
+        {/* Spec §4.5 (JP 11/11) : « propulsé par Shephr » en bas de l'accueil, pays actif seulement. */}
+        {HOME_PATHS.includes(location.pathname) && <PoweredBy />}
         {/* D-WEB-06 (JP 27/10) — Parité mobile → web : rappels et campagnes à l'ouverture. */}
         <NotificationGate />
       </main>

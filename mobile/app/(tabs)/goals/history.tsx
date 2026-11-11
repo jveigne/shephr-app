@@ -31,6 +31,7 @@ import {
   type GoalCategory,
   type ProgressResponse,
 } from '@/services/goalsApi';
+import { alpha } from '@/theme/brandingPalette';
 
 const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallback;
 
@@ -347,7 +348,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(22,41,31,0.45)',
+    backgroundColor: alpha(colors.mossDeep, 0.45),
     justifyContent: 'center',
     padding: 20,
   },

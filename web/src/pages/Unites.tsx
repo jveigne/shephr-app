@@ -550,11 +550,11 @@ function UnitFormModal({
           {!isEdit && (
             <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--ink-500)' }}>
               {t('units.cityMissingHint')}{' '}
-              <a href={contactMailto(t('units.cityMissingSubject'))} style={{ color: 'var(--green-700, #1E3A2F)' }}>
+              <a href={contactMailto(t('units.cityMissingSubject'))} style={{ color: 'var(--green-700)' }}>
                 {t('units.contactSupport')}
               </a>
               {' · '}
-              <a href={contactWhatsapp(t('units.cityMissingSubject'))} target="_blank" rel="noreferrer" style={{ color: 'var(--green-700, #1E3A2F)' }}>
+              <a href={contactWhatsapp(t('units.cityMissingSubject'))} target="_blank" rel="noreferrer" style={{ color: 'var(--green-700)' }}>
                 {t('units.contactWhatsapp')}
               </a>
             </p>
@@ -593,7 +593,7 @@ function UnitFormModal({
                   style={{
                     textAlign: 'left', padding: '8px 10px', borderRadius: 8, cursor: 'pointer',
                     border: `1px solid ${leaderId === u.id ? 'var(--green-800)' : 'var(--line)'}`,
-                    background: leaderId === u.id ? 'var(--paper-2, #faf7f0)' : 'transparent',
+                    background: leaderId === u.id ? 'var(--ivory-soft)' : 'transparent',
                     fontFamily: 'var(--font-sans)', fontSize: 13.5, color: 'var(--ink-700)',
                   }}
                 >

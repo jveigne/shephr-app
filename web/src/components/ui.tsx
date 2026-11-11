@@ -13,6 +13,7 @@ import {
 } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { Icon } from './Icon';
+import { useBranding } from '../theme/BrandingProvider';
 
 // ---------------- Button ----------------
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -603,6 +604,11 @@ export function Pagination({
 
 // ---------------- Crumbs / TopBar ----------------
 export function Crumbs({ items }: { items: ReactNode[] }) {
+  const { t } = useTranslation();
+  const branding = useBranding();
+  // §5.5 / recette 13 (JP 11/11) : le premier maillon « shephr » (`common.brand`) devient le nom du pays actif.
+  const brandWord = t('common.brand');
+  items = items.map((it) => (branding.countryIso && it === brandWord ? branding.displayName : it));
   return (
     <div className="crumbs">
       {items.map((it, i) => (

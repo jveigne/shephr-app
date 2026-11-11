@@ -38,6 +38,8 @@ export interface JoinRequestResponse {
   decisionReason: string | null;
   createdAt: string;
   decidedAt: string | null;
+  /** RG-PAYS-12 (JP 11/11) — consentement RGPD horodaté à l'envoi ; null pour les demandes antérieures au lot. */
+  consentAt: string | null;
 }
 
 export async function searchAssemblies(params: { q?: string; cityId?: string }) {
@@ -60,6 +62,11 @@ export async function createJoinRequest(payload: {
   assemblyNodeId?: string;
   requestedRole: JoinRequestRole;
   newAssembly?: { cityId: string; name: string };
+  /**
+   * RG-PAYS-12 (JP 11/11) — « J'accepte que mon appartenance à cette assemblée soit visible par ses dirigeants. »
+   * Absent ou faux → 400 `JOIN_CONSENT_REQUIRED` (contrôlé avant toute écriture, aussi pour `newAssembly`).
+   */
+  consent: boolean;
 }) {
   const { data } = await apiClient.post<JoinRequestResponse>('/api/church/join-requests', payload);
   return data;

@@ -95,6 +95,11 @@ export interface EventCreateRequest {
   restorations?: number | null;
   baptisms?: number | null;
   note?: string | null;
+  /**
+   * RG-PAYS-23 (JP 11/11) — « Ouvert à tous » : PLANNED et niveau COUNTRY / LOCALITY seulement, sinon 422
+   * `EVENT_OPEN_TO_ALL_INVALID`. null / absent = false.
+   */
+  openToAll?: boolean | null;
 }
 
 /**
@@ -120,6 +125,8 @@ export interface EventUpdateRequest {
   restorations: number | null;
   baptisms: number | null;
   note: string | null;
+  /** RG-PAYS-23 (JP 11/11) — null / absent = INCHANGÉ (anciennes versions) ; false toujours permis. */
+  openToAll?: boolean | null;
 }
 
 /** Mirrors com.excellence.back.events.EventDtos.EventDoneRequest — un champ absent GARDE sa valeur ; note "" l'efface. */
@@ -183,6 +190,146 @@ export interface EventResponse {
   canEdit: boolean;
   /** Poser / retirer « à vérifier » (dirigeants du périmètre et SECRETARIAT). */
   canFlag: boolean;
+  // Lot conf-pays (JP 11/11, contrat 11_11_2026/02 §8.2) — champs ajoutés EN FIN de record (facultatifs : un
+  // serveur antérieur au lot ne les envoie pas).
+  /** RG-PAYS-23 — « Ouvert à tous ». */
+  openToAll?: boolean;
+  /** §8.1 — vue « ouvert à tous » limitée : compteurs, prédicateur, note, auteur à null, aucun droit (E-04). */
+  restricted?: boolean;
+  myRegistration?: MyEventRegistration | null;
+  /** RG-PAYS-26 — calculé par le serveur. */
+  canRegister?: boolean;
+  /** RG-PAYS-29 — inscrits REGISTERED / pointés venus ; non null seulement si canEdit && openToAll. */
+  registrationCount?: number | null;
+  attendedCount?: number | null;
+  /** E-15 (JP 11/11) — liste des inscrits et pointage : `canEdit` ou SECRETARIAT du ministère (serveur). Absent = `canEdit`. */
+  canManageRegistrations?: boolean;
+}
+
+// ---------------------------------------------------------------------------------------------
+//  Évènements ouverts à tous, inscriptions et pointage (lot conf-pays, D-PAYS-11 / 12, JP 11/11 ;
+//  contrat 11_11_2026/02 §8). Gratuit (D-PAYS-14) : module EVENTS seulement. Droits calculés par le
+//  serveur (`canRegister`, `canEdit`, `canMarkAttendance`) : jamais recalculés ici.
+// ---------------------------------------------------------------------------------------------
+
+/** Mirrors com.excellence.back.events.EventRegistrationStatus (JP 11/11). */
+export type EventRegistrationStatus = 'REGISTERED' | 'CANCELED';
+
+/** Mirrors com.excellence.back.events.EventDtos.MyEventRegistration (JP 11/11). */
+export interface MyEventRegistration {
+  id: string;
+  status: EventRegistrationStatus;
+  /** Instant (création, ou réinscription). */
+  registeredAt: string;
+  attended: boolean | null;
+}
+
+/** Mirrors com.excellence.back.events.EventDtos.OpenEventResponse (JP 11/11) — jamais de compteur ni de prédicateur. */
+export interface OpenEventResponse {
+  id: string;
+  typeId: string;
+  typeCode: string;
+  typeName: string;
+  typeNameEn: string | null;
+  evangelism: boolean;
+  customLabel: string | null;
+  title: string | null;
+  status: EventStatus;
+  eventDate: string;
+  endDate: string | null;
+  scopeLevel: 'COUNTRY' | 'LOCALITY';
+  scopeId: string;
+  scopeName: string;
+  place: string | null;
+  myRegistration: MyEventRegistration | null;
+  canRegister: boolean;
+}
+
+/** Mirrors com.excellence.back.events.EventDtos.EventRegistrationRequest (JP 11/11). */
+export interface EventRegistrationRequest { consent?: boolean | null }
+
+/** Mirrors com.excellence.back.org.followup.FollowUpStatus (JP 11/11) — voir services/followUpsApi.ts. */
+export type FollowUpStatus = 'A_CONTACTER' | 'CONTACTEE' | 'INTEGREE' | 'NE_SOUHAITE_PAS';
+
+/** Mirrors com.excellence.back.events.EventDtos.EventRegistrationRow (JP 11/11). */
+export interface EventRegistrationRow {
+  id: string;
+  userId: string;
+  fullName: string;
+  /** t_user.phone_number / country_code (indicatif). */
+  phoneNumber: string | null;
+  phoneCountryCode: string | null;
+  /** User#contactEmail(). */
+  email: string | null;
+  /** « sans assemblée » ou nom de l'assemblée (goalUnitId). */
+  unattached: boolean;
+  assemblyName: string | null;
+  status: EventRegistrationStatus;
+  registeredAt: string;
+  attended: boolean | null;
+  attendedAt: string | null;
+  attendedByName: string | null;
+  /** Seulement si l'appelant voit la fiche de suivi (§9), sinon null. */
+  followUpStatus: FollowUpStatus | null;
+}
+
+/** Mirrors com.excellence.back.events.EventDtos.EventRegistrationsResponse (JP 11/11). */
+export interface EventRegistrationsResponse {
+  eventId: string;
+  registeredCount: number;
+  attendedCount: number;
+  absentCount: number;
+  unmarkedCount: number;
+  canceledCount: number;
+  /** §8.1 (date / statut). */
+  canMarkAttendance: boolean;
+  /** REGISTERED seulement, tri par nom. */
+  items: EventRegistrationRow[];
+}
+
+/** Mirrors com.excellence.back.events.EventDtos.EventAttendanceRequest (JP 11/11) — null = « non pointé ». */
+export interface EventAttendanceRequest { attended: boolean | null }
+
+/** RG-PAYS-24 — évènements ouverts de mon pays et de ma ville ; défaut serveur : aujourd'hui → + 365 j. */
+export async function listOpenEvents(params?: { from?: string; to?: string }): Promise<OpenEventResponse[]> {
+  const { data } = await apiClient.get<OpenEventResponse[]>(`${BASE}/open`, { params });
+  return data ?? [];
+}
+
+/** « Mes inscriptions » — `upcoming` (défaut) ou `past`. */
+export async function listMyRegistrations(when: 'upcoming' | 'past' = 'upcoming'): Promise<OpenEventResponse[]> {
+  const { data } = await apiClient.get<OpenEventResponse[]>(`${BASE}/me/registrations`, { params: { when } });
+  return data ?? [];
+}
+
+/**
+ * RG-PAYS-26 — « Je participe » (idempotent). 400 `EVENT_REGISTRATION_CONSENT_REQUIRED` sans consentement en cours ;
+ * 422 `EVENT_REGISTRATION_CLOSED`.
+ */
+export async function registerToEvent(id: string, body: EventRegistrationRequest): Promise<MyEventRegistration> {
+  const { data } = await apiClient.post<MyEventRegistration>(`${BASE}/${id}/registration`, body);
+  return data;
+}
+
+/** « Je ne participe plus » (204, idempotent) ; 422 `EVENT_REGISTRATION_CLOSED` après la date. */
+export async function unregisterFromEvent(id: string): Promise<void> {
+  await apiClient.delete(`${BASE}/${id}/registration`);
+}
+
+/** RG-PAYS-28 — liste des inscrits, réservée à `canEdit` (403 `UNAUTHORIZED_ACCESS` sinon). */
+export async function listEventRegistrations(id: string): Promise<EventRegistrationsResponse> {
+  const { data } = await apiClient.get<EventRegistrationsResponse>(`${BASE}/${id}/registrations`);
+  return { ...data, items: data?.items ?? [] };
+}
+
+/** RG-PAYS-28 — pointage : venu / pas venu / null (non pointé). 422 `EVENT_NOT_YET_HELD`, `EVENT_REGISTRATION_CANCELED`. */
+export async function markRegistrationAttendance(
+  eventId: string,
+  registrationId: string,
+  body: EventAttendanceRequest,
+): Promise<EventRegistrationRow> {
+  const { data } = await apiClient.patch<EventRegistrationRow>(`${BASE}/${eventId}/registrations/${registrationId}`, body);
+  return data;
 }
 
 /** Page Spring Data — seuls les champs utiles (contrat §5). */

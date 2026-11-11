@@ -98,9 +98,9 @@ export function SocialSignInButtons({
         aria-hidden
         style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--ink-400)', fontSize: 13, margin: '0 0 14px' }}
       >
-        <span style={{ flex: 1, height: 1, background: 'var(--line, #e5e1d8)' }} />
+        <span style={{ flex: 1, height: 1, background: 'var(--line)' }} />
         {t('login.social.or')}
-        <span style={{ flex: 1, height: 1, background: 'var(--line, #e5e1d8)' }} />
+        <span style={{ flex: 1, height: 1, background: 'var(--line)' }} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'stretch' }}>
         {GOOGLE_WEB_CLIENT_ID && (
@@ -322,6 +322,8 @@ function AppleButton({
         gap: 8,
         height: 44,
         borderRadius: 4,
+        // Lot conf-pays P1 (JP 11/11) : noir / blanc imposés par la charte « Sign in with Apple » — jamais aux
+        // couleurs du pays (comme les couleurs Google du bouton mobile).
         border: '1px solid #000',
         background: '#000',
         color: '#fff',
