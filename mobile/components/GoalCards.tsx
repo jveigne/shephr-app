@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,13 +8,15 @@ import Card from '@/components/Card';
 import Label from '@/components/Label';
 import Button from '@/components/Button';
 import HandDivider from '@/components/HandDivider';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { goalName } from '@/utils/goalName';
 import { goalCategoryMeta } from '@/constants/goalCategories';
 import { fmtAmount } from '@/utils/format';
 import type { GoalLine } from '@/hooks/useGoalsData';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Primitives partagées des écrans Objectifs.
  *
@@ -32,14 +34,16 @@ import type { GoalLine } from '@/hooks/useGoalsData';
  * servent aussi d'écran d'ENTRÉE de l'onglet pour un compte sans assemblée.
  */
 export function GoalScreenTitle({ title }: { title: string }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.titleRow}>
       {router.canGoBack() && (
         <Pressable onPress={() => goBack()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={24} color={colors.ink2} />
+          <Ionicons name="arrow-back" size={24} color={c.texte2} />
         </Pressable>
       )}
-      <Ionicons name="flag-outline" size={22} color={colors.mossSoft} />
+      <Ionicons name="flag-outline" size={22} color={c.accentDoux} />
       <Text style={styles.screenTitle}>{title}</Text>
     </View>
   );
@@ -55,6 +59,7 @@ export function YearSelector({
   value: number;
   onChange: (y: number) => void;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.yearRow}>
       {years.map((y) => {
@@ -90,6 +95,8 @@ export function GoalLineCard({
   onPress: () => void;
   showProgress?: boolean;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const meta = goalCategoryMeta(line.category.code);
   const { pledge, achieved, target } = line;
@@ -121,8 +128,8 @@ export function GoalLineCard({
               : t('goals.lineDraft')}
           </Text>
         </View>
-        {pledge?.locked && <Ionicons name="lock-closed" size={14} color={colors.ink3} />}
-        <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+        {pledge?.locked && <Ionicons name="lock-closed" size={14} color={c.texte3} />}
+        <Ionicons name="chevron-forward" size={16} color={c.texte3} />
       </View>
       {pledge != null && !showProgress && (
         <>
@@ -151,7 +158,7 @@ export function GoalLineCard({
           <View style={styles.barTrack}>
             <View style={[styles.barFill, { width: `${basePct}%`, backgroundColor: meta.tone }]} />
             {over && (
-              <View style={[styles.barFill, { width: `${overPct}%`, backgroundColor: colors.earthDeep }]} />
+              <View style={[styles.barFill, { width: `${overPct}%`, backgroundColor: c.secondaireProfond }]} />
             )}
             {over && <View style={[styles.goalMark, { left: `${goalLinePct}%` }]} />}
           </View>
@@ -178,12 +185,14 @@ export function GoalEmptyState({
   actionLabel?: string;
   onAction?: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <ScreenShell>
       <View style={styles.centerBox}>
         <View style={styles.emptyBubble}>
-          <Ionicons name={icon} size={30} color={colors.mossSoft} />
+          <Ionicons name={icon} size={30} color={c.accentDoux} />
         </View>
         <Text style={styles.emptyTitle}>{title}</Text>
         <Text style={styles.emptyHint}>{hint}</Text>
@@ -198,19 +207,19 @@ export function GoalEmptyState({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
-  screenTitle: { flex: 1, fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4 },
+  screenTitle: { flex: 1, fontFamily: fonts.serif, fontSize: 28, color: c.texte, letterSpacing: -0.4 },
   yearRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   yearChip: {
     paddingVertical: 6,
     paddingHorizontal: 14,
     borderRadius: 99,
-    backgroundColor: 'rgba(42,38,32,0.06)',
+    backgroundColor: transparence(c.texte, 0.06),
   },
-  yearChipActive: { backgroundColor: colors.moss },
-  yearChipText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink2 },
-  yearChipTextActive: { color: colors.white },
+  yearChipActive: { backgroundColor: c.accent },
+  yearChipText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.texte2 },
+  yearChipTextActive: { color: c.surAccent },
   lineCard: { paddingHorizontal: 16, paddingVertical: 14 },
   lineHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   lineIcon: {
@@ -220,15 +229,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  lineName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
-  lineMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2 },
+  lineName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.texte },
+  lineMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 2 },
   lineFooter: { flexDirection: 'row', justifyContent: 'space-between' },
-  lineValue: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink, marginTop: 2 },
+  lineValue: { fontFamily: fonts.serif, fontSize: 18, color: c.texte, marginTop: 2 },
   barTrack: {
     height: 6,
     flexDirection: 'row',
     position: 'relative',
-    backgroundColor: 'rgba(42,38,32,0.05)',
+    backgroundColor: transparence(c.texte, 0.05),
     borderRadius: 99,
     overflow: 'hidden',
     marginTop: 10,
@@ -244,33 +253,33 @@ const styles = StyleSheet.create({
   pctText: {
     fontFamily: fonts.mono,
     fontSize: 10.5,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 4,
     textAlign: 'right',
   },
-  pctOver: { color: colors.earthDeep },
+  pctOver: { color: c.secondaireProfond },
   centerBox: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 24 },
   emptyBubble: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.mossTint2,
+    backgroundColor: c.accentTeinte2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyTitle: {
     fontFamily: fonts.serif,
     fontSize: 22,
-    color: colors.ink,
+    color: c.texte,
     marginTop: 16,
     textAlign: 'center',
   },
   emptyHint: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 8,
     textAlign: 'center',
     lineHeight: 19,
   },
-});
+}));

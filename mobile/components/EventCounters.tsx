@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import Card from '@/components/Card';
 import Label from '@/components/Label';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+import { creerStyles } from '@/theme/creerStyles';
 /**
  * Spec Recensement §6.1 — compteurs « ce mois / cette année » en tête de « Mes actions » : actions
  * COMPTÉES (D-EVT-03 : réalisées, d'un type évangélique ; « à vérifier » n'y change rien,
@@ -21,6 +22,7 @@ export default function EventCounters({
   monthCount: number | null;
   yearCount: number | null;
 }) {
+  const styles = useStyles();
   const { t } = useLanguage();
   const monthName = t('common.monthsLong').split(',')[Number(month.slice(5, 7)) - 1] ?? '';
   return (
@@ -41,7 +43,7 @@ export default function EventCounters({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   counters: {
     marginTop: 16,
     paddingVertical: 18,
@@ -50,14 +52,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   counterCell: { flex: 1, alignItems: 'center', gap: 4 },
-  counterDivider: { width: 1, alignSelf: 'stretch', backgroundColor: colors.hair },
-  counterValue: { fontFamily: fonts.serif, fontSize: 34, color: colors.ink, letterSpacing: -0.6 },
+  counterDivider: { width: 1, alignSelf: 'stretch', backgroundColor: c.filet },
+  counterValue: { fontFamily: fonts.serif, fontSize: 34, color: c.texte, letterSpacing: -0.6 },
   counterHint: {
     marginTop: 8,
     fontFamily: fonts.sans,
     fontSize: 11.5,
-    color: colors.ink3,
+    color: c.texte3,
     textAlign: 'center',
     lineHeight: 17,
   },
-});
+}));

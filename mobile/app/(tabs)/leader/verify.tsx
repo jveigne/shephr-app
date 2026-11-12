@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,7 @@ import Chip from '@/components/Chip';
 import Amount from '@/components/Amount';
 import ErrorBanner from '@/components/ErrorBanner';
 import DeclarationStatusPill from '@/components/DeclarationStatusPill';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useDonationCategories } from '@/hooks/useDonationCategories';
@@ -20,6 +20,8 @@ import {
 } from '@/services/donationApi';
 import { fmtAmount, fmtDate, parseLocalDate } from '@/utils/format';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 const PAGE_SIZE = 20;
 
 /** Filtre de statut de la file. `undefined` = les deux — il n'y a que deux statuts (J-1). */
@@ -45,6 +47,8 @@ const STATUS_FILTERS: StatusFilter[] = ['DECLARE', 'VERIFIE', 'ALL'];
  * déclare aussi ses dons, et doit pouvoir s'y retrouver sans connaître son identifiant.
  */
 export default function VerifyQueueScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { isTreasurer } = useAuth();
   const { t } = useLanguage();
   const { labelOf, metaOf } = useDonationCategories();
@@ -134,7 +138,7 @@ export default function VerifyQueueScreen() {
       <ScreenShell>
         <Header title={t('treasury.queueTitle')} />
         <Card style={styles.noticeCard}>
-          <Ionicons name="lock-closed-outline" size={18} color={colors.ink3} />
+          <Ionicons name="lock-closed-outline" size={18} color={c.texte3} />
           <Text style={styles.noticeText}>{t('leader.notTreasurer')}</Text>
         </Card>
       </ScreenShell>
@@ -144,7 +148,7 @@ export default function VerifyQueueScreen() {
   return (
     <ScreenShell
       refreshControl={
-        <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
       <Header title={t('treasury.queueTitle')} />
@@ -174,7 +178,7 @@ export default function VerifyQueueScreen() {
 
       {loading ? (
         <View style={{ alignItems: 'center', marginTop: 40 }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       ) : (
         <>
@@ -182,7 +186,7 @@ export default function VerifyQueueScreen() {
 
           {items.length === 0 && !failed && (
             <Card style={styles.noticeCard}>
-              <Ionicons name="checkmark-done-outline" size={18} color={colors.mossSoft} />
+              <Ionicons name="checkmark-done-outline" size={18} color={c.accentDoux} />
               <Text style={styles.noticeText}>
                 {status === 'DECLARE' ? t('treasury.emptyQueue') : t('treasury.emptyList')}
               </Text>
@@ -238,7 +242,7 @@ export default function VerifyQueueScreen() {
           {!last && (
             <Pressable style={styles.moreBtn} onPress={loadMore} disabled={loadingMore}>
               {loadingMore ? (
-                <ActivityIndicator color={colors.mossSoft} />
+                <ActivityIndicator color={c.accentDoux} />
               ) : (
                 <Text style={styles.moreText}>{t('treasury.loadMore')}</Text>
               )}
@@ -251,10 +255,12 @@ export default function VerifyQueueScreen() {
 }
 
 function Header({ title }: { title: string }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.headerRow}>
       <Pressable onPress={() => goBack()} hitSlop={10}>
-        <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+        <Ionicons name="chevron-back" size={22} color={c.texte2} />
       </Pressable>
       <Text style={styles.headerTitle}>{title}</Text>
       <View style={{ width: 22 }} />
@@ -262,19 +268,19 @@ function Header({ title }: { title: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink2 },
+  headerTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.texte2 },
   title: {
     fontFamily: fonts.serif,
     fontSize: 28,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.4,
     marginTop: 6,
   },
-  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4, lineHeight: 18 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 4, lineHeight: 18 },
   chipRow: { flexDirection: 'row', gap: 6, marginTop: 12, flexWrap: 'wrap' },
-  count: { fontFamily: fonts.mono, fontSize: 11.5, color: colors.ink3, marginTop: 16 },
+  count: { fontFamily: fonts.mono, fontSize: 11.5, color: c.texte3, marginTop: 16 },
   noticeCard: {
     marginTop: 14,
     paddingHorizontal: 16,
@@ -283,11 +289,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 10,
   },
-  noticeText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2, lineHeight: 19 },
+  noticeText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: c.texte2, lineHeight: 19 },
   row: { paddingHorizontal: 16, paddingVertical: 14 },
   rowHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  donor: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
-  meta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 3 },
+  donor: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.texte },
+  meta: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 3 },
   linesWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
   lineChip: {
     flexDirection: 'row',
@@ -297,11 +303,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 5,
     borderRadius: 99,
-    backgroundColor: 'rgba(42,38,32,0.05)',
+    backgroundColor: transparence(c.texte, 0.05),
   },
   lineDot: { width: 6, height: 6, borderRadius: 3 },
-  lineLabel: { flexShrink: 1, fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink2 },
-  lineAmount: { fontFamily: fonts.mono, fontSize: 11.5, color: colors.ink },
+  lineLabel: { flexShrink: 1, fontFamily: fonts.sans, fontSize: 11.5, color: c.texte2 },
+  lineAmount: { fontFamily: fonts.mono, fontSize: 11.5, color: c.texte },
   // Mention « auto-validée » : servie par le backend (`selfVerified`), jamais déduite en comparant
   // deux identifiants. J-1 autorise l'auto-validation — à condition qu'elle se VOIE.
   selfTag: {
@@ -310,14 +316,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
     textTransform: 'uppercase',
-    color: colors.earthDeep,
+    color: c.secondaireProfond,
   },
   moreBtn: {
     marginTop: 14,
     paddingVertical: 12,
     borderRadius: 99,
     alignItems: 'center',
-    backgroundColor: 'rgba(42,38,32,0.05)',
+    backgroundColor: transparence(c.texte, 0.05),
   },
-  moreText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.mossSoft },
-});
+  moreText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.accentDoux },
+}));

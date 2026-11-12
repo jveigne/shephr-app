@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
@@ -8,13 +8,15 @@ import Label from '@/components/Label';
 import ErrorBanner from '@/components/ErrorBanner';
 import MeetingReportCard from '@/components/MeetingReportCard';
 import CalebAssemblyLock from '@/components/CalebAssemblyLock';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { deleteMeeting, getMeeting, type MeetingDetail } from '@/services/assemblyApi';
 import { hierarchyAccessDenied } from '@/services/entitlementsApi';
 import { fmtIsoDay, formatChapters, type MeetingReportInput } from '@/utils/meetingReport';
 import { confirmDialog, notify } from '@/utils/dialogs';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Détail d'un compte rendu — §6.3 plan 23/09 (lot L5).
  * Lecture : public RG-ASM-05 (CR complet, présents inclus — [HYPOTHÈSE] du plan).
@@ -23,6 +25,8 @@ import { confirmDialog, notify } from '@/utils/dialogs';
  * — 403 `MODULE_ACCESS_DENIED` / `HIERARCHIE_SUIVI` → verrou Caleb à la place du CR.
  */
 export default function MeetingDetailScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [detail, setDetail] = useState<MeetingDetail | null>(null);
@@ -103,7 +107,7 @@ export default function MeetingDetailScreen() {
     return (
       <ScreenShell>
         <View style={{ marginTop: 60, alignItems: 'center' }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       </ScreenShell>
     );
@@ -113,7 +117,7 @@ export default function MeetingDetailScreen() {
     <ScreenShell>
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+          <Ionicons name="chevron-back" size={22} color={c.texte2} />
         </Pressable>
         <View style={{ flex: 1 }} />
         {detail?.canWrite && (
@@ -128,10 +132,10 @@ export default function MeetingDetailScreen() {
                 } as unknown as Href)
               }
             >
-              <Ionicons name="create-outline" size={16} color={colors.moss} />
+              <Ionicons name="create-outline" size={16} color={c.accent} />
             </Pressable>
             <Pressable style={[styles.iconBtn, styles.delBtn]} hitSlop={8} onPress={onDelete}>
-              <Ionicons name="trash-outline" size={16} color={colors.clay} />
+              <Ionicons name="trash-outline" size={16} color={c.alerte} />
             </Pressable>
           </>
         )}
@@ -172,7 +176,7 @@ export default function MeetingDetailScreen() {
             ) : (
               detail.attendees.map((a) => (
                 <View key={a.userId} style={styles.personRow}>
-                  <Ionicons name="person-outline" size={15} color={colors.mossSoft} />
+                  <Ionicons name="person-outline" size={15} color={c.accentDoux} />
                   <Text style={styles.personName}>{a.displayName}</Text>
                 </View>
               ))
@@ -187,9 +191,11 @@ export default function MeetingDetailScreen() {
 }
 
 function InfoRow({ icon, label, value }: { icon: any; label: string; value: string }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.infoRow}>
-      <Ionicons name={icon} size={17} color={colors.mossSoft} />
+      <Ionicons name={icon} size={17} color={c.accentDoux} />
       <View style={{ flex: 1 }}>
         <Text style={styles.infoLabel}>{label}</Text>
         <Text style={styles.infoValue}>{value}</Text>
@@ -198,30 +204,30 @@ function InfoRow({ icon, label, value }: { icon: any; label: string; value: stri
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   iconBtn: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: colors.mossTint2,
+    backgroundColor: c.accentTeinte2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  delBtn: { backgroundColor: colors.mossTint },
-  title: { fontFamily: fonts.serif, fontSize: 26, color: colors.ink, letterSpacing: -0.4, marginTop: 4 },
-  subtitle: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, marginTop: 4 },
+  delBtn: { backgroundColor: c.accentTeinte },
+  title: { fontFamily: fonts.serif, fontSize: 26, color: c.texte, letterSpacing: -0.4, marginTop: 4 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, marginTop: 4 },
   card: { marginTop: 14, paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   infoLabel: {
     fontFamily: fonts.sans,
     fontSize: 11.5,
-    color: colors.ink3,
+    color: c.texte3,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  infoValue: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink, marginTop: 2, lineHeight: 19 },
-  hint: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3 },
+  infoValue: { fontFamily: fonts.sans, fontSize: 14, color: c.texte, marginTop: 2, lineHeight: 19 },
+  hint: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3 },
   personRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  personName: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink },
-});
+  personName: { fontFamily: fonts.sans, fontSize: 14, color: c.texte },
+}));

@@ -1,15 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Share, Switch } from 'react-native';
+import { View, Text, Pressable, Share, Switch } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '@/components/Card';
 import Label from '@/components/Label';
 import Button from '@/components/Button';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { buildMeetingReport, type MeetingReportInput } from '@/utils/meetingReport';
 import { notify } from '@/utils/dialogs';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Aperçu du compte rendu + Copier / Partager — §6.3 plan 23/09 (lot L5).
  *
@@ -18,6 +20,8 @@ import { notify } from '@/utils/dialogs';
  * React Native, qui propose directement WhatsApp.
  */
 export default function MeetingReportCard({ input }: { input: MeetingReportInput }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [includeAttendees, setIncludeAttendees] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -60,8 +64,8 @@ export default function MeetingReportCard({ input }: { input: MeetingReportInput
         <Switch
           value={includeAttendees}
           onValueChange={setIncludeAttendees}
-          trackColor={{ true: colors.moss, false: colors.hairStrong }}
-          thumbColor={colors.paper2}
+          trackColor={{ true: c.accent, false: c.filetFort }}
+          thumbColor={c.surfaceHaute}
         />
       </Pressable>
       <View style={styles.preview}>
@@ -76,19 +80,19 @@ export default function MeetingReportCard({ input }: { input: MeetingReportInput
           onPress={onCopy}
           height={46}
           style={{ flex: 1 }}
-          iconLeft={<Ionicons name="copy-outline" size={17} color={colors.moss} />}
+          iconLeft={<Ionicons name="copy-outline" size={17} color={c.accent} />}
         />
         <Button
           label={t('assemblyLife.reportUi.share')}
           onPress={onShare}
           height={46}
           style={{ flex: 1 }}
-          iconLeft={<Ionicons name="share-social-outline" size={17} color={colors.white} />}
+          iconLeft={<Ionicons name="share-social-outline" size={17} color={c.surAccent} />}
         />
       </View>
       {copied && (
         <View style={styles.copiedRow}>
-          <Ionicons name="checkmark-circle" size={16} color={colors.mossSoft} />
+          <Ionicons name="checkmark-circle" size={16} color={c.accentDoux} />
           <Text style={styles.copiedText}>{t('assemblyLife.reportUi.copied')}</Text>
         </View>
       )}
@@ -96,20 +100,20 @@ export default function MeetingReportCard({ input }: { input: MeetingReportInput
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   card: { marginTop: 16, paddingHorizontal: 16, paddingVertical: 16 },
   toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  toggleText: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2 },
+  toggleText: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, color: c.texte2 },
   preview: {
     marginTop: 12,
     padding: 12,
     borderRadius: radii.sm,
-    backgroundColor: colors.paper2,
+    backgroundColor: c.surfaceHaute,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
   },
-  previewText: { fontFamily: fonts.mono, fontSize: 12, lineHeight: 18, color: colors.ink },
+  previewText: { fontFamily: fonts.mono, fontSize: 12, lineHeight: 18, color: c.texte },
   actions: { flexDirection: 'row', gap: 10, marginTop: 12 },
   copiedRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
-  copiedText: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.mossSoft },
-});
+  copiedText: { fontFamily: fonts.sans, fontSize: 12.5, color: c.accentDoux },
+}));

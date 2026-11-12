@@ -1,3 +1,4 @@
+import type { UserPreferences } from '@/services/preferencesApi';
 import { apiClient } from '@/services/apiClient';
 
 // Real role model exposed by the backend (ModuleRole + superAdmin).
@@ -200,6 +201,12 @@ export interface MeResponse {
   cityNames: string[] | null;
   /** Noms des pays rattachés (DIRIGEANT_COORDINATEUR) ; vide sinon. */
   countryNames: string[] | null;
+  /**
+   * Thème de l'application — préférences d'affichage du compte (docs/theme-plan.md §4.1, M5).
+   * Champs à `null` si le compte n'a rien choisi ; absent sur un backend antérieur.
+   * Mirrors com.excellence.back.auth.preference.dto.UserPreferenceDto
+   */
+  preferences?: UserPreferences | null;
 }
 
 /** A role strictly above MEMBRE in a module. */

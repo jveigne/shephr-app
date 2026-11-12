@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, View, StyleProp, TextStyle } from 'react-native';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Props {
   size?: number;
@@ -8,7 +9,9 @@ interface Props {
   style?: StyleProp<TextStyle>;
 }
 
-export default function Wordmark({ size = 32, color = colors.moss, style }: Props) {
+export default function Wordmark({ size = 32, color: couleurDemandee, style }: Props) {
+  const { couleurs: c } = useTheme();
+  const color = couleurDemandee ?? c.accent;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
       <Text
@@ -30,7 +33,7 @@ export default function Wordmark({ size = 32, color = colors.moss, style }: Prop
           width: size * 0.18,
           height: size * 0.18,
           borderRadius: size * 0.09,
-          backgroundColor: colors.earth,
+          backgroundColor: c.secondaire,
           marginLeft: size * 0.12,
           marginBottom: size * 0.12,
         }}

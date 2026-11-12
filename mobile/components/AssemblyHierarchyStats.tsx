@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { router, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '@/components/Card';
 import ErrorBanner from '@/components/ErrorBanner';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getAssemblyStats, listMeetingsInRange, type UnitMeetingStats } from '@/services/assemblyApi';
 import type { LeaderHierarchyNode } from '@/services/leadersApi';
@@ -15,6 +15,8 @@ import { toLocalDate } from '@/utils/format';
 import { notify } from '@/utils/dialogs';
 import { hierarchyAccessDenied } from '@/services/entitlementsApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Vie d'assemblée dans la Hiérarchie — D-ASM-18 (JP 08/10).
  *
@@ -159,6 +161,8 @@ export function useAssemblyHierarchyStats(enabled: boolean, refreshKey: number, 
 
 /** Bloc de statistiques de la page « Vie de mon leadership », sur toutes les assemblées de l'arbre. */
 export function AssemblyStatsBlock({ asm, roots }: { asm: AssemblyStatsState; roots: LeaderHierarchyNode[] }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const th = (k: string, o?: Record<string, unknown>) => t(`assemblyLife.hierarchy.${k}`, o);
   const { statsById, todayIso } = asm;
@@ -169,7 +173,7 @@ export function AssemblyStatsBlock({ asm, roots }: { asm: AssemblyStatsState; ro
   return (
     <Card style={styles.block}>
       <View style={styles.blockHeader}>
-        <Ionicons name="book-outline" size={18} color={colors.mossDeep} />
+        <Ionicons name="book-outline" size={18} color={c.accentProfond} />
         <Text style={styles.blockTitle}>{th('title')}</Text>
       </View>
 
@@ -178,7 +182,7 @@ export function AssemblyStatsBlock({ asm, roots }: { asm: AssemblyStatsState; ro
       {!agg ? (
         !asm.error && (
           <View style={styles.loading}>
-            <ActivityIndicator color={colors.moss} />
+            <ActivityIndicator color={c.accent} />
           </View>
         )
       ) : (
@@ -207,9 +211,11 @@ export function AssemblyStatsBlock({ asm, roots }: { asm: AssemblyStatsState; ro
 }
 
 function Tile({ value, label, alert }: { value: string | number; label: string; alert?: boolean }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.tile}>
-      <Text style={[styles.tileValue, alert && { color: colors.clay }]}>{value}</Text>
+      <Text style={[styles.tileValue, alert && { color: c.alerte }]}>{value}</Text>
       <Text style={styles.tileLabel}>{label}</Text>
     </View>
   );
@@ -220,6 +226,8 @@ function Tile({ value, label, alert }: { value: string | number; label: string; 
  * des 3 semaines. Appui → page Vie d'assemblée présélectionnée sur cette assemblée.
  */
 export function UnitAssemblyLine({ asm, unitId }: { asm: AssemblyStatsState; unitId: string }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const row = asm.statsById?.get(unitId);
   if (!row) return null;
@@ -250,42 +258,42 @@ export function UnitAssemblyLine({ asm, unitId }: { asm: AssemblyStatsState; uni
       <Text style={[styles.unitLineText, alert && styles.alertInline]} numberOfLines={2}>
         {text}
       </Text>
-      <Ionicons name="arrow-forward-circle-outline" size={15} color={alert ? colors.clay : colors.moss} />
+      <Ionicons name="arrow-forward-circle-outline" size={15} color={alert ? c.alerte : c.accent} />
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   block: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 12 },
   blockHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  blockTitle: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '700', color: colors.ink },
+  blockTitle: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '700', color: c.texte },
   loading: { paddingVertical: 18, alignItems: 'center' },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
   tile: {
     flexBasis: '31%',
     flexGrow: 1,
-    backgroundColor: colors.paper2,
+    backgroundColor: c.surfaceHaute,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 7,
   },
-  tileValue: { fontFamily: fonts.serif, fontSize: 17, color: colors.moss },
-  tileLabel: { fontFamily: fonts.sans, fontSize: 10.5, color: colors.ink3, marginTop: 1, lineHeight: 13 },
+  tileValue: { fontFamily: fonts.serif, fontSize: 17, color: c.accent },
+  tileLabel: { fontFamily: fonts.sans, fontSize: 10.5, color: c.texte3, marginTop: 1, lineHeight: 13 },
   alertBox: {
     marginTop: 8,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.clay,
-    backgroundColor: colors.paper2,
+    borderColor: c.alerte,
+    backgroundColor: c.surfaceHaute,
   },
-  alertTitle: { fontFamily: fonts.sans, fontSize: 11.5, fontWeight: '700', color: colors.clay },
-  alertNames: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink2, marginTop: 2, lineHeight: 16 },
-  alertInline: { color: colors.clay },
-  note: { fontFamily: fonts.sans, fontSize: 10.5, color: colors.ink3, lineHeight: 14, marginTop: 8 },
+  alertTitle: { fontFamily: fonts.sans, fontSize: 11.5, fontWeight: '700', color: c.alerte },
+  alertNames: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte2, marginTop: 2, lineHeight: 16 },
+  alertInline: { color: c.alerte },
+  note: { fontFamily: fonts.sans, fontSize: 10.5, color: c.texte3, lineHeight: 14, marginTop: 8 },
   unitLine: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  unitLineText: { flex: 1, fontFamily: fonts.sans, fontSize: 11.5, color: colors.mossSoft },
-});
+  unitLineText: { flex: 1, fontFamily: fonts.sans, fontSize: 11.5, color: c.accentDoux },
+}));

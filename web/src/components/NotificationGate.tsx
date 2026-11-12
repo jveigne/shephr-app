@@ -336,7 +336,7 @@ export function NotificationGate() {
             }}
           />
         ) : null}
-        <p style={{ margin: 0, whiteSpace: 'pre-line', color: 'var(--ink-700)', lineHeight: 1.55 }}>
+        <p style={{ margin: 0, whiteSpace: 'pre-line', color: 'var(--texte-2)', lineHeight: 1.55 }}>
           {campaign.message}
         </p>
       </Modal>
@@ -372,16 +372,16 @@ export function NotificationGate() {
           </>
         }
       >
-        <p style={{ margin: 0, color: 'var(--ink-700)', lineHeight: 1.55 }}>
+        <p style={{ margin: 0, color: 'var(--texte-2)', lineHeight: 1.55 }}>
           {t('notifications.supervision.body', { name: requester.fullName })}
         </p>
-        {place && <div style={{ marginTop: 6, fontSize: 13, color: 'var(--ink-500)' }}>{place}</div>}
+        {place && <div style={{ marginTop: 6, fontSize: 13, color: 'var(--texte-3)' }}>{place}</div>}
         {replaced && (
           <p
             role={confirmReplace ? 'alert' : undefined}
             style={{
               margin: '12px 0 0', fontSize: 13.5, lineHeight: 1.5,
-              color: confirmReplace ? 'var(--earth-700)' : 'var(--ink-600)',
+              color: confirmReplace ? 'var(--secondaire-profond)' : 'var(--texte-corps)',
               fontWeight: confirmReplace ? 600 : 400,
             }}
           >
@@ -389,10 +389,10 @@ export function NotificationGate() {
           </p>
         )}
         {supervisionError && (
-          <p role="alert" style={{ margin: '12px 0 0', color: 'var(--err)', fontSize: 13 }}>{supervisionError}</p>
+          <p role="alert" style={{ margin: '12px 0 0', color: 'var(--alerte)', fontSize: 13 }}>{supervisionError}</p>
         )}
         {queue.length > 1 && (
-          <div className="mono" style={{ marginTop: 12, color: 'var(--ink-500)' }}>
+          <div className="mono" style={{ marginTop: 12, color: 'var(--texte-3)' }}>
             {t('notifications.morePending', { count: queue.length - 1 })}
           </div>
         )}
@@ -417,11 +417,11 @@ export function NotificationGate() {
         </>
       }
     >
-      <p style={{ margin: 0, whiteSpace: 'pre-line', color: 'var(--ink-700)', lineHeight: 1.55 }}>
+      <p style={{ margin: 0, whiteSpace: 'pre-line', color: 'var(--texte-2)', lineHeight: 1.55 }}>
         {current.message}
       </p>
       {queue.length > 1 && (
-        <div className="mono" style={{ marginTop: 12, color: 'var(--ink-500)' }}>
+        <div className="mono" style={{ marginTop: 12, color: 'var(--texte-3)' }}>
           {t('notifications.morePending', { count: queue.length - 1 })}
         </div>
       )}

@@ -309,7 +309,9 @@
     "help": "Aide",
     "contactHint": "Une question, un blocage, un besoin d'assistance ? Écris-nous sur WhatsApp — c'est le canal le plus rapide — ou envoie-nous un e-mail.",
     "contactWhatsappText": "Bonjour, j'ai besoin d'aide sur Shephr.",
-    "contactMailSubject": "Shephr — demande d'assistance"
+    "contactMailSubject": "Shephr — demande d'assistance",
+    "appearance": "Apparence",
+    "appearanceValue": "Mode sombre, couleurs"
   },
   "leader": {
     "title": "Mon périmètre",
@@ -2029,5 +2031,35 @@
       "name": "Offre Néhémie",
       "subtitle": "Le suivi de toute ma ville"
     }
+  },
+  "appearance": {
+    "title": "Apparence",
+    "intro": "Choisissez l'apparence de l'application. Le choix est enregistré sur votre compte et se retrouve sur le web.",
+    "modeSection": "Mode",
+    "modes": {
+      "auto": "Automatique",
+      "autoHelp": "Suit le réglage clair / sombre du téléphone",
+      "clair": "Clair",
+      "clairHelp": "Fond parchemin, l'apparence habituelle",
+      "sombre": "Sombre",
+      "sombreHelp": "Fond sombre, texte clair : plus doux le soir",
+      "noirEtBlanc": "Noir et blanc",
+      "noirEtBlancHelp": "Aucune couleur, contraste maximal"
+    },
+    "accentSection": "Couleur d'accent",
+    "accents": {
+      "mousse": "Vert mousse",
+      "terre": "Terre",
+      "argile": "Argile"
+    },
+    "customAccent": "Ou votre couleur (code hexadécimal)",
+    "apply": "Appliquer",
+    "invalidHex": "Code invalide : utilisez le format #RRGGBB.",
+    "contrastNote": "La couleur est ajustée automatiquement si elle manque de contraste.",
+    "accentIgnored": "Le mode Noir et blanc n'utilise pas de couleur d'accent.",
+    "previewSection": "Aperçu",
+    "previewTitle": "Objectif de l'année",
+    "previewMeta": "Mon assemblée · 2026",
+    "previewButton": "Bouton principal"
   }
 }

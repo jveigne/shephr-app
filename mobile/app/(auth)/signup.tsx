@@ -21,7 +21,7 @@ import Field from '@/components/Field';
 import Label from '@/components/Label';
 import Button from '@/components/Button';
 import Wordmark from '@/components/Wordmark';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { notify } from '@/utils/dialogs';
@@ -29,6 +29,8 @@ import i18n from '@/utils/i18n/i18n';
 import { flagEmoji, sortedDialCountries, type DialCountry } from '@/constants/dialCodes';
 import type { MeResponse } from '@/services/authApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Inscription — écran unique : identité, email, téléphone (RG-ID-04/05), mot de passe confirmé.
  * Le compte créé n'est rattaché à rien → on enchaîne sur `/join` (rattachement à une assemblée),
@@ -45,6 +47,8 @@ import type { MeResponse } from '@/services/authApi';
 type Mode = 'form' | 'existing';
 
 export default function SignupScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const { register, login } = useAuth();
   const { t } = useLanguage();
@@ -164,7 +168,7 @@ export default function SignupScreen() {
               style={styles.iconBtn}
               hitSlop={10}
             >
-              <Ionicons name="chevron-back" size={22} color={colors.mossDeep} />
+              <Ionicons name="chevron-back" size={22} color={c.accentProfond} />
             </Pressable>
             <Wordmark size={22} />
           </View>
@@ -215,7 +219,7 @@ export default function SignupScreen() {
                     <Text style={styles.countryButtonText}>
                       {country ? `${flagEmoji(country.iso)} ${country.dial}` : t('signup.countryPlaceholder')}
                     </Text>
-                    <Ionicons name="chevron-down" size={14} color={colors.ink3} />
+                    <Ionicons name="chevron-down" size={14} color={c.texte3} />
                   </Pressable>
                   <View style={{ flex: 1 }}>
                     <Field
@@ -270,13 +274,13 @@ export default function SignupScreen() {
                 disabled={!formValid}
                 loading={loading}
                 height={56}
-                iconRight={<Ionicons name="arrow-forward" size={18} color={colors.white} />}
+                iconRight={<Ionicons name="arrow-forward" size={18} color={c.surAccent} />}
               />
             </View>
           ) : (
             <View style={{ gap: 14, marginTop: 22 }}>
               <Card style={styles.emailCard}>
-                <Ionicons name="mail-outline" size={18} color={colors.mossDeep} />
+                <Ionicons name="mail-outline" size={18} color={c.accentProfond} />
                 <Text style={styles.emailCardText} numberOfLines={1}>
                   {email.trim()}
                 </Text>
@@ -299,7 +303,7 @@ export default function SignupScreen() {
                 disabled={password.length < 6}
                 loading={loading}
                 height={56}
-                iconRight={<Ionicons name="arrow-forward" size={18} color={colors.white} />}
+                iconRight={<Ionicons name="arrow-forward" size={18} color={c.surAccent} />}
               />
 
               <Pressable onPress={() => setMode('form')} style={{ alignItems: 'center', paddingVertical: 8 }}>
@@ -341,6 +345,8 @@ function CountryPickerModal({
   onClose: () => void;
   onPick: (c: DialCountry) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [query, setQuery] = useState('');
   const lang = i18n.language?.startsWith('en') ? ('en' as const) : ('fr' as const);
@@ -359,13 +365,13 @@ function CountryPickerModal({
         <Card style={styles.pickerCard}>
           <Label style={{ marginBottom: 8 }}>{t('signup.countryLabel')}</Label>
           <View style={styles.pickerSearch}>
-            <Ionicons name="search" size={15} color={colors.ink3} />
+            <Ionicons name="search" size={15} color={c.texte3} />
             <TextInput
               value={query}
               onChangeText={setQuery}
               style={styles.pickerSearchInput}
               placeholder={t('signup.countrySearchPlaceholder')}
-              placeholderTextColor={colors.ink3}
+              placeholderTextColor={c.texte3}
               autoCapitalize="none"
             />
           </View>
@@ -403,6 +409,7 @@ function CountryPickerModal({
 }
 
 function Hills() {
+  const { couleurs: c } = useTheme();
   return (
     <Svg
       viewBox="0 0 402 240"
@@ -411,30 +418,30 @@ function Hills() {
     >
       <Path
         d="M-10,130 C 80,80 160,180 240,130 S 380,80 420,120 L 420,250 L -10,250 Z"
-        fill="#1E3A2F"
+        fill={c.accent}
         opacity={0.14}
       />
-      <Circle cx="320" cy="80" r="34" fill="#C9956B" opacity={0.4} />
+      <Circle cx="320" cy="80" r="34" fill={c.secondaire} opacity={0.4} />
     </Svg>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.parchment },
+const useStyles = creerStyles((c) => ({
+  root: { flex: 1, backgroundColor: c.page },
   scroll: { paddingHorizontal: 24, flexGrow: 1 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   iconBtn: { padding: 4 },
   title: {
     fontFamily: fonts.serif,
     fontSize: 28,
-    color: colors.mossDeep,
+    color: c.accentProfond,
     marginTop: 18,
     letterSpacing: -0.4,
   },
   subtitle: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink2,
+    color: c.texte2,
     marginTop: 6,
     lineHeight: 20,
     maxWidth: 320,
@@ -446,16 +453,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(42,38,32,0.15)',
-    backgroundColor: colors.paper,
+    borderColor: transparence(c.texte, 0.15),
+    backgroundColor: c.surface,
     height: 52,
   },
-  countryButtonText: { fontFamily: fonts.sans, fontSize: 14.5, color: colors.ink },
-  countryName: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginTop: 6 },
+  countryButtonText: { fontFamily: fonts.sans, fontSize: 14.5, color: c.texte },
+  countryName: { fontFamily: fonts.sans, fontSize: 12, color: c.texte3, marginTop: 6 },
   errText: {
     fontFamily: fonts.sans,
     fontSize: 12,
-    color: colors.clay,
+    color: c.alerte,
     marginTop: 6,
   },
   emailCard: {
@@ -464,14 +471,14 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: 'rgba(30,58,47,0.06)',
-    borderColor: 'rgba(30,58,47,0.15)',
+    backgroundColor: transparence(c.accent, 0.06),
+    borderColor: transparence(c.accent, 0.15),
   },
-  emailCardText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, color: colors.ink },
-  cancelLink: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink3, fontWeight: '600' },
+  emailCardText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, color: c.texte },
+  cancelLink: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte3, fontWeight: '600' },
   pickerBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(22,41,31,0.45)',
+    backgroundColor: c.voile,
     justifyContent: 'center',
     padding: 20,
   },
@@ -481,13 +488,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: 'rgba(42,38,32,0.15)',
+    borderColor: transparence(c.texte, 0.15),
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
   },
-  pickerSearchInput: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: colors.ink, padding: 0 },
+  pickerSearchInput: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: c.texte, padding: 0 },
   pickerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -495,22 +502,22 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     paddingHorizontal: 6,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(42,38,32,0.06)',
+    borderBottomColor: transparence(c.texte, 0.06),
   },
   pickerFlag: { fontSize: 18 },
-  pickerName: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: colors.ink2 },
-  pickerDial: { fontFamily: fonts.mono, fontSize: 13, color: colors.ink3 },
+  pickerName: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: c.texte2 },
+  pickerDial: { fontFamily: fonts.mono, fontSize: 13, color: c.texte3 },
   bottomRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 6,
     marginTop: 18,
   },
-  bottomHint: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2 },
+  bottomHint: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2 },
   bottomLink: {
     fontFamily: fonts.sans,
     fontSize: 12.5,
     fontWeight: '600',
-    color: colors.moss,
+    color: c.accent,
   },
-});
+}));

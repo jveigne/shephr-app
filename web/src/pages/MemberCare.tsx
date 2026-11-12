@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '../hooks/useTheme';
+import { tonDonnee } from '../theme/palettes';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Badge,
@@ -56,11 +58,16 @@ const errMsg = (err: unknown, fallback: string) =>
 
 function StatusPill({ label, color }: { label: string | null; color: string | null }) {
   const { t } = useTranslation();
-  if (!label) return <span style={{ color: 'var(--ink-400)' }}>{t('memberCare.noStatus')}</span>;
+  const { modeResolu } = useTheme();
+  if (!label) return <span style={{ color: 'var(--texte-4)' }}>{t('memberCare.noStatus')}</span>;
+  // D8 : la couleur du statut (choisie au back-office) suit le thème — grise en Noir et blanc.
+  const ton = color ? tonDonnee(color, modeResolu) : null;
   return (
     <span style={{
       display: 'inline-block', padding: '2px 10px', borderRadius: 999, fontSize: 12,
-      background: (color ?? '#999') + '22', color: color ?? 'var(--ink-700)', border: `1px solid ${color ?? '#ccc'}`,
+      background: ton ? `color-mix(in srgb, ${ton} 13%, transparent)` : 'color-mix(in srgb, var(--texte-3) 13%, transparent)',
+      color: ton ?? 'var(--texte-2)',
+      border: `1px solid ${ton ?? 'var(--filet-fort)'}`,
     }}>{label}</span>
   );
 }
@@ -149,7 +156,7 @@ export function MemberCarePage() {
         <div>
           <div style={{ fontWeight: 500 }}>{r.fullName}</div>
           {r.username && r.username !== r.fullName && (
-            <div style={{ fontSize: 12, color: 'var(--ink-500)' }}>{r.username}</div>
+            <div style={{ fontSize: 12, color: 'var(--texte-3)' }}>{r.username}</div>
           )}
         </div>
       ),
@@ -160,16 +167,16 @@ export function MemberCarePage() {
     ...(hasAssembly
       ? [{
           label: t('memberCare.colLastAttendance'),
-          render: (r: MemberCareRecord) => <span style={{ color: 'var(--ink-500)' }}>{fmtDay(r.lastAttendanceDate)}</span>,
+          render: (r: MemberCareRecord) => <span style={{ color: 'var(--texte-3)' }}>{fmtDay(r.lastAttendanceDate)}</span>,
         }]
       : []),
-    { label: t('memberCare.colUpdated'), render: (r) => <span style={{ color: 'var(--ink-500)' }}>{fmt(r.updatedAt)}</span> },
+    { label: t('memberCare.colUpdated'), render: (r) => <span style={{ color: 'var(--texte-3)' }}>{fmt(r.updatedAt)}</span> },
   ];
 
   const overviewCols: Column<OverviewRow & { id: string }>[] = [
     { label: t('memberCare.colUnit'), render: (r) => <span style={{ fontWeight: 500 }}>{r.unitName}</span> },
     { label: t('memberCare.colRecords'), render: (r) => <span>{r.recordCount}</span> },
-    { label: t('memberCare.colLastUpdate'), render: (r) => <span style={{ color: 'var(--ink-500)' }}>{fmt(r.lastUpdatedAt)}</span> },
+    { label: t('memberCare.colLastUpdate'), render: (r) => <span style={{ color: 'var(--texte-3)' }}>{fmt(r.lastUpdatedAt)}</span> },
     {
       label: t('memberCare.colState'),
       render: (r) => r.recordCount === 0
@@ -186,7 +193,7 @@ export function MemberCarePage() {
 
   const body = (() => {
     if (modulesQ.isLoading || (hasMemberCare && unitsQ.isLoading)) {
-      return <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>;
+      return <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>;
     }
     if (!hasMemberCare) {
       return <EmptyState title={t('memberCare.moduleOff')} text={t('memberCare.moduleOffHint')} />;
@@ -237,11 +244,11 @@ export function MemberCarePage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
           <strong style={{ fontFamily: 'var(--font-serif)', fontSize: 17 }}>{unit.name}</strong>
-          {unit.cityName && <span style={{ color: 'var(--ink-500)', fontSize: 13 }}>{unit.cityName}</span>}
+          {unit.cityName && <span style={{ color: 'var(--texte-3)', fontSize: 13 }}>{unit.cityName}</span>}
           {!unit.canEdit && <Badge tone="gray">{t('memberCare.readOnly')}</Badge>}
         </div>
         {recordsQ.isLoading ? (
-          <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>
+          <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>
         ) : (
           <Table
             columns={recordCols}
@@ -345,7 +352,7 @@ function RecordModal({ userId, statuses, onClose }: {
     onError: onWriteError,
   });
 
-  const section = { borderTop: '1px solid var(--line,#eee)', paddingTop: 12 } as const;
+  const section = { borderTop: '1px solid var(--filet,#eee)', paddingTop: 12 } as const;
   const history = detail ? [...detail.history].reverse() : [];
 
   return (
@@ -361,13 +368,13 @@ function RecordModal({ userId, statuses, onClose }: {
         // D-OFF-06 (JP 27/10) : fiche d'une assemblée de la chaîne sans Caleb — verrou, pas d'erreur.
         <HierarchyLockedCompact context="memberCare" canSubscribe={hierarchyAccessDenied(detailQ.error)?.canSubscribe} />
       ) : detailQ.isError ? (
-        <div style={{ color: 'var(--ink-500)' }}>{errMsg(detailQ.error, t('common.error'))}</div>
+        <div style={{ color: 'var(--texte-3)' }}>{errMsg(detailQ.error, t('common.error'))}</div>
       ) : !detail || !record ? (
-        <div style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</div>
+        <div style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Identité (lecture seule, issue du compte) */}
-          <div style={{ fontSize: 14, color: 'var(--ink-600)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div style={{ fontSize: 14, color: 'var(--texte-corps)', display: 'flex', flexDirection: 'column', gap: 2 }}>
             {record.unitName && <div>{t('memberCare.assemblyLabel')} : <strong>{record.unitName}</strong></div>}
             {record.username && <div>{t('memberCare.usernameLabel')} : {record.username}</div>}
             {record.phoneNumber && <div>{t('memberCare.phoneLabel')} : {record.phoneNumber}</div>}
@@ -423,7 +430,7 @@ function RecordModal({ userId, statuses, onClose }: {
                 </div>
               </div>
             ) : (
-              <div style={{ marginTop: 6, fontSize: 14, whiteSpace: 'pre-wrap', color: record.note ? 'var(--ink-700)' : 'var(--ink-400)' }}>
+              <div style={{ marginTop: 6, fontSize: 14, whiteSpace: 'pre-wrap', color: record.note ? 'var(--texte-2)' : 'var(--texte-4)' }}>
                 {record.note || t('memberCare.noNote')}
               </div>
             )}
@@ -433,13 +440,13 @@ function RecordModal({ userId, statuses, onClose }: {
           <div style={section}>
             <strong style={{ fontSize: 13 }}>{t('memberCare.journey')}</strong>
             <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {history.length === 0 && <span style={{ color: 'var(--ink-400)' }}>{t('memberCare.noChange')}</span>}
+              {history.length === 0 && <span style={{ color: 'var(--texte-4)' }}>{t('memberCare.noChange')}</span>}
               {history.map((h) => (
                 <div key={h.id} style={{ fontSize: 13 }}>
-                  <span style={{ color: 'var(--ink-500)' }}>{fmt(h.changedAt)}</span>{' — '}
+                  <span style={{ color: 'var(--texte-3)' }}>{fmt(h.changedAt)}</span>{' — '}
                   {h.oldStatusLabel ? `${h.oldStatusLabel} → ` : ''}<strong>{h.newStatusLabel}</strong>
-                  {h.changedByName ? <span style={{ color: 'var(--ink-500)' }}> · {t('memberCare.changedBy', { name: h.changedByName })}</span> : null}
-                  {h.note ? <span style={{ color: 'var(--ink-500)' }}> · {h.note}</span> : null}
+                  {h.changedByName ? <span style={{ color: 'var(--texte-3)' }}> · {t('memberCare.changedBy', { name: h.changedByName })}</span> : null}
+                  {h.note ? <span style={{ color: 'var(--texte-3)' }}> · {h.note}</span> : null}
                 </div>
               ))}
             </div>
@@ -449,17 +456,17 @@ function RecordModal({ userId, statuses, onClose }: {
           {detail.attendanceEnabled && (
             <div style={section}>
               <strong style={{ fontSize: 13 }}>{t('memberCare.attendances')}</strong>
-              <div style={{ fontSize: 13, color: 'var(--ink-600)', marginTop: 6 }}>
+              <div style={{ fontSize: 13, color: 'var(--texte-corps)', marginTop: 6 }}>
                 {t('memberCare.lastAttendance')} : <strong>{fmtDay(record.lastAttendanceDate ?? detail.attendances[0]?.meetingDate ?? null)}</strong>
                 {' · '}
                 {t('memberCare.attendanceCount', { n: detail.attendances.length })}
               </div>
               <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 220, overflowY: 'auto' }}>
-                {detail.attendances.length === 0 && <span style={{ color: 'var(--ink-400)', fontSize: 13 }}>{t('memberCare.noAttendance')}</span>}
+                {detail.attendances.length === 0 && <span style={{ color: 'var(--texte-4)', fontSize: 13 }}>{t('memberCare.noAttendance')}</span>}
                 {detail.attendances.map((a) => (
                   <div key={a.meetingId} style={{ fontSize: 13 }}>
                     <span>{fmtDay(a.meetingDate)}</span>
-                    {a.unitName && <span style={{ color: 'var(--ink-500)' }}> · {a.unitName}</span>}
+                    {a.unitName && <span style={{ color: 'var(--texte-3)' }}> · {a.unitName}</span>}
                   </div>
                 ))}
               </div>

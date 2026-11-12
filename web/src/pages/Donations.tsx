@@ -242,7 +242,7 @@ export function DonationsPage() {
 
         {chips.length > 0 && (
           <div className="chips" style={{ marginBottom: 14 }}>
-            <span style={{ fontSize: 12, color: 'var(--ink-500)', marginRight: 4 }}>
+            <span style={{ fontSize: 12, color: 'var(--texte-3)', marginRight: 4 }}>
               {t('donations.activeFilters')}
             </span>
             {chips.map((c, i) => (
@@ -268,13 +268,13 @@ export function DonationsPage() {
             marginBottom: 10,
           }}
         >
-          <div style={{ color: 'var(--ink-500)', fontSize: 13 }}>
+          <div style={{ color: 'var(--texte-3)', fontSize: 13 }}>
             <Trans
               i18nKey="donations.onPage"
               values={{ count: rows.length, amount: fmtAmount(totalAmount), total: totalElements }}
               components={[
-                <strong style={{ color: 'var(--ink-800)' }} />,
-                <strong style={{ color: 'var(--green-800)', marginLeft: 6 }} />,
+                <strong style={{ color: 'var(--texte-corps)' }} />,
+                <strong style={{ color: 'var(--accent)', marginLeft: 6 }} />,
               ]}
             />
           </div>
@@ -327,7 +327,7 @@ export function DonationsPage() {
             <div>
               <div
                 style={{
-                  color: 'var(--ink-500)',
+                  color: 'var(--texte-3)',
                   fontSize: 12,
                   textTransform: 'uppercase',
                   letterSpacing: '.08em',
@@ -340,7 +340,7 @@ export function DonationsPage() {
                   fontFamily: 'var(--font-serif)',
                   fontSize: 36,
                   fontWeight: 500,
-                  color: 'var(--green-800)',
+                  color: 'var(--accent)',
                   letterSpacing: '-.015em',
                   marginTop: 4,
                 }}
@@ -369,10 +369,10 @@ export function DonationsPage() {
                 <Icon name="info" size={16} />
               </div>
               <div>
-                <div style={{ fontSize: 12.5, color: 'var(--ink-800)', fontWeight: 500 }}>
+                <div style={{ fontSize: 12.5, color: 'var(--texte-corps)', fontWeight: 500 }}>
                   {t('donations.physicalDeclared')}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: 'var(--texte-3)', marginTop: 2 }}>
                   {t('donations.physicalDeclaredText')}
                 </div>
               </div>
@@ -398,14 +398,14 @@ function DetailRow({
       <div
         style={{
           fontSize: 11,
-          color: 'var(--ink-500)',
+          color: 'var(--texte-3)',
           textTransform: 'uppercase',
           letterSpacing: '.08em',
         }}
       >
         {label}
       </div>
-      <div style={{ marginTop: 4, color: 'var(--ink-800)' }}>{value}</div>
+      <div style={{ marginTop: 4, color: 'var(--texte-corps)' }}>{value}</div>
     </div>
   );
 }

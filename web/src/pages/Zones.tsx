@@ -93,7 +93,7 @@ export function ZonesPage() {
   const canCreate = canDirect && countries.length > 0;
 
   const cols: Column<ZoneResponse>[] = [
-    { label: t('zones.colZone'), render: (z) => <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{z.name}</span> },
+    { label: t('zones.colZone'), render: (z) => <span style={{ fontWeight: 500, color: 'var(--texte)' }}>{z.name}</span> },
     {
       label: t('zones.colCountry'),
       render: (z) => (
@@ -105,7 +105,7 @@ export function ZonesPage() {
     },
     {
       label: t('zones.colDescription'),
-      render: (z) => z.description ? z.description : <span style={{ color: 'var(--ink-400)' }}>—</span>,
+      render: (z) => z.description ? z.description : <span style={{ color: 'var(--texte-4)' }}>—</span>,
     },
     { label: t('common.status'), render: (z) => <StatusBadge active={z.active} /> },
     ...(canWrite || canDelete
@@ -164,7 +164,7 @@ export function ZonesPage() {
           </Field>
         </div>
 
-        <div style={{ color: 'var(--ink-500)', fontSize: 13, marginBottom: 10 }}>
+        <div style={{ color: 'var(--texte-3)', fontSize: 13, marginBottom: 10 }}>
           {t('zones.count', { count: rows.length })}
         </div>
 
@@ -321,7 +321,7 @@ export function ConfirmDelete({
         </>
       }
     >
-      <p style={{ color: 'var(--ink-600)' }}>
+      <p style={{ color: 'var(--texte-corps)' }}>
         {t('common.deleteConfirm', { label })}
       </p>
     </Modal>

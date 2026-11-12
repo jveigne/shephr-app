@@ -295,7 +295,7 @@ export function MemberGoalsPage() {
       render: (l) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <strong>{goalName(l.category)}</strong>
-          <span style={{ fontSize: 12, color: 'var(--ink-400)' }}>
+          <span style={{ fontSize: 12, color: 'var(--texte-4)' }}>
             {l.category.unitType === 'CURRENCY'
               ? t('goals.amountUnit', { symbol: currencySymbol(currency) })
               : t('goals.countUnit', { label: l.category.unitLabel ?? '—' })}
@@ -340,7 +340,7 @@ export function MemberGoalsPage() {
       style: { width: 140 },
       render: (l) =>
         l.achieved == null ? (
-          <span style={{ color: 'var(--ink-400)' }}>—</span>
+          <span style={{ color: 'var(--texte-4)' }}>—</span>
         ) : (
           <strong>
             {l.category.unitType === 'CURRENCY'
@@ -419,7 +419,7 @@ export function MemberGoalsPage() {
             faiseur de disciple (28/07). */}
 
         {goalQ.isLoading || pledgesQ.isLoading ? (
-          <p style={{ color: 'var(--ink-400)' }}>{t('common.loading')}</p>
+          <p style={{ color: 'var(--texte-4)' }}>{t('common.loading')}</p>
         ) : noGoal ? (
           <div className="card" style={{ padding: 0 }}>
             <div className="empty">
@@ -453,11 +453,11 @@ export function MemberGoalsPage() {
               <h3 style={{ margin: '0 0 4px' }}>{goalName(goal)}</h3>
               <p style={{ margin: 0, fontSize: 13.5 }}>
                 {deadlinePast && yearDeadline ? (
-                  <strong style={{ color: 'var(--err, #B86A4A)' }}>
+                  <strong style={{ color: 'var(--alerte, #B86A4A)' }}>
                     {t('memberGoals.deadlinePast', { date: fmtDateLabel(yearDeadline.slice(0, 10)) })}
                   </strong>
                 ) : yearDeadline ? (
-                  <strong style={{ color: 'var(--earth-700, #8E6B47)' }}>
+                  <strong style={{ color: 'var(--secondaire-profond, #8E6B47)' }}>
                     {t('goals.submitBefore', { date: fmtDateLabel(yearDeadline.slice(0, 10)) })}
                   </strong>
                 ) : null}
@@ -470,9 +470,9 @@ export function MemberGoalsPage() {
                 margin: '0 0 14px',
                 padding: '10px 14px',
                 borderRadius: 10,
-                background: 'var(--parchment-deep, #F2EDE2)',
+                background: 'var(--page-profonde, #F2EDE2)',
                 fontSize: 13.5,
-                color: 'var(--ink-600)',
+                color: 'var(--texte-corps)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
@@ -489,9 +489,9 @@ export function MemberGoalsPage() {
                   margin: '0 0 14px',
                   padding: '10px 14px',
                   borderRadius: 10,
-                  background: 'var(--green-50, #EAF1EC)',
+                  background: 'var(--accent-teinte-douce, #EAF1EC)',
                   fontSize: 13.5,
-                  color: 'var(--green-800, #14241C)',
+                  color: 'var(--accent, #14241C)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
@@ -516,7 +516,7 @@ export function MemberGoalsPage() {
                 </h3>
                 <p
                   style={{
-                    margin: '0 0 10px', fontSize: 13, color: 'var(--ink-500)',
+                    margin: '0 0 10px', fontSize: 13, color: 'var(--texte-3)',
                     display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
                   }}
                 >
@@ -535,14 +535,14 @@ export function MemberGoalsPage() {
                       {t('goals.lateMembers', { count: assemblyQ.data.lateMembers })}
                     </Badge>
                   )}
-                  <span style={{ color: 'var(--ink-400)' }}>{t('memberGoals.assemblyTotalHint')}</span>
+                  <span style={{ color: 'var(--texte-4)' }}>{t('memberGoals.assemblyTotalHint')}</span>
                 </p>
                 <Table
                   columns={assemblyCols}
                   rows={assemblyRows}
                   zebra
                   empty={
-                    <p style={{ color: 'var(--ink-400)', fontStyle: 'italic' }}>
+                    <p style={{ color: 'var(--texte-4)', fontStyle: 'italic' }}>
                       {t('memberGoals.assemblyTotalEmpty')}
                     </p>
                   }
@@ -594,7 +594,7 @@ export function MemberGoalsPage() {
             />
           </Field>
           {progressLine && (
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-400)' }}>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--texte-4)' }}>
               {t('goals.pledgedPaidRemaining', {
                 pledged: fmtLineValue(progressLine, progressLine.pledge?.targetAmount ?? progressLine.pledge?.targetCount ?? 0, currency),
                 paid: fmtLineValue(progressLine, progressLine.achieved ?? 0, currency),
@@ -643,7 +643,7 @@ export function MemberGoalsPage() {
           </>
         }
       >
-        <p style={{ margin: 0, fontSize: 14, color: 'var(--ink-700)' }}>
+        <p style={{ margin: 0, fontSize: 14, color: 'var(--texte-2)' }}>
           {t('memberGoals.submitModalBody', { count: openPledges.length })}
         </p>
       </Modal>

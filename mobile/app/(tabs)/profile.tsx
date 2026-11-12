@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, Platform, Linking } from 'react-native';
+import { View, Text, Pressable, Alert, Platform, Linking } from 'react-native';
 import { router, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
@@ -7,14 +7,18 @@ import Button from '@/components/Button';
 import Card from '@/components/Card';
 import Label from '@/components/Label';
 import HandDivider from '@/components/HandDivider';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { canManageStructure, deleteMyAccount, roleLabel } from '@/services/authApi';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { confirmDialog, notify } from '@/utils/dialogs';
 import { contactMailto, contactWhatsapp, useContactSettings } from '@/services/contactApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 export default function ProfileScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { me, isLeader, logout } = useAuth();
   // Coordonnées d'assistance pilotées depuis le back-office.
   const contact = useContactSettings();
@@ -86,23 +90,23 @@ export default function ProfileScreen() {
             style={[
               styles.pill,
               {
-                backgroundColor: isLeader ? colors.moss : 'rgba(42,38,32,0.06)',
+                backgroundColor: isLeader ? c.accent : transparence(c.texte, 0.06),
               },
             ]}
           >
-            {isLeader && <Ionicons name="people" size={13} color={colors.white} />}
+            {isLeader && <Ionicons name="people" size={13} color={c.surAccent} />}
             <Text
               style={[
                 styles.pillText,
-                { color: isLeader ? colors.white : colors.ink2 },
+                { color: isLeader ? c.surAccent : c.texte2 },
               ]}
             >
               {roleLabel(me)}
             </Text>
           </View>
           {me?.donationUnitId && (
-            <View style={[styles.pill, { backgroundColor: 'rgba(201,149,107,0.18)' }]}>
-              <Text style={[styles.pillText, { color: colors.earthDeep }]}>{t('profile.myUnit')}</Text>
+            <View style={[styles.pill, { backgroundColor: transparence(c.secondaire, 0.18) }]}>
+              <Text style={[styles.pillText, { color: c.secondaireProfond }]}>{t('profile.myUnit')}</Text>
             </View>
           )}
         </View>
@@ -183,6 +187,13 @@ export default function ProfileScreen() {
         {/* Lot N4b (J-3 14/09) — l'entrée vers les réglages de notifications. Elle n'est pas
             décorative : une catégorie de push sans interrupteur atteignable est la cause
             numéro un de désinstallation, et c'est ici qu'on coupe « Rappels ». */}
+        {/* Thème (docs/theme-plan.md, étape M2) — écran Apparence : mode et couleur d'accent. */}
+        <Row
+          icon="color-palette-outline"
+          label={t('profile.appearance')}
+          value={t('profile.appearanceValue')}
+          onPress={() => router.push('/appearance' as unknown as Href)}
+        />
         <Row
           icon="notifications-outline"
           label={t('profile.notifications')}
@@ -212,20 +223,20 @@ export default function ProfileScreen() {
               Linking.openURL(contactWhatsapp(t('profile.contactWhatsappText')))
                 .catch(() => Linking.openURL(contact.whatsappUrl).catch(() => {}))
             }
-            iconLeft={<Ionicons name="logo-whatsapp" size={18} color={colors.mossDeep} />}
+            iconLeft={<Ionicons name="logo-whatsapp" size={18} color={c.accentProfond} />}
           />
           <Button
             label={t('join.contactMail')}
             variant="ghost"
             onPress={() => Linking.openURL(contactMailto(t('profile.contactMailSubject'))).catch(() => {})}
-            iconLeft={<Ionicons name="mail-outline" size={18} color={colors.mossDeep} />}
+            iconLeft={<Ionicons name="mail-outline" size={18} color={c.accentProfond} />}
           />
         </View>
       </Card>
 
       <Card style={styles.logoutCard}>
         <Pressable onPress={confirmLogout} style={styles.logout}>
-          <Ionicons name="log-out-outline" size={18} color={colors.moss} />
+          <Ionicons name="log-out-outline" size={18} color={c.accent} />
           <Text style={styles.logoutText}>{t('profile.logout')}</Text>
         </Pressable>
       </Card>
@@ -235,7 +246,7 @@ export default function ProfileScreen() {
       </Label>
       <Card style={styles.dangerCard}>
         <Pressable onPress={() => void confirmDeleteAccount()} style={styles.dangerRow}>
-          <Ionicons name="trash-outline" size={18} color={colors.clay} />
+          <Ionicons name="trash-outline" size={18} color={c.alerte} />
           <Text style={styles.dangerText}>{t('profile.deleteAccount')}</Text>
         </Pressable>
       </Card>
@@ -246,6 +257,7 @@ export default function ProfileScreen() {
 }
 
 function Stat({ label, value }: { label: string; value: string | number }) {
+  const styles = useStyles();
   return (
     <View style={{ alignItems: 'center', flex: 1 }}>
       <Text style={styles.statValue}>{value}</Text>
@@ -267,6 +279,8 @@ function Row({
   onPress?: () => void;
   last?: boolean;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -276,11 +290,11 @@ function Row({
       ]}
     >
       <View style={styles.rowIcon}>
-        <Ionicons name={icon} size={18} color={colors.mossSoft} />
+        <Ionicons name={icon} size={18} color={c.accentDoux} />
       </View>
       <Text style={styles.rowLabel}>{label}</Text>
       <Text style={styles.rowValue}>{value}</Text>
-      <Ionicons name="chevron-forward" size={14} color={colors.ink3} />
+      <Ionicons name="chevron-forward" size={14} color={c.texte3} />
     </Pressable>
   );
 }
@@ -295,10 +309,12 @@ function InfoRow({
   label: string;
   value: string;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.infoRow}>
       <View style={styles.rowIcon}>
-        <Ionicons name={icon} size={18} color={colors.mossSoft} />
+        <Ionicons name={icon} size={18} color={c.accentDoux} />
       </View>
       <Text style={styles.infoLabel}>{label}</Text>
       <Text style={styles.infoValue}>{value}</Text>
@@ -306,11 +322,11 @@ function InfoRow({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   title: {
     fontFamily: fonts.serif,
     fontSize: 30,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.5,
   },
   idCard: { paddingVertical: 22, paddingHorizontal: 22, alignItems: 'center', marginTop: 18 },
@@ -318,19 +334,19 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: colors.moss,
+    backgroundColor: c.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontFamily: fonts.serif, fontSize: 30, color: colors.white },
+  avatarText: { fontFamily: fonts.serif, fontSize: 30, color: c.surAccent },
   name: {
     fontFamily: fonts.serif,
     fontSize: 22,
-    color: colors.ink,
+    color: c.texte,
     marginTop: 14,
   },
-  email: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, marginTop: 2 },
-  contactHint: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink2, lineHeight: 19 },
+  email: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, marginTop: 2 },
+  contactHint: { fontFamily: fonts.sans, fontSize: 13, color: c.texte2, lineHeight: 19 },
   pillRow: { flexDirection: 'row', gap: 6, marginTop: 14 },
   pill: {
     flexDirection: 'row',
@@ -342,27 +358,27 @@ const styles = StyleSheet.create({
   },
   pillText: { fontFamily: fonts.sans, fontSize: 11.5, fontWeight: '600' },
   statsRow: { flexDirection: 'row', justifyContent: 'space-around', width: '100%' },
-  statsDivider: { width: 1, backgroundColor: 'rgba(42,38,32,0.10)' },
-  statValue: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink },
-  statLabel: { fontFamily: fonts.sans, fontSize: 11, color: colors.ink3, marginTop: 2 },
+  statsDivider: { width: 1, backgroundColor: transparence(c.texte, 0.10) },
+  statValue: { fontFamily: fonts.serif, fontSize: 18, color: c.texte },
+  statLabel: { fontFamily: fonts.sans, fontSize: 11, color: c.texte3, marginTop: 2 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
     paddingVertical: 14,
     paddingHorizontal: 18,
-    borderBottomColor: 'rgba(42,38,32,0.06)',
+    borderBottomColor: transparence(c.texte, 0.06),
   },
   rowIcon: {
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: 'rgba(30,58,47,0.07)',
+    backgroundColor: transparence(c.accent, 0.07),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rowLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '500', color: colors.ink },
-  rowValue: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
+  rowLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '500', color: c.texte },
+  rowValue: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3 },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -370,21 +386,21 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 18,
   },
-  infoLabel: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
+  infoLabel: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3 },
   infoValue: {
     flex: 1,
     textAlign: 'right',
     fontFamily: fonts.sans,
     fontSize: 14,
     fontWeight: '500',
-    color: colors.ink,
+    color: c.texte,
   },
   // Même traitement visuel que la carte « Supprimer mon compte » (carte bordée, texte gras) ;
   // la couleur terre-cuite (clay) reste réservée à l'action destructrice.
   logoutCard: {
     marginTop: 18,
     paddingVertical: 0,
-    borderColor: colors.mossTint2,
+    borderColor: c.accentTeinte2,
   },
   logout: {
     flexDirection: 'row',
@@ -394,10 +410,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 18,
   },
-  logoutText: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.moss },
+  logoutText: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.accent },
   dangerCard: {
     paddingVertical: 0,
-    borderColor: 'rgba(184,106,74,0.3)',
+    borderColor: transparence(c.alerte, 0.3),
   },
   dangerRow: {
     flexDirection: 'row',
@@ -407,13 +423,13 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 18,
   },
-  dangerText: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.clay },
+  dangerText: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.alerte },
   version: {
     textAlign: 'center',
     marginTop: 16,
     fontSize: 10.5,
-    color: colors.ink3,
+    color: c.texte3,
     letterSpacing: 0.6,
     fontFamily: fonts.mono,
   },
-});
+}));

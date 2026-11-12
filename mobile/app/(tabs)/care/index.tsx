@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
@@ -7,7 +7,7 @@ import Card from '@/components/Card';
 import Field from '@/components/Field';
 import Chip from '@/components/Chip';
 import CalebAssemblyLock from '@/components/CalebAssemblyLock';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getOverview,
@@ -26,10 +26,16 @@ import { confirmDialog, notify } from '@/utils/dialogs';
 import { fmtDate } from '@/utils/format';
 import { fmtIsoDay } from '@/utils/meetingReport';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { tonDonnee } from '@/theme/tonsDonnees';
+import { useTheme } from '@/contexts/ThemeContext';
 type Tab = 'records' | 'accountability';
 
 function StatusDot({ color }: { color: string | null }) {
-  return <View style={[styles.dot, { backgroundColor: color || colors.moss }]} />;
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
+  // D8 : la couleur du statut (choisie au back-office) suit le thème — grise en Noir et blanc.
+  return <View style={[styles.dot, { backgroundColor: color ? tonDonnee(color) : c.accent }]} />;
 }
 
 function lastUpdated(iso: string | null, t: (k: string) => string): string {
@@ -50,6 +56,8 @@ function lastUpdated(iso: string | null, t: (k: string) => string): string {
  * « Aucune assemblée suivie ».
  */
 export default function CareIndexScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [tab, setTab] = useState<Tab>('records');
 
@@ -168,7 +176,7 @@ export default function CareIndexScreen() {
 
   return (
     <ScreenShell
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.moss} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.accent} />}
     >
       <Text style={styles.title}>{t('care.title')}</Text>
       <Text style={styles.subtitle}>{t('care.subtitle')}</Text>
@@ -192,7 +200,7 @@ export default function CareIndexScreen() {
 
       {loading ? (
         <View style={{ marginTop: 50, alignItems: 'center' }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       ) : tab === 'records' ? (
         <RecordsView
@@ -251,12 +259,14 @@ function RecordsView({
   showChainLock: boolean;
   t: (k: string, o?: any) => string;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   if (units.length === 0 && lockedLed.length === 0) {
     // D-OFF-06 (JP 27/10, recette n°4) : les fiches de la chaîne relèvent de l'offre Caleb.
     if (showChainLock) return <CalebAssemblyLock />;
     return (
       <Card style={styles.emptyCard}>
-        <Ionicons name="home-outline" size={26} color={colors.ink3} />
+        <Ionicons name="home-outline" size={26} color={c.texte3} />
         <Text style={styles.emptyText}>{t('care.noUnits')}</Text>
       </Card>
     );
@@ -284,7 +294,7 @@ function RecordsView({
                 <Ionicons
                   name="lock-closed"
                   size={12}
-                  color={a.id === lockedSel?.id ? colors.white : colors.ink3}
+                  color={a.id === lockedSel?.id ? c.surAccent : c.texte3}
                   accessibilityLabel={t('assemblyLife.lockedUnit')}
                 />
               }
@@ -318,13 +328,13 @@ function RecordsView({
       {/* D-ASM-05 (JP 23/09) : le superviseur lit, seul le dirigeant d'assemblée écrit. */}
       {unit && !unit.canEdit && (
         <View style={styles.readOnly}>
-          <Ionicons name="eye-outline" size={15} color={colors.ink3} />
+          <Ionicons name="eye-outline" size={15} color={c.texte3} />
           <Text style={styles.readOnlyText}>{t('care.readOnly')}</Text>
         </View>
       )}
 
       <View style={styles.searchRow}>
-        <Ionicons name="search" size={17} color={colors.ink3} />
+        <Ionicons name="search" size={17} color={c.texte3} />
         <Field
           value={search}
           onChangeText={setSearch}
@@ -350,7 +360,7 @@ function RecordsView({
 
       {records.length === 0 ? (
         <Card style={styles.emptyCard}>
-          <Ionicons name="people-outline" size={26} color={colors.ink3} />
+          <Ionicons name="people-outline" size={26} color={c.texte3} />
           <Text style={styles.emptyText}>{t('care.emptyRecords')}</Text>
         </Card>
       ) : (
@@ -373,7 +383,7 @@ function RecordsView({
                     : ''}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.ink3} />
+              <Ionicons name="chevron-forward" size={18} color={c.texte3} />
             </Pressable>
           ))}
         </Card>
@@ -393,10 +403,12 @@ function AccountabilityView({
   t: (k: string, o?: any) => string;
   lastUpdated: (iso: string | null, t: (k: string) => string) => string;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   if (overview.length === 0) {
     return (
       <Card style={styles.emptyCard}>
-        <Ionicons name="shield-checkmark-outline" size={26} color={colors.ink3} />
+        <Ionicons name="shield-checkmark-outline" size={26} color={c.texte3} />
         <Text style={styles.emptyText}>{t('care.emptyOverview')}</Text>
       </Card>
     );
@@ -406,10 +418,10 @@ function AccountabilityView({
       {overview.map((row) => {
         const badge =
           row.recordCount === 0
-            ? { label: t('care.badgeEmpty'), color: colors.ink3, bg: 'rgba(42,38,32,0.06)' }
+            ? { label: t('care.badgeEmpty'), color: c.texte3, bg: transparence(c.texte, 0.06) }
             : row.late
-            ? { label: t('care.badgeLate'), color: colors.clay, bg: 'rgba(184,106,74,0.12)' }
-            : { label: t('care.badgeUpToDate'), color: colors.mossSoft, bg: 'rgba(30,58,47,0.10)' };
+            ? { label: t('care.badgeLate'), color: c.alerte, bg: transparence(c.alerte, 0.12) }
+            : { label: t('care.badgeUpToDate'), color: c.accentDoux, bg: transparence(c.accent, 0.10) };
         return (
           <Card key={row.unitId} style={styles.ovCard}>
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -424,7 +436,7 @@ function AccountabilityView({
             </View>
             {row.late && (
               <Pressable style={styles.remindBtn} onPress={() => onRemind(row)} hitSlop={8}>
-                <Ionicons name="notifications-outline" size={16} color={colors.moss} />
+                <Ionicons name="notifications-outline" size={16} color={c.accent} />
               </Pressable>
             )}
           </Card>
@@ -434,33 +446,33 @@ function AccountabilityView({
   );
 }
 
-const styles = StyleSheet.create({
-  title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4 },
-  subtitle: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, marginTop: 4, lineHeight: 19 },
+const useStyles = creerStyles((c) => ({
+  title: { fontFamily: fonts.serif, fontSize: 28, color: c.texte, letterSpacing: -0.4 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, marginTop: 4, lineHeight: 19 },
   tabRow: {
     flexDirection: 'row',
     marginTop: 18,
-    backgroundColor: 'rgba(42,38,32,0.05)',
+    backgroundColor: transparence(c.texte, 0.05),
     borderRadius: 99,
     padding: 3,
   },
   tabBtn: { flex: 1, paddingVertical: 9, borderRadius: 99, alignItems: 'center' },
   tabBtnOn: {
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     shadowColor: 'rgba(0,0,0,0.08)',
     shadowOffset: { width: 0, height: 1 },
     shadowRadius: 3,
     shadowOpacity: 1,
   },
-  tabText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink3 },
-  tabTextOn: { color: colors.moss },
+  tabText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.texte3 },
+  tabTextOn: { color: c.accent },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginTop: 18,
-    backgroundColor: colors.paper2,
-    borderColor: colors.hair,
+    backgroundColor: c.surfaceHaute,
+    borderColor: c.filet,
     borderWidth: 1,
     borderRadius: 14,
     paddingHorizontal: 14,
@@ -473,28 +485,28 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
-  unitName: { fontFamily: fonts.serif, fontSize: 19, color: colors.ink, marginTop: 16 },
-  unitCity: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
+  unitName: { fontFamily: fonts.serif, fontSize: 19, color: c.texte, marginTop: 16 },
+  unitCity: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3 },
   readOnly: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
-  readOnlyText: { flex: 1, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, lineHeight: 17 },
+  readOnlyText: { flex: 1, fontFamily: fonts.sans, fontSize: 12, color: c.texte3, lineHeight: 17 },
   emptyCard: { marginTop: 16, paddingVertical: 30, alignItems: 'center', gap: 10 },
-  emptyText: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, textAlign: 'center', maxWidth: 260, lineHeight: 19 },
+  emptyText: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, textAlign: 'center', maxWidth: 260, lineHeight: 19 },
   recRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
-  recRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(42,38,32,0.06)' },
+  recRowBorder: { borderBottomWidth: 1, borderBottomColor: transparence(c.texte, 0.06) },
   dot: { width: 10, height: 10, borderRadius: 5 },
-  recName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
-  recSub: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2 },
+  recName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.texte },
+  recSub: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 2 },
   ovCard: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14 },
-  ovUnit: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
-  ovMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2 },
+  ovUnit: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.texte },
+  ovMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 2 },
   badge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99 },
   badgeText: { fontFamily: fonts.sans, fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
   remindBtn: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(30,58,47,0.08)',
+    backgroundColor: transparence(c.accent, 0.08),
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

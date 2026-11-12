@@ -2,14 +2,13 @@ import React, { ReactNode } from 'react';
 import {
   ScrollView,
   View,
-  StyleSheet,
   StyleProp,
   ViewStyle,
   ScrollViewProps,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '@/theme';
 
+import { creerStyles } from '@/theme/creerStyles';
 interface Props extends ScrollViewProps {
   children: ReactNode;
   withTabBar?: boolean;
@@ -24,6 +23,7 @@ export default function ScreenShell({
   contentStyle,
   ...rest
 }: Props) {
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   return (
     <View style={styles.root}>
@@ -46,12 +46,12 @@ export default function ScreenShell({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   root: {
     flex: 1,
-    backgroundColor: colors.parchment,
+    backgroundColor: c.page,
   },
   content: {
     paddingHorizontal: 20,
   },
-});
+}));

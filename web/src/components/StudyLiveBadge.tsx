@@ -26,12 +26,12 @@ export function StudyLiveBadge({ enabled }: { enabled: boolean }) {
         fontSize: 10.5,
         fontWeight: 600,
         letterSpacing: 0.3,
-        background: 'var(--earth-500)',
-        color: 'var(--green-900)',
+        background: 'var(--secondaire)',
+        color: 'var(--accent-profond)',
         whiteSpace: 'nowrap',
       }}
     >
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green-900)' }} />
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-profond)' }} />
       {t('nav.studyLive')}
     </span>
   );

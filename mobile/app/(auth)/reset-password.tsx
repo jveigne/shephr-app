@@ -17,7 +17,7 @@ import Field from '@/components/Field';
 import Label from '@/components/Label';
 import Button from '@/components/Button';
 import Wordmark from '@/components/Wordmark';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { goBack } from '@/utils/navigation';
@@ -29,6 +29,8 @@ import {
   type PasswordResetError,
 } from '@/utils/passwordResetErrors';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /** Valeurs du backend (`ResetCodeRules`), si les paramètres de route manquent. */
 const DEFAULT_RESEND_AFTER_SECONDS = 60;
 const DEFAULT_VALIDITY_MINUTES = 15;
@@ -53,6 +55,8 @@ function positiveInt(raw: string | string[] | undefined, fallback: number): numb
  *   (`resetPassword` → `applySession`) puis le même routage qu'après une connexion.
  */
 export default function ResetPasswordScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const { ready, isAuthenticated, resetPassword } = useAuth();
   const { t, language } = useLanguage();
@@ -195,7 +199,7 @@ export default function ResetPasswordScreen() {
               hitSlop={10}
               accessibilityLabel={t('common.back')}
             >
-              <Ionicons name="chevron-back" size={22} color={colors.mossDeep} />
+              <Ionicons name="chevron-back" size={22} color={c.accentProfond} />
             </Pressable>
             <Wordmark size={22} />
           </View>
@@ -209,7 +213,7 @@ export default function ResetPasswordScreen() {
 
           <View style={{ gap: 14, marginTop: 22 }}>
             <Card style={styles.emailCard}>
-              <Ionicons name="mail-outline" size={18} color={colors.mossDeep} />
+              <Ionicons name="mail-outline" size={18} color={c.accentProfond} />
               <Text style={styles.emailCardText} numberOfLines={1}>
                 {identifier}
               </Text>
@@ -268,7 +272,7 @@ export default function ResetPasswordScreen() {
 
             {errorMessage && (
               <View style={styles.errorBox}>
-                <Ionicons name="alert-circle-outline" size={18} color={colors.clay} />
+                <Ionicons name="alert-circle-outline" size={18} color={c.alerte} />
                 <Text style={styles.errorBoxText}>{errorMessage}</Text>
               </View>
             )}
@@ -280,7 +284,7 @@ export default function ResetPasswordScreen() {
               disabled={!formValid}
               loading={submitting}
               height={56}
-              iconRight={<Ionicons name="arrow-forward" size={18} color={colors.white} />}
+              iconRight={<Ionicons name="arrow-forward" size={18} color={c.surAccent} />}
             />
 
             <Button
@@ -307,6 +311,7 @@ export default function ResetPasswordScreen() {
 
 /** Même décor que l'inscription. */
 function Hills() {
+  const { couleurs: c } = useTheme();
   return (
     <Svg
       viewBox="0 0 402 240"
@@ -315,30 +320,30 @@ function Hills() {
     >
       <Path
         d="M-10,130 C 80,80 160,180 240,130 S 380,80 420,120 L 420,250 L -10,250 Z"
-        fill={colors.moss}
+        fill={c.accent}
         opacity={0.14}
       />
-      <Circle cx="320" cy="80" r="34" fill={colors.earth} opacity={0.4} />
+      <Circle cx="320" cy="80" r="34" fill={c.secondaire} opacity={0.4} />
     </Svg>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.parchment },
+const useStyles = creerStyles((c) => ({
+  root: { flex: 1, backgroundColor: c.page },
   scroll: { paddingHorizontal: 24, flexGrow: 1 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   iconBtn: { padding: 4 },
   title: {
     fontFamily: fonts.serif,
     fontSize: 28,
-    color: colors.mossDeep,
+    color: c.accentProfond,
     marginTop: 18,
     letterSpacing: -0.4,
   },
   subtitle: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink2,
+    color: c.texte2,
     marginTop: 6,
     lineHeight: 20,
     maxWidth: 320,
@@ -349,11 +354,11 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: colors.mossTint,
-    borderColor: colors.mossTint2,
+    backgroundColor: c.accentTeinte,
+    borderColor: c.accentTeinte2,
   },
-  emailCardText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, color: colors.ink },
-  changeLink: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.moss },
+  emailCardText: { flex: 1, fontFamily: fonts.sans, fontSize: 14, color: c.texte },
+  changeLink: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.accent },
   codeField: {
     fontFamily: fonts.mono,
     fontSize: 22,
@@ -364,7 +369,7 @@ const styles = StyleSheet.create({
   errText: {
     fontFamily: fonts.sans,
     fontSize: 12,
-    color: colors.clay,
+    color: c.alerte,
     marginTop: 6,
   },
   errorBox: {
@@ -375,8 +380,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.hairStrong,
-    backgroundColor: colors.paper2,
+    borderColor: c.filetFort,
+    backgroundColor: c.surfaceHaute,
   },
-  errorBoxText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, lineHeight: 19, color: colors.clay },
-});
+  errorBoxText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, lineHeight: 19, color: c.alerte },
+}));

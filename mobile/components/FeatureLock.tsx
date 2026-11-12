@@ -3,12 +3,14 @@ import { View, Text, StyleSheet, Pressable, Linking } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { offersUrl, type OfferKey } from '@/constants/links';
 import { createHandoff } from '@/services/handoffApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Verrou générique d'une fonctionnalité soumise à un code de droit — lot « pro-plan » (JP 27/10).
  * Généralisé depuis `StudyCityLock` (suivi de la ville, ETUDE_SUIVI) pour servir aussi au suivi de
@@ -48,6 +50,8 @@ export default function FeatureLock({
   /** D-OFF-11 — lien « En savoir plus » vers `/offres` (défaut vrai). */
   learnMore?: boolean;
 }) {
+  const { couleurs: c, estSombre } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const { token } = useAuth();
   // Un appui pendant la demande du jeton est ignoré (pas deux jetons, pas deux navigateurs).
@@ -75,11 +79,12 @@ export default function FeatureLock({
       <FakePreview rows={compact ? 3 : 5} />
       {/* Revue 27/10 : sur Android, `blurMethod` vaut 'none' par défaut (voile sans flou) ; le flou
           Dimezis n'opère qu'à partir d'Android 12 (SDK 31), en dessous le voile seul reste. */}
-      <BlurView intensity={28} tint="light" blurMethod="dimezisBlurViewSdk31Plus" style={StyleSheet.absoluteFill} />
+      {/* Flou sombre en mode Sombre, sinon clair (docs/theme-plan.md §4.2). */}
+      <BlurView intensity={28} tint={estSombre ? 'dark' : 'light'} blurMethod="dimezisBlurViewSdk31Plus" style={StyleSheet.absoluteFill} />
       <View style={styles.veil} />
       <View style={styles.message}>
         <View style={styles.lockBadge}>
-          <Ionicons name="lock-closed" size={20} color={colors.moss} />
+          <Ionicons name="lock-closed" size={20} color={c.accent} />
         </View>
         {!!title && (
           <Text style={styles.title} accessibilityRole="header">
@@ -95,7 +100,7 @@ export default function FeatureLock({
         {learnMore && (
           <Pressable onPress={() => void openOffers()} accessibilityRole="link" hitSlop={8} style={styles.learnMore}>
             <Text style={styles.learnMoreText}>{t('offers.learnMore')}</Text>
-            <Ionicons name="open-outline" size={14} color={colors.moss} />
+            <Ionicons name="open-outline" size={14} color={c.accent} />
           </Pressable>
         )}
       </View>
@@ -105,6 +110,7 @@ export default function FeatureLock({
 
 /** Gabarit fictif (blocs sans texte) : assemblées × leçons, pour suggérer le contenu verrouillé. */
 function FakePreview({ rows }: { rows: number }) {
+  const styles = useStyles();
   const lessons = 7;
   return (
     <View style={styles.preview} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
@@ -122,25 +128,25 @@ function FakePreview({ rows }: { rows: number }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   root: {
     marginTop: 16,
     minHeight: 280,
     borderRadius: radii.md,
     overflow: 'hidden',
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
     justifyContent: 'center',
   },
   rootCompact: { minHeight: 200 },
   preview: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, paddingHorizontal: 16, paddingVertical: 18, gap: 14 },
   fakeRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  fakeName: { height: 12, borderRadius: 6, backgroundColor: colors.hairStrong },
+  fakeName: { height: 12, borderRadius: 6, backgroundColor: c.filetFort },
   fakeCells: { flexDirection: 'row', gap: 6, flex: 1, justifyContent: 'flex-end' },
-  fakeCell: { width: 18, height: 18, borderRadius: 5, backgroundColor: colors.mossTint2 },
-  fakeCellOn: { backgroundColor: colors.mossSoft },
-  veil: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.paper2, opacity: 0.55 },
+  fakeCell: { width: 18, height: 18, borderRadius: 5, backgroundColor: c.accentTeinte2 },
+  fakeCellOn: { backgroundColor: c.accentDoux },
+  veil: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: c.surfaceHaute, opacity: 0.55 },
   message: { alignItems: 'center', paddingHorizontal: 24, paddingVertical: 28, gap: 10 },
   lockBadge: {
     width: 44,
@@ -148,19 +154,19 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.paper2,
+    backgroundColor: c.surfaceHaute,
     borderWidth: 1,
-    borderColor: colors.hairStrong,
+    borderColor: c.filetFort,
   },
-  title: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink, textAlign: 'center', letterSpacing: -0.2 },
-  body: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink2, lineHeight: 20, textAlign: 'center' },
-  offer: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, textAlign: 'center', letterSpacing: 0.2 },
+  title: { fontFamily: fonts.serif, fontSize: 18, color: c.texte, textAlign: 'center', letterSpacing: -0.2 },
+  body: { fontFamily: fonts.sans, fontSize: 14, color: c.texte2, lineHeight: 20, textAlign: 'center' },
+  offer: { fontFamily: fonts.sans, fontSize: 12, color: c.texte3, textAlign: 'center', letterSpacing: 0.2 },
   learnMore: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4 },
   learnMoreText: {
     fontFamily: fonts.sans,
     fontSize: 14,
     fontWeight: '600',
-    color: colors.moss,
+    color: c.accent,
     textDecorationLine: 'underline',
   },
-});
+}));

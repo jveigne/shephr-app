@@ -41,7 +41,7 @@ function Kpi({ label, value, sub }: { label: string; value: ReactNode; sub?: Rea
     <div className="kpi" style={{ padding: '12px 14px' }}>
       <div className="lbl" style={{ fontSize: 11 }}>{label}</div>
       <div className="val" style={{ fontSize: 22, marginTop: 4 }}>{value}</div>
-      {sub && <div style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 2 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 12, color: 'var(--texte-3)', marginTop: 2 }}>{sub}</div>}
     </div>
   );
 }
@@ -87,11 +87,11 @@ export function EventHierarchyBlock({ from, to, onLocked }: { from: string; to: 
         <div>
           <div style={{ fontWeight: 500 }}>
             {r.unitName}
-            {r.cityName && <span style={{ color: 'var(--ink-500)', fontSize: 12, fontWeight: 400 }}> · {r.cityName}</span>}
+            {r.cityName && <span style={{ color: 'var(--texte-3)', fontSize: 12, fontWeight: 400 }}> · {r.cityName}</span>}
           </div>
           {/* Chaîne de DIRIGEANTS jusqu'à l'assemblée, puis son dirigeant — jamais un membre. */}
           {(r.supervisorChain.length > 0 || r.leaderName) && (
-            <div style={{ color: 'var(--ink-500)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+            <div style={{ color: 'var(--texte-3)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
               <Icon name="hierarchy" size={11} />
               <span>
                 {[
@@ -109,15 +109,15 @@ export function EventHierarchyBlock({ from, to, onLocked }: { from: string; to: 
     { label: t('hierarchy.events.conversions'), render: (r) => r.conversions },
     {
       label: t('hierarchy.events.lastEvent'),
-      render: (r) => <span style={{ color: 'var(--ink-500)', fontSize: 12.5, whiteSpace: 'nowrap' }}>{fmtDay(r.lastEventDate, lang)}</span>,
+      render: (r) => <span style={{ color: 'var(--texte-3)', fontSize: 12.5, whiteSpace: 'nowrap' }}>{fmtDay(r.lastEventDate, lang)}</span>,
     },
   ];
 
   let body: ReactNode;
   if (q.isLoading) {
-    body = <p style={{ margin: 0, color: 'var(--ink-500)', fontSize: 13 }}>{t('common.loading')}</p>;
+    body = <p style={{ margin: 0, color: 'var(--texte-3)', fontSize: 13 }}>{t('common.loading')}</p>;
   } else if (q.isError || !q.data) {
-    body = <p role="alert" style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>{errMsg(q.error, t('hierarchy.events.loadError'))}</p>;
+    body = <p role="alert" style={{ margin: 0, color: 'var(--alerte)', fontSize: 13 }}>{errMsg(q.error, t('hierarchy.events.loadError'))}</p>;
   } else {
     const s = q.data;
     body = (
@@ -133,7 +133,7 @@ export function EventHierarchyBlock({ from, to, onLocked }: { from: string; to: 
           <Kpi label={t('hierarchy.events.baptisms')} value={s.total.baptisms} />
         </div>
         {s.units.length === 0 ? (
-          <p style={{ margin: 0, color: 'var(--ink-500)', fontSize: 13 }}>{t('hierarchy.events.empty')}</p>
+          <p style={{ margin: 0, color: 'var(--texte-3)', fontSize: 13 }}>{t('hierarchy.events.empty')}</p>
         ) : (
           <>
             {s.byLeader.length > 0 && (
@@ -162,7 +162,7 @@ export function EventHierarchyBlock({ from, to, onLocked }: { from: string; to: 
     <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
       <strong style={{ fontSize: 14 }}>{t('hierarchy.events.title')}</strong>
       <div style={{ marginTop: 12 }}>{body}</div>
-      <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--ink-400)' }}>{t('hierarchy.events.hint')}</p>
+      <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--texte-4)' }}>{t('hierarchy.events.hint')}</p>
     </div>
   );
 }

@@ -16,7 +16,7 @@ import Field from '@/components/Field';
 import Label from '@/components/Label';
 import Button from '@/components/Button';
 import Wordmark from '@/components/Wordmark';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { goBack } from '@/utils/navigation';
@@ -26,6 +26,8 @@ import {
   passwordResetErrorMessage,
 } from '@/utils/passwordResetErrors';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Mot de passe oublié, écran 1 (plan `mot-de-passe-oublie-plan.md` §6 A2, 18/10/2026) :
  * l'adresse e-mail → `POST /api/auth/password/forgot` (`fromApp = SHEPHR`, langue de l'appli).
@@ -38,6 +40,8 @@ import {
  * conclure. Jamais de « compte introuvable ».
  */
 export default function ForgotPasswordScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const { ready, isAuthenticated } = useAuth();
   const focused = useIsFocused();
@@ -99,7 +103,7 @@ export default function ForgotPasswordScreen() {
               hitSlop={10}
               accessibilityLabel={t('common.back')}
             >
-              <Ionicons name="chevron-back" size={22} color={colors.mossDeep} />
+              <Ionicons name="chevron-back" size={22} color={c.accentProfond} />
             </Pressable>
             <Wordmark size={22} />
           </View>
@@ -135,7 +139,7 @@ export default function ForgotPasswordScreen() {
               disabled={!valid}
               loading={loading}
               height={56}
-              iconRight={<Ionicons name="arrow-forward" size={18} color={colors.white} />}
+              iconRight={<Ionicons name="arrow-forward" size={18} color={c.surAccent} />}
             />
           </View>
 
@@ -155,6 +159,7 @@ export default function ForgotPasswordScreen() {
 
 /** Même décor que l'inscription. */
 function Hills() {
+  const { couleurs: c } = useTheme();
   return (
     <Svg
       viewBox="0 0 402 240"
@@ -163,30 +168,30 @@ function Hills() {
     >
       <Path
         d="M-10,130 C 80,80 160,180 240,130 S 380,80 420,120 L 420,250 L -10,250 Z"
-        fill={colors.moss}
+        fill={c.accent}
         opacity={0.14}
       />
-      <Circle cx="320" cy="80" r="34" fill={colors.earth} opacity={0.4} />
+      <Circle cx="320" cy="80" r="34" fill={c.secondaire} opacity={0.4} />
     </Svg>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.parchment },
+const useStyles = creerStyles((c) => ({
+  root: { flex: 1, backgroundColor: c.page },
   scroll: { paddingHorizontal: 24, flexGrow: 1 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   iconBtn: { padding: 4 },
   title: {
     fontFamily: fonts.serif,
     fontSize: 28,
-    color: colors.mossDeep,
+    color: c.accentProfond,
     marginTop: 18,
     letterSpacing: -0.4,
   },
   subtitle: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink2,
+    color: c.texte2,
     marginTop: 6,
     lineHeight: 20,
     maxWidth: 320,
@@ -194,7 +199,7 @@ const styles = StyleSheet.create({
   errText: {
     fontFamily: fonts.sans,
     fontSize: 12,
-    color: colors.clay,
+    color: c.alerte,
     marginTop: 6,
   },
   bottomRow: {
@@ -203,11 +208,11 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 18,
   },
-  bottomHint: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2 },
+  bottomHint: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2 },
   bottomLink: {
     fontFamily: fonts.sans,
     fontSize: 12.5,
     fontWeight: '600',
-    color: colors.moss,
+    color: c.accent,
   },
-});
+}));

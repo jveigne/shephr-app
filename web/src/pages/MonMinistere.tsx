@@ -24,7 +24,7 @@ export function MonMinisterePage() {
         </p>
 
         {ministriesQ.isLoading ? (
-          <div className="card"><p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p></div>
+          <div className="card"><p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p></div>
         ) : ministries.length === 0 ? (
           <div className="card" style={{ padding: 0 }}>
             <div className="empty">
@@ -50,13 +50,13 @@ function MinistryCard({ ministry }: { ministry: MinistryResponse }) {
     <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
       <div
         className="icon-wrap"
-        style={{ background: 'var(--green-700)', color: '#FBF5E4', width: 44, height: 44, borderRadius: 12 }}
+        style={{ background: 'var(--accent-moyen)', color: 'var(--sur-accent)', width: 44, height: 44, borderRadius: 12 }}
       >
         <Icon name="building" size={22} />
       </div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink-900)' }}>{ministry.name}</div>
-        <div style={{ display: 'flex', gap: 18, marginTop: 6, fontSize: 13, color: 'var(--ink-500)' }}>
+        <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--texte)' }}>{ministry.name}</div>
+        <div style={{ display: 'flex', gap: 18, marginTop: 6, fontSize: 13, color: 'var(--texte-3)' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Icon name="globe" size={13} /> {ministry.country || '—'}
           </span>

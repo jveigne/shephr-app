@@ -174,7 +174,7 @@ export function SignupPage() {
           }
           style={{
             position: 'absolute', top: 24, left: 24, display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--ink-500)',
+            background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--texte-3)',
             fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, padding: 6,
           }}
         >
@@ -231,7 +231,7 @@ export function SignupPage() {
                   onClick={() => setMode('form')}
                   style={{
                     background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
-                    color: 'var(--ink-600)', fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
+                    color: 'var(--texte-corps)', fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
                   }}
                 >
                   {t('signup.useAnotherEmail')}
@@ -317,7 +317,7 @@ export function SignupPage() {
                         background: 'transparent',
                         border: 'none',
                         cursor: 'pointer',
-                        color: 'var(--ink-400)',
+                        color: 'var(--texte-4)',
                         padding: 6,
                         display: 'grid',
                         placeItems: 'center',

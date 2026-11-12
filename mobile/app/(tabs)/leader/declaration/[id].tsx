@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,7 +11,7 @@ import Button from '@/components/Button';
 import HandDivider from '@/components/HandDivider';
 import ErrorBanner from '@/components/ErrorBanner';
 import DeclarationStatusPill from '@/components/DeclarationStatusPill';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii, transparence } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useDonationCategories } from '@/hooks/useDonationCategories';
@@ -24,6 +24,8 @@ import {
 import { confirmDialog, notify } from '@/utils/dialogs';
 import { fmtAmount, fmtDateLong, parseLocalDate } from '@/utils/format';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Détail d'une déclaration, côté TRÉSORIER — Lot T8 (décision J-1, JP 14/09).
  *
@@ -38,6 +40,8 @@ import { fmtAmount, fmtDateLong, parseLocalDate } from '@/utils/format';
  * statut, et sa réciproque — dévalider — réservée au rattrapage d'une erreur du trésorier.
  */
 export default function TreasuryDeclarationScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { t } = useLanguage();
   const { me } = useAuth();
@@ -109,7 +113,7 @@ export default function TreasuryDeclarationScreen() {
     return (
       <ScreenShell>
         <View style={{ marginTop: 60, alignItems: 'center' }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       </ScreenShell>
     );
@@ -144,7 +148,7 @@ export default function TreasuryDeclarationScreen() {
       </Text>
 
       <Card style={styles.totalCard}>
-        <Label style={{ color: colors.mossSoft }}>{t('treasury.declaredTotal')}</Label>
+        <Label style={{ color: c.accentDoux }}>{t('treasury.declaredTotal')}</Label>
         <Amount value={declaration.declaredTotal} currency={declaration.currency} size={36} />
         <Text style={styles.totalHint}>
           {t('treasury.linesCount', { count: declaration.lines.length })}
@@ -154,7 +158,7 @@ export default function TreasuryDeclarationScreen() {
       {/* Ventilation : c'est l'objet même de la comparaison. Le total seul ne permet pas de
           rapprocher un versement de 300 constaté d'une dîme de 200 et d'une mission de 100. */}
       <Card style={styles.linesCard}>
-        <Label style={{ color: colors.mossSoft }}>{t('treasury.breakdown')}</Label>
+        <Label style={{ color: c.accentDoux }}>{t('treasury.breakdown')}</Label>
         <View style={{ marginTop: 12, gap: 12 }}>
           {declaration.lines.map((l) => {
             const meta = metaOf(l.category);
@@ -190,7 +194,7 @@ export default function TreasuryDeclarationScreen() {
           VOIE, ici comme dans les exports du lot T9. */}
       {verified && declaration.selfVerified && (
         <View style={styles.selfBanner}>
-          <Ionicons name="information-circle-outline" size={18} color={colors.earthDeep} />
+          <Ionicons name="information-circle-outline" size={18} color={c.secondaireProfond} />
           <View style={{ flex: 1 }}>
             <Text style={styles.selfTitle}>{t('treasury.selfVerifiedTitle')}</Text>
             <Text style={styles.selfText}>{t('treasury.selfVerifiedHint')}</Text>
@@ -200,7 +204,7 @@ export default function TreasuryDeclarationScreen() {
 
       {verified && (
         <Card style={styles.verifiedCard}>
-          <Ionicons name="checkmark-circle-outline" size={18} color={colors.mossSoft} />
+          <Ionicons name="checkmark-circle-outline" size={18} color={c.accentDoux} />
           <Text style={styles.verifiedText}>
             {t('treasury.verifiedBy', {
               name: declaration.verifiedByName ?? '—',
@@ -215,7 +219,7 @@ export default function TreasuryDeclarationScreen() {
       {!verified && (
         <>
           <View style={styles.hintBox}>
-            <Ionicons name="alert-circle-outline" size={15} color={colors.mossSoft} />
+            <Ionicons name="alert-circle-outline" size={15} color={c.accentDoux} />
             <Text style={styles.hintText}>{t('treasury.mismatchHint')}</Text>
           </View>
           {isOwnDeclaration && (
@@ -227,7 +231,7 @@ export default function TreasuryDeclarationScreen() {
             loading={saving}
             fullWidth
             style={{ marginTop: 14 }}
-            iconLeft={<Ionicons name="checkmark" size={18} color={colors.white} />}
+            iconLeft={<Ionicons name="checkmark" size={18} color={c.surAccent} />}
           />
         </>
       )}
@@ -247,11 +251,13 @@ export default function TreasuryDeclarationScreen() {
 }
 
 function Head() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <View style={styles.headerRow}>
       <Pressable onPress={() => goBack()} hitSlop={10}>
-        <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+        <Ionicons name="chevron-back" size={22} color={c.texte2} />
       </Pressable>
       <Text style={styles.headerTitle}>{t('treasury.detailTitle')}</Text>
       <View style={{ width: 22 }} />
@@ -259,20 +265,20 @@ function Head() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink2 },
+  headerTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.texte2 },
   title: {
     fontFamily: fonts.serif,
     fontSize: 26,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.4,
     marginTop: 8,
     lineHeight: 30,
   },
-  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 4 },
   totalCard: { paddingHorizontal: 18, paddingVertical: 18, marginTop: 16 },
-  totalHint: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 6 },
+  totalHint: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 6 },
   linesCard: { paddingHorizontal: 18, paddingVertical: 18, marginTop: 12 },
   lineRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   lineIcon: {
@@ -282,26 +288,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  lineLabel: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
-  lineNote: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2, lineHeight: 17 },
-  lineAmount: { fontFamily: fonts.mono, fontSize: 13, color: colors.ink },
+  lineLabel: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.texte },
+  lineNote: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 2, lineHeight: 17 },
+  lineAmount: { fontFamily: fonts.mono, fontSize: 13, color: c.texte },
   sumRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  sumLabel: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: colors.ink2 },
-  sumValue: { fontFamily: fonts.mono, fontSize: 14, fontWeight: '700', color: colors.ink },
+  sumLabel: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: c.texte2 },
+  sumValue: { fontFamily: fonts.mono, fontSize: 14, fontWeight: '700', color: c.texte },
   selfBanner: {
     marginTop: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: radii.md,
-    backgroundColor: 'rgba(201,149,107,0.16)',
+    backgroundColor: transparence(c.secondaire, 0.16),
     borderWidth: 1,
-    borderColor: 'rgba(167,117,75,0.30)',
+    borderColor: transparence(c.secondaireProfond, 0.3),
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
   },
-  selfTitle: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '700', color: colors.earthDeep },
-  selfText: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink2, marginTop: 2, lineHeight: 17 },
+  selfTitle: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '700', color: c.secondaireProfond },
+  selfText: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte2, marginTop: 2, lineHeight: 17 },
   verifiedCard: {
     marginTop: 12,
     paddingHorizontal: 16,
@@ -310,22 +316,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  verifiedText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },
+  verifiedText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2, lineHeight: 18 },
   hintBox: {
     marginTop: 16,
     padding: 12,
     borderRadius: radii.md,
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
   },
-  hintText: { flex: 1, fontFamily: fonts.sans, fontSize: 11.5, color: colors.mossDeep, lineHeight: 18 },
+  hintText: { flex: 1, fontFamily: fonts.sans, fontSize: 11.5, color: c.accentProfond, lineHeight: 18 },
   selfAhead: {
     fontFamily: fonts.sans,
     fontSize: 11.5,
-    color: colors.earthDeep,
+    color: c.secondaireProfond,
     marginTop: 10,
     lineHeight: 17,
   },
-});
+}));

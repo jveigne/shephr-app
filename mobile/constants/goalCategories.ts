@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { tonDonnee } from '@/theme/tonsDonnees';
 
 export interface GoalCategoryMeta {
   icon: keyof typeof Ionicons.glyphMap;
@@ -20,5 +21,7 @@ export const DEFAULT_GOAL_CATEGORY_META: GoalCategoryMeta = {
 };
 
 export function goalCategoryMeta(code: string): GoalCategoryMeta {
-  return GOAL_CATEGORY_META[code] ?? DEFAULT_GOAL_CATEGORY_META;
+  const meta = GOAL_CATEGORY_META[code] ?? DEFAULT_GOAL_CATEGORY_META;
+  // D8 : le ton suit le thème (gris en Noir et blanc, éclairci en Sombre).
+  return { ...meta, tone: tonDonnee(meta.tone) };
 }

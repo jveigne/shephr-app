@@ -98,7 +98,8 @@ export function LandingPage() {
   const chain = ['member', 'unit', 'city', 'zone', 'country', 'continent'];
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--parchment)', fontFamily: 'var(--font-sans)' }}>
+    // D11 (décision B5 de JP) : la landing reste en Clair, quel que soit le thème de l'utilisateur.
+    <div data-theme="clair" style={{ minHeight: '100vh', background: 'var(--parchment)', fontFamily: 'var(--font-sans)' }}>
       {/* Top bar */}
       <header style={{
         position: 'sticky', top: 0, zIndex: 10, background: 'var(--parchment)',

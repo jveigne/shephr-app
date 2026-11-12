@@ -47,7 +47,7 @@ function SeeOffersLink({ offer }: { offer: 'caleb' | 'nehemie' }) {
   return (
     <Link
       to={`/offres?offer=${offer}`}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 14, color: 'var(--green-700)', fontWeight: 600, fontSize: 13.5 }}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 14, color: 'var(--accent-moyen)', fontWeight: 600, fontSize: 13.5 }}
     >
       {t('offers.seeOffers')}
       <Icon name="arrowRight" size={13} />
@@ -70,7 +70,7 @@ function VoucherEntry({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, borderTop: '1px solid var(--line-soft)', paddingTop: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, borderTop: '1px solid var(--filet-doux)', paddingTop: 12 }}>
       <Button variant="secondary" iconL={<Icon name="tag" size={14} />} onClick={() => setOpen(true)} style={{ justifyContent: 'center' }}>
         {t('offers.voucher.open')}
       </Button>
@@ -101,17 +101,17 @@ function FakePreview() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginBottom: 14 }}>
         {[38, 112, 64, 71].map((n, i) => (
           <div key={i} className="card" style={{ padding: 14 }}>
-            <div style={{ height: 8, width: '60%', background: 'var(--line-soft)', borderRadius: 4, marginBottom: 10 }} />
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 24, color: 'var(--green-700)' }}>{n}</div>
+            <div style={{ height: 8, width: '60%', background: 'var(--filet-doux)', borderRadius: 4, marginBottom: 10 }} />
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 24, color: 'var(--accent-moyen)' }}>{n}</div>
           </div>
         ))}
       </div>
       <div className="card" style={{ padding: 14 }}>
         {FAKE_ROWS.map((r) => (
-          <div key={r.letter} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid var(--line-soft)' }}>
+          <div key={r.letter} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid var(--filet-doux)' }}>
             <span style={{ width: 120, fontSize: 13 }}>{t('cityStudy.lock.fakeAssembly', { letter: r.letter })}</span>
-            <div style={{ flex: 1, height: 8, background: 'var(--line-soft)', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{ width: `${(100 * r.done) / r.total}%`, height: '100%', background: 'var(--green-600)' }} />
+            <div style={{ flex: 1, height: 8, background: 'var(--filet-doux)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{ width: `${(100 * r.done) / r.total}%`, height: '100%', background: 'var(--accent-doux)' }} />
             </div>
             <span style={{ fontSize: 12.5 }}>{r.done}/{r.total}</span>
           </div>
@@ -148,12 +148,12 @@ export function LockedFeature({
   if (compact) {
     return (
       <div className="card" style={{ padding: 18, display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--parchment)', display: 'grid', placeItems: 'center', color: 'var(--earth-700)', flexShrink: 0 }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--page)', display: 'grid', placeItems: 'center', color: 'var(--secondaire-profond)', flexShrink: 0 }}>
           <Icon name="lock" size={17} />
         </div>
         <div style={{ flex: '1 1 240px' }}>
-          <div style={{ fontWeight: 600, color: 'var(--green-800)', marginBottom: 4 }}>{t('cityStudy.lock.title')}</div>
-          <div style={{ fontSize: 13.5, color: 'var(--ink-700)', lineHeight: 1.5 }}>
+          <div style={{ fontWeight: 600, color: 'var(--accent)', marginBottom: 4 }}>{t('cityStudy.lock.title')}</div>
+          <div style={{ fontSize: 13.5, color: 'var(--texte-2)', lineHeight: 1.5 }}>
             {denied.canSubscribe ? t('cityStudy.lock.compactSubscribe') : t('cityStudy.lock.askPastor')}
           </div>
         </div>
@@ -172,13 +172,13 @@ export function LockedFeature({
       <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: 16 }}>
         <div className="card" style={{ maxWidth: 480, width: '100%', padding: 'clamp(18px, 4vw, 26px)', boxShadow: 'var(--shadow-md, var(--shadow-sm))' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <Icon name="lock" size={18} style={{ color: 'var(--earth-700)' }} />
-            <h2 style={{ margin: 0, fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 19, color: 'var(--green-800)' }}>
+            <Icon name="lock" size={18} style={{ color: 'var(--secondaire-profond)' }} />
+            <h2 style={{ margin: 0, fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 19, color: 'var(--accent)' }}>
               {t('cityStudy.lock.title')}
             </h2>
           </div>
           {cityId ? <LockActions localityId={cityId} fallbackCanSubscribe={denied.canSubscribe} /> : (
-            <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>{t('cityStudy.lock.askPastor')}</p>
+            <p style={{ margin: 0, color: 'var(--texte-2)', fontSize: 14 }}>{t('cityStudy.lock.askPastor')}</p>
           )}
           <SeeOffersLink offer="nehemie" />
         </div>
@@ -204,7 +204,7 @@ function LockActions({ localityId, fallbackCanSubscribe }: { localityId: string;
     onSuccess: (res) => window.location.assign(res.url),
   });
 
-  if (entQ.isLoading || citiesQ.isLoading) return <p style={{ margin: 0, color: 'var(--ink-500)', fontSize: 14 }}>{t('common.loading')}</p>;
+  if (entQ.isLoading || citiesQ.isLoading) return <p style={{ margin: 0, color: 'var(--texte-3)', fontSize: 14 }}>{t('common.loading')}</p>;
 
   const ent = entQ.data;
   const byAgreement = !!citiesQ.data?.find((c) => c.localityId === localityId)?.agreement;
@@ -215,7 +215,7 @@ function LockActions({ localityId, fallbackCanSubscribe }: { localityId: string;
   const other = subs.find((s) => s.status !== 'PENDING' && s.status !== 'EXPIRED' && !s.entitled && s !== pastDue);
 
   if (pending) {
-    return <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>{t('cityStudy.lock.pending')}</p>;
+    return <p style={{ margin: 0, color: 'var(--texte-2)', fontSize: 14 }}>{t('cityStudy.lock.pending')}</p>;
   }
   // D-FIX-4A (JP 29/10) : ville déjà ouverte par un ACCORD `sub_subscription` (ministère / nation /
   // région, D-ABO-28) sur un code du plan — `agreement` du serveur, même règle que la caisse, qui la
@@ -227,23 +227,23 @@ function LockActions({ localityId, fallbackCanSubscribe }: { localityId: string;
         <div>
           <Badge tone="ok" dot>{t('offers.nehemie.alreadyActiveAgreement')}</Badge>
         </div>
-        <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>{t('cityStudy.lock.agreementOther')}</p>
+        <p style={{ margin: 0, color: 'var(--texte-2)', fontSize: 14 }}>{t('cityStudy.lock.agreementOther')}</p>
       </div>
     );
   }
   if (pastDue) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <p style={{ margin: 0, color: 'var(--err)', fontSize: 14 }}>{t('cityStudy.lock.pastDue')}</p>
+        <p style={{ margin: 0, color: 'var(--alerte)', fontSize: 14 }}>{t('cityStudy.lock.pastDue')}</p>
         {pastDue.paidByMe && pastDue.source === 'STRIPE' ? (
           <>
             <Button variant="primary" disabled={portalM.isPending} onClick={() => portalM.mutate(pastDue.reference)} style={{ justifyContent: 'center' }}>
               {t('cityStudy.lock.updateCard')}
             </Button>
-            {portalM.isError && <p style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>{billingErrMsg(portalM.error, t)}</p>}
+            {portalM.isError && <p style={{ margin: 0, color: 'var(--alerte)', fontSize: 13 }}>{billingErrMsg(portalM.error, t)}</p>}
           </>
         ) : (
-          <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>
+          <p style={{ margin: 0, color: 'var(--texte-2)', fontSize: 14 }}>
             {t('cityStudy.lock.managedBy', { name: pastDue.payerName ?? t('cityStudy.subscription.unknownPayer') })}
           </p>
         )}
@@ -252,14 +252,14 @@ function LockActions({ localityId, fallbackCanSubscribe }: { localityId: string;
   }
   if (other && !other.paidByMe) {
     return (
-      <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>
+      <p style={{ margin: 0, color: 'var(--texte-2)', fontSize: 14 }}>
         {t('cityStudy.lock.managedBy', { name: other.payerName ?? t('cityStudy.subscription.unknownPayer') })}
       </p>
     );
   }
   const plan = ent?.plans?.[0];
   if (!canSubscribe || !plan) {
-    return <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>{t('cityStudy.lock.askPastor')}</p>;
+    return <p style={{ margin: 0, color: 'var(--texte-2)', fontSize: 14 }}>{t('cityStudy.lock.askPastor')}</p>;
   }
   return <SubscribeForm localityId={localityId} plan={plan} cityName={ent?.localityName ?? null} />;
 }
@@ -347,7 +347,7 @@ function SubscribeForm({ localityId, plan, cityName }: { localityId: string; pla
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14, lineHeight: 1.5 }}>
+      <p style={{ margin: 0, color: 'var(--texte-2)', fontSize: 14, lineHeight: 1.5 }}>
         {t('cityStudy.lock.subscribeIntro', { plan: plan.name, city: cityName ?? '—' })}
       </p>
       {/* D-CUR-03 (JP 28/10, RG-CUR-19) : sélecteur € / $ au-dessus de Mensuel / Annuel. */}
@@ -374,14 +374,14 @@ function SubscribeForm({ localityId, plan, cityName }: { localityId: string; pla
         </div>
       )}
       <div>
-        <span style={{ fontFamily: 'var(--font-serif)', fontSize: 26, color: 'var(--green-700)' }}>{priceLabel}</span>
-        <span style={{ color: 'var(--ink-500)', fontSize: 13, marginLeft: 6 }}>{t(`billing.period.${effPeriod}`)}</span>
+        <span style={{ fontFamily: 'var(--font-serif)', fontSize: 26, color: 'var(--accent-moyen)' }}>{priceLabel}</span>
+        <span style={{ color: 'var(--texte-3)', fontSize: 13, marginLeft: 6 }}>{t(`billing.period.${effPeriod}`)}</span>
         {promo && (
           <span style={{ marginLeft: 8 }}>
             <Badge tone="earth">-{promo.percentOff} %</Badge>
           </span>
         )}
-        <div style={{ color: 'var(--ink-500)', fontSize: 12 }}>{t('billing.offers.vatIncluded', { rate: plan.vatRate })}</div>
+        <div style={{ color: 'var(--texte-3)', fontSize: 12 }}>{t('billing.offers.vatIncluded', { rate: plan.vatRate })}</div>
         <EurOnlyNote show={!!sel?.fallback} />
       </div>
       <form
@@ -412,7 +412,7 @@ function SubscribeForm({ localityId, plan, cityName }: { localityId: string; pla
           {previewM.isPending ? t('billing.promo.checking') : t('billing.promo.apply')}
         </Button>
       </form>
-      {promoError && <p style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>{promoError}</p>}
+      {promoError && <p style={{ margin: 0, color: 'var(--alerte)', fontSize: 13 }}>{promoError}</p>}
       <Button
         variant="primary"
         style={{ justifyContent: 'center' }}
@@ -423,8 +423,8 @@ function SubscribeForm({ localityId, plan, cityName }: { localityId: string; pla
           ? t('billing.offers.redirecting')
           : t(effPeriod === 'ANNUAL' ? 'cityStudy.lock.subscribeAnnual' : 'cityStudy.lock.subscribeMonthly', { price: priceLabel })}
       </Button>
-      {checkoutM.isError && <p style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>{billingErrMsg(checkoutM.error, t)}</p>}
-      <p style={{ margin: 0, color: 'var(--ink-400)', fontSize: 12 }}>{t('billing.offers.stripeNote')}</p>
+      {checkoutM.isError && <p style={{ margin: 0, color: 'var(--alerte)', fontSize: 13 }}>{billingErrMsg(checkoutM.error, t)}</p>}
+      <p style={{ margin: 0, color: 'var(--texte-4)', fontSize: 12 }}>{t('billing.offers.stripeNote')}</p>
       {/* D-OFF-08 (JP 27/10) : le web affiche TOUJOURS les deux voies — carte (€ ou $, D-CUR-03) et code Mobile Money. */}
       <VoucherEntry plan="nehemie" localityId={localityId} cityName={cityName} localPriceLabel={plan.localPriceLabel} />
     </div>
@@ -456,17 +456,17 @@ function FakeHierarchyPreview() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginBottom: 14 }}>
         {[24, '9 / 12', 2, 18].map((n, i) => (
           <div key={i} className="card" style={{ padding: 14 }}>
-            <div style={{ height: 8, width: '60%', background: 'var(--line-soft)', borderRadius: 4, marginBottom: 10 }} />
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 24, color: 'var(--green-700)' }}>{n}</div>
+            <div style={{ height: 8, width: '60%', background: 'var(--filet-doux)', borderRadius: 4, marginBottom: 10 }} />
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 24, color: 'var(--accent-moyen)' }}>{n}</div>
           </div>
         ))}
       </div>
       <div className="card" style={{ padding: 14 }}>
         {FAKE_ROWS.map((r) => (
-          <div key={r.letter} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid var(--line-soft)' }}>
+          <div key={r.letter} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid var(--filet-doux)' }}>
             <span style={{ width: 120, fontSize: 13 }}>{t('cityStudy.lock.fakeAssembly', { letter: r.letter })}</span>
-            <div style={{ flex: 1, height: 8, background: 'var(--line-soft)', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{ width: `${(100 * r.done) / r.total}%`, height: '100%', background: 'var(--green-600)' }} />
+            <div style={{ flex: 1, height: 8, background: 'var(--filet-doux)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{ width: `${(100 * r.done) / r.total}%`, height: '100%', background: 'var(--accent-doux)' }} />
             </div>
             <span style={{ fontSize: 12.5 }}>{r.done}/{r.total}</span>
           </div>
@@ -484,12 +484,12 @@ export function HierarchyLockedFeature({ plan }: { plan: PersonalPlan | null }) 
       <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: 16 }}>
         <div className="card" style={{ maxWidth: 480, width: '100%', padding: 'clamp(18px, 4vw, 26px)', boxShadow: 'var(--shadow-md, var(--shadow-sm))' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <Icon name="lock" size={18} style={{ color: 'var(--earth-700)' }} />
-            <h2 style={{ margin: 0, fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 19, color: 'var(--green-800)' }}>
+            <Icon name="lock" size={18} style={{ color: 'var(--secondaire-profond)' }} />
+            <h2 style={{ margin: 0, fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 19, color: 'var(--accent)' }}>
               {t('hierarchy.lock.title')}
             </h2>
           </div>
-          <p style={{ margin: '0 0 12px', color: 'var(--ink-700)', fontSize: 14, lineHeight: 1.5 }}>{t('hierarchy.lock.intro')}</p>
+          <p style={{ margin: '0 0 12px', color: 'var(--texte-2)', fontSize: 14, lineHeight: 1.5 }}>{t('hierarchy.lock.intro')}</p>
           <PersonalLockActions plan={plan} />
           <SeeOffersLink offer="caleb" />
         </div>
@@ -522,23 +522,23 @@ function PersonalLockActions({ plan }: { plan: PersonalPlan | null }) {
 
   const sub = plan?.subscription ?? null;
   if (sub?.status === 'PENDING') {
-    return <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>{t('hierarchy.lock.pending')}</p>;
+    return <p style={{ margin: 0, color: 'var(--texte-2)', fontSize: 14 }}>{t('hierarchy.lock.pending')}</p>;
   }
   if (sub?.status === 'PAST_DUE' && !plan?.entitled) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <p style={{ margin: 0, color: 'var(--err)', fontSize: 14 }}>{t('hierarchy.lock.pastDue')}</p>
+        <p style={{ margin: 0, color: 'var(--alerte)', fontSize: 14 }}>{t('hierarchy.lock.pastDue')}</p>
         {sub.source === 'STRIPE' && (
           <Button variant="primary" disabled={portalM.isPending} onClick={() => portalM.mutate(sub.reference)} style={{ justifyContent: 'center' }}>
             {t('cityStudy.lock.updateCard')}
           </Button>
         )}
-        {portalM.isError && <p style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>{billingErrMsg(portalM.error, t)}</p>}
+        {portalM.isError && <p style={{ margin: 0, color: 'var(--alerte)', fontSize: 13 }}>{billingErrMsg(portalM.error, t)}</p>}
       </div>
     );
   }
   if (!plan || !plan.canSubscribe) {
-    return <p style={{ margin: 0, color: 'var(--ink-700)', fontSize: 14 }}>{t('hierarchy.lock.askShephr')}</p>;
+    return <p style={{ margin: 0, color: 'var(--texte-2)', fontSize: 14 }}>{t('hierarchy.lock.askShephr')}</p>;
   }
   // RG-ABO-05 : prix TOUJOURS en centimes du serveur, jamais recalculé. RG-CUR-20 / 22 (JP 28/10) :
   // ligne de la devise choisie (sinon EUR, avec mention) ; l'annuel doit exister dans cette devise.
@@ -573,15 +573,15 @@ function PersonalLockActions({ plan }: { plan: PersonalPlan | null }) {
         </div>
       )}
       <div>
-        <span style={{ fontFamily: 'var(--font-serif)', fontSize: 26, color: 'var(--green-700)' }}>{price}</span>
-        <span style={{ color: 'var(--ink-500)', fontSize: 13, marginLeft: 6 }}>{t(`billing.period.${effPeriod}`)}</span>
+        <span style={{ fontFamily: 'var(--font-serif)', fontSize: 26, color: 'var(--accent-moyen)' }}>{price}</span>
+        <span style={{ color: 'var(--texte-3)', fontSize: 13, marginLeft: 6 }}>{t(`billing.period.${effPeriod}`)}</span>
         {/* D-MKT-04 (JP 28/10) : pastille « Annuel : 2 mois offerts » quand l'annuel existe. */}
         {hasAnnual && (
           <span style={{ marginLeft: 8 }}>
             <Badge tone="earth">{t('offers.annualBadge')}</Badge>
           </span>
         )}
-        <div style={{ color: 'var(--ink-500)', fontSize: 12 }}>{t('hierarchy.lock.vatIncluded', { plan: plan.offerName })}</div>
+        <div style={{ color: 'var(--texte-3)', fontSize: 12 }}>{t('hierarchy.lock.vatIncluded', { plan: plan.offerName })}</div>
         <EurOnlyNote show={!!sel?.fallback} />
       </div>
       <Button
@@ -594,8 +594,8 @@ function PersonalLockActions({ plan }: { plan: PersonalPlan | null }) {
           ? t('billing.offers.redirecting')
           : t(effPeriod === 'ANNUAL' ? 'cityStudy.lock.subscribeAnnual' : 'cityStudy.lock.subscribeMonthly', { price })}
       </Button>
-      {checkoutM.isError && <p style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>{billingErrMsg(checkoutM.error, t)}</p>}
-      <p style={{ margin: 0, color: 'var(--ink-400)', fontSize: 12 }}>{t('billing.offers.stripeNote')}</p>
+      {checkoutM.isError && <p style={{ margin: 0, color: 'var(--alerte)', fontSize: 13 }}>{billingErrMsg(checkoutM.error, t)}</p>}
+      <p style={{ margin: 0, color: 'var(--texte-4)', fontSize: 12 }}>{t('billing.offers.stripeNote')}</p>
       {/* D-OFF-08 (JP 27/10) : seconde voie, code d'activation (droit personnel, sans ville). */}
       <VoucherEntry plan="caleb" localPriceLabel={plan.localPriceLabel} />
     </div>
@@ -634,13 +634,13 @@ export function HierarchySubscriptionStatus({ plan }: { plan: PersonalPlan | nul
 
   return (
     <div className="card" style={{ padding: '10px 14px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-      <Icon name="check" size={15} style={{ color: 'var(--ok)' }} />
+      <Icon name="check" size={15} style={{ color: 'var(--succes)' }} />
       <strong style={{ fontSize: 13.5 }}>{plan.offerName}</strong>
       {/* D-MKT-03 (JP 28/10, RG-MKT-30) : formule de l'abonnement (mensuelle ou annuelle). */}
-      {sub.billingPeriod && <span style={{ fontSize: 13, color: 'var(--ink-700)' }}>{t(`cityStudy.lock.periods.${sub.billingPeriod}`)}</span>}
+      {sub.billingPeriod && <span style={{ fontSize: 13, color: 'var(--texte-2)' }}>{t(`cityStudy.lock.periods.${sub.billingPeriod}`)}</span>}
       <Badge tone={sub.status === 'PAST_DUE' ? 'err' : sub.status === 'ACTIVE' ? 'ok' : 'gray'} dot>{t(`billing.status.${sub.status}`)}</Badge>
-      {due && <span style={{ fontSize: 13, color: sub.status === 'PAST_DUE' ? 'var(--err)' : 'var(--ink-700)' }}>{due}</span>}
-      {portalM.isError && <span style={{ color: 'var(--err)', fontSize: 13 }}>{billingErrMsg(portalM.error, t)}</span>}
+      {due && <span style={{ fontSize: 13, color: sub.status === 'PAST_DUE' ? 'var(--alerte)' : 'var(--texte-2)' }}>{due}</span>}
+      {portalM.isError && <span style={{ color: 'var(--alerte)', fontSize: 13 }}>{billingErrMsg(portalM.error, t)}</span>}
       {portal && (
         <Button size="sm" variant={sub.status === 'PAST_DUE' ? 'primary' : 'secondary'} disabled={portalM.isPending} onClick={() => portalM.mutate(sub.reference)} style={{ marginLeft: 'auto' }}>
           {sub.status === 'PAST_DUE' ? t('cityStudy.lock.updateCard') : t('hierarchy.plan.manage')}
@@ -747,12 +747,12 @@ export function HierarchyLockedCompact({
     // Caleb déjà ouvert : jamais d'invitation — l'assemblée est hors de la chaîne de supervision.
     return (
       <div className="card" style={{ padding: 18, display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--parchment)', display: 'grid', placeItems: 'center', color: 'var(--earth-700)', flexShrink: 0 }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--page)', display: 'grid', placeItems: 'center', color: 'var(--secondaire-profond)', flexShrink: 0 }}>
           <Icon name="lock" size={17} />
         </div>
         <div style={{ flex: '1 1 240px' }}>
-          <div style={{ fontWeight: 600, color: 'var(--green-800)', marginBottom: 4 }}>{t('hierarchy.lock.outsideChainTitle')}</div>
-          <div style={{ fontSize: 13.5, color: 'var(--ink-700)', lineHeight: 1.5 }}>
+          <div style={{ fontWeight: 600, color: 'var(--accent)', marginBottom: 4 }}>{t('hierarchy.lock.outsideChainTitle')}</div>
+          <div style={{ fontSize: 13.5, color: 'var(--texte-2)', lineHeight: 1.5 }}>
             {t(context === 'memberCare' ? 'hierarchy.lock.outsideChainMemberCare' : 'hierarchy.lock.outsideChainAssembly')}
           </div>
         </div>
@@ -761,12 +761,12 @@ export function HierarchyLockedCompact({
   }
   return (
     <div className="card" style={{ padding: 18, display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-      <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--parchment)', display: 'grid', placeItems: 'center', color: 'var(--earth-700)', flexShrink: 0 }}>
+      <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--page)', display: 'grid', placeItems: 'center', color: 'var(--secondaire-profond)', flexShrink: 0 }}>
         <Icon name="lock" size={17} />
       </div>
       <div style={{ flex: '1 1 240px' }}>
-        <div style={{ fontWeight: 600, color: 'var(--green-800)', marginBottom: 4 }}>{t('hierarchy.lock.compactTitle')}</div>
-        <div style={{ fontSize: 13.5, color: 'var(--ink-700)', lineHeight: 1.5 }}>
+        <div style={{ fontWeight: 600, color: 'var(--accent)', marginBottom: 4 }}>{t('hierarchy.lock.compactTitle')}</div>
+        <div style={{ fontSize: 13.5, color: 'var(--texte-2)', lineHeight: 1.5 }}>
           {t(
             context === 'memberCare'
               ? 'hierarchy.lock.compactMemberCare'
@@ -776,7 +776,7 @@ export function HierarchyLockedCompact({
           )}
         </div>
         {!subscribable && (
-          <div style={{ fontSize: 13, color: 'var(--ink-500)', marginTop: 6 }}>{t('hierarchy.lock.askShephr')}</div>
+          <div style={{ fontSize: 13, color: 'var(--texte-3)', marginTop: 6 }}>{t('hierarchy.lock.askShephr')}</div>
         )}
       </div>
       {/* W-02 (plan 05 §10.2, JP 29/10) : tous les verrous compacts Caleb renvoient vers la carte de

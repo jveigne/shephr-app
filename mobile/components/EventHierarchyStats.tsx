@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '@/components/Card';
 import ErrorBanner from '@/components/ErrorBanner';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getEventHierarchyStats,
@@ -13,6 +13,8 @@ import {
 import { hierarchyAccessDenied, moduleAccessDenied } from '@/services/entitlementsApi';
 import { fmtIsoDay } from '@/utils/meetingReport';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * « Évènements de ma hiérarchie » — D-HIE-09 (JP 28/10), offre Caleb (code personnel
  * HIERARCHIE_SUIVI), page 3 « Vie de mon leadership ».
@@ -37,6 +39,8 @@ export default function EventHierarchyStatsBlock({
   refreshKey: number;
   onDenied: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const th = (k: string, o?: Record<string, unknown>) => t(`hierarchy.events.${k}`, o);
   const [loaded, setLoaded] = useState<{ key: string; stats: EventHierarchyStats } | null>(null);
@@ -84,7 +88,7 @@ export default function EventHierarchyStatsBlock({
   return (
     <Card style={styles.block}>
       <View style={styles.blockHeader}>
-        <Ionicons name="megaphone-outline" size={18} color={colors.mossDeep} />
+        <Ionicons name="megaphone-outline" size={18} color={c.accentProfond} />
         <Text style={styles.blockTitle}>{th('title')}</Text>
       </View>
 
@@ -93,7 +97,7 @@ export default function EventHierarchyStatsBlock({
       {!stats ? (
         !errorMessage && (
           <View style={styles.loading}>
-            <ActivityIndicator color={colors.moss} />
+            <ActivityIndicator color={c.accent} />
           </View>
         )
       ) : (
@@ -150,6 +154,7 @@ function Figures({
   guests: number;
   num: (v: number) => string;
 }) {
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <View style={{ alignItems: 'flex-end' }}>
@@ -162,6 +167,7 @@ function Figures({
 }
 
 function UnitLine({ unit, num }: { unit: EventHierarchyUnitStats; num: (v: number) => string }) {
+  const styles = useStyles();
   const { t } = useLanguage();
   const th = (k: string, o?: Record<string, unknown>) => t(`hierarchy.events.${k}`, o);
   return (
@@ -186,6 +192,7 @@ function UnitLine({ unit, num }: { unit: EventHierarchyUnitStats; num: (v: numbe
 }
 
 function Tile({ value, label }: { value: string | number; label: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.tile}>
       <Text style={styles.tileValue}>{value}</Text>
@@ -194,28 +201,28 @@ function Tile({ value, label }: { value: string | number; label: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   block: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 12 },
   blockHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  blockTitle: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '700', color: colors.ink },
+  blockTitle: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '700', color: c.texte },
   loading: { paddingVertical: 18, alignItems: 'center' },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
   tile: {
     flexBasis: '31%',
     flexGrow: 1,
-    backgroundColor: colors.paper2,
+    backgroundColor: c.surfaceHaute,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 7,
   },
-  tileValue: { fontFamily: fonts.serif, fontSize: 17, color: colors.moss },
-  tileLabel: { fontFamily: fonts.sans, fontSize: 10.5, color: colors.ink3, marginTop: 1, lineHeight: 13 },
+  tileValue: { fontFamily: fonts.serif, fontSize: 17, color: c.accent },
+  tileLabel: { fontFamily: fonts.sans, fontSize: 10.5, color: c.texte3, marginTop: 1, lineHeight: 13 },
   sectionLabel: {
     fontFamily: fonts.mono,
     fontSize: 10.5,
-    color: colors.ink3,
+    color: c.texte3,
     letterSpacing: 1.1,
     textTransform: 'uppercase',
     marginTop: 14,
@@ -227,12 +234,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: colors.hair,
+    borderTopColor: c.filet,
   },
-  rowName: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
-  unitName: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.earthDeep },
-  meta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2, lineHeight: 16 },
-  figureStrong: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '700', color: colors.moss },
-  empty: { fontFamily: fonts.serif, fontStyle: 'italic', color: colors.ink3, textAlign: 'center', paddingVertical: 14 },
-  note: { fontFamily: fonts.sans, fontSize: 10.5, color: colors.ink3, lineHeight: 14, marginTop: 10 },
-});
+  rowName: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.texte },
+  unitName: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.secondaireProfond },
+  meta: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 2, lineHeight: 16 },
+  figureStrong: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '700', color: c.accent },
+  empty: { fontFamily: fonts.serif, fontStyle: 'italic', color: c.texte3, textAlign: 'center', paddingVertical: 14 },
+  note: { fontFamily: fonts.sans, fontSize: 10.5, color: c.texte3, lineHeight: 14, marginTop: 10 },
+}));

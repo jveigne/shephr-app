@@ -23,7 +23,7 @@ import Label from '@/components/Label';
 import Button from '@/components/Button';
 import Wordmark from '@/components/Wordmark';
 import SelectField from '@/components/SelectField';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { confirmDialog, notify } from '@/utils/dialogs';
@@ -44,6 +44,8 @@ import {
   type JoinRequestedRole,
 } from '@/services/joinRequestsApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 type Mode = 'search' | 'create' | 'code' | 'pending';
 
 /**
@@ -66,6 +68,8 @@ const RESULT_CAP = 50;
  * une nouvelle assemblée ; puis suivre sa demande en attente de validation.
  */
 export default function JoinScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   // Coordonnées d'aide (pays / région / ville manquants) — pilotées depuis le back-office.
@@ -266,7 +270,7 @@ export default function JoinScreen() {
   if (booting) {
     return (
       <View style={[styles.root, { alignItems: 'center', justifyContent: 'center' }]}>
-        <ActivityIndicator color={colors.moss} />
+        <ActivityIndicator color={c.accent} />
       </View>
     );
   }
@@ -294,7 +298,7 @@ export default function JoinScreen() {
                 style={styles.iconBtn}
                 hitSlop={10}
               >
-                <Ionicons name="chevron-back" size={22} color={colors.mossDeep} />
+                <Ionicons name="chevron-back" size={22} color={c.accentProfond} />
               </Pressable>
             )}
             <Wordmark size={22} />
@@ -354,7 +358,7 @@ export default function JoinScreen() {
                 height={52}
                 style={{ marginTop: 24 }}
                 onPress={() => { setCreateStep('role'); setMode('search'); }}
-                iconLeft={<Ionicons name="arrow-back" size={18} color={colors.mossDeep} />}
+                iconLeft={<Ionicons name="arrow-back" size={18} color={c.accentProfond} />}
               />
             </>
           )}
@@ -404,7 +408,7 @@ export default function JoinScreen() {
                     label={t('join.contactWhatsapp')}
                     variant="soft"
                     onPress={() => Linking.openURL(contact.whatsappUrl).catch(() => {})}
-                    iconLeft={<Ionicons name="logo-whatsapp" size={18} color={colors.mossDeep} />}
+                    iconLeft={<Ionicons name="logo-whatsapp" size={18} color={c.accentProfond} />}
                   />
                   <Button
                     label={t('join.contactMail')}
@@ -412,7 +416,7 @@ export default function JoinScreen() {
                     onPress={() =>
                       Linking.openURL(contactMailto(t('join.contactMailSubject'))).catch(() => {})
                     }
-                    iconLeft={<Ionicons name="mail-outline" size={18} color={colors.mossDeep} />}
+                    iconLeft={<Ionicons name="mail-outline" size={18} color={c.accentProfond} />}
                   />
                 </View>
               </View>
@@ -436,7 +440,7 @@ export default function JoinScreen() {
                     fontFamily: fonts.mono,
                     fontSize: 24,
                     letterSpacing: 1.5,
-                    color: colors.mossDeep,
+                    color: c.accentProfond,
                     paddingVertical: 4,
                   }}
                 />
@@ -449,7 +453,7 @@ export default function JoinScreen() {
                 loading={submitting}
                 height={56}
                 style={{ marginTop: 18 }}
-                iconLeft={<Ionicons name="checkmark" size={18} color={colors.white} />}
+                iconLeft={<Ionicons name="checkmark" size={18} color={c.surAccent} />}
               />
             </>
           )}
@@ -459,7 +463,7 @@ export default function JoinScreen() {
               <Text style={styles.title}>{t('join.requestSent')}</Text>
               <Card style={styles.pendingCard}>
                 <View style={styles.pendingIcon}>
-                  <Ionicons name="time-outline" size={26} color={colors.earthDeep} />
+                  <Ionicons name="time-outline" size={26} color={c.secondaireProfond} />
                 </View>
                 <Label>{t('join.myRequest')}</Label>
                 <Text style={styles.pendingName}>
@@ -484,7 +488,7 @@ export default function JoinScreen() {
                 fullWidth
                 height={54}
                 style={{ marginTop: 18 }}
-                iconRight={<Ionicons name="arrow-forward" size={18} color={colors.white} />}
+                iconRight={<Ionicons name="arrow-forward" size={18} color={c.surAccent} />}
               />
               <Button
                 label={t('join.cancelRequest')}
@@ -590,6 +594,8 @@ function SearchSection({
   onNotFound: () => void;
   onCode: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   // Une recherche est « active » dès qu'une ville est choisie, ou dès 2 caractères saisis.
   const active = city != null || debouncedQ.length >= MIN_QUERY_LENGTH;
@@ -603,7 +609,7 @@ function SearchSection({
 
       <Text style={styles.drillHint}>{t('join.browseTitle')}</Text>
       {context == null ? (
-        <ActivityIndicator color={colors.moss} style={{ marginTop: 10 }} />
+        <ActivityIndicator color={c.accent} style={{ marginTop: 10 }} />
       ) : (
         <PlaceDrill
           context={context}
@@ -619,7 +625,7 @@ function SearchSection({
       {/* Le champ de recherche appartient à la LISTE : il est rendu juste au-dessus d'elle,
           là où on filtre — pas en tête d'écran, hors de vue dès que la liste s'allonge. */}
       <View style={styles.searchBox}>
-        <Ionicons name="search" size={16} color={colors.ink3} />
+        <Ionicons name="search" size={16} color={c.texte3} />
         <Field
           value={query}
           onChangeText={onQuery}
@@ -629,7 +635,7 @@ function SearchSection({
         />
       </View>
 
-      {searching && <ActivityIndicator color={colors.moss} style={{ marginTop: 14 }} />}
+      {searching && <ActivityIndicator color={c.accent} style={{ marginTop: 14 }} />}
       {!searching && active && results.length === 0 && (
         <Text style={styles.emptyHint}>
           {city ? t('join.noAssemblyInCity') : t('join.noResults')}
@@ -650,11 +656,11 @@ function SearchSection({
       )}
 
       <Pressable onPress={onNotFound} style={styles.secondaryLink}>
-        <Ionicons name="add-circle-outline" size={16} color={colors.earthDeep} />
+        <Ionicons name="add-circle-outline" size={16} color={c.secondaireProfond} />
         <Text style={styles.secondaryLinkText}>{t('join.notFound')}</Text>
       </Pressable>
       <Pressable onPress={onCode} style={styles.secondaryLink}>
-        <Ionicons name="key-outline" size={16} color={colors.earthDeep} />
+        <Ionicons name="key-outline" size={16} color={c.secondaireProfond} />
         <Text style={styles.secondaryLinkText}>{t('join.hasJoinCode')}</Text>
       </Pressable>
     </>
@@ -668,6 +674,8 @@ function AssemblyRow({
   assembly: AssemblySearchResult;
   onPress: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <Card onPress={onPress} style={styles.resultCard}>
@@ -684,7 +692,7 @@ function AssemblyRow({
           </Text>
         )}
       </View>
-      <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+      <Ionicons name="chevron-forward" size={16} color={c.texte3} />
     </Card>
   );
 }
@@ -707,6 +715,7 @@ function PlaceDrill({
   onRegion: (r: RequestNodeOption | null) => void;
   onCity: (c: RequestNodeOption | null) => void;
 }) {
+  const { couleurs: c } = useTheme();
   const { t } = useLanguage();
   const regions = nation ? context.regions.filter((r) => r.parentId === nation.id) : [];
   const cities = region ? context.cities.filter((c) => c.parentId === region.id) : [];
@@ -738,6 +747,7 @@ function PlaceDrill({
 
 
 function Hills() {
+  const { couleurs: c } = useTheme();
   return (
     <Svg
       viewBox="0 0 402 240"
@@ -746,30 +756,30 @@ function Hills() {
     >
       <Path
         d="M-10,130 C 80,80 160,180 240,130 S 380,80 420,120 L 420,250 L -10,250 Z"
-        fill="#1E3A2F"
+        fill={c.accent}
         opacity={0.14}
       />
-      <Circle cx="320" cy="80" r="34" fill="#C9956B" opacity={0.4} />
+      <Circle cx="320" cy="80" r="34" fill={c.secondaire} opacity={0.4} />
     </Svg>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.parchment },
+const useStyles = creerStyles((c) => ({
+  root: { flex: 1, backgroundColor: c.page },
   scroll: { paddingHorizontal: 24, flexGrow: 1 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   iconBtn: { padding: 4 },
   title: {
     fontFamily: fonts.serif,
     fontSize: 26,
-    color: colors.mossDeep,
+    color: c.accentProfond,
     marginTop: 18,
     letterSpacing: -0.4,
   },
   subtitle: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink2,
+    color: c.texte2,
     marginTop: 6,
     lineHeight: 20,
   },
@@ -778,10 +788,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: 'rgba(42,38,32,0.15)',
+    borderColor: transparence(c.texte, 0.15),
     borderRadius: 14,
     paddingHorizontal: 14,
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     marginTop: 18,
   },
   searchField: {
@@ -793,30 +803,30 @@ const styles = StyleSheet.create({
   drillHint: {
     fontFamily: fonts.sans,
     fontSize: 12.5,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 16,
   },
   contactBlock: {
     marginTop: 22,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(42,38,32,0.10)',
+    borderTopColor: transparence(c.texte, 0.10),
   },
   contactHint: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink2,
+    color: c.texte2,
     lineHeight: 19,
   },
   cappedHint: {
     fontFamily: fonts.sans,
     fontSize: 12,
-    color: colors.earthDeep,
+    color: c.secondaireProfond,
     lineHeight: 18,
     marginTop: 10,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(201,149,107,0.14)',
+    backgroundColor: transparence(c.secondaire, 0.14),
   },
   resultCard: {
     paddingHorizontal: 16,
@@ -826,15 +836,15 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 8,
   },
-  resultName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
-  resultMeta: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginTop: 2 },
+  resultName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.texte },
+  resultMeta: { fontFamily: fonts.sans, fontSize: 12, color: c.texte3, marginTop: 2 },
   leaderTag: {
     alignSelf: 'flex-start',
     fontFamily: fonts.sans,
     fontSize: 10.5,
     fontWeight: '700',
-    color: colors.earthDeep,
-    backgroundColor: 'rgba(201,149,107,0.22)',
+    color: c.secondaireProfond,
+    backgroundColor: transparence(c.secondaire, 0.22),
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 99,
@@ -852,16 +862,16 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontSize: 13.5,
     fontWeight: '600',
-    color: colors.earthDeep,
+    color: c.secondaireProfond,
   },
   emptyHint: {
     fontFamily: fonts.sans,
     fontSize: 12.5,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 12,
     lineHeight: 18,
   },
-  cancelLink: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink3, fontWeight: '600' },
+  cancelLink: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte3, fontWeight: '600' },
   pendingCard: {
     marginTop: 18,
     paddingHorizontal: 20,
@@ -872,29 +882,29 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 13,
-    backgroundColor: 'rgba(201,149,107,0.18)',
+    backgroundColor: transparence(c.secondaire, 0.18),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
   },
-  pendingName: { fontFamily: fonts.serif, fontSize: 19, color: colors.ink, marginTop: 2 },
-  pendingMeta: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4 },
+  pendingName: { fontFamily: fonts.serif, fontSize: 19, color: c.texte, marginTop: 2 },
+  pendingMeta: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 4 },
   pendingHint: {
     fontFamily: fonts.sans,
     fontSize: 12.5,
-    color: colors.ink2,
+    color: c.texte2,
     lineHeight: 18,
     marginTop: 14,
-    backgroundColor: 'rgba(42,38,32,0.04)',
+    backgroundColor: transparence(c.texte, 0.04),
     padding: 12,
     borderRadius: 14,
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(22,41,31,0.45)',
+    backgroundColor: c.voile,
     justifyContent: 'center',
     padding: 20,
   },
   modalCard: { paddingHorizontal: 20, paddingVertical: 20 },
-  modalTitle: { fontFamily: fonts.serif, fontSize: 21, color: colors.ink },
-});
+  modalTitle: { fontFamily: fonts.serif, fontSize: 21, color: c.texte },
+}));

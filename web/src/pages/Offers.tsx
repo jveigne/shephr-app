@@ -197,7 +197,8 @@ export function OffersPage() {
     );
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--ivory)', color: 'var(--ink-900)', fontFamily: 'var(--font-sans)' }}>
+    // D11 (décision B5 de JP) : /offres reste en Clair, quel que soit le thème de l'utilisateur.
+    <div data-theme="clair" style={{ minHeight: '100vh', background: 'var(--ivory)', color: 'var(--ink-900)', fontFamily: 'var(--font-sans)' }}>
       <OfferHeader loggedIn={loggedIn} home={home} />
 
       <main>

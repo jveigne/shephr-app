@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '@/components/Card';
 import Label from '@/components/Label';
 import HandDivider from '@/components/HandDivider';
 import ErrorBanner from '@/components/ErrorBanner';
 import StudyCityLock from '@/components/StudyCityLock';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getEventStats,
@@ -23,6 +23,8 @@ import { counterParts, fmtMonth, isEnglishLang, typeLabel } from '@/utils/events
 import { notify } from '@/utils/dialogs';
 import type { Translate } from '@/utils/meetingReport';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Lot E7 (plan 14/10, §6.3) — STATISTIQUES D'ÉVANGÉLISATION avec descente Nation → Région →
  * Ville → Assemblée, en cartes par sous-niveau (pattern `GoalAggregates`). D-EVT-09 : c'est
@@ -94,6 +96,8 @@ export default function EventStatsDrill({
    */
   root?: { level: OrgLevel; id: string };
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [path, setPath] = useState<DrillStep[]>([]);
   const current = path.length > 0 ? path[path.length - 1] : null;
@@ -189,13 +193,13 @@ export default function EventStatsDrill({
   // Racine pas encore lue : rien à descendre, pas de fil d'Ariane.
   if (!root) {
     if (loading) {
-      return <ActivityIndicator color={colors.moss} style={{ marginTop: 40 }} />;
+      return <ActivityIndicator color={c.accent} style={{ marginTop: 40 }} />;
     }
     if (locked) return <StudyCityLock />;
     if (error?.noPerimeter) {
       return (
         <Card variant="paper2" style={styles.emptyCard}>
-          <Ionicons name="lock-closed-outline" size={24} color={colors.ink3} />
+          <Ionicons name="lock-closed-outline" size={24} color={c.texte3} />
           <Text style={styles.emptyText}>{t('events.stats.noPerimeter')}</Text>
         </Card>
       );
@@ -227,7 +231,7 @@ export default function EventStatsDrill({
         )}
         {path.map((step, i) => (
           <View key={`${step.level}:${step.id}`} style={styles.crumbItem}>
-            <Ionicons name="chevron-forward" size={12} color={colors.ink3} />
+            <Ionicons name="chevron-forward" size={12} color={c.texte3} />
             {i === path.length - 1 ? (
               <Text style={styles.crumbOn}>{step.name}</Text>
             ) : (
@@ -237,7 +241,7 @@ export default function EventStatsDrill({
             )}
           </View>
         ))}
-        {loading && <ActivityIndicator size="small" color={colors.moss} style={{ marginLeft: 6 }} />}
+        {loading && <ActivityIndicator size="small" color={c.accent} style={{ marginLeft: 6 }} />}
       </View>
 
       {!!error && !loading && <ErrorBanner message={error.message} onRetry={retry} />}
@@ -260,6 +264,8 @@ function StatsBody({
   dimmed: boolean;
   onOpen: (c: ChildStats) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const english = isEnglishLang(language);
   // D-OFF-12 : `children` null quand la ventilation sous la ville est verrouillée.
@@ -309,23 +315,23 @@ function StatsBody({
           </View>
           <Text style={styles.sectionHint}>{t('events.stats.drillHint')}</Text>
           <View style={{ gap: 8, marginTop: 10 }}>
-            {children.map((c) => (
-              <Card key={`${c.level}:${c.id}`} style={styles.childCard} onPress={() => onOpen(c)}>
+            {children.map((enfant) => (
+              <Card key={`${enfant.level}:${enfant.id}`} style={styles.childCard} onPress={() => onOpen(enfant)}>
                 <View style={styles.childHead}>
                   <View style={styles.childIcon}>
-                    <Ionicons name={LEVEL_ICON[c.level]} size={18} color={colors.mossSoft} />
+                    <Ionicons name={LEVEL_ICON[enfant.level]} size={18} color={c.accentDoux} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.childName} numberOfLines={2}>
-                      {c.name ?? t(`events.levels.${c.level}`)}
+                      {enfant.name ?? t(`events.levels.${enfant.level}`)}
                     </Text>
-                    {!homogeneous && <Text style={styles.childMeta}>{t(`events.levels.${c.level}`)}</Text>}
+                    {!homogeneous && <Text style={styles.childMeta}>{t(`events.levels.${enfant.level}`)}</Text>}
                   </View>
-                  <Text style={[styles.childCount, c.count === 0 && { color: colors.ink3 }]}>{c.count}</Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+                  <Text style={[styles.childCount, enfant.count === 0 && { color: c.texte3 }]}>{enfant.count}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={c.texte3} />
                 </View>
                 <HandDivider style={{ marginVertical: 8 }} />
-                <Text style={styles.childMeta}>{figures(c, t)}</Text>
+                <Text style={styles.childMeta}>{figures(enfant, t)}</Text>
               </Card>
             ))}
           </View>
@@ -382,11 +388,13 @@ function Kpi({
   hintAlert?: boolean;
   strong?: boolean;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   return (
     <Card variant={strong ? 'tinted' : 'paper'} style={styles.kpi}>
       <Label>{label}</Label>
       <Text style={styles.kpiValue}>{value}</Text>
-      {!!hint && <Text style={[styles.kpiHint, hintAlert && { color: colors.clay }]}>{hint}</Text>}
+      {!!hint && <Text style={[styles.kpiHint, hintAlert && { color: c.alerte }]}>{hint}</Text>}
     </Card>
   );
 }
@@ -402,6 +410,8 @@ function ListLine({
   first: boolean;
   t: Translate;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   return (
     <View style={[styles.listLine, !first && styles.listLineBorder]}>
       <View style={{ flex: 1, minWidth: 0 }}>
@@ -410,24 +420,24 @@ function ListLine({
         </Text>
         {totals.count > 0 && <Text style={styles.childMeta}>{figures(totals, t)}</Text>}
       </View>
-      <Text style={[styles.listCount, totals.count === 0 && { color: colors.ink3 }]}>{totals.count}</Text>
+      <Text style={[styles.listCount, totals.count === 0 && { color: c.texte3 }]}>{totals.count}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   crumbs: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 16 },
   crumbItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  crumb: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.moss, textDecorationLine: 'underline' },
-  crumbOn: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '700', color: colors.ink },
+  crumb: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.accent, textDecorationLine: 'underline' },
+  crumbOn: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '700', color: c.texte },
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
   kpi: { flexBasis: '47%', flexGrow: 1, paddingHorizontal: 14, paddingVertical: 12, gap: 4 },
-  kpiValue: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.5 },
-  kpiHint: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3 },
-  rule: { marginTop: 10, fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, lineHeight: 17 },
+  kpiValue: { fontFamily: fonts.serif, fontSize: 28, color: c.texte, letterSpacing: -0.5 },
+  kpiHint: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3 },
+  rule: { marginTop: 10, fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, lineHeight: 17 },
   sectionRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 22 },
-  sectionTitle: { fontFamily: fonts.serif, fontSize: 20, color: colors.ink },
-  sectionHint: { marginTop: 4, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3 },
+  sectionTitle: { fontFamily: fonts.serif, fontSize: 20, color: c.texte },
+  sectionHint: { marginTop: 4, fontFamily: fonts.sans, fontSize: 12, color: c.texte3 },
   childCard: { paddingHorizontal: 16, paddingVertical: 12 },
   childHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   childIcon: {
@@ -436,17 +446,17 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
   },
-  childName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
-  childMeta: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginTop: 2 },
-  childCount: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink },
-  ownLevel: { marginTop: 10, fontFamily: fonts.sans, fontSize: 12, color: colors.ink2, lineHeight: 17 },
+  childName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.texte },
+  childMeta: { fontFamily: fonts.sans, fontSize: 12, color: c.texte3, marginTop: 2 },
+  childCount: { fontFamily: fonts.serif, fontSize: 22, color: c.texte },
+  ownLevel: { marginTop: 10, fontFamily: fonts.sans, fontSize: 12, color: c.texte2, lineHeight: 17 },
   listCard: { paddingHorizontal: 16, paddingVertical: 4, marginTop: 10 },
   listLine: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
-  listLineBorder: { borderTopWidth: 1, borderTopColor: colors.hair },
-  listLabel: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '500', color: colors.ink },
-  listCount: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink },
+  listLineBorder: { borderTopWidth: 1, borderTopColor: c.filet },
+  listLabel: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '500', color: c.texte },
+  listCount: { fontFamily: fonts.serif, fontSize: 18, color: c.texte },
   emptyCard: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 24, alignItems: 'center', gap: 10 },
-  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2, lineHeight: 20, textAlign: 'center' },
-});
+  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte2, lineHeight: 20, textAlign: 'center' },
+}));

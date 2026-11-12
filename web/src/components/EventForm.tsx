@@ -224,7 +224,7 @@ export function EventForm({
   };
 
   const showErr = (k: keyof typeof errors) =>
-    submitted && errors[k] ? <span style={{ color: 'var(--err)' }}>{errors[k]}</span> : undefined;
+    submitted && errors[k] ? <span style={{ color: 'var(--alerte)' }}>{errors[k]}</span> : undefined;
 
   const submitLabel = saveM.isPending
     ? t('common.saving')
@@ -325,7 +325,7 @@ export function EventForm({
           onChange={(k, v) => setCounts((c) => ({ ...c, [k]: v }))}
           hint={(k) =>
             k === 'guests' && guestsExceed ? (
-              <span style={{ color: 'var(--err)' }}>{errors.guests}</span>
+              <span style={{ color: 'var(--alerte)' }}>{errors.guests}</span>
             ) : (
               showErr(k) ?? (k === 'guests' ? t('events.form.guestsHint') : t('common.optional'))
             )
@@ -365,7 +365,7 @@ export function EventForm({
       ) : null}
 
       {saveM.isError && (
-        <div role="alert" style={{ color: 'var(--err)', fontSize: 13 }}>
+        <div role="alert" style={{ color: 'var(--alerte)', fontSize: 13 }}>
           {eventErrorMessage(saveM.error, t)}
         </div>
       )}
@@ -464,9 +464,9 @@ function TypeChip({ selected, onClick, children }: { selected: boolean; onClick:
         display: 'inline-flex',
         alignItems: 'center',
         gap: 6,
-        border: `1px solid ${selected ? 'var(--green-700)' : 'var(--line)'}`,
-        background: selected ? 'var(--green-700)' : 'var(--ivory-raised)',
-        color: selected ? 'var(--ivory)' : 'var(--ink-800)',
+        border: `1px solid ${selected ? 'var(--accent-moyen)' : 'var(--filet)'}`,
+        background: selected ? 'var(--accent-moyen)' : 'var(--surface-haute)',
+        color: selected ? 'var(--surface-basse)' : 'var(--texte-corps)',
         fontWeight: selected ? 600 : 500,
       }}
     >
@@ -487,9 +487,9 @@ export function ScopeBanner({ children, tone = 'info' }: { children: ReactNode; 
         padding: '9px 12px',
         borderRadius: 'var(--radius)',
         fontSize: 13,
-        background: tone === 'warn' ? 'var(--warn-bg)' : 'var(--green-50)',
-        color: tone === 'warn' ? 'var(--warn)' : 'var(--green-800)',
-        border: `1px solid ${tone === 'warn' ? 'var(--warn-bg)' : 'var(--green-100)'}`,
+        background: tone === 'warn' ? 'var(--avertissement-teinte)' : 'var(--accent-teinte-douce)',
+        color: tone === 'warn' ? 'var(--avertissement)' : 'var(--accent)',
+        border: `1px solid ${tone === 'warn' ? 'var(--avertissement-teinte)' : 'var(--accent-teinte)'}`,
       }}
     >
       <Icon name={tone === 'warn' ? 'warning' : 'info'} size={15} />

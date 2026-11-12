@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, RefreshControl } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
@@ -9,7 +9,7 @@ import ErrorBanner from '@/components/ErrorBanner';
 import EventCounters from '@/components/EventCounters';
 import EventQueueBlocks from '@/components/EventQueueBlocks';
 import { AgendaBlock } from '@/components/EventAgenda';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useEventCatalog } from '@/hooks/useEventCatalog';
@@ -18,6 +18,8 @@ import { flushEventQueue, useEventQueue } from '@/services/eventQueue';
 import { eventActionMessage } from '@/utils/eventErrors';
 import { monthLocal, todayLocal } from '@/utils/events';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 interface AssemblyCounts {
   month: string;
   monthCount: number;
@@ -50,6 +52,8 @@ interface AssemblyCounts {
  * quand même, le serveur l'imposant déjà au simple membre.
  */
 export default function EventMemberView() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const { me, hasEvents } = useAuth();
   const userId = me?.id ?? null;
@@ -130,7 +134,7 @@ export default function EventMemberView() {
   return (
     <ScreenShell
       refreshControl={
-        active ? <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} /> : undefined
+        active ? <RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} /> : undefined
       }
     >
       <Text style={styles.kicker}>{t('events.tab.kicker')}</Text>
@@ -139,14 +143,14 @@ export default function EventMemberView() {
 
       {!hasEvents ? (
         <Card variant="paper2" style={styles.empty}>
-          <Ionicons name="lock-closed-outline" size={26} color={colors.ink3} />
+          <Ionicons name="lock-closed-outline" size={26} color={c.texte3} />
           <Text style={styles.emptyText}>{t('events.declare.moduleUnavailable')}</Text>
         </Card>
       ) : (
         <>
           {!!assemblyName && (
             <View style={styles.assembly}>
-              <Ionicons name="home-outline" size={14} color={colors.moss} />
+              <Ionicons name="home-outline" size={14} color={c.accent} />
               <Text style={styles.assemblyName}>{assemblyName}</Text>
             </View>
           )}
@@ -173,7 +177,7 @@ export default function EventMemberView() {
                       disabled={noTypes}
                       height={46}
                       style={{ flex: 1 }}
-                      iconLeft={<Ionicons name="megaphone-outline" size={17} color={colors.white} />}
+                      iconLeft={<Ionicons name="megaphone-outline" size={17} color={c.surAccent} />}
                     />
                   )}
                   {scopes.canPlan && (
@@ -184,7 +188,7 @@ export default function EventMemberView() {
                       disabled={noTypes}
                       height={46}
                       style={{ flex: 1 }}
-                      iconLeft={<Ionicons name="calendar-outline" size={17} color={colors.mossDeep} />}
+                      iconLeft={<Ionicons name="calendar-outline" size={17} color={c.accentProfond} />}
                     />
                   )}
                 </View>
@@ -200,7 +204,7 @@ export default function EventMemberView() {
               <AgendaBlock
                 title={t('events.agenda.upcoming')}
                 sub={t('events.member.plannedSub')}
-                tone={colors.earthDeep}
+                tone={c.secondaireProfond}
                 params={{ status: 'PLANNED', from: todayLocal(), order: 'ASC', includeAncestors: false }}
                 empty={scopes?.canPlan ? t('events.agenda.upcomingEmptyPlanner') : t('events.agenda.upcomingEmpty')}
                 refreshKey={reloadKey}
@@ -209,7 +213,7 @@ export default function EventMemberView() {
               <AgendaBlock
                 title={t('events.member.doneTitle')}
                 sub={t('events.member.doneSub')}
-                tone={colors.moss}
+                tone={c.accent}
                 params={{ status: 'DONE', evangelism: true, order: 'DESC', includeAncestors: false }}
                 empty={t('events.member.doneEmpty')}
                 refreshKey={reloadKey}
@@ -219,7 +223,7 @@ export default function EventMemberView() {
               <AgendaBlock
                 title={t('events.member.all')}
                 sub={t('events.member.allSub')}
-                tone={colors.moss}
+                tone={c.accent}
                 params="mine"
                 empty={t('events.member.allEmpty')}
                 refreshKey={reloadKey}
@@ -234,20 +238,20 @@ export default function EventMemberView() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   kicker: {
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.clay,
+    color: c.alerte,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4, marginTop: 4 },
-  subtitle: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, marginTop: 4, lineHeight: 19 },
+  title: { fontFamily: fonts.serif, fontSize: 28, color: c.texte, letterSpacing: -0.4, marginTop: 4 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, marginTop: 4, lineHeight: 19 },
   assembly: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
-  assemblyName: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.moss },
+  assemblyName: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.accent },
   actions: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  hint: { marginTop: 10, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, lineHeight: 17 },
+  hint: { marginTop: 10, fontFamily: fonts.sans, fontSize: 12, color: c.texte3, lineHeight: 17 },
   empty: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 24, alignItems: 'center', gap: 10 },
-  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2, lineHeight: 20, textAlign: 'center' },
-});
+  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte2, lineHeight: 20, textAlign: 'center' },
+}));

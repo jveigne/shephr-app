@@ -64,7 +64,7 @@ export function EventsTable({
 }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
-  const dash = <span style={{ color: 'var(--ink-400)' }}>—</span>;
+  const dash = <span style={{ color: 'var(--texte-4)' }}>—</span>;
 
   const cols: Column<EventResponse>[] = [
     {
@@ -84,10 +84,10 @@ export function EventsTable({
               </span>
             )}
           </div>
-          {e.title && <div style={{ color: 'var(--ink-500)', fontSize: 12 }}>{e.title}</div>}
+          {e.title && <div style={{ color: 'var(--texte-3)', fontSize: 12 }}>{e.title}</div>}
           {/* D-EVT-16 (JP 14/10) : le prédicateur, quand il est renseigné (type évangélique seulement). */}
           {e.preacher && (
-            <div style={{ color: 'var(--green-800)', fontSize: 12, fontWeight: 500 }}>
+            <div style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 500 }}>
               {t('events.preacherLine', { name: e.preacher })}
             </div>
           )}
@@ -175,9 +175,9 @@ export function EventsBlock({
         <span className="muted" style={{ fontSize: 12.5 }}>{sub}</span>
       </div>
       {q.isLoading ? (
-        <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>
+        <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>
       ) : !q.data ? (
-        <p role="alert" style={{ color: 'var(--err)' }}>{eventErrorMessage(q.error, t)}</p>
+        <p role="alert" style={{ color: 'var(--alerte)' }}>{eventErrorMessage(q.error, t)}</p>
       ) : (
         <div className="card" style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>
           <EventsTable
@@ -186,7 +186,7 @@ export function EventsBlock({
             onOpen={onOpen}
             mineId={mineId}
             withScope={withScope}
-            empty={<p style={{ margin: 0, padding: '16px 22px', color: 'var(--ink-500)', fontSize: 13 }}>{empty}</p>}
+            empty={<p style={{ margin: 0, padding: '16px 22px', color: 'var(--texte-3)', fontSize: 13 }}>{empty}</p>}
           />
         </div>
       )}

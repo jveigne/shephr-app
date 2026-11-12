@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, Pressable } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
@@ -9,7 +9,7 @@ import Label from '@/components/Label';
 import Amount from '@/components/Amount';
 import ErrorBanner from '@/components/ErrorBanner';
 import DeclarationStatusPill from '@/components/DeclarationStatusPill';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useDonationCategories } from '@/hooks/useDonationCategories';
 import {
   listDeclarations,
@@ -19,6 +19,8 @@ import {
 import { fmtAmount, fmtDate, monthLabel, parseLocalDate, toLocalDate } from '@/utils/format';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Lot T7 (décision J-1, JP 14/09) — « MES DÉCLARATIONS ».
  *
@@ -39,6 +41,8 @@ const PERIODS: Period[] = ['month', '3m', '6m', 'year', 'all'];
 const STATUSES: DeclarationStatus[] = ['DECLARE', 'VERIFIE'];
 
 export default function DeclarationsScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const { labelOf, metaOf } = useDonationCategories();
   const [period, setPeriod] = useState<Period>('month');
@@ -91,7 +95,7 @@ export default function DeclarationsScreen() {
   return (
     <ScreenShell
       refreshControl={
-        <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
       <Text style={styles.title}>{t('declarations.title')}</Text>
@@ -99,7 +103,7 @@ export default function DeclarationsScreen() {
       {failed && <ErrorBanner message={t('declarations.loadFailed')} onRetry={() => void load()} />}
 
       <Card style={styles.totalCard}>
-        <Label style={{ color: colors.mossSoft }}>{t('history.totalPeriod')}</Label>
+        <Label style={{ color: c.accentDoux }}>{t('history.totalPeriod')}</Label>
         {totals.length === 0 ? (
           <View style={styles.totalRow}>
             <Text style={styles.noTotal}>{t('declarations.noTotal')}</Text>
@@ -220,10 +224,12 @@ export default function DeclarationsScreen() {
 }
 
 function EmptyState() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <View style={{ alignItems: 'center', paddingVertical: 48 }}>
-      <Ionicons name="leaf-outline" size={36} color={colors.mossSoft} />
+      <Ionicons name="leaf-outline" size={36} color={c.accentDoux} />
       <Text style={styles.emptyText}>{t('declarations.emptyState')}</Text>
     </View>
   );
@@ -287,11 +293,11 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   title: {
     fontFamily: fonts.serif,
     fontSize: 30,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.5,
     marginTop: 6,
   },
@@ -302,12 +308,12 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     marginTop: 2,
   },
-  count: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3 },
+  count: { fontFamily: fonts.sans, fontSize: 12, color: c.texte3 },
   noTotal: {
     fontFamily: fonts.serif,
     fontStyle: 'italic',
     fontSize: 16,
-    color: colors.ink3,
+    color: c.texte3,
   },
   row: {
     flexDirection: 'row',
@@ -325,9 +331,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rowBody: { flex: 1, minWidth: 0 },
-  rowTitle: { fontFamily: fonts.sans, fontWeight: '600', fontSize: 14.5, color: colors.ink },
+  rowTitle: { fontFamily: fonts.sans, fontWeight: '600', fontSize: 14.5, color: c.texte },
   rowSubRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
-  rowSub: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3 },
+  rowSub: { fontFamily: fonts.sans, fontSize: 12, color: c.texte3 },
   groupHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -339,16 +345,16 @@ const styles = StyleSheet.create({
     fontFamily: fonts.serif,
     fontSize: 16,
     fontStyle: 'italic',
-    color: colors.mossSoft,
+    color: c.accentDoux,
   },
-  groupSum: { fontFamily: fonts.mono, fontSize: 12, color: colors.ink3 },
+  groupSum: { fontFamily: fonts.mono, fontSize: 12, color: c.texte3 },
   emptyText: {
     fontFamily: fonts.serif,
     fontSize: 16,
     fontStyle: 'italic',
-    color: colors.ink2,
+    color: c.texte2,
     marginTop: 14,
     textAlign: 'center',
     paddingHorizontal: 24,
   },
-});
+}));

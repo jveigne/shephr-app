@@ -71,9 +71,9 @@ export function AreaChart({
       >
         <defs>
           <linearGradient id="areaGreen" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#1E3A2F" stopOpacity="0.28" />
-            <stop offset="60%" stopColor="#1E3A2F" stopOpacity="0.08" />
-            <stop offset="100%" stopColor="#1E3A2F" stopOpacity="0" />
+            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.28" />
+            <stop offset="60%" stopColor="var(--accent)" stopOpacity="0.08" />
+            <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
           </linearGradient>
         </defs>
         {yTicks.map((v, i) => (
@@ -83,30 +83,30 @@ export function AreaChart({
               x2={w - padR}
               y1={y(v)}
               y2={y(v)}
-              stroke="#BFAB85"
+              stroke="var(--filet-fort)"
               strokeOpacity="0.25"
               strokeDasharray={i === 0 ? '0' : '3 5'}
             />
-            <text x={padL - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="#7A6B55" fontFamily="Inter">
+            <text x={padL - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="var(--texte-3)" fontFamily="Inter">
               {fmtShort(v)}
             </text>
           </g>
         ))}
         {areaD && <path d={areaD} fill="url(#areaGreen)" />}
-        {pathD && <path d={pathD} fill="none" stroke="#1E3A2F" strokeWidth="2" strokeLinecap="round" />}
+        {pathD && <path d={pathD} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" />}
         {pts.map((p, i) => (
           <circle
             key={i}
             cx={p[0]}
             cy={p[1]}
             r={i === hover ? 5 : 3}
-            fill={i === hover ? '#C9956B' : '#1E3A2F'}
-            stroke={i === hover ? '#FBF5E4' : 'transparent'}
+            fill={i === hover ? 'var(--secondaire)' : 'var(--accent)'}
+            stroke={i === hover ? 'var(--surface)' : 'transparent'}
             strokeWidth="2"
           />
         ))}
         {data.map((d, i) => (
-          <text key={i} x={x(i)} y={h - 8} textAnchor="middle" fontSize="11" fill="#7A6B55" fontFamily="Inter">
+          <text key={i} x={x(i)} y={h - 8} textAnchor="middle" fontSize="11" fill="var(--texte-3)" fontFamily="Inter">
             {d.label}
           </text>
         ))}
@@ -116,7 +116,7 @@ export function AreaChart({
             x2={x(hover)}
             y1={padT}
             y2={padT + innerH}
-            stroke="#1E3A2F"
+            stroke="var(--accent)"
             strokeOpacity="0.18"
             strokeDasharray="3 4"
           />
@@ -129,8 +129,8 @@ export function AreaChart({
             left: `${(x(hover) / w) * 100}%`,
             top: 4,
             transform: 'translateX(-50%)',
-            background: 'var(--green-800)',
-            color: '#FBF5E4',
+            background: 'var(--accent)',
+            color: 'var(--sur-accent)',
             padding: '8px 12px',
             borderRadius: 8,
             fontSize: 12,
@@ -161,13 +161,13 @@ export function HorizontalBars({ data }: { data: { name: string; total: number }
                 justifyContent: 'space-between',
                 marginBottom: 6,
                 fontSize: 13,
-                color: 'var(--ink-800)',
+                color: 'var(--texte-corps)',
               }}
             >
               <span style={{ fontWeight: 500 }}>{d.name}</span>
               <span
                 style={{
-                  color: 'var(--green-800)',
+                  color: 'var(--accent)',
                   fontWeight: 600,
                   fontVariantNumeric: 'tabular-nums',
                 }}
@@ -178,7 +178,7 @@ export function HorizontalBars({ data }: { data: { name: string; total: number }
             <div
               style={{
                 height: 10,
-                background: 'var(--parchment-deep)',
+                background: 'var(--page-profonde)',
                 borderRadius: 999,
                 overflow: 'hidden',
                 position: 'relative',
@@ -188,7 +188,7 @@ export function HorizontalBars({ data }: { data: { name: string; total: number }
                 style={{
                   height: '100%',
                   width: `${pct}%`,
-                  background: 'linear-gradient(90deg, var(--green-700), var(--green-600))',
+                  background: 'linear-gradient(90deg, var(--accent-moyen), var(--accent-doux))',
                   borderRadius: 999,
                   transition: 'width .6s cubic-bezier(.22,.9,.33,1)',
                 }}

@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   RefreshControl,
   ActivityIndicator,
@@ -16,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenShell from '@/components/ScreenShell';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { goalName } from '@/utils/goalName';
@@ -42,12 +41,16 @@ import {
   type StructureRequestContext,
 } from '@/services/structureRequestsApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Membres (Lot S1 — 21/07) : annuaire du périmètre de la personne connectée. La liste est SCOPÉE
  * côté backend (sous-arbre superviseur + unités visibles) — un membre simple ne voit que lui-même,
  * un dirigeant voit son périmètre. Invitation réservée aux managers (canManageUsers).
  */
 export default function MembresScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const { me } = useAuth();
   const { t } = useLanguage();
@@ -134,7 +137,7 @@ export default function MembresScreen() {
     return (
       <ScreenShell withTabBar={false}>
         <View style={{ alignItems: 'center', paddingTop: 80 }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       </ScreenShell>
     );
@@ -144,11 +147,11 @@ export default function MembresScreen() {
     <ScreenShell
       withTabBar={false}
       paddingTop={insets.top ? 4 : 16}
-      refreshControl={<RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={styles.headerRow}>
         <Pressable onPress={() => goBack()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={24} color={colors.ink2} />
+          <Ionicons name="arrow-back" size={24} color={c.texte2} />
         </Pressable>
         <Text style={styles.title}>{t('membres.title')}</Text>
       </View>
@@ -183,13 +186,13 @@ export default function MembresScreen() {
 
       {/* Recherche par noms approchés : déclenchée par le bouton, pas à la frappe. */}
       <View style={styles.searchBox}>
-        <Ionicons name="search" size={16} color={colors.ink3} />
+        <Ionicons name="search" size={16} color={c.texte3} />
         <TextInput
           value={searchInput}
           onChangeText={setSearchInput}
           style={styles.searchInput}
           placeholder={t('membres.searchPlaceholder')}
-          placeholderTextColor={colors.ink3}
+          placeholderTextColor={c.texte3}
           autoCapitalize="none"
           returnKeyType="search"
           onSubmitEditing={() => setSearch(searchInput.trim())}
@@ -258,7 +261,7 @@ export default function MembresScreen() {
                 </Text>
               )}
               {!u.active && <Text style={styles.inactivePill}>{t('membres.inactive')}</Text>}
-              <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+              <Ionicons name="chevron-forward" size={16} color={c.texte3} />
             </Card>
           );
         })}
@@ -306,6 +309,8 @@ function MemberGoalsModal({
   secretariat: boolean;
   onClose: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [acting, setActing] = useState(false);
@@ -408,7 +413,7 @@ function MemberGoalsModal({
         <Card style={styles.modalCard}>
           <Text style={styles.modalTitle}>{t('membres.goalsTitle', { name: member?.fullName ?? '' })}</Text>
 
-          {loading && <ActivityIndicator color={colors.moss} style={{ marginTop: 20 }} />}
+          {loading && <ActivityIndicator color={c.accent} style={{ marginTop: 20 }} />}
           {!loading && error && (
             <Text style={styles.empty}>
               {error === 'forbidden' ? t('membres.goalsNoAccess') : t('membres.goalsError')}
@@ -434,7 +439,7 @@ function MemberGoalsModal({
                   height={44}
                   loading={acting}
                   onPress={onRemind}
-                  iconLeft={<Ionicons name="notifications-outline" size={17} color={colors.mossDeep} />}
+                  iconLeft={<Ionicons name="notifications-outline" size={17} color={c.accentProfond} />}
                 />
               )}
               {secretariat && locked && (
@@ -444,7 +449,7 @@ function MemberGoalsModal({
                   height={44}
                   loading={acting}
                   onPress={onUnlock}
-                  iconLeft={<Ionicons name="lock-open-outline" size={17} color={colors.mossDeep} />}
+                  iconLeft={<Ionicons name="lock-open-outline" size={17} color={c.accentProfond} />}
                 />
               )}
             </View>
@@ -459,54 +464,54 @@ function MemberGoalsModal({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2 },
-  title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4 },
-  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4 },
+  title: { fontFamily: fonts.serif, fontSize: 28, color: c.texte, letterSpacing: -0.4 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 4 },
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14,
-    borderWidth: 1, borderColor: 'rgba(42,38,32,0.15)', borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 8, backgroundColor: colors.paper,
+    borderWidth: 1, borderColor: transparence(c.texte, 0.15), borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 8, backgroundColor: c.surface,
   },
-  searchInput: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: colors.ink, padding: 0 },
-  count: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginTop: 14, marginBottom: 8 },
+  searchInput: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: c.texte, padding: 0 },
+  count: { fontFamily: fonts.sans, fontSize: 12, color: c.texte3, marginTop: 14, marginBottom: 8 },
   itemCard: { paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: {
-    width: 38, height: 38, borderRadius: 19, backgroundColor: colors.moss,
+    width: 38, height: 38, borderRadius: 19, backgroundColor: c.accent,
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarText: { color: colors.white, fontFamily: fonts.serif, fontSize: 15 },
-  itemName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
-  itemMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2 },
+  avatarText: { color: c.surAccent, fontFamily: fonts.serif, fontSize: 15 },
+  itemName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.texte },
+  itemMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 2 },
   countRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
   submittedCounter: {
-    fontFamily: fonts.sans, fontSize: 12, fontWeight: '700', color: colors.mossDeep,
-    backgroundColor: colors.mossTint, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 99,
+    fontFamily: fonts.sans, fontSize: 12, fontWeight: '700', color: c.accentProfond,
+    backgroundColor: c.accentTeinte, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 99,
   },
   submittedPill: {
-    fontFamily: fonts.sans, fontSize: 10.5, fontWeight: '700', color: colors.mossDeep,
-    backgroundColor: colors.mossTint, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99,
+    fontFamily: fonts.sans, fontSize: 10.5, fontWeight: '700', color: c.accentProfond,
+    backgroundColor: c.accentTeinte, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99,
   },
-  submittedPillPending: { color: colors.earthDeep, backgroundColor: 'rgba(201,149,107,0.22)' },
+  submittedPillPending: { color: c.secondaireProfond, backgroundColor: transparence(c.secondaire, 0.22) },
   inactivePill: {
-    fontFamily: fonts.mono, fontSize: 9.5, color: colors.ink3, letterSpacing: 0.6,
+    fontFamily: fonts.mono, fontSize: 9.5, color: c.texte3, letterSpacing: 0.6,
     textTransform: 'uppercase', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 99,
-    backgroundColor: 'rgba(42,38,32,0.05)', borderWidth: 1, borderColor: 'rgba(42,38,32,0.07)',
+    backgroundColor: transparence(c.texte, 0.05), borderWidth: 1, borderColor: transparence(c.texte, 0.07),
     overflow: 'hidden',
   },
-  empty: { fontFamily: fonts.serif, fontStyle: 'italic', color: colors.ink3, textAlign: 'center', paddingVertical: 20 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(22,41,31,0.45)', justifyContent: 'center', padding: 20 },
+  empty: { fontFamily: fonts.serif, fontStyle: 'italic', color: c.texte3, textAlign: 'center', paddingVertical: 20 },
+  backdrop: { flex: 1, backgroundColor: c.voile, justifyContent: 'center', padding: 20 },
   modalCard: { paddingHorizontal: 20, paddingVertical: 20, maxHeight: '80%' },
-  modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink },
-  cancelLink: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink3 },
+  modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: c.texte },
+  cancelLink: { fontFamily: fonts.sans, fontSize: 14, color: c.texte3 },
   sectionLabel: {
-    fontFamily: fonts.mono, fontSize: 10, color: colors.ink3, letterSpacing: 0.8,
+    fontFamily: fonts.mono, fontSize: 10, color: c.texte3, letterSpacing: 0.8,
     textTransform: 'uppercase', marginBottom: 6,
   },
   pledgeRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-    paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: 'rgba(42,38,32,0.07)',
+    paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: transparence(c.texte, 0.07),
   },
-  pledgeLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2 },
-  pledgeValue: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
-});
+  pledgeLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, color: c.texte2 },
+  pledgeValue: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.texte },
+}));

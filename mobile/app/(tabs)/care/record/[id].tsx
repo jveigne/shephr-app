@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +10,7 @@ import Field from '@/components/Field';
 import Button from '@/components/Button';
 import Chip from '@/components/Chip';
 import CalebAssemblyLock from '@/components/CalebAssemblyLock';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   changeStatus,
@@ -25,6 +25,9 @@ import { notify } from '@/utils/dialogs';
 import { fmtDateLong } from '@/utils/format';
 import { fmtIsoDay } from '@/utils/meetingReport';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { tonDonnee } from '@/theme/tonsDonnees';
+import { useTheme } from '@/contexts/ThemeContext';
 /** Nombre de présences affichées avant « Tout afficher ». */
 const ATTENDANCE_PREVIEW = 8;
 
@@ -38,6 +41,8 @@ const ATTENDANCE_PREVIEW = 8;
  * `HIERARCHIE_SUIVI` (lecture ou écriture) → verrou Caleb à la place de la fiche.
  */
 export default function RecordDetailScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -139,7 +144,7 @@ export default function RecordDetailScreen() {
   const header = (
     <View style={styles.headerRow}>
       <Pressable onPress={() => goBack()} hitSlop={10}>
-        <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+        <Ionicons name="chevron-back" size={22} color={c.texte2} />
       </Pressable>
     </View>
   );
@@ -148,7 +153,7 @@ export default function RecordDetailScreen() {
     return (
       <ScreenShell>
         <View style={{ marginTop: 60, alignItems: 'center' }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       </ScreenShell>
     );
@@ -168,7 +173,7 @@ export default function RecordDetailScreen() {
       <ScreenShell>
         {header}
         <Card style={styles.emptyCard}>
-          <Ionicons name="alert-circle-outline" size={26} color={colors.ink3} />
+          <Ionicons name="alert-circle-outline" size={26} color={c.texte3} />
           <Text style={styles.emptyText}>{error ?? t('care.loadFailed')}</Text>
         </Card>
       </ScreenShell>
@@ -180,6 +185,8 @@ export default function RecordDetailScreen() {
   const statusChanged = pickStatus !== record.currentStatusId;
   const noteChanged = noteDraft.trim() !== (record.note ?? '').trim();
   const shownAttendances = showAllAttendances ? attendances : attendances.slice(0, ATTENDANCE_PREVIEW);
+  // D8 : la couleur du statut (choisie au back-office) suit le thème — grise en Noir et blanc.
+  const tonStatut = record.currentStatusColor ? tonDonnee(record.currentStatusColor) : null;
 
   return (
     <ScreenShell>
@@ -187,16 +194,16 @@ export default function RecordDetailScreen() {
 
       <Text style={styles.name}>{record.fullName}</Text>
       {!!record.unitName && <Text style={styles.unit}>{record.unitName}</Text>}
-      <View style={[styles.statusPill, { backgroundColor: (record.currentStatusColor || colors.moss) + '20' }]}>
-        <View style={[styles.dot, { backgroundColor: record.currentStatusColor || colors.moss }]} />
-        <Text style={[styles.statusPillText, { color: record.currentStatusColor || colors.mossSoft }]}>
+      <View style={[styles.statusPill, { backgroundColor: transparence(tonStatut ?? c.accent, 0.125) }]}>
+        <View style={[styles.dot, { backgroundColor: tonStatut ?? c.accent }]} />
+        <Text style={[styles.statusPillText, { color: tonStatut ?? c.accentDoux }]}>
           {record.currentStatusLabel ?? t('care.noStatus')}
         </Text>
       </View>
 
       {!canEdit && (
         <View style={styles.readOnly}>
-          <Ionicons name="eye-outline" size={15} color={colors.ink3} />
+          <Ionicons name="eye-outline" size={15} color={c.texte3} />
           <Text style={styles.readOnlyText}>{t('care.readOnly')}</Text>
         </View>
       )}
@@ -323,7 +330,7 @@ export default function RecordDetailScreen() {
                   key={a.meetingId}
                   style={[styles.attRow, i < arr.length - 1 && styles.histRowBorder]}
                 >
-                  <Ionicons name="checkmark-circle-outline" size={17} color={colors.mossSoft} />
+                  <Ionicons name="checkmark-circle-outline" size={17} color={c.accentDoux} />
                   <Text style={styles.attDate}>{fmtIsoDay(a.meetingDate, t)}</Text>
                   {/* La fiche suit le membre (D-ASM-06) : l'assemblée d'origine est rappelée. */}
                   {a.unitId !== record.unitId && !!a.unitName && (
@@ -363,19 +370,21 @@ function InfoRow({
   value: string | null;
   t: (k: string) => string;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.infoRow}>
-      <Ionicons name={icon} size={17} color={colors.mossSoft} />
+      <Ionicons name={icon} size={17} color={c.accentDoux} />
       <Text style={styles.infoLabel}>{label}</Text>
       <Text style={styles.infoValue}>{value || t('care.notProvided')}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center' },
-  name: { fontFamily: fonts.serif, fontSize: 26, color: colors.ink, letterSpacing: -0.4, marginTop: 8 },
-  unit: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, marginTop: 2 },
+  name: { fontFamily: fonts.serif, fontSize: 26, color: c.texte, letterSpacing: -0.4, marginTop: 8 },
+  unit: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, marginTop: 2 },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -389,34 +398,34 @@ const styles = StyleSheet.create({
   statusPillText: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '700' },
   dot: { width: 9, height: 9, borderRadius: 5 },
   readOnly: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
-  readOnlyText: { flex: 1, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, lineHeight: 17 },
+  readOnlyText: { flex: 1, fontFamily: fonts.sans, fontSize: 12, color: c.texte3, lineHeight: 17 },
   infoCard: { marginTop: 18, paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   infoLabel: {
     fontFamily: fonts.sans,
     fontSize: 12,
-    color: colors.ink3,
+    color: c.texte3,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     width: 110,
   },
-  infoValue: { flex: 1, fontFamily: fonts.sans, fontSize: 14, color: colors.ink, textAlign: 'right' },
-  note: { fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 14, color: colors.mossSoft },
+  infoValue: { flex: 1, fontFamily: fonts.sans, fontSize: 14, color: c.texte, textAlign: 'right' },
+  note: { fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 14, color: c.accentDoux },
   editCard: { marginTop: 16, paddingHorizontal: 16, paddingVertical: 16 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  sectionTitle: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink, marginTop: 24 },
-  emptyInline: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, fontStyle: 'italic', marginTop: 8 },
+  sectionTitle: { fontFamily: fonts.serif, fontSize: 18, color: c.texte, marginTop: 24 },
+  emptyInline: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, fontStyle: 'italic', marginTop: 8 },
   emptyCard: { marginTop: 16, paddingVertical: 30, alignItems: 'center', gap: 10 },
-  emptyText: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, textAlign: 'center', maxWidth: 260, lineHeight: 19 },
+  emptyText: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, textAlign: 'center', maxWidth: 260, lineHeight: 19 },
   histRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 14, paddingVertical: 14 },
-  histRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(42,38,32,0.06)' },
-  histDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.mossSoft, marginTop: 5 },
-  histLabel: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
-  histDate: { fontFamily: fonts.mono, fontSize: 11, color: colors.ink3, marginTop: 2 },
-  histNote: { fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 13, color: colors.mossSoft, marginTop: 4 },
+  histRowBorder: { borderBottomWidth: 1, borderBottomColor: transparence(c.texte, 0.06) },
+  histDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: c.accentDoux, marginTop: 5 },
+  histLabel: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.texte },
+  histDate: { fontFamily: fonts.mono, fontSize: 11, color: c.texte3, marginTop: 2 },
+  histNote: { fontFamily: fonts.serif, fontStyle: 'italic', fontSize: 13, color: c.accentDoux, marginTop: 4 },
   attRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
-  attDate: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink },
-  attUnit: { flex: 1, fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, textAlign: 'right' },
+  attDate: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte },
+  attUnit: { flex: 1, fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, textAlign: 'right' },
   moreBtn: { paddingHorizontal: 14, paddingVertical: 12, alignItems: 'center' },
-  moreText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.moss },
-});
+  moreText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.accent },
+}));

@@ -14,13 +14,13 @@
  * <p>Mise en page reprise de `components/push/ModaleActivationPush.tsx` (carte, voile, boutons).
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import Field from '@/components/Field';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { MeResponse } from '@/services/authApi';
@@ -28,6 +28,8 @@ import { resendFederatedLinkCode, type LinkConfirmationRequired } from '@/servic
 import { notify } from '@/utils/dialogs';
 import { linkConfirmErrorMessage, retryAfterSeconds } from '@/utils/socialAuthErrors';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 interface Props {
   challenge: LinkConfirmationRequired;
   /** Nom du fournisseur tel qu'affiché (« Google » / « Apple » — noms de marque, non traduits). */
@@ -38,6 +40,8 @@ interface Props {
 }
 
 export default function LinkConfirmModal({ challenge, providerLabel, onSignedIn, onClose }: Props) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { confirmFederatedLink } = useAuth();
   const { t } = useLanguage();
 
@@ -124,7 +128,7 @@ export default function LinkConfirmModal({ challenge, providerLabel, onSignedIn,
       >
         <Card style={styles.card}>
           <View style={styles.iconBubble}>
-            <Ionicons name="mail-outline" size={24} color={colors.moss} />
+            <Ionicons name="mail-outline" size={24} color={c.accent} />
           </View>
           <Text style={styles.title}>{t('auth.social.linkConfirm.title')}</Text>
           <Text style={styles.message}>
@@ -190,10 +194,10 @@ export default function LinkConfirmModal({ challenge, providerLabel, onSignedIn,
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(22,41,31,0.5)',
+    backgroundColor: c.voile,
     justifyContent: 'center',
     padding: 24,
   },
@@ -202,21 +206,21 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: colors.mossTint2,
+    backgroundColor: c.accentTeinte2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontFamily: fonts.serif,
     fontSize: 20,
-    color: colors.ink,
+    color: c.texte,
     marginTop: 14,
     textAlign: 'center',
   },
   message: {
     fontFamily: fonts.sans,
     fontSize: 13.5,
-    color: colors.ink2,
+    color: c.texte2,
     marginTop: 10,
     textAlign: 'center',
     lineHeight: 20,
@@ -224,7 +228,7 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: fonts.sans,
     fontSize: 12.5,
-    color: colors.ink2,
+    color: c.texte2,
     alignSelf: 'stretch',
     marginTop: 16,
     marginBottom: 6,
@@ -238,14 +242,14 @@ const styles = StyleSheet.create({
   error: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.clay,
+    color: c.alerte,
     marginTop: 10,
     textAlign: 'center',
   },
   info: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.moss,
+    color: c.accent,
     marginTop: 10,
     textAlign: 'center',
   },
@@ -253,18 +257,18 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontSize: 13.5,
     fontWeight: '600',
-    color: colors.moss,
+    color: c.accent,
     marginTop: 14,
     textAlign: 'center',
   },
-  resendDisabled: { color: colors.ink3, fontWeight: '400' },
+  resendDisabled: { color: c.texte3, fontWeight: '400' },
   notMine: {
     fontFamily: fonts.sans,
     fontSize: 12,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 12,
     textAlign: 'center',
     lineHeight: 17,
   },
   actions: { flexDirection: 'row', gap: 10, marginTop: 18, alignSelf: 'stretch' },
-});
+}));

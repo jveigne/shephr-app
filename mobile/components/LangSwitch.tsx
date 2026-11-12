@@ -1,8 +1,9 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import { colors, fonts } from '@/theme';
+import { Pressable, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+import { creerStyles } from '@/theme/creerStyles';
 const LANGS = ['fr', 'en'] as const;
 
 /**
@@ -10,6 +11,7 @@ const LANGS = ['fr', 'en'] as const;
  * (la préférence du compte n'est appliquée qu'après authentification).
  */
 export default function LangSwitch({ style }: { style?: StyleProp<ViewStyle> }) {
+  const styles = useStyles();
   const { language, setLanguage, t } = useLanguage();
   const current = language?.startsWith('en') ? 'en' : 'fr';
 
@@ -34,22 +36,22 @@ export default function LangSwitch({ style }: { style?: StyleProp<ViewStyle> }) 
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   group: {
     flexDirection: 'row',
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: colors.hairStrong,
+    borderColor: c.filetFort,
     borderRadius: 999,
     overflow: 'hidden',
   },
   item: { paddingHorizontal: 12, paddingVertical: 5 },
-  itemActive: { backgroundColor: colors.moss },
+  itemActive: { backgroundColor: c.accent },
   label: {
     fontFamily: fonts.sans,
     fontSize: 12,
     fontWeight: '600',
-    color: colors.ink2,
+    color: c.texte2,
   },
-  labelActive: { color: colors.white },
-});
+  labelActive: { color: c.surAccent },
+}));

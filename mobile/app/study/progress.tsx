@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
@@ -8,7 +8,7 @@ import Label from '@/components/Label';
 import ErrorBanner from '@/components/ErrorBanner';
 import StudyCityLock from '@/components/StudyCityLock';
 import { StudyCopySheet, StudyLanguagePill, studyLanguagesToMark } from '@/components/StudyQuestionList';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -28,6 +28,8 @@ import { fmtIsoDay } from '@/utils/meetingReport';
 import { notify } from '@/utils/dialogs';
 import { goBack } from '@/utils/navigation';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Étude de l'assemblée (plan 21/10, §6.3) — AVANCEMENT, un écran selon son paramètre :
  * <ul>
@@ -50,6 +52,8 @@ import { goBack } from '@/utils/navigation';
  * aucun paiement (D-ABO-13).
  */
 export default function StudyProgressScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const params = useLocalSearchParams<{ unitId?: string; mine?: string; userId?: string; leader?: string; lang?: string }>();
   const unitId = typeof params.unitId === 'string' && params.unitId ? params.unitId : null;
   const userId = typeof params.userId === 'string' && params.userId ? params.userId : null;
@@ -132,11 +136,11 @@ export default function StudyProgressScreen() {
   return (
     <ScreenShell
       withTabBar={false}
-      refreshControl={<RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={styles.headerRow}>
         <Pressable onPress={() => goBack()} hitSlop={10} accessibilityLabel={t('common.back')}>
-          <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+          <Ionicons name="chevron-back" size={22} color={c.texte2} />
         </Pressable>
       </View>
       <Text style={styles.kicker}>{kicker}</Text>
@@ -146,7 +150,7 @@ export default function StudyProgressScreen() {
 
       {loading ? (
         <View style={styles.loadingBox}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       ) : locked ? (
         <StudyCityLock />
@@ -175,11 +179,13 @@ function fmtInstantDay(iso: string | null, t: (k: string, o?: any) => string): s
 
 /** RG-ETU-17b — une assemblée : leçons faites ENSEMBLE, puis chaque membre (D-ETU-08). */
 function UnitView({ unit, refLanguage }: { unit: StudyUnitProgress; refLanguage: string | null }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   if (unit.modules.length === 0) {
     return (
       <Card variant="paper2" style={styles.empty}>
-        <Ionicons name="school-outline" size={26} color={colors.ink3} />
+        <Ionicons name="school-outline" size={26} color={c.texte3} />
         <Text style={styles.emptyText}>{t('study.progress.noModules')}</Text>
       </Card>
     );
@@ -227,7 +233,7 @@ function UnitView({ unit, refLanguage }: { unit: StudyUnitProgress; refLanguage:
                     ? t('study.score', { score: fmtPoints(r.score, language), max: fmtPoints(r.maxScore, language) })
                     : '–'}
                 </Text>
-                <Ionicons name="chevron-forward" size={18} color={colors.ink3} />
+                <Ionicons name="chevron-forward" size={18} color={c.texte3} />
               </Pressable>
             ))
           )}
@@ -251,11 +257,13 @@ function PersonView({
   opening: string | null;
   onOpenCopy: (l: StudyLessonProgress) => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   if (person.modules.length === 0) {
     return (
       <Card variant="paper2" style={styles.empty}>
-        <Ionicons name="school-outline" size={26} color={colors.ink3} />
+        <Ionicons name="school-outline" size={26} color={c.texte3} />
         <Text style={styles.emptyText}>{t('study.progress.noModules')}</Text>
       </Card>
     );
@@ -300,7 +308,7 @@ function PersonView({
                 <Ionicons
                   name={l.done ? 'checkmark-circle' : 'ellipse-outline'}
                   size={20}
-                  color={l.done ? colors.moss : colors.ink3}
+                  color={l.done ? c.accent : c.texte3}
                 />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.lessonTitle} numberOfLines={2}>
@@ -324,7 +332,7 @@ function PersonView({
                   </Text>
                 </View>
                 {opening === l.chapterId ? (
-                  <ActivityIndicator color={colors.moss} />
+                  <ActivityIndicator color={c.accent} />
                 ) : (
                   (l.done || (partial && l.bestScore != null && l.maxScore != null)) && (
                     <Text style={styles.score}>
@@ -332,7 +340,7 @@ function PersonView({
                     </Text>
                   )
                 )}
-                {link && <Ionicons name="chevron-forward" size={18} color={colors.ink3} />}
+                {link && <Ionicons name="chevron-forward" size={18} color={c.texte3} />}
               </Pressable>
             );
           })}
@@ -344,6 +352,7 @@ function PersonView({
 
 /** D-ETU-27 (JP 21/10) — langues, autres que la référence, où des leçons de l'unité ont été faites. */
 function LanguagePills({ languages }: { languages: ReturnType<typeof studyLanguagesToMark> }) {
+  const styles = useStyles();
   if (languages.length === 0) return null;
   return (
     <View style={styles.pills}>
@@ -355,6 +364,7 @@ function LanguagePills({ languages }: { languages: ReturnType<typeof studyLangua
 }
 
 function ProgressBar({ done, total }: { done: number; total: number }) {
+  const styles = useStyles();
   const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
   return (
     <View style={styles.bar}>
@@ -363,30 +373,30 @@ function ProgressBar({ done, total }: { done: number; total: number }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   kicker: {
     marginTop: 10,
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.clay,
+    color: c.alerte,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4, marginTop: 4 },
+  title: { fontFamily: fonts.serif, fontSize: 28, color: c.texte, letterSpacing: -0.4, marginTop: 4 },
   loadingBox: { marginTop: 40, alignItems: 'center' },
   block: { marginTop: 20, gap: 8 },
   blockLabel: { marginTop: 8 },
-  muted: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
+  muted: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3 },
   empty: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 22, alignItems: 'center', gap: 8 },
-  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink2, lineHeight: 20, textAlign: 'center' },
+  emptyText: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte2, lineHeight: 20, textAlign: 'center' },
   moduleCard: { paddingHorizontal: 16, paddingVertical: 14, gap: 6 },
-  moduleTitle: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink, letterSpacing: -0.2 },
-  moduleStat: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.moss },
-  cumulative: { fontFamily: fonts.mono, fontSize: 13, color: colors.ink2 },
+  moduleTitle: { fontFamily: fonts.serif, fontSize: 18, color: c.texte, letterSpacing: -0.2 },
+  moduleStat: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.accent },
+  cumulative: { fontFamily: fonts.mono, fontSize: 13, color: c.texte2 },
   pills: { flexDirection: 'row', gap: 6 },
-  bar: { height: 6, borderRadius: 3, backgroundColor: colors.mossTint2, overflow: 'hidden' },
-  barFill: { height: 6, borderRadius: 3, backgroundColor: colors.moss },
+  bar: { height: 6, borderRadius: 3, backgroundColor: c.accentTeinte2, overflow: 'hidden' },
+  barFill: { height: 6, borderRadius: 3, backgroundColor: c.accent },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -394,12 +404,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: radii.md,
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
   },
-  rowTitle: { fontFamily: fonts.serif, fontSize: 16, color: colors.ink },
-  lessonTitle: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink },
-  rowMeta: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 2 },
-  score: { fontFamily: fonts.mono, fontSize: 13.5, color: colors.moss },
-});
+  rowTitle: { fontFamily: fonts.serif, fontSize: 16, color: c.texte },
+  lessonTitle: { fontFamily: fonts.sans, fontSize: 14, color: c.texte },
+  rowMeta: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 2 },
+  score: { fontFamily: fonts.mono, fontSize: 13.5, color: c.accent },
+}));

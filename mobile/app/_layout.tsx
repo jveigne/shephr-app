@@ -22,6 +22,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import PushBridge from '@/components/push/PushBridge';
 import EventQueueSync from '@/components/EventQueueSync';
 import { loadContactSettings } from '@/services/contactApi';
@@ -62,12 +63,6 @@ export default function RootLayout() {
   // client IDs de `app.json` sont les valeurs factices REMPLACER_...).
   useEffect(() => { configureGoogleSignIn(); }, []);
 
-  useEffect(() => {
-    if (appReady && fontsLoaded) {
-      SplashScreen.hideAsync().catch(() => {});
-    }
-  }, [appReady, fontsLoaded]);
-
   if (!appReady || !fontsLoaded) {
     return null;
   }
@@ -77,7 +72,11 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <LanguageProvider>
           <AuthProvider>
-            <StatusBar style="dark" />
+            {/* Thème (docs/theme-plan.md §4.2) — sous AuthProvider : à l'étape M5, il lira les
+                préférences du compte connecté. Étape M1 : choix local seulement. */}
+            <ThemeProvider>
+            <MasquerSplashQuandThemePret />
+            <BarreEtat />
             {/* Lot N4b (J-3 14/09) — push Expo : enregistrement de l'appareil, canaux Android,
                 routage du tap, invitation d'activation. Sous `AuthProvider` parce qu'il suit la
                 connexion et la déconnexion ; il ne rend rien tant qu'il n'y a rien à demander, et
@@ -87,7 +86,7 @@ export default function RootLayout() {
             {/* Lot E6 (14/10) — vidage de la file hors-ligne des déclarations d'action
                 (RG-ACT-08) : démarrage, retour au premier plan, retour du réseau. Ne rend rien. */}
             <EventQueueSync />
-            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#E8DCC4' } }}>
+            <PileRacine>
               <Stack.Screen name="index" />
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
@@ -111,6 +110,8 @@ export default function RootLayout() {
               {/* Réglages des notifications — hors onglets : on y vient du Profil, et la
                   catégorie « Rappels » de N4a y a son interrupteur. */}
               <Stack.Screen name="notification-settings" options={{ animation: 'slide_from_right' }} />
+              {/* Thème (docs/theme-plan.md, étape M2) — écran Apparence, depuis le Profil. */}
+              <Stack.Screen name="appearance" options={{ animation: 'slide_from_right' }} />
               {/* Évènements (plan 14/10, §6.3) : déclarer une action s'ouvre en modale, comme
                   « Déclarer un don » ; « Mes actions » se pousse depuis la droite. */}
               <Stack.Screen
@@ -138,10 +139,39 @@ export default function RootLayout() {
               <Stack.Screen name="study/progress" options={{ animation: 'slide_from_right' }} />
               {/* D-OFF-10 (JP 27/10) : l'écran « Mes factures » (lot ABO5) est retiré — aucun
                   montant dans l'app ; factures par email (PDF) et sur le web « Mes abonnements ». */}
-            </Stack>
+            </PileRacine>
+            </ThemeProvider>
           </AuthProvider>
         </LanguageProvider>
       </GestureHandlerRootView>
     </SafeAreaProvider>
+  );
+}
+
+/**
+ * Thème (docs/theme-plan.md §4.2, étape M2) — le splash reste affiché tant que le thème enregistré
+ * n'est pas relu : sinon un utilisateur en Sombre verrait un éclair de Clair au démarrage (R10).
+ */
+function MasquerSplashQuandThemePret() {
+  const { pret } = useTheme();
+  useEffect(() => {
+    if (pret) SplashScreen.hideAsync().catch(() => {});
+  }, [pret]);
+  return null;
+}
+
+/** Barre d'état : texte clair sur fond sombre, foncé sinon (était `style="dark"` en dur). */
+function BarreEtat() {
+  const { estSombre } = useTheme();
+  return <StatusBar style={estSombre ? 'light' : 'dark'} />;
+}
+
+/** Pile racine : le fond des écrans suit le thème (était `#E8DCC4`, le parchemin, en dur). */
+function PileRacine({ children }: { children: React.ReactNode }) {
+  const { couleurs } = useTheme();
+  return (
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: couleurs.page } }}>
+      {children}
+    </Stack>
   );
 }

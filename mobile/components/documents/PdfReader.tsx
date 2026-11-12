@@ -1,7 +1,7 @@
 import React from 'react';
-import { StyleSheet, TurboModuleRegistry, View, type StyleProp, type ViewStyle } from 'react-native';
-import { colors } from '@/theme';
+import { TurboModuleRegistry, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { creerStyles } from '@/theme/creerStyles';
 /**
  * D-DOC-13 (JP 18/10) [HYPOTHÈSE] — lecteur PDF NATIF (`react-native-pdf` + `react-native-blob-util`,
  * plugins `@config-plugins/*`) : défilement vertical continu, rendu fluide sur un Android d'entrée de
@@ -53,6 +53,7 @@ export function isPdfReaderAvailable(): boolean {
 }
 
 export default function PdfReader({ source, style, onLoadComplete, onPageChanged, onError }: PdfReaderProps) {
+  const styles = useStyles();
   if (!NativePdf) return <View style={[styles.fill, style]} />;
   return (
     <NativePdf
@@ -74,9 +75,9 @@ export default function PdfReader({ source, style, onLoadComplete, onPageChanged
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   fill: {
     flex: 1,
-    backgroundColor: colors.parchmentDeep,
+    backgroundColor: c.pageProfonde,
   },
-});
+}));

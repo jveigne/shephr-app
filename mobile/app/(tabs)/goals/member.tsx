@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, RefreshControl, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, RefreshControl, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import ScreenShell from '@/components/ScreenShell';
@@ -8,7 +8,7 @@ import Card from '@/components/Card';
 import Label from '@/components/Label';
 import { YearSelector, GoalLineCard, GoalEmptyState } from '@/components/GoalCards';
 import UnitMembersAggregate from '@/components/UnitMembersAggregate';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { goalName } from '@/utils/goalName';
@@ -21,6 +21,8 @@ import {
 } from '@/services/goalsApi';
 import { fmtDate, fmtAmount } from '@/utils/format';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * « Mes objectifs » — l'écran de TOUT LE MONDE depuis le chantier du 16/08.
  *
@@ -33,6 +35,8 @@ import { fmtDate, fmtAmount } from '@/utils/format';
  * (RG-BQ-07), mais le SECRETARIAT et le LEADER passent outre côté serveur.
  */
 export default function MemberGoalsScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { me } = useAuth();
   const { t } = useLanguage();
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -136,11 +140,11 @@ export default function MemberGoalsScreen() {
   return (
     <ScreenShell
       refreshControl={
-        <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
       <View style={styles.titleRow}>
-        <Ionicons name="flag-outline" size={22} color={colors.mossSoft} />
+        <Ionicons name="flag-outline" size={22} color={c.accentDoux} />
         <Text style={styles.title}>{t('goals.title')}</Text>
       </View>
       <View style={styles.viewChip}>
@@ -161,9 +165,9 @@ export default function MemberGoalsScreen() {
             <Ionicons
                 name={deadlinePast ? 'alert-circle-outline' : 'time-outline'}
                 size={18}
-                color={deadlinePast ? colors.clay : colors.earthDeep}
+                color={deadlinePast ? c.alerte : c.secondaireProfond}
             />
-            <Text style={[styles.bannerText, deadlinePast && { color: colors.clay }]}>
+            <Text style={[styles.bannerText, deadlinePast && { color: c.alerte }]}>
               {deadlinePast
                   ? t('goals.deadlinePast', { date: fmtDate(deadline) })
                   : t('goals.deadlineFuture', { date: fmtDate(deadline) })}
@@ -180,22 +184,22 @@ export default function MemberGoalsScreen() {
         <View style={{ gap: 8, marginTop: 14 }}>
           {perimeter && (
             <Card variant="tinted" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/perimeter')}>
-              <Ionicons name="stats-chart-outline" size={18} color={colors.mossDeep} />
+              <Ionicons name="stats-chart-outline" size={18} color={c.accentProfond} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={styles.navTitle}>{t('goals.nav.perimeter')}</Text>
                 <Text style={styles.navHint}>{t('goals.nav.perimeterHint')}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+              <Ionicons name="chevron-forward" size={16} color={c.texte3} />
             </Card>
           )}
           {myUnits && (
             <Card variant="tinted" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/units')}>
-              <Ionicons name="home-outline" size={18} color={colors.mossDeep} />
+              <Ionicons name="home-outline" size={18} color={c.accentProfond} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={styles.navTitle}>{t('goals.nav.units')}</Text>
                 <Text style={styles.navHint}>{t('goals.nav.unitsHint')}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+              <Ionicons name="chevron-forward" size={16} color={c.texte3} />
             </Card>
           )}
           {/* Lot G3 (14/09) — relance groupée. Proposée à tout compte NON simple membre : les
@@ -206,12 +210,12 @@ export default function MemberGoalsScreen() {
               `GET /goals/reminders/scopes`. */}
           {leader && (
             <Card variant="tinted" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/remind')}>
-              <Ionicons name="paper-plane-outline" size={18} color={colors.mossDeep} />
+              <Ionicons name="paper-plane-outline" size={18} color={c.accentProfond} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={styles.navTitle}>{t('goals.nav.remind')}</Text>
                 <Text style={styles.navHint}>{t('goals.nav.remindHint')}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+              <Ionicons name="chevron-forward" size={16} color={c.texte3} />
             </Card>
           )}
         </View>
@@ -247,7 +251,7 @@ export default function MemberGoalsScreen() {
           onPress={() => router.push(`/(tabs)/goals/progress?year=${year ?? ''}`)}
           fullWidth
           style={{ marginTop: 16 }}
-          iconLeft={<Ionicons name="trending-up-outline" size={18} color={colors.mossDeep} />}
+          iconLeft={<Ionicons name="trending-up-outline" size={18} color={c.accentProfond} />}
         />
       )}
       {pledges.length > 0 && (
@@ -262,7 +266,7 @@ export default function MemberGoalsScreen() {
 
       {submitted ? (
         <Card variant="paper2" style={styles.banner}>
-          <Ionicons name="lock-closed-outline" size={18} color={colors.moss} />
+          <Ionicons name="lock-closed-outline" size={18} color={c.accent} />
           <Text style={styles.bannerText}>{t('goals.member.submittedBanner')}</Text>
         </Card>
       ) : (
@@ -272,7 +276,7 @@ export default function MemberGoalsScreen() {
             onPress={() => router.push(`/(tabs)/goals/submit?year=${year ?? ''}`)}
             fullWidth
             style={{ marginTop: 16 }}
-            iconLeft={<Ionicons name="lock-closed-outline" size={18} color={colors.white} />}
+            iconLeft={<Ionicons name="lock-closed-outline" size={18} color={c.surAccent} />}
           />
         )
       )}
@@ -287,12 +291,12 @@ export default function MemberGoalsScreen() {
 
       {/* RG-BQ-13 — changer d'assemblée soi-même, sans demande ni valideur. */}
       <Card variant="paper2" style={styles.navCard} onPress={() => router.push('/(tabs)/goals/assembly')}>
-        <Ionicons name="swap-horizontal-outline" size={18} color={colors.mossDeep} />
+        <Ionicons name="swap-horizontal-outline" size={18} color={c.accentProfond} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={styles.navTitle}>{t('assembly.changeCta')}</Text>
           <Text style={styles.navHint}>{t('assembly.changeHintShort')}</Text>
         </View>
-        <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+        <Ionicons name="chevron-forward" size={16} color={c.texte3} />
       </Card>
 
       <Text style={styles.footnote}>{t('goals.member.hint')}</Text>
@@ -311,6 +315,8 @@ export default function MemberGoalsScreen() {
  * la somme des engagements des membres (RG-BQ-02).
  */
 function MyAssemblyBlock({ year, goal, refreshToken }: { year: number; goal: ActiveGoal; refreshToken: string }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const [data, setData] = useState<MyAssemblyGoalResponse | null>(null);
@@ -363,18 +369,18 @@ function MyAssemblyBlock({ year, goal, refreshToken }: { year: number; goal: Act
   return (
     <Card variant="paper2" style={styles.assemblyCard}>
       <Pressable onPress={() => setExpanded((e) => !e)} style={styles.assemblyHeader} hitSlop={6}>
-        <Ionicons name="home-outline" size={18} color={colors.mossSoft} />
+        <Ionicons name="home-outline" size={18} color={c.accentDoux} />
         <Text style={styles.assemblyTitle}>
           {t('goals.member.assemblyTitle')}
           {data?.unitName ? ` · ${data.unitName}` : ''}
         </Text>
-        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.ink3} />
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={c.texte3} />
       </Pressable>
 
       {expanded && (
         <View style={{ marginTop: 10 }}>
           <Text style={styles.assemblyHint}>{t('goals.member.assemblyHint')}</Text>
-          {loading && <ActivityIndicator color={colors.moss} style={{ marginTop: 10 }} />}
+          {loading && <ActivityIndicator color={c.accent} style={{ marginTop: 10 }} />}
 
           {/* RG-BQ-06 — le suivi de soumission est un COMPTEUR DE PERSONNES, jamais un booléen. */}
           {!loading && data != null && data.totalMembers > 0 && (
@@ -436,12 +442,12 @@ function MyAssemblyBlock({ year, goal, refreshToken }: { year: number; goal: Act
 }
 
 // Styles alignés sur ceux des primitives partagées (components/GoalCards.tsx).
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   title: {
     fontFamily: fonts.serif,
     fontSize: 28,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.4,
   },
   viewChip: {
@@ -450,15 +456,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
   },
   viewChipText: {
     fontFamily: fonts.sans,
     fontSize: 11.5,
     fontWeight: '600',
-    color: colors.mossSoft,
+    color: c.accentDoux,
   },
-  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 6 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 6 },
   banner: {
     marginTop: 14,
     paddingHorizontal: 16,
@@ -471,7 +477,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: fonts.sans,
     fontSize: 12.5,
-    color: colors.ink2,
+    color: c.texte2,
     lineHeight: 18,
   },
   sectionRow: {
@@ -480,7 +486,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 22,
   },
-  sectionTitle: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink },
+  sectionTitle: { fontFamily: fonts.serif, fontSize: 18, color: c.texte },
   navCard: {
     marginTop: 8,
     paddingHorizontal: 16,
@@ -489,12 +495,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  navTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
-  navHint: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2, lineHeight: 16 },
+  navTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.texte },
+  navHint: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 2, lineHeight: 16 },
   footnote: {
     fontFamily: fonts.sans,
     fontSize: 12,
-    color: colors.ink3,
+    color: c.texte3,
     textAlign: 'center',
     marginTop: 18,
     lineHeight: 18,
@@ -506,19 +512,19 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontSize: 13.5,
     fontWeight: '600',
-    color: colors.ink,
+    color: c.texte,
   },
-  assemblyHint: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, lineHeight: 17 },
+  assemblyHint: { fontFamily: fonts.sans, fontSize: 12, color: c.texte3, lineHeight: 17 },
   assemblyCounterRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 8 },
   assemblyCounter: {
-    fontFamily: fonts.sans, fontSize: 12, fontWeight: '700', color: colors.mossDeep,
-    backgroundColor: colors.mossTint, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 99,
+    fontFamily: fonts.sans, fontSize: 12, fontWeight: '700', color: c.accentProfond,
+    backgroundColor: c.accentTeinte, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 99,
   },
-  assemblyLate: { fontFamily: fonts.sans, fontSize: 12, color: colors.clay },
+  assemblyLate: { fontFamily: fonts.sans, fontSize: 12, color: c.alerte },
   assemblyEmpty: {
     fontFamily: fonts.sans,
     fontSize: 12.5,
-    color: colors.ink3,
+    color: c.texte3,
     lineHeight: 18,
     marginTop: 10,
   },
@@ -526,18 +532,18 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(42,38,32,0.06)',
+    borderTopColor: transparence(c.texte, 0.06),
   },
-  assemblyCat: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
+  assemblyCat: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.texte },
   assemblyCols: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
-  assemblyValue: { fontFamily: fonts.serif, fontSize: 16, color: colors.ink, marginTop: 2 },
+  assemblyValue: { fontFamily: fonts.serif, fontSize: 16, color: c.texte, marginTop: 2 },
   centerBox: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 24 },
   emptyHint: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 8,
     textAlign: 'center',
     lineHeight: 19,
   },
-});
+}));

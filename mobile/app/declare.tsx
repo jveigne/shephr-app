@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +16,7 @@ import DeclarationForm, {
   round2,
   type DraftLine,
 } from '@/components/DeclarationForm';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useDonationCategories } from '@/hooks/useDonationCategories';
 import { createDeclaration, type DeclarationResponse } from '@/services/donationApi';
 import { fmtAmount, fmtDateLong, parseLocalDate, toLocalDate } from '@/utils/format';
@@ -24,6 +24,8 @@ import { notify } from '@/utils/dialogs';
 import { declarationErrorMessage } from '@/utils/donationErrors';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Lot T7 (décision J-1, JP 14/09) — DÉCLARER UN VERSEMENT, PAS UN DON ISOLÉ.
  *
@@ -46,6 +48,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 const dismiss = () => goBack();
 
 export default function DeclareScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
 
@@ -98,7 +102,7 @@ export default function DeclareScreen() {
       <ScreenShell withTabBar={false} paddingTop={insets.top ? 4 : 16}>
         <View style={styles.headerRow}>
           <Pressable onPress={dismiss} hitSlop={10}>
-            <Ionicons name="close" size={26} color={colors.ink2} />
+            <Ionicons name="close" size={26} color={c.texte2} />
           </Pressable>
         </View>
         <Text style={styles.title}>{t('declare.title')}</Text>
@@ -120,7 +124,7 @@ export default function DeclareScreen() {
           fullWidth
           height={58}
           style={{ marginTop: 22 }}
-          iconLeft={<Ionicons name="checkmark" size={20} color={colors.white} />}
+          iconLeft={<Ionicons name="checkmark" size={20} color={c.surAccent} />}
         />
 
         <Text style={styles.footnote}>{t('declare.footnote')}</Text>
@@ -130,6 +134,8 @@ export default function DeclareScreen() {
 }
 
 function SuccessScreen({ declaration }: { declaration: DeclarationResponse }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const { labelOf, metaOf } = useDonationCategories();
 
@@ -137,7 +143,7 @@ function SuccessScreen({ declaration }: { declaration: DeclarationResponse }) {
     <ScreenShell withTabBar={false} paddingTop={40}>
       <View style={{ alignItems: 'center' }}>
         <View style={styles.checkBubble}>
-          <Ionicons name="checkmark" size={38} color={colors.white} />
+          <Ionicons name="checkmark" size={38} color={c.surAccent} />
         </View>
         <Text style={styles.successTitle}>{t('declare.successTitle')}</Text>
         <Text style={styles.successHint}>{t('declare.successHint')}</Text>
@@ -197,19 +203,19 @@ function SuccessScreen({ declaration }: { declaration: DeclarationResponse }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 6 },
   title: {
     fontFamily: fonts.serif,
     fontSize: 30,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.5,
     marginTop: 2,
   },
   intro: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 6,
     lineHeight: 20,
     maxWidth: 320,
@@ -218,7 +224,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 14,
     fontSize: 12,
-    color: colors.ink3,
+    color: c.texte3,
     fontFamily: fonts.sans,
     lineHeight: 18,
     paddingHorizontal: 24,
@@ -227,21 +233,21 @@ const styles = StyleSheet.create({
     width: 78,
     height: 78,
     borderRadius: 39,
-    backgroundColor: colors.moss,
+    backgroundColor: c.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   successTitle: {
     fontFamily: fonts.serif,
     fontSize: 26,
-    color: colors.ink,
+    color: c.texte,
     marginTop: 18,
     textAlign: 'center',
   },
   successHint: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 6,
     textAlign: 'center',
     maxWidth: 280,
@@ -251,18 +257,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 24,
     borderStyle: 'dashed',
-    borderColor: 'rgba(42,38,32,0.22)',
+    borderColor: transparence(c.texte, 0.22),
   },
   receiptHeader: { flexDirection: 'row', justifyContent: 'space-between' },
   receiptMono: {
     fontFamily: fonts.mono,
     fontSize: 10.5,
-    color: colors.ink3,
+    color: c.texte3,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
   rec1: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  recAmount: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink },
+  recAmount: { fontFamily: fonts.serif, fontSize: 28, color: c.texte },
   recRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -271,13 +277,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   recLineLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 },
-  recLabel: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
-  recValue: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink, textAlign: 'right' },
+  recLabel: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3 },
+  recValue: { fontFamily: fonts.sans, fontSize: 13.5, color: c.texte, textAlign: 'right' },
   verse: {
     fontFamily: fonts.serif,
     fontSize: 13,
     fontStyle: 'italic',
-    color: colors.mossSoft,
+    color: c.accentDoux,
     textAlign: 'center',
   },
-});
+}));

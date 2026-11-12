@@ -222,9 +222,9 @@ function StatsBlock({ loading, error }: { loading: boolean; error: boolean }) {
   const agg = ctx?.all;
 
   const kpi = (label: string, value: string, warn = false) => (
-    <div className="kpi" style={{ padding: '12px 14px', ...(warn ? { background: 'var(--earth-50)' } : null) }}>
+    <div className="kpi" style={{ padding: '12px 14px', ...(warn ? { background: 'var(--secondaire-teinte-douce)' } : null) }}>
       <div className="lbl" style={{ fontSize: 11 }}>{label}</div>
-      <div className="val" style={{ fontSize: 22, marginTop: 4, ...(warn ? { color: 'var(--earth-700)' } : null) }}>
+      <div className="val" style={{ fontSize: 22, marginTop: 4, ...(warn ? { color: 'var(--secondaire-profond)' } : null) }}>
         {value}
       </div>
     </div>
@@ -236,9 +236,9 @@ function StatsBlock({ loading, error }: { loading: boolean; error: boolean }) {
       <strong style={{ fontSize: 14 }}>{t('hierarchy.stats.title')}</strong>
 
       {loading ? (
-        <p style={{ margin: '12px 0 0', color: 'var(--ink-500)', fontSize: 13 }}>{t('common.loading')}</p>
+        <p style={{ margin: '12px 0 0', color: 'var(--texte-3)', fontSize: 13 }}>{t('common.loading')}</p>
       ) : error || !agg ? (
-        <p style={{ margin: '12px 0 0', color: 'var(--ink-500)', fontSize: 13 }}>{t('hierarchy.stats.loadError')}</p>
+        <p style={{ margin: '12px 0 0', color: 'var(--texte-3)', fontSize: 13 }}>{t('hierarchy.stats.loadError')}</p>
       ) : (
         <>
           <div
@@ -258,12 +258,12 @@ function StatsBlock({ loading, error }: { loading: boolean; error: boolean }) {
             {kpi(t('hierarchy.stats.bread'), String(agg.breadBreaking))}
           </div>
           {agg.alertRows.length > 0 && (
-            <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--earth-700)', display: 'flex', gap: 6 }}>
+            <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--secondaire-profond)', display: 'flex', gap: 6 }}>
               <Icon name="warning" size={14} style={{ flex: 'none', marginTop: 2 }} />
               <span>{t('hierarchy.stats.alertList', { list: agg.alertRows.map((r) => r.unitName).join(', ') })}</span>
             </p>
           )}
-          <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--ink-400)' }}>{t('hierarchy.stats.hint')}</p>
+          <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--texte-4)' }}>{t('hierarchy.stats.hint')}</p>
         </>
       )}
     </div>
@@ -317,7 +317,7 @@ export function AssemblyLastReportList({ roots }: { roots: LeaderHierarchyNode[]
     <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
       <strong style={{ fontSize: 14 }}>{t('hierarchy.life.unitsTitle')}</strong>
       {rows.length === 0 ? (
-        <p style={{ margin: '10px 0 0', color: 'var(--ink-500)', fontSize: 13 }}>{t('hierarchy.life.unitsEmpty')}</p>
+        <p style={{ margin: '10px 0 0', color: 'var(--texte-3)', fontSize: 13 }}>{t('hierarchy.life.unitsEmpty')}</p>
       ) : (
         <div style={{ marginTop: 8 }}>
           {rows.map((row) => {
@@ -341,27 +341,27 @@ export function AssemblyLastReportList({ roots }: { roots: LeaderHierarchyNode[]
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, width: '100%', flexWrap: 'wrap',
                   padding: '9px 0', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-                  font: 'inherit', borderTop: '1px solid var(--line-soft, rgba(42,38,32,0.08))',
+                  font: 'inherit', borderTop: '1px solid var(--filet-doux, color-mix(in srgb, var(--texte) 8%, transparent))',
                 }}
               >
                 <Icon name="unit" size={15} />
                 <span style={{ flex: '1 1 200px', minWidth: 0 }}>
                   <span style={{ fontWeight: 600 }}>{row.unitName}</span>
-                  {row.cityName && <span style={{ color: 'var(--ink-500)', fontSize: 12 }}> · {row.cityName}</span>}
+                  {row.cityName && <span style={{ color: 'var(--texte-3)', fontSize: 12 }}> · {row.cityName}</span>}
                   {leader && (
-                    <span style={{ display: 'block', color: 'var(--ink-500)', fontSize: 12 }}>
+                    <span style={{ display: 'block', color: 'var(--texte-3)', fontSize: 12 }}>
                       {t('hierarchy.life.leader', { name: leader })}
                     </span>
                   )}
                 </span>
-                <span style={{ fontSize: 12.5, color: 'var(--ink-600)' }}>
+                <span style={{ fontSize: 12.5, color: 'var(--texte-corps)' }}>
                   {t('hierarchy.life.meetings', { count: row.meetingCount })}
                   {avg != null && ` · ${t('hierarchy.stats.unitAverage', { value: avg.toLocaleString(i18n.language) })}`}
                 </span>
                 <span
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12.5,
-                    color: alert ? 'var(--earth-700)' : 'var(--ink-500)',
+                    color: alert ? 'var(--secondaire-profond)' : 'var(--texte-3)',
                   }}
                 >
                   {alert ? <Icon name="warning" size={12} /> : <Icon name="calendar" size={12} />}

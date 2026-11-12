@@ -190,7 +190,7 @@ function PdfPage({
     >
       <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
       {!rendered && (
-        <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--ink-400)', fontSize: 13 }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'var(--texte-4)', fontSize: 13 }}>
           {failed ? (
             <Button size="sm" onClick={() => setAttempt((a) => a + 1)}>{t('documents.reader.retryPage')}</Button>
           ) : (
@@ -238,9 +238,9 @@ function QrCode({ value }: { value: string }) {
         alt={t('documents.wall.qrAlt')}
         width={180}
         height={180}
-        style={{ borderRadius: 'var(--radius)', border: '1px solid var(--line-soft)', background: 'var(--ivory-card)' }}
+        style={{ borderRadius: 'var(--radius)', border: '1px solid var(--filet-doux)', background: 'var(--surface)' }}
       />
-      <figcaption style={{ fontSize: 13, color: 'var(--ink-500)', textAlign: 'center', maxWidth: 260 }}>
+      <figcaption style={{ fontSize: 13, color: 'var(--texte-3)', textAlign: 'center', maxWidth: 260 }}>
         {t('documents.wall.qrCaption')}
       </figcaption>
     </figure>
@@ -250,7 +250,7 @@ function QrCode({ value }: { value: string }) {
 const storeBtnStyle = {
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 46,
   padding: '12px 20px', borderRadius: 'var(--radius)', fontWeight: 600, fontSize: 15,
-  textDecoration: 'none', border: 'none', background: 'var(--green-800)', color: '#fff',
+  textDecoration: 'none', border: 'none', background: 'var(--accent)', color: 'var(--sur-accent)',
 } as const;
 
 function StoreButton({ store, onClick }: { store: 'ios' | 'android'; onClick?: () => void }) {
@@ -312,7 +312,7 @@ function AppButtons({
         <a
           href={appUrl}
           onClick={onOpenApp}
-          style={{ ...storeBtnStyle, background: 'transparent', color: 'var(--green-800)', border: '1px solid var(--line-strong)' }}
+          style={{ ...storeBtnStyle, background: 'transparent', color: 'var(--accent)', border: '1px solid var(--filet-fort)' }}
         >
           {t('documents.wall.openInApp')}
         </a>
@@ -330,7 +330,7 @@ function Logo() {
     <div
       aria-hidden
       style={{
-        flexShrink: 0, width: 30, height: 30, borderRadius: 8, background: 'var(--green-600)', color: '#fff',
+        flexShrink: 0, width: 30, height: 30, borderRadius: 8, background: 'var(--accent-doux)', color: 'var(--sur-accent)',
         display: 'grid', placeItems: 'center', fontWeight: 700, fontFamily: 'var(--font-serif)',
       }}
     >S</div>
@@ -339,11 +339,11 @@ function Logo() {
 
 function CenteredScreen({ children }: { children: ReactNode }) {
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--parchment)', fontFamily: 'var(--font-sans)', display: 'flex', flexDirection: 'column' }}>
-      <header style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderBottom: '1px solid var(--line-soft)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--page)', fontFamily: 'var(--font-sans)', display: 'flex', flexDirection: 'column' }}>
+      <header style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderBottom: '1px solid var(--filet-doux)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Logo />
-          <span style={{ fontFamily: 'var(--font-serif)', fontSize: 19, fontWeight: 600, color: 'var(--green-800)' }}>shephr</span>
+          <span style={{ fontFamily: 'var(--font-serif)', fontSize: 19, fontWeight: 600, color: 'var(--accent)' }}>shephr</span>
         </div>
         <LangSwitch />
       </header>
@@ -677,10 +677,10 @@ export function DocumentReaderPage() {
   if (!validSlug || (docQuery.isError && isDocumentGone(docQuery.error))) {
     return (
       <CenteredScreen>
-        <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(24px, 6vw, 32px)', color: 'var(--green-900)', margin: '0 0 12px' }}>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(24px, 6vw, 32px)', color: 'var(--accent-profond)', margin: '0 0 12px' }}>
           {t('documents.unavailable.title')}
         </h1>
-        <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: '0 0 28px' }}>
+        <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--texte-2)', margin: '0 0 28px' }}>
           {t('documents.unavailable.body')}
         </p>
         <AppButtons platform={platform} />
@@ -692,10 +692,10 @@ export function DocumentReaderPage() {
     const { code } = apiErrorInfo(docQuery.error);
     return (
       <CenteredScreen>
-        <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 26, color: 'var(--green-900)', margin: '0 0 12px' }}>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 26, color: 'var(--accent-profond)', margin: '0 0 12px' }}>
           {t('documents.reader.loadErrorTitle')}
         </h1>
-        <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: '0 0 24px' }}>
+        <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--texte-2)', margin: '0 0 24px' }}>
           {code === 'RATE_LIMITED' ? t('documents.errors.RATE_LIMITED') : t('documents.reader.loadErrorBody')}
         </p>
         <Button variant="primary" onClick={() => void docQuery.refetch()}>{t('documents.reader.retry')}</Button>
@@ -706,7 +706,7 @@ export function DocumentReaderPage() {
   if (!doc) {
     return (
       <CenteredScreen>
-        <p style={{ color: 'var(--ink-500)', fontSize: 15 }}>{t('documents.reader.loading')}</p>
+        <p style={{ color: 'var(--texte-3)', fontSize: 15 }}>{t('documents.reader.loading')}</p>
       </CenteredScreen>
     );
   }
@@ -720,17 +720,17 @@ export function DocumentReaderPage() {
     : t('documents.reader.pageIndicator', { page: Math.min(currentPage, loadedPages), total: loadedPages });
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--parchment-deep)', fontFamily: 'var(--font-sans)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--page-profonde)', fontFamily: 'var(--font-sans)' }}>
       {/* En-tête léger : logo, titre, auteur, Partager ; indicateur d'aperçu. */}
-      <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'var(--parchment)', borderBottom: '1px solid var(--line-soft)', boxShadow: 'var(--shadow-sm)' }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'var(--page)', borderBottom: '1px solid var(--filet-doux)', boxShadow: 'var(--shadow-sm)' }}>
         <div style={{ maxWidth: COLUMN_MAX + 32, margin: '0 auto', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <Logo />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 16, color: 'var(--green-900)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, fontSize: 16, color: 'var(--accent-profond)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {doc.title}
             </div>
             {(doc.author || category) && (
-              <div style={{ fontSize: 12.5, color: 'var(--ink-500)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: 12.5, color: 'var(--texte-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {[doc.author, category].filter(Boolean).join(' · ')}
               </div>
             )}
@@ -742,16 +742,16 @@ export function DocumentReaderPage() {
         <div style={{ maxWidth: COLUMN_MAX + 32, margin: '0 auto', padding: '0 16px 8px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
           <span
             aria-live="polite"
-            style={{ display: 'inline-block', fontSize: 12, fontWeight: 600, color: 'var(--green-800)', background: 'var(--green-50)', borderRadius: 999, padding: '3px 10px' }}
+            style={{ display: 'inline-block', fontSize: 12, fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-teinte-douce)', borderRadius: 999, padding: '3px 10px' }}
           >
             {indicator}
           </span>
           {source === 'file' && pdfState.status === 'ready' && (
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--earth-700)' }}>{t('documents.reader.full')}</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--secondaire-profond)' }}>{t('documents.reader.full')}</span>
           )}
           <span style={{ flex: 1 }} />
           {moreDocsPath && (
-            <Link to={moreDocsPath} style={{ fontSize: 13, fontWeight: 600, color: 'var(--green-700)', textDecoration: 'none' }}>
+            <Link to={moreDocsPath} style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-moyen)', textDecoration: 'none' }}>
               {t('documents.reader.otherDocuments')}
             </Link>
           )}
@@ -766,11 +766,11 @@ export function DocumentReaderPage() {
       <main style={{ maxWidth: COLUMN_MAX + 32, margin: '0 auto', padding: '12px 16px 40px' }}>
         <div ref={columnRef} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
           {pdfState.status === 'loading' && (
-            <p style={{ color: 'var(--ink-500)', fontSize: 15, padding: '48px 0' }}>{t('documents.reader.loading')}</p>
+            <p style={{ color: 'var(--texte-3)', fontSize: 15, padding: '48px 0' }}>{t('documents.reader.loading')}</p>
           )}
           {pdfState.status === 'error' && (
             <div style={{ textAlign: 'center', padding: '48px 0' }}>
-              <p style={{ color: 'var(--ink-700)', fontSize: 15, margin: '0 0 16px' }}>{t('documents.reader.pdfError')}</p>
+              <p style={{ color: 'var(--texte-2)', fontSize: 15, margin: '0 0 16px' }}>{t('documents.reader.pdfError')}</p>
               <Button variant="primary" onClick={() => setPdfAttempt((a) => a + 1)}>{t('documents.reader.retry')}</Button>
             </div>
           )}
@@ -792,22 +792,22 @@ export function DocumentReaderPage() {
           <section
             ref={wallRef}
             style={{
-              marginTop: 24, background: 'var(--ivory-card)', border: '1px solid var(--line-soft)', borderRadius: 'var(--radius-lg)',
+              marginTop: 24, background: 'var(--surface)', border: '1px solid var(--filet-doux)', borderRadius: 'var(--radius-lg)',
               boxShadow: 'var(--shadow-md)', padding: 'clamp(22px, 5vw, 36px) clamp(18px, 4vw, 32px)', textAlign: 'center',
             }}
           >
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(20px, 5vw, 26px)', lineHeight: 1.25, color: 'var(--green-900)', margin: '0 0 10px' }}>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(20px, 5vw, 26px)', lineHeight: 1.25, color: 'var(--accent-profond)', margin: '0 0 10px' }}>
               {t('documents.wall.title', { title: doc.title })}
             </h2>
-            <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: '0 0 6px' }}>{t('documents.wall.body')}</p>
-            <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--earth-700)', margin: '0 0 22px' }}>
+            <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--texte-2)', margin: '0 0 6px' }}>{t('documents.wall.body')}</p>
+            <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--secondaire-profond)', margin: '0 0 22px' }}>
               {t('documents.wall.remaining', { count: remaining })}
             </p>
             {/* D-WEB-04 (JP 27/10) : la suite se lit aussi sur le web — connexion / inscription pour un
                 visiteur, rattachement pour un compte connecté non rattaché ; retour ici par `?next=`. */}
             {wallKind === 'login' ? (
               <div style={{ margin: '0 0 22px' }}>
-                <p style={{ fontSize: 14, lineHeight: 1.55, color: 'var(--ink-700)', margin: '0 0 14px' }}>{t('documents.wall.signInHint')}</p>
+                <p style={{ fontSize: 14, lineHeight: 1.55, color: 'var(--texte-2)', margin: '0 0 14px' }}>{t('documents.wall.signInHint')}</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
                   <Link to={`/login${nextParam}`} className="btn primary" style={{ textDecoration: 'none' }}>{t('documents.wall.signIn')}</Link>
                   <Link to={`/signup${nextParam}`} className="btn secondary" style={{ textDecoration: 'none' }}>{t('documents.wall.signUp')}</Link>
@@ -815,14 +815,14 @@ export function DocumentReaderPage() {
               </div>
             ) : (
               <div style={{ margin: '0 0 22px' }}>
-                <h3 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 18, color: 'var(--green-900)', margin: '0 0 6px' }}>
+                <h3 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 18, color: 'var(--accent-profond)', margin: '0 0 6px' }}>
                   {t('documents.wall.joinTitle')}
                 </h3>
-                <p style={{ fontSize: 14, lineHeight: 1.55, color: 'var(--ink-700)', margin: '0 0 14px' }}>{t('documents.wall.joinBody')}</p>
+                <p style={{ fontSize: 14, lineHeight: 1.55, color: 'var(--texte-2)', margin: '0 0 14px' }}>{t('documents.wall.joinBody')}</p>
                 <Link to={`/join${nextParam}`} className="btn primary" style={{ textDecoration: 'none' }}>{t('documents.wall.join')}</Link>
               </div>
             )}
-            <p style={{ fontSize: 13, color: 'var(--ink-500)', margin: '0 0 14px' }}>{t('documents.wall.orApp')}</p>
+            <p style={{ fontSize: 13, color: 'var(--texte-3)', margin: '0 0 14px' }}>{t('documents.wall.orApp')}</p>
             <AppButtons
               platform={platform}
               qrValue={qrUrl}
@@ -833,8 +833,8 @@ export function DocumentReaderPage() {
           </section>
         ) : (
           // Document `open` (ou aperçu = document entier) : pas de mur, mêmes boutons en pied de page.
-          <footer style={{ marginTop: 28, padding: '24px 16px', borderTop: '1px solid var(--line)', textAlign: 'center' }}>
-            <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--ink-700)', margin: '0 0 18px' }}>{t('documents.footer.body')}</p>
+          <footer style={{ marginTop: 28, padding: '24px 16px', borderTop: '1px solid var(--filet)', textAlign: 'center' }}>
+            <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--texte-2)', margin: '0 0 18px' }}>{t('documents.footer.body')}</p>
             <AppButtons
               platform={platform}
               qrValue={qrUrl}
@@ -875,7 +875,7 @@ export function DocumentReaderPage() {
           value={shareSheetUrl ?? ''}
           onFocus={(e) => e.currentTarget.select()}
           aria-label={t('documents.share.linkLabel')}
-          style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--line)', background: 'var(--ivory-raised)', fontFamily: 'var(--font-mono)', fontSize: 13 }}
+          style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--filet)', background: 'var(--surface-haute)', fontFamily: 'var(--font-mono)', fontSize: 13 }}
         />
       </Modal>
     </div>

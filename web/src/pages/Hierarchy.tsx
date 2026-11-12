@@ -80,13 +80,13 @@ function LeadershipTotals({ unitCount, memberCount }: { unitCount: number; membe
     <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <strong style={{ fontSize: 14 }}>{t('hierarchy.leadershipTitle', { year: goal.currentYear })}</strong>
-        <span style={{ fontSize: 12.5, color: 'var(--ink-500)' }}>
+        <span style={{ fontSize: 12.5, color: 'var(--texte-3)' }}>
           {t('hierarchy.unitsCount', { count: unitCount })} · {t('hierarchy.membersCount', { count: memberCount })}
         </span>
       </div>
 
       {nothing ? (
-        <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--ink-400)', fontStyle: 'italic' }}>
+        <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--texte-4)', fontStyle: 'italic' }}>
           {t('hierarchy.leadershipEmpty')}
         </p>
       ) : (
@@ -96,10 +96,10 @@ function LeadershipTotals({ unitCount, memberCount }: { unitCount: number; membe
               key={category.id}
               style={{
                 display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12,
-                paddingTop: 6, borderTop: '1px solid var(--line-soft, rgba(42,38,32,0.08))',
+                paddingTop: 6, borderTop: '1px solid var(--filet-doux, color-mix(in srgb, var(--texte) 8%, transparent))',
               }}
             >
-              <span style={{ fontSize: 13, color: 'var(--ink-600)' }}>{goalName(category)}</span>
+              <span style={{ fontSize: 13, color: 'var(--texte-corps)' }}>{goalName(category)}</span>
               <strong style={{ fontSize: 15 }}>
                 {category.unitType === 'CURRENCY'
                   ? fmtAmount(valueOf(category.id), goal.defaultCurrency)
@@ -109,7 +109,7 @@ function LeadershipTotals({ unitCount, memberCount }: { unitCount: number; membe
           ))}
         </div>
       )}
-      <p style={{ margin: '12px 0 0', fontSize: 12, color: 'var(--ink-400)' }}>
+      <p style={{ margin: '12px 0 0', fontSize: 12, color: 'var(--texte-4)' }}>
         {t('hierarchy.leadershipHint')}
       </p>
     </div>
@@ -209,9 +209,9 @@ export function HierarchyPage() {
             style={{
               display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12,
               padding: '10px 14px', borderRadius: 'var(--radius-md, 10px)',
-              background: 'var(--sand-50, rgba(201,149,107,0.10))',
-              border: '1px solid var(--line-soft, rgba(42,38,32,0.10))',
-              fontSize: 13.5, color: 'var(--ink-700)',
+              background: 'var(--sand-50, color-mix(in srgb, var(--secondaire) 10%, transparent))',
+              border: '1px solid var(--filet-doux, color-mix(in srgb, var(--texte) 10%, transparent))',
+              fontSize: 13.5, color: 'var(--texte-2)',
             }}
           >
             <Icon name="arrowUp" size={14} />
@@ -242,7 +242,7 @@ export function HierarchyPage() {
                       title={t('hierarchy.home.pendingBadge', { count: pending })}
                       style={{
                         minWidth: 22, height: 22, padding: '0 7px', borderRadius: 11, display: 'inline-grid',
-                        placeItems: 'center', background: 'var(--earth-700)', color: 'var(--parchment, #fff)',
+                        placeItems: 'center', background: 'var(--secondaire-profond)', color: 'var(--page, #fff)',
                         fontSize: 12, fontWeight: 700,
                       }}
                     >
@@ -260,7 +260,7 @@ export function HierarchyPage() {
                 text={t('hierarchy.home.lifeCardHint')}
                 badge={
                   lifeLocked ? (
-                    <span title={t('hierarchy.home.lifeLocked')} aria-label={t('hierarchy.home.lifeLocked')} style={{ display: 'inline-flex', color: 'var(--earth-700)' }}>
+                    <span title={t('hierarchy.home.lifeLocked')} aria-label={t('hierarchy.home.lifeLocked')} style={{ display: 'inline-flex', color: 'var(--secondaire-profond)' }}>
                       <Icon name="lock" size={15} />
                     </span>
                   ) : null
@@ -273,7 +273,7 @@ export function HierarchyPage() {
         <p className="section-sub">{intro}</p>
 
         {data && roots.length > 0 && (
-          <div style={{ color: 'var(--ink-500)', fontSize: 13, marginBottom: 10 }}>
+          <div style={{ color: 'var(--texte-3)', fontSize: 13, marginBottom: 10 }}>
             {t('hierarchy.leadersCount', { count: totals.leaders })}
             {' · '}
             {t('hierarchy.unitsCount', { count: totals.units })}
@@ -319,12 +319,12 @@ export function HierarchyPage() {
                   <Icon name="unit" size={15} />
                   <span style={{ fontWeight: 600 }}>{unit.name ?? t('hierarchy.unnamedUnit')}</span>
                   {(unit.localityName || unit.countryName) && (
-                    <span style={{ color: 'var(--ink-500)', fontSize: 12 }}>
+                    <span style={{ color: 'var(--texte-3)', fontSize: 12 }}>
                       · {[unit.localityName, unit.zoneName, unit.countryName].filter(Boolean).join(' · ')}
                     </span>
                   )}
                   <Badge tone="warn">{t('hierarchy.needsLeader')}</Badge>
-                  <span style={{ marginLeft: 'auto', color: 'var(--ink-500)', fontSize: 12 }}>
+                  <span style={{ marginLeft: 'auto', color: 'var(--texte-3)', fontSize: 12 }}>
                     {unit.members.length > 0
                       ? t('hierarchy.membersCount', { count: unit.members.length })
                       : t('hierarchy.unitNoMembers')}
@@ -352,15 +352,15 @@ function AccessCard({
         textDecoration: 'none', color: 'inherit',
       }}
     >
-      <span style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--parchment)', display: 'grid', placeItems: 'center', color: 'var(--green-700)', flexShrink: 0 }}>
+      <span style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--page)', display: 'grid', placeItems: 'center', color: 'var(--accent-moyen)', flexShrink: 0 }}>
         <Icon name={icon} size={17} />
       </span>
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <strong style={{ fontSize: 14.5, color: 'var(--green-800)' }}>{title}</strong>
+          <strong style={{ fontSize: 14.5, color: 'var(--accent)' }}>{title}</strong>
           {badge}
         </span>
-        <span style={{ display: 'block', fontSize: 12.5, color: 'var(--ink-500)', marginTop: 2 }}>{text}</span>
+        <span style={{ display: 'block', fontSize: 12.5, color: 'var(--texte-3)', marginTop: 2 }}>{text}</span>
       </span>
       <Icon name="chevRight" size={14} />
     </Link>
@@ -387,7 +387,7 @@ function LeaderNode({ node, depth, meId }: { node: LeaderHierarchyNode; depth: n
           textAlign: 'left', font: 'inherit',
         }}
       >
-        <span style={{ width: 16, display: 'inline-flex', color: 'var(--ink-500)' }}>
+        <span style={{ width: 16, display: 'inline-flex', color: 'var(--texte-3)' }}>
           {hasContent && <Icon name={open ? 'chevDown' : 'chevRight'} size={14} />}
         </span>
         <Icon name="users" size={15} />
@@ -400,7 +400,7 @@ function LeaderNode({ node, depth, meId }: { node: LeaderHierarchyNode; depth: n
         <GoalPastille hasPledges={node.goalHasPledges} submitted={node.goalSubmitted} late={node.goalLate} />
         {/* D-HIE-01 (JP 28/10) : seulement le compte des assemblées directes — les résumés de CR
             et le journal PDF du sous-arbre sont payants et vivent en page 3. */}
-        <span style={{ marginLeft: 'auto', color: 'var(--ink-500)', fontSize: 12 }}>
+        <span style={{ marginLeft: 'auto', color: 'var(--texte-3)', fontSize: 12 }}>
           {node.units.length > 0 && t('hierarchy.unitsCount', { count: node.units.length })}
         </span>
       </button>
@@ -434,19 +434,19 @@ function UnitRow({ unit, depth }: { unit: HierarchyUnitView; depth: number }) {
           display: 'flex', alignItems: 'center', gap: 8, width: '100%',
           padding: '7px 14px', paddingLeft: 14 + depth * 22,
           background: 'none', border: 'none', cursor: hasMembers ? 'pointer' : 'default',
-          textAlign: 'left', font: 'inherit', color: 'var(--ink-700, inherit)',
+          textAlign: 'left', font: 'inherit', color: 'var(--texte-2, inherit)',
         }}
       >
-        <span style={{ width: 16, display: 'inline-flex', color: 'var(--ink-500)' }}>
+        <span style={{ width: 16, display: 'inline-flex', color: 'var(--texte-3)' }}>
           {hasMembers && <Icon name={open ? 'chevDown' : 'chevRight'} size={14} />}
         </span>
         <Icon name="unit" size={15} />
         <span>{unit.name ?? t('hierarchy.unnamedUnit')}</span>
         {unit.localityName && (
-          <span style={{ color: 'var(--ink-500)', fontSize: 12 }}>· {unit.localityName}</span>
+          <span style={{ color: 'var(--texte-3)', fontSize: 12 }}>· {unit.localityName}</span>
         )}
         {unit.needsLeader && <Badge tone="warn">{t('hierarchy.needsLeader')}</Badge>}
-        <span style={{ marginLeft: 'auto', color: 'var(--ink-500)', fontSize: 12 }}>
+        <span style={{ marginLeft: 'auto', color: 'var(--texte-3)', fontSize: 12 }}>
           {hasMembers
             ? t('hierarchy.membersCount', { count: unit.members.length })
             : t('hierarchy.unitNoMembers')}
@@ -464,7 +464,7 @@ function UnitRow({ unit, depth }: { unit: HierarchyUnitView; depth: number }) {
             }}
           >
             <span>{m.fullName}</span>
-            <span style={{ color: 'var(--ink-500)', fontSize: 12 }}>{m.email}</span>
+            <span style={{ color: 'var(--texte-3)', fontSize: 12 }}>{m.email}</span>
             {!m.active && <Badge tone="gray">{t('users.statusInactive')}</Badge>}
             <GoalPastille hasPledges={m.goalHasPledges} submitted={m.goalSubmitted} late={m.goalLate} />
           </div>

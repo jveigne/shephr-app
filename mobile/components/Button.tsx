@@ -3,13 +3,15 @@ import {
   Pressable,
   Text,
   ActivityIndicator,
-  StyleSheet,
   StyleProp,
   ViewStyle,
   View,
 } from 'react-native';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
+import { transparence, type PaletteTheme } from '@/theme';
 type Variant = 'primary' | 'ghost' | 'soft' | 'danger';
 
 interface Props {
@@ -39,7 +41,9 @@ export default function Button({
   fullWidth,
   height = 54,
 }: Props) {
-  const palette = PALETTES[variant];
+  const styles = useStyles();
+  const { couleurs: c } = useTheme();
+  const palette = palettesDe(c)[variant];
 
   return (
     <Pressable
@@ -74,14 +78,17 @@ export default function Button({
   );
 }
 
-const PALETTES: Record<Variant, { bg: string; fg: string; border?: string }> = {
-  primary: { bg: colors.moss, fg: colors.white },
-  ghost: { bg: 'transparent', fg: colors.moss, border: colors.hairStrong },
-  soft: { bg: colors.parchmentDeep, fg: colors.mossDeep },
-  danger: { bg: 'transparent', fg: colors.clay, border: 'rgba(184,106,74,0.3)' },
-};
+/** Couleurs des variantes, selon la palette du thème (docs/theme-plan.md §4.4). */
+function palettesDe(c: PaletteTheme): Record<Variant, { bg: string; fg: string; border?: string }> {
+  return {
+    primary: { bg: c.accent, fg: c.surAccent },
+    ghost: { bg: 'transparent', fg: c.accent, border: c.filetFort },
+    soft: { bg: c.pageProfonde, fg: c.accentProfond },
+    danger: { bg: 'transparent', fg: c.alerte, border: transparence(c.alerte, 0.3) },
+  };
+}
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   base: {
     borderRadius: 18,
     paddingHorizontal: 22,
@@ -99,4 +106,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.1,
   },
-});
+}));

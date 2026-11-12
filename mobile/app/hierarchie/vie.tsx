@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +14,7 @@ import {
 } from '@/components/AssemblyHierarchyStats';
 import EventHierarchyStatsBlock from '@/components/EventHierarchyStats';
 import StudyHierarchyStatsBlock from '@/components/StudyHierarchyStats';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { goBack } from '@/utils/navigation';
@@ -31,6 +31,8 @@ import { treeUnitIds } from '@/utils/assemblyHierarchyStats';
 import { fetchLeaderHierarchy, type LeaderHierarchyNode, type LeaderHierarchyResponse } from '@/services/leadersApi';
 import { ENTITLEMENT_HIERARCHIE_SUIVI, getPersonalEntitlements } from '@/services/entitlementsApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Page 3 de la Hiérarchie, « Vie de mon leadership » — D-HIE-01 / D-HIE-09 / D-HIE-10 (JP 28/10).
  *
@@ -68,6 +70,8 @@ function unitLeaders(roots: LeaderHierarchyNode[]): Map<string, string> {
 }
 
 export default function HierarchyLifeScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const { isLeader, hasAssembly, hasEvents, hasStudy } = useAuth();
@@ -140,11 +144,11 @@ export default function HierarchyLifeScreen() {
     <ScreenShell
       withTabBar={false}
       paddingTop={insets.top ? 4 : 16}
-      refreshControl={<RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={styles.headerRow}>
         <Pressable onPress={() => goBack()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={24} color={colors.ink2} />
+          <Ionicons name="arrow-back" size={24} color={c.texte2} />
         </Pressable>
         <Text style={styles.title}>{th('title')}</Text>
       </View>
@@ -152,7 +156,7 @@ export default function HierarchyLifeScreen() {
 
       {access === 'unknown' ? (
         <View style={{ alignItems: 'center', paddingTop: 60 }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       ) : locked ? (
         // Verrou UNIQUE (D-HIE-01) — texte neutre inchangé (D-OFF-09), « En savoir plus » (D-OFF-11).
@@ -183,7 +187,7 @@ export default function HierarchyLifeScreen() {
                 style={styles.navBtn}
                 accessibilityLabel={th('previousPeriod')}
               >
-                <Ionicons name="chevron-back" size={16} color={colors.ink2} />
+                <Ionicons name="chevron-back" size={16} color={c.texte2} />
               </Pressable>
               <Text style={styles.periodText}>{label}</Text>
               <Pressable
@@ -193,7 +197,7 @@ export default function HierarchyLifeScreen() {
                 style={[styles.navBtn, !canGoNext && { opacity: 0.3 }]}
                 accessibilityLabel={th('nextPeriod')}
               >
-                <Ionicons name="chevron-forward" size={16} color={colors.ink2} />
+                <Ionicons name="chevron-forward" size={16} color={c.texte2} />
               </Pressable>
             </View>
           </Card>
@@ -222,7 +226,7 @@ export default function HierarchyLifeScreen() {
           {assemblyEnabled && asm.statsById && unitIds.length > 0 && (
             <Card style={styles.block}>
               <View style={styles.blockHeader}>
-                <Ionicons name="home-outline" size={18} color={colors.mossDeep} />
+                <Ionicons name="home-outline" size={18} color={c.accentProfond} />
                 <Text style={styles.blockTitle}>{th('unitsTitle')}</Text>
               </View>
               {unitIds.map((id) => {
@@ -255,7 +259,7 @@ export default function HierarchyLifeScreen() {
               loading={asm.generating === 'all'}
               disabled={meetingTotal === 0 || (asm.generating !== null && asm.generating !== 'all')}
               style={{ marginTop: 14 }}
-              iconLeft={<Ionicons name="document-text-outline" size={16} color={colors.moss} />}
+              iconLeft={<Ionicons name="document-text-outline" size={16} color={c.accent} />}
             />
           )}
         </>
@@ -264,16 +268,16 @@ export default function HierarchyLifeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2 },
-  title: { fontFamily: fonts.serif, fontSize: 26, color: colors.ink, letterSpacing: -0.4, flex: 1 },
-  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4, lineHeight: 18 },
+  title: { fontFamily: fonts.serif, fontSize: 26, color: c.texte, letterSpacing: -0.4, flex: 1 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 4, lineHeight: 18 },
   periodCard: { marginTop: 14, paddingHorizontal: 12, paddingVertical: 10 },
-  segments: { flexDirection: 'row', gap: 4, padding: 3, borderRadius: 10, backgroundColor: colors.mossTint },
+  segments: { flexDirection: 'row', gap: 4, padding: 3, borderRadius: 10, backgroundColor: c.accentTeinte },
   segment: { flex: 1, alignItems: 'center', paddingVertical: 6, borderRadius: 8 },
-  segmentOn: { backgroundColor: colors.moss },
-  segmentText: { fontFamily: fonts.sans, fontSize: 12, fontWeight: '600', color: colors.ink2 },
-  segmentTextOn: { color: colors.white },
+  segmentOn: { backgroundColor: c.accent },
+  segmentText: { fontFamily: fonts.sans, fontSize: 12, fontWeight: '600', color: c.texte2 },
+  segmentTextOn: { color: c.surAccent },
   periodRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 8 },
   navBtn: {
     width: 28,
@@ -281,14 +285,14 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
   },
-  periodText: { fontFamily: fonts.serif, fontSize: 16, color: colors.ink, minWidth: 140, textAlign: 'center' },
+  periodText: { fontFamily: fonts.serif, fontSize: 16, color: c.texte, minWidth: 140, textAlign: 'center' },
   block: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 12 },
   blockHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
-  blockTitle: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '700', color: colors.ink },
-  unitRow: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.hair },
-  unitName: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.earthDeep },
-  meta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2 },
-  empty: { fontFamily: fonts.serif, fontStyle: 'italic', color: colors.ink3, textAlign: 'center', paddingVertical: 20 },
-});
+  blockTitle: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '700', color: c.texte },
+  unitRow: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.filet },
+  unitName: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.secondaireProfond },
+  meta: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 2 },
+  empty: { fontFamily: fonts.serif, fontStyle: 'italic', color: c.texte3, textAlign: 'center', paddingVertical: 20 },
+}));

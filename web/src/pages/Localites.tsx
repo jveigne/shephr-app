@@ -82,12 +82,12 @@ export function LocalitesPage() {
   const canCreate = canDirect && ministryId != null && zones.length > 0;
 
   const cols: Column<LocalityResponse>[] = [
-    { label: t('localities.colLocality'), render: (l) => <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{l.name}</span> },
+    { label: t('localities.colLocality'), render: (l) => <span style={{ fontWeight: 500, color: 'var(--texte)' }}>{l.name}</span> },
     {
       label: t('common.zone'),
-      render: (l) => l.zoneName ? <Badge tone="earth">{l.zoneName}</Badge> : <span style={{ color: 'var(--ink-400)' }}>{t('localities.outOfZone')}</span>,
+      render: (l) => l.zoneName ? <Badge tone="earth">{l.zoneName}</Badge> : <span style={{ color: 'var(--texte-4)' }}>{t('localities.outOfZone')}</span>,
     },
-    { label: t('common.country'), render: (l) => l.country ?? <span style={{ color: 'var(--ink-400)' }}>—</span> },
+    { label: t('common.country'), render: (l) => l.country ?? <span style={{ color: 'var(--texte-4)' }}>—</span> },
     ...(canWrite || canDelete
       ? [{
           label: '',
@@ -142,7 +142,7 @@ export function LocalitesPage() {
           </Field>
         </div>
 
-        <div style={{ color: 'var(--ink-500)', fontSize: 13, marginBottom: 10 }}>
+        <div style={{ color: 'var(--texte-3)', fontSize: 13, marginBottom: 10 }}>
           {t('localities.count', { count: rows.length })}
         </div>
 

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   TextInput,
   KeyboardAvoidingView,
@@ -17,7 +16,7 @@ import ScreenShell from '@/components/ScreenShell';
 import Card from '@/components/Card';
 import Label from '@/components/Label';
 import Button from '@/components/Button';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { goalName } from '@/utils/goalName';
 import { goalCategoryMeta } from '@/constants/goalCategories';
@@ -26,6 +25,8 @@ import { currencySymbol } from '@/utils/format';
 import { notify } from '@/utils/dialogs';
 import { saveMemberPledge, type PledgeResponse } from '@/services/goalsApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallback;
 
 /**
@@ -36,6 +37,8 @@ const errMsg = (e: any, fallback: string) => e?.response?.data?.message ?? fallb
  * un seul appel couvre création et modification.
  */
 export default function PledgeEditScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const { categoryId, year: yearParam } = useLocalSearchParams<{
@@ -57,7 +60,7 @@ export default function PledgeEditScreen() {
     return (
       <ScreenShell withTabBar={false}>
         <View style={{ alignItems: 'center', paddingTop: 80 }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       </ScreenShell>
     );
@@ -70,7 +73,7 @@ export default function PledgeEditScreen() {
       <ScreenShell withTabBar={false} paddingTop={insets.top ? 4 : 16}>
         <View style={styles.headerRow}>
           <Pressable onPress={() => goBack()} hitSlop={10}>
-            <Ionicons name="arrow-back" size={24} color={colors.ink2} />
+            <Ionicons name="arrow-back" size={24} color={c.texte2} />
           </Pressable>
         </View>
 
@@ -83,7 +86,7 @@ export default function PledgeEditScreen() {
 
         {locked && (
           <Card variant="tinted" style={styles.lockBanner}>
-            <Ionicons name="lock-closed" size={16} color={colors.moss} />
+            <Ionicons name="lock-closed" size={16} color={c.accent} />
             <Text style={styles.lockText}>
               {t('pledge.lockedBanner')}
             </Text>
@@ -135,6 +138,8 @@ function TargetSection({
   editable: boolean;
   onSaved: () => Promise<void>;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const isCurrency = unitType === 'CURRENCY';
   const initial = pledge ? (isCurrency ? pledge.targetAmount : pledge.targetCount) : null;
@@ -172,7 +177,7 @@ function TargetSection({
   return (
     <>
       <Card style={styles.amountCard}>
-        <Label style={{ color: colors.mossSoft, textAlign: 'center' }}>
+        <Label style={{ color: c.accentDoux, textAlign: 'center' }}>
           {isCurrency ? t('pledge.amountPledged') : t('pledge.pledgeLabel', { unit: unitLabel ?? t('pledge.unitFallback') })}
         </Label>
         <View style={styles.amountRow}>
@@ -185,7 +190,7 @@ function TargetSection({
             maxLength={10}
             editable={editable}
             placeholder="0"
-            placeholderTextColor={colors.ink3}
+            placeholderTextColor={c.texte3}
           />
         </View>
       </Card>
@@ -198,7 +203,7 @@ function TargetSection({
           fullWidth
           height={56}
           style={{ marginTop: 22 }}
-          iconLeft={<Ionicons name="checkmark" size={20} color={colors.white} />}
+          iconLeft={<Ionicons name="checkmark" size={20} color={c.surAccent} />}
         />
       )}
       <Text style={styles.footnote}>
@@ -208,7 +213,7 @@ function TargetSection({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', marginBottom: 6 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 2 },
   titleIcon: {
@@ -222,7 +227,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: fonts.serif,
     fontSize: 26,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.4,
   },
   lockBanner: {
@@ -233,16 +238,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  lockText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },
-  declaredBy: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 12 },
+  lockText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2, lineHeight: 18 },
+  declaredBy: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 12 },
   amountCard: { paddingVertical: 22, paddingHorizontal: 22, marginTop: 22, alignItems: 'center' },
   amountRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: 10 },
-  cur: { fontFamily: fonts.serif, fontSize: 32, color: colors.ink3, marginRight: 4 },
+  cur: { fontFamily: fonts.serif, fontSize: 32, color: c.texte3, marginRight: 4 },
   amountInput: {
     fontFamily: fonts.serif,
     fontSize: 56,
     fontWeight: '500',
-    color: colors.ink,
+    color: c.texte,
     textAlign: 'center',
     minWidth: 130,
     letterSpacing: -1,
@@ -252,9 +257,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 14,
     fontSize: 12,
-    color: colors.ink3,
+    color: c.texte3,
     fontFamily: fonts.sans,
     lineHeight: 18,
     paddingHorizontal: 16,
   },
-});
+}));

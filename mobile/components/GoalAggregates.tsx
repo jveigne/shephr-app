@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Modal,
   ActivityIndicator,
   RefreshControl,
@@ -16,7 +15,7 @@ import Label from '@/components/Label';
 import Button from '@/components/Button';
 import HandDivider from '@/components/HandDivider';
 import { GoalScreenTitle } from '@/components/GoalCards';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { goalCategoryMeta } from '@/constants/goalCategories';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { goalName } from '@/utils/goalName';
@@ -39,6 +38,8 @@ import {
 } from '@/services/goalsApi';
 import { listCountries, listLocalities, listZones } from '@/services/orgApi';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /** Regroupement d'assemblées par ville (localityName) — clé stable même sans localityId. */
 interface CityUnitsGroup {
   key: string;
@@ -101,6 +102,8 @@ export default function GoalAggregatesScreen({
   /** Nations portées (coordinateur) ; vide sinon. */
   countryIds: string[];
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const { me } = useAuth();
   // `GET /goals/me/units` est réservé aux sous-coordinateurs côté backend
@@ -181,7 +184,7 @@ export default function GoalAggregatesScreen({
     return (
       <ScreenShell>
         <View style={{ alignItems: 'center', paddingTop: 80 }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       </ScreenShell>
     );
@@ -203,7 +206,7 @@ export default function GoalAggregatesScreen({
   return (
     <ScreenShell
       refreshControl={
-        <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
       <GoalScreenTitle title={t('goals.title')} />
@@ -266,6 +269,8 @@ export default function GoalAggregatesScreen({
 type SectionError = 'denied' | 'failed';
 
 function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goal: ActiveGoal; year: number }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [lines, setLines] = useState<AggregateLine[]>([]);
   const [loading, setLoading] = useState(true);
@@ -313,14 +318,14 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
       </View>
 
       {loading ? (
-        <ActivityIndicator color={colors.moss} style={{ marginTop: 18 }} />
+        <ActivityIndicator color={c.accent} style={{ marginTop: 18 }} />
       ) : error != null ? (
         <Card variant="paper2" style={styles.errorCard}>
           <View style={styles.errorHead}>
             <Ionicons
               name={error === 'denied' ? 'lock-closed-outline' : 'cloud-offline-outline'}
               size={18}
-              color={colors.clay}
+              color={c.alerte}
             />
             <Text style={styles.errorTitle}>
               {t(error === 'denied' ? 'goalsAgg.deniedTitle' : 'goalsAgg.loadErrorTitle')}
@@ -367,6 +372,8 @@ function AggregateSection({ perimeter, goal, year }: { perimeter: Perimeter; goa
  * assemblées directes pour un dirigeant déjà scopé à une seule ville.
  */
 function MyUnitsBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [units, setUnits] = useState<ZoneUnitStatus[]>([]);
   const [loading, setLoading] = useState(true);
@@ -453,7 +460,7 @@ function MyUnitsBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
         {!showingCityList
           && activeUnits.length > 0
           && activeUnits.every((u) => u.totalMembers > 0 && u.submittedMembers === u.totalMembers) && (
-          <Text style={[styles.listItem, { color: colors.mossSoft, fontWeight: '600' }]}>
+          <Text style={[styles.listItem, { color: c.accentDoux, fontWeight: '600' }]}>
             {t('goalsAgg.allMembersSubmitted')}
           </Text>
         )}
@@ -473,11 +480,11 @@ function MyUnitsBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <CityStatusBadge submitted={submitted} total={total} />
-                      <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+                      <Ionicons name="chevron-forward" size={16} color={c.texte3} />
                     </View>
                   </View>
                   {lines == null ? (
-                    <ActivityIndicator color={colors.moss} size="small" style={{ marginTop: 8 }} />
+                    <ActivityIndicator color={c.accent} size="small" style={{ marginTop: 8 }} />
                   ) : lines.length > 0 ? (
                     <View style={{ marginTop: 8, gap: 2 }}>
                       {categories.map((category) => {
@@ -507,7 +514,7 @@ function MyUnitsBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
                     })}
                   </Text>
                   {u.lateMembers > 0 && (
-                    <Text style={[styles.unitMeta, { color: colors.clay }]}>
+                    <Text style={[styles.unitMeta, { color: c.alerte }]}>
                       {t('goals.members.lateCount', { count: u.lateMembers })}
                     </Text>
                   )}
@@ -519,7 +526,7 @@ function MyUnitsBlock({ year, goal }: { year: number; goal: ActiveGoal }) {
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <UnitStatusBadge unit={u} />
-                  <Ionicons name="chevron-forward" size={16} color={colors.ink3} />
+                  <Ionicons name="chevron-forward" size={16} color={c.texte3} />
                 </View>
               </Pressable>
             ))}
@@ -553,6 +560,8 @@ function UnitDetailModal({
   year: number;
   onClose: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const currency = goal.defaultCurrency;
   const catByCode = new Map(goal.categories.map((c) => [c.code, c]));
@@ -566,7 +575,7 @@ function UnitDetailModal({
           <Text style={styles.modalSub}>{t('goalsAgg.unitPledgesSub', { year })}</Text>
 
           {loading ? (
-            <ActivityIndicator color={colors.moss} style={{ marginTop: 14 }} />
+            <ActivityIndicator color={c.accent} style={{ marginTop: 14 }} />
           ) : (
             <View style={{ marginTop: 10, gap: 8 }}>
               {(detail ?? []).map((d) => {
@@ -605,8 +614,10 @@ function UnitDetailModal({
  * MEMBRES de ses assemblées qui sont comptés, pas les assemblées.
  */
 function CityStatusBadge({ submitted, total }: { submitted: number; total: number }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
-  const tone = total > 0 && submitted === total ? colors.moss : submitted > 0 ? colors.earthDeep : colors.ink3;
+  const tone = total > 0 && submitted === total ? c.accent : submitted > 0 ? c.secondaireProfond : c.texte3;
   return (
     <View style={[styles.statusBadge, { backgroundColor: tone + '22' }]}>
       <Text style={[styles.statusBadgeText, { color: tone }]}>
@@ -618,6 +629,8 @@ function CityStatusBadge({ submitted, total }: { submitted: number; total: numbe
 
 /** Lot V1 — cumuls d'une Nation détaillés PAR RÉGION (la vue Coordinateur s'arrête à la Région). */
 function RegionsSummaryBlock({ nationId, year, goal }: { nationId: string; year: number; goal: ActiveGoal }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [data, setData] = useState<Awaited<ReturnType<typeof getRegionsSummary>> | null>(null);
   const currency = goal.defaultCurrency;
@@ -682,15 +695,17 @@ function RegionsSummaryBlock({ nationId, year, goal }: { nationId: string; year:
  * divergeraient sur la règle « en retard ».
  */
 export function UnitStatusBadge({ unit }: { unit: ZoneUnitStatus }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const allSubmitted = unit.totalMembers > 0 && unit.submittedMembers === unit.totalMembers;
   const [label, tone] = unit.lateMembers > 0
-    ? [t('goalsAgg.statusLate'), colors.clay]
+    ? [t('goalsAgg.statusLate'), c.alerte]
     : allSubmitted
-    ? [t('goalsAgg.statusSubmitted'), colors.moss]
+    ? [t('goalsAgg.statusSubmitted'), c.accent]
     : unit.membersWithPledges > 0
-    ? [t('goalsAgg.statusInProgress'), colors.earthDeep]
-    : [t('goalsAgg.statusNotStarted'), colors.ink3];
+    ? [t('goalsAgg.statusInProgress'), c.secondaireProfond]
+    : [t('goalsAgg.statusNotStarted'), c.texte3];
   return (
     <View style={[styles.statusBadge, { backgroundColor: tone + '22' }]}>
       <Text style={[styles.statusBadgeText, { color: tone }]}>{label}</Text>
@@ -698,39 +713,39 @@ export function UnitStatusBadge({ unit }: { unit: ZoneUnitStatus }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   viewChip: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.earthDeep + '1F',
+    backgroundColor: c.secondaireProfond + '1F',
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginTop: 8,
   },
-  viewChipText: { fontFamily: fonts.sans, fontSize: 12, fontWeight: '600', color: colors.earthDeep },
-  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4 },
+  viewChipText: { fontFamily: fonts.sans, fontSize: 12, fontWeight: '600', color: c.secondaireProfond },
+  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 4 },
   yearRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   yearChip: {
     paddingVertical: 6,
     paddingHorizontal: 14,
     borderRadius: 99,
-    backgroundColor: 'rgba(42,38,32,0.06)',
+    backgroundColor: transparence(c.texte, 0.06),
   },
-  yearChipActive: { backgroundColor: colors.moss },
-  yearChipText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink2 },
-  yearChipTextActive: { color: colors.white },
+  yearChipActive: { backgroundColor: c.accent },
+  yearChipText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.texte2 },
+  yearChipTextActive: { color: c.surAccent },
   sectionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
     marginTop: 22,
   },
-  sectionTitle: { fontFamily: fonts.serif, fontSize: 20, color: colors.ink },
+  sectionTitle: { fontFamily: fonts.serif, fontSize: 20, color: c.texte },
   lineCard: { paddingHorizontal: 16, paddingVertical: 14 },
   errorCard: { paddingHorizontal: 16, paddingVertical: 14, marginTop: 10 },
   errorHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  errorTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '700', color: colors.clay, flex: 1 },
-  errorHint: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink2, marginTop: 6, lineHeight: 17 },
+  errorTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '700', color: c.alerte, flex: 1 },
+  errorHint: { fontFamily: fonts.sans, fontSize: 12, color: c.texte2, marginTop: 6, lineHeight: 17 },
   lineHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   lineIcon: {
     width: 36,
@@ -744,10 +759,10 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontSize: 14.5,
     fontWeight: '600',
-    color: colors.ink,
+    color: c.texte,
   },
   lineFooter: { flexDirection: 'row', justifyContent: 'space-between' },
-  lineValue: { fontFamily: fonts.serif, fontSize: 17, color: colors.ink, marginTop: 2 },
+  lineValue: { fontFamily: fonts.serif, fontSize: 17, color: c.texte, marginTop: 2 },
   listCard: { paddingHorizontal: 16, paddingVertical: 14, marginTop: 4 },
   unitRow: {
     flexDirection: 'row',
@@ -759,47 +774,47 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(42,38,32,0.06)',
+    borderTopColor: transparence(c.texte, 0.06),
   },
   detailRow: {
     gap: 3,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(42,38,32,0.06)',
+    borderTopColor: transparence(c.texte, 0.06),
   },
-  unitName: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
-  unitMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 1 },
+  unitName: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.texte },
+  unitMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 1 },
   statusBadge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 99 },
   statusBadgeText: { fontFamily: fonts.sans, fontSize: 11, fontWeight: '700' },
-  backLink: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: colors.moss },
+  backLink: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: c.accent },
   listItem: {
     fontFamily: fonts.sans,
     fontSize: 12.5,
-    color: colors.ink2,
+    color: c.texte2,
     marginTop: 4,
     lineHeight: 18,
   },
   emptyTitle: {
     fontFamily: fonts.serif,
     fontSize: 22,
-    color: colors.ink,
+    color: c.texte,
     textAlign: 'center',
   },
   emptyHint: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 8,
     textAlign: 'center',
     lineHeight: 19,
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(22,41,31,0.45)',
+    backgroundColor: c.voile,
     justifyContent: 'center',
     padding: 20,
   },
   modalCard: { paddingHorizontal: 20, paddingVertical: 20 },
-  modalTitle: { fontFamily: fonts.serif, fontSize: 21, color: colors.ink },
-  modalSub: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4 },
-});
+  modalTitle: { fontFamily: fonts.serif, fontSize: 21, color: c.texte },
+  modalSub: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 4 },
+}));

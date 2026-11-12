@@ -44,13 +44,13 @@ export function AuthPageLayout({
         >
           <defs>
             <linearGradient id="pwHill" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#C9956B" stopOpacity="0.55" />
-              <stop offset="100%" stopColor="#C9956B" stopOpacity="0.15" />
+              <stop offset="0%" stopColor="var(--secondaire)" stopOpacity="0.55" />
+              <stop offset="100%" stopColor="var(--secondaire)" stopOpacity="0.15" />
             </linearGradient>
           </defs>
-          <line x1="0" x2="360" y1="160" y2="160" stroke="rgba(245,236,212,0.18)" strokeWidth="1" />
-          <circle cx="270" cy="100" r="38" fill="#C9956B" opacity="0.35" />
-          <circle cx="270" cy="100" r="22" fill="#D9AE89" opacity="0.55" />
+          <line x1="0" x2="360" y1="160" y2="160" stroke="color-mix(in srgb, var(--surface-basse) 18%, transparent)" strokeWidth="1" />
+          <circle cx="270" cy="100" r="38" fill="var(--secondaire)" opacity="0.35" />
+          <circle cx="270" cy="100" r="22" fill="var(--secondaire-clair)" opacity="0.55" />
           <path d="M 0 175 Q 80 145 170 165 T 360 160 L 360 220 L 0 220 Z" fill="url(#pwHill)" />
         </svg>
       </div>
@@ -61,7 +61,7 @@ export function AuthPageLayout({
           onClick={() => navigate(backTo)}
           style={{
             position: 'absolute', top: 24, left: 24, display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--ink-500)',
+            background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--texte-3)',
             fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, padding: 6,
           }}
         >

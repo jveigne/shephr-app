@@ -5,12 +5,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { canDeclareEvents, hasMemberGoals } from '@/services/authApi';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 import NotificationGate from '@/components/NotificationGate';
 
 export default function TabLayout() {
   const { t, applyAccountLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
+  // Thème (docs/theme-plan.md §4.2, étape M2) : la barre d'onglets suit la palette. En Clair, les
+  // valeurs calculées sont exactement les anciennes (paper à 96 %, encre à 8 %).
+  const { couleurs: c } = useTheme();
   const { isLeader, hasGoals, hasMemberCare, hasAssembly, hasDonations, hasEvents, me } = useAuth();
 
   // Initialise la langue depuis le compte (me.language) tant que l'utilisateur
@@ -25,12 +29,12 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.moss,
-        tabBarInactiveTintColor: colors.ink3,
+        tabBarActiveTintColor: c.accent,
+        tabBarInactiveTintColor: c.texte3,
         tabBarStyle: {
-          backgroundColor: 'rgba(245,236,216,0.96)',
+          backgroundColor: transparence(c.surface, 0.96),
           borderTopWidth: 1,
-          borderTopColor: 'rgba(42,38,32,0.08)',
+          borderTopColor: transparence(c.texte, 0.08),
           height: 60 + insets.bottom,
           paddingBottom: insets.bottom + 4,
           paddingTop: 8,

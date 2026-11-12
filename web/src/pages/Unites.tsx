@@ -124,13 +124,13 @@ export function UnitesPage() {
   const canCreate = canCreateAssembly(me) && localities.length > 0;
 
   const cols: Column<UnitResponse>[] = [
-    { label: t('units.colUnit'), render: (u) => <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{u.name}</span> },
+    { label: t('units.colUnit'), render: (u) => <span style={{ fontWeight: 500, color: 'var(--texte)' }}>{u.name}</span> },
     { label: t('common.locality'), render: (u) => u.localityName },
     // D-ETU-24 (JP 21/10) : langue de l'assemblée — un backend antérieur ne la renvoie pas (FR).
     { label: t('units.colLanguage'), render: (u) => <Badge tone="gray">{u.language ?? 'FR'}</Badge> },
     {
       label: t('units.colCode'),
-      render: (u) => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-600)' }}>{u.joinCode}</span>,
+      render: (u) => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--texte-corps)' }}>{u.joinCode}</span>,
     },
     { label: t('common.status'), render: (u) => <StatusBadge active={u.active} /> },
     ...(canAdminister
@@ -196,7 +196,7 @@ export function UnitesPage() {
               </Field>
             </div>
 
-            <div style={{ color: 'var(--ink-500)', fontSize: 13, marginBottom: 10 }}>
+            <div style={{ color: 'var(--texte-3)', fontSize: 13, marginBottom: 10 }}>
               {t('units.count', { count: rows.length })}
             </div>
 
@@ -298,7 +298,7 @@ function AssemblyHistory() {
   const cols: Column<HistoryRow>[] = [
     {
       label: t('common.name'),
-      render: (r) => <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{r.name}</span>,
+      render: (r) => <span style={{ fontWeight: 500, color: 'var(--texte)' }}>{r.name}</span>,
     },
     { label: t('common.locality'), render: (r) => r.cityName ?? t('common.none') },
     { label: t('common.zone'), render: (r) => r.regionName ?? t('common.none') },
@@ -318,7 +318,7 @@ function AssemblyHistory() {
     },
     {
       label: t('common.date'),
-      render: (r) => <span style={{ color: 'var(--ink-600)' }}>{fmtDate(r.createdAt)}</span>,
+      render: (r) => <span style={{ color: 'var(--texte-corps)' }}>{fmtDate(r.createdAt)}</span>,
     },
   ];
 
@@ -342,7 +342,7 @@ function AssemblyHistory() {
     <>
       <p className="section-sub">{t('units.histIntro')}</p>
 
-      <div style={{ color: 'var(--ink-500)', fontSize: 13, marginBottom: 10 }}>
+      <div style={{ color: 'var(--texte-3)', fontSize: 13, marginBottom: 10 }}>
         {historyQ.isLoading ? t('common.loading') : t('units.histCount', { count: total })}
       </div>
 
@@ -548,13 +548,13 @@ function UnitFormModal({
               pas la sienne contacte le support — coordonnées servies par GET /api/app/contact,
               donc modifiables sans redéployer. */}
           {!isEdit && (
-            <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--ink-500)' }}>
+            <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--texte-3)' }}>
               {t('units.cityMissingHint')}{' '}
-              <a href={contactMailto(t('units.cityMissingSubject'))} style={{ color: 'var(--green-700, #1E3A2F)' }}>
+              <a href={contactMailto(t('units.cityMissingSubject'))} style={{ color: 'var(--accent-moyen, #1E3A2F)' }}>
                 {t('units.contactSupport')}
               </a>
               {' · '}
-              <a href={contactWhatsapp(t('units.cityMissingSubject'))} target="_blank" rel="noreferrer" style={{ color: 'var(--green-700, #1E3A2F)' }}>
+              <a href={contactWhatsapp(t('units.cityMissingSubject'))} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-moyen, #1E3A2F)' }}>
                 {t('units.contactWhatsapp')}
               </a>
             </p>
@@ -592,13 +592,13 @@ function UnitFormModal({
                   onClick={() => { setLeaderId(u.id); setLeaderQuery(u.fullName); }}
                   style={{
                     textAlign: 'left', padding: '8px 10px', borderRadius: 8, cursor: 'pointer',
-                    border: `1px solid ${leaderId === u.id ? 'var(--green-800)' : 'var(--line)'}`,
-                    background: leaderId === u.id ? 'var(--paper-2, #faf7f0)' : 'transparent',
-                    fontFamily: 'var(--font-sans)', fontSize: 13.5, color: 'var(--ink-700)',
+                    border: `1px solid ${leaderId === u.id ? 'var(--accent)' : 'var(--filet)'}`,
+                    background: leaderId === u.id ? 'var(--surface-haute)' : 'transparent',
+                    fontFamily: 'var(--font-sans)', fontSize: 13.5, color: 'var(--texte-2)',
                   }}
                 >
                   {u.fullName}
-                  <span style={{ color: 'var(--ink-400)' }}> · {u.username ?? u.email ?? ''}</span>
+                  <span style={{ color: 'var(--texte-4)' }}> · {u.username ?? u.email ?? ''}</span>
                 </button>
               ))}
             </div>

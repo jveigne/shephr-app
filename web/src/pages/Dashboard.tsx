@@ -102,24 +102,24 @@ export function DashboardPage() {
                 fontFamily: 'var(--font-serif)',
                 fontSize: 30,
                 fontWeight: 500,
-                color: 'var(--green-800)',
+                color: 'var(--accent)',
                 letterSpacing: '-0.015em',
                 lineHeight: 1.1,
               }}
             >
               {t('dashboard.greeting')}{' '}
-              <em style={{ fontStyle: 'italic', color: 'var(--earth-600)' }}>{firstName || '…'}</em>.
+              <em style={{ fontStyle: 'italic', color: 'var(--secondaire-moyen)' }}>{firstName || '…'}</em>.
             </div>
-            <div style={{ color: 'var(--ink-500)', marginTop: 6, fontSize: 13.5 }}>
+            <div style={{ color: 'var(--texte-3)', marginTop: 6, fontSize: 13.5 }}>
               {t('dashboard.overview', { date: dateLong })}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 16, color: 'var(--ink-500)', fontSize: 12.5 }}>
+          <div style={{ display: 'flex', gap: 16, color: 'var(--texte-3)', fontSize: 12.5 }}>
             <div style={{ textAlign: 'right' }}>
               <div className="muted" style={{ fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase' }}>
                 {t('dashboard.currency')}
               </div>
-              <div style={{ color: 'var(--ink-800)', fontWeight: 500, marginTop: 2 }}>{PRIMARY} £</div>
+              <div style={{ color: 'var(--texte-corps)', fontWeight: 500, marginTop: 2 }}>{PRIMARY} £</div>
             </div>
           </div>
         </div>
@@ -144,7 +144,7 @@ export function DashboardPage() {
             </div>
             <div className="right chart-legend">
               <span>
-                <span className="swatch" style={{ background: 'var(--green-700)' }} />
+                <span className="swatch" style={{ background: 'var(--accent-moyen)' }} />
                 {t('dashboard.monthlyTotal')}
               </span>
             </div>
@@ -234,13 +234,13 @@ export function DashboardPage() {
             <div
               className="activity-row"
               style={{
-                borderBottom: '1px solid var(--line)',
-                background: 'var(--ivory-raised)',
+                borderBottom: '1px solid var(--filet)',
+                background: 'var(--surface-haute)',
                 fontSize: 11.5,
                 fontWeight: 600,
                 textTransform: 'uppercase',
                 letterSpacing: '.08em',
-                color: 'var(--ink-500)',
+                color: 'var(--texte-3)',
               }}
             >
               <div>{t('dashboard.colDate')}</div>
@@ -301,7 +301,7 @@ function KpiCard({
           {Math.abs(delta).toFixed(1)} %<span className="vs">{t('dashboard.vsLastMonth')}</span>
         </div>
       ) : (
-        <div style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 10 }}>{sub}</div>
+        <div style={{ fontSize: 12, color: 'var(--texte-3)', marginTop: 10 }}>{sub}</div>
       )}
     </div>
   );

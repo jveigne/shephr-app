@@ -237,8 +237,8 @@ export function UsersPage() {
             {r.fullName.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()}
           </div>
           <div>
-            <div style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{r.fullName}</div>
-            <div style={{ fontSize: 12, color: 'var(--ink-500)' }}>{r.email ?? r.username}</div>
+            <div style={{ fontWeight: 500, color: 'var(--texte)' }}>{r.fullName}</div>
+            <div style={{ fontSize: 12, color: 'var(--texte-3)' }}>{r.email ?? r.username}</div>
           </div>
         </div>
       ),
@@ -259,7 +259,7 @@ export function UsersPage() {
         return badges.length > 0 ? (
           <span style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>{badges}</span>
         ) : (
-          <span style={{ color: 'var(--ink-400)' }}>—</span>
+          <span style={{ color: 'var(--texte-4)' }}>—</span>
         );
       },
     },
@@ -271,7 +271,7 @@ export function UsersPage() {
             ? t('users.roleWithModule', { module: moduleLabel(m), role: perimeterLabel(r, m) })
             : perimeterLabel(r, m),
         );
-        return <span style={{ color: 'var(--ink-600)' }}>{parts.join(' · ') || '—'}</span>;
+        return <span style={{ color: 'var(--texte-corps)' }}>{parts.join(' · ') || '—'}</span>;
       },
     },
     {
@@ -282,7 +282,7 @@ export function UsersPage() {
       render: (r) =>
         r.goalSubmitted == null ? (
           r.superAdmin ? (
-            <span style={{ color: 'var(--ink-400)' }}>—</span>
+            <span style={{ color: 'var(--texte-4)' }}>—</span>
           ) : (
             <Badge tone="gray">{t('users.notAttached')}</Badge>
           )
@@ -392,14 +392,14 @@ export function UsersPage() {
 
         {/* Le total vient du SERVEUR : `rows` n'est qu'une page de 30. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
-          <span style={{ color: 'var(--ink-500)', fontSize: 13 }}>
+          <span style={{ color: 'var(--texte-3)', fontSize: 13 }}>
             {t('users.count', { count: usersQ.data?.totalElements ?? rows.length })}
           </span>
           {submissionQ.data && submissionQ.data.total > 0 && (
             <span
               style={{
-                fontSize: 13, fontWeight: 600, color: 'var(--green-800)',
-                background: 'var(--paper-2, #faf7f0)', border: '1px solid var(--line)',
+                fontSize: 13, fontWeight: 600, color: 'var(--accent)',
+                background: 'var(--surface-haute)', border: '1px solid var(--filet)',
                 borderRadius: 999, padding: '3px 10px',
               }}
               title={t('users.submittedCounterHint')}
@@ -428,7 +428,7 @@ export function UsersPage() {
             >
               {t('users.pagePrev')}
             </Button>
-            <span style={{ color: 'var(--ink-500)', fontSize: 13 }}>
+            <span style={{ color: 'var(--texte-3)', fontSize: 13 }}>
               {t('users.pageOf', { page: (usersQ.data?.number ?? 0) + 1, total: usersQ.data?.totalPages ?? 1 })}
             </span>
             <Button
@@ -487,7 +487,7 @@ export function UsersPage() {
           </>
         }
       >
-        <p style={{ margin: 0, color: 'var(--ink-600)' }}>{t('users.deleteWarning')}</p>
+        <p style={{ margin: 0, color: 'var(--texte-corps)' }}>{t('users.deleteWarning')}</p>
       </Modal>
     </>
   );
@@ -574,11 +574,11 @@ function MemberGoalsModal({ member, onClose }: { member: AdminUserResponse | nul
         key={p.id}
         style={{
           display: 'flex', justifyContent: 'space-between', gap: 12,
-          padding: '7px 0', borderBottom: '1px solid var(--line)',
+          padding: '7px 0', borderBottom: '1px solid var(--filet)',
         }}
       >
-        <span style={{ color: 'var(--ink-600)' }}>{goalName(cat, p.categoryCode)}</span>
-        <strong style={{ color: 'var(--ink-900)' }}>{value}</strong>
+        <span style={{ color: 'var(--texte-corps)' }}>{goalName(cat, p.categoryCode)}</span>
+        <strong style={{ color: 'var(--texte)' }}>{value}</strong>
       </div>
     );
   };
@@ -625,7 +625,7 @@ function MemberGoalsModal({ member, onClose }: { member: AdminUserResponse | nul
       )}
       {!goalsQ.isLoading && !goalsQ.isError && !empty && data && (
         <div>
-          <div style={{ fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', color: 'var(--ink-500)', marginBottom: 6 }}>{t('users.goalsPersonal')}</div>
+          <div style={{ fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', color: 'var(--texte-3)', marginBottom: 6 }}>{t('users.goalsPersonal')}</div>
           {data.memberPledges.map(line)}
         </div>
       )}
@@ -775,8 +775,8 @@ function ExtraUnitsField({
                 type="button"
                 onClick={() => onChange(extras.filter((x) => x !== id))}
                 style={{
-                  border: '1px solid var(--line)', borderRadius: 999, padding: '4px 10px',
-                  background: 'var(--paper-2, #faf7f0)', color: 'var(--ink-600)', cursor: 'pointer',
+                  border: '1px solid var(--filet)', borderRadius: 999, padding: '4px 10px',
+                  background: 'var(--surface-haute)', color: 'var(--texte-corps)', cursor: 'pointer',
                   fontSize: 13, fontFamily: 'var(--font-sans)',
                 }}
               >
@@ -1137,7 +1137,7 @@ function EditModal({
                 );
               })}
               {countries.length === 0 && (
-                <span style={{ color: 'var(--ink-400)', fontStyle: 'italic', fontSize: 13 }}>{t('users.noCountry')}</span>
+                <span style={{ color: 'var(--texte-4)', fontStyle: 'italic', fontSize: 13 }}>{t('users.noCountry')}</span>
               )}
             </div>
           </Field>

@@ -30,7 +30,7 @@ export function Placeholder({ titleKey, crumbKeys, descriptionKey, endpointHint 
                 className="mono"
                 style={{
                   marginTop: 8,
-                  color: 'var(--ink-500)',
+                  color: 'var(--texte-3)',
                   fontSize: 11.5,
                 }}
               >

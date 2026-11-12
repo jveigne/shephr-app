@@ -74,7 +74,7 @@ export function PaysPage() {
       label: t('countries.colCountry'),
       render: (c) => (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontWeight: 500, color: 'var(--ink-900)' }}>{c.name}</span>
+          <span style={{ fontWeight: 500, color: 'var(--texte)' }}>{c.name}</span>
           <Badge tone="gray">{c.code}</Badge>
         </span>
       ),
@@ -127,7 +127,7 @@ export function PaysPage() {
           </Field>
         </div>
 
-        <div style={{ color: 'var(--ink-500)', fontSize: 13, marginBottom: 10 }}>
+        <div style={{ color: 'var(--texte-3)', fontSize: 13, marginBottom: 10 }}>
           {t('countries.count', { count: rows.length })}
         </div>
 

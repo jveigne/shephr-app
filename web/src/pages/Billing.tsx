@@ -99,12 +99,12 @@ function StatusBadgeOf({ status }: { status: BillingSubscriptionStatus }) {
 /** Mise en page publique commune (même en-tête que /privacy) — aussi celle de /offres. */
 export function BillingLayout({ children }: { children: ReactNode }) {
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--parchment)', fontFamily: 'var(--font-sans)' }}>
-      <header style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--parchment)', borderBottom: '1px solid var(--line-soft)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--page)', fontFamily: 'var(--font-sans)' }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--page)', borderBottom: '1px solid var(--filet-doux)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '14px clamp(16px, 3vw, 24px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--green-600)', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>S</div>
-            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: 'var(--green-800)' }}>shephr</span>
+            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--accent-doux)', color: 'var(--sur-accent)', display: 'grid', placeItems: 'center', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>S</div>
+            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600, color: 'var(--accent)' }}>shephr</span>
           </Link>
           <LangSwitch />
         </div>
@@ -117,17 +117,17 @@ export function BillingLayout({ children }: { children: ReactNode }) {
 export function PageTitle({ title, sub }: { title: string; sub?: string }) {
   return (
     <div style={{ marginBottom: 24 }}>
-      <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(26px, 7vw, 36px)', lineHeight: 1.15, letterSpacing: '-.02em', color: 'var(--green-900)', margin: '0 0 8px' }}>
+      <h1 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 'clamp(26px, 7vw, 36px)', lineHeight: 1.15, letterSpacing: '-.02em', color: 'var(--accent-profond)', margin: '0 0 8px' }}>
         {title}
       </h1>
-      {sub && <p style={{ color: 'var(--ink-600)', fontSize: 15, lineHeight: 1.6, margin: 0 }}>{sub}</p>}
+      {sub && <p style={{ color: 'var(--texte-corps)', fontSize: 15, lineHeight: 1.6, margin: 0 }}>{sub}</p>}
     </div>
   );
 }
 
 export function Banner({ tone, children }: { tone: 'warn' | 'ok' | 'err'; children: ReactNode }) {
-  const bg = tone === 'ok' ? 'var(--ok-bg)' : tone === 'err' ? 'var(--err-bg)' : 'var(--warn-bg)';
-  const fg = tone === 'ok' ? 'var(--ok)' : tone === 'err' ? 'var(--err)' : 'var(--warn)';
+  const bg = tone === 'ok' ? 'var(--succes-teinte)' : tone === 'err' ? 'var(--alerte-teinte)' : 'var(--avertissement-teinte)';
+  const fg = tone === 'ok' ? 'var(--succes)' : tone === 'err' ? 'var(--alerte)' : 'var(--avertissement)';
   return (
     <div role="status" style={{ background: bg, color: fg, borderRadius: 'var(--radius)', padding: '12px 16px', fontSize: 14, lineHeight: 1.5, marginBottom: 20, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
       <Icon name={tone === 'ok' ? 'check' : 'info'} size={16} style={{ flexShrink: 0, marginTop: 2 }} />
@@ -137,8 +137,8 @@ export function Banner({ tone, children }: { tone: 'warn' | 'ok' | 'err'; childr
 }
 
 export const cardStyle = {
-  background: 'var(--ivory-card)',
-  border: '1px solid var(--line-soft)',
+  background: 'var(--surface)',
+  border: '1px solid var(--filet-doux)',
   borderRadius: 'var(--radius-lg)',
   boxShadow: 'var(--shadow-sm)',
   padding: 'clamp(18px, 4vw, 26px)',
@@ -202,7 +202,7 @@ export function BillingReturnPage() {
     (subQ.isError || (pollState?.dataUpdateCount ?? 0) + (pollState?.errorUpdateCount ?? 0) >= POLL_MAX);
 
   const mine = (
-    <Link to="/abonnements/mes-abonnements" style={{ color: 'var(--green-700)', fontWeight: 600 }}>
+    <Link to="/abonnements/mes-abonnements" style={{ color: 'var(--accent-moyen)', fontWeight: 600 }}>
       {t('billing.return.mySubscriptions')}
     </Link>
   );
@@ -212,13 +212,13 @@ export function BillingReturnPage() {
   // Plan personnel = formule sans ville (D-ABO-33), pas un code en dur : une autre offre USER marche aussi.
   const hierarchyPlan = !!sub?.planCode && !sub.localityId;
   const cityLink = hierarchyPlan ? (
-    <Link to="/hierarchy/vie" style={{ color: 'var(--green-700)', fontWeight: 600 }}>
+    <Link to="/hierarchy/vie" style={{ color: 'var(--accent-moyen)', fontWeight: 600 }}>
       {t('billing.plan.backToHierarchy')}
     </Link>
   ) : sub?.planCode && sub.localityId ? (
       <Link
         to={`/study/city?localityId=${encodeURIComponent(sub.localityId)}&tab=subscription`}
-        style={{ color: 'var(--green-700)', fontWeight: 600 }}
+        style={{ color: 'var(--accent-moyen)', fontWeight: 600 }}
       >
         {t('billing.plan.backToCity')}
       </Link>
@@ -226,7 +226,7 @@ export function BillingReturnPage() {
 
   let content: ReactNode;
   if (!allowed || (ref !== '' && subQ.isLoading)) {
-    content = <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>;
+    content = <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>;
   } else if (ref === '' || (subQ.isError && !sub)) {
     // Une relecture en échec après une 1re lecture garde le dernier statut connu (bannière ci-dessous).
     content = (
@@ -248,7 +248,7 @@ export function BillingReturnPage() {
             ? t('billing.plan.activated', { city: sub.localityName ?? '—' })
             : t('billing.return.active', { reference: sub.reference })}
         </Banner>
-        <p style={{ color: 'var(--ink-600)', fontSize: 14 }}>{t('billing.return.emailNote')}</p>
+        <p style={{ color: 'var(--texte-corps)', fontSize: 14 }}>{t('billing.return.emailNote')}</p>
         <p style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           {cityLink}
           {mine}
@@ -272,7 +272,7 @@ export function BillingReturnPage() {
         <p>
           {/* D-ABO-29 : un plan se souscrit depuis le suivi de la ville ; O12 (plan 05) : les offres sont sur /offres. */}
           {cityLink ?? (
-            <Link to="/offres" style={{ color: 'var(--green-700)', fontWeight: 600 }}>{t('billing.return.backToOffers')}</Link>
+            <Link to="/offres" style={{ color: 'var(--accent-moyen)', fontWeight: 600 }}>{t('billing.return.backToOffers')}</Link>
           )}
         </p>
       </>
@@ -326,7 +326,7 @@ export function MySubscriptionsPage() {
     {
       label: t('billing.invoice.period'),
       render: (i) => (
-        <span style={{ color: 'var(--ink-600)', fontSize: 13 }}>
+        <span style={{ color: 'var(--texte-corps)', fontSize: 13 }}>
           {i.periodStart ? `${fmtDay(i.periodStart, lang)} → ${fmtDay(i.periodEnd, lang)}` : '—'}
         </span>
       ),
@@ -337,7 +337,7 @@ export function MySubscriptionsPage() {
         <div>
           <div>{fmtCents(i.totalCents, i.currency, lang)}</div>
           {i.refundedCents > 0 && (
-            <div style={{ color: 'var(--ink-500)', fontSize: 12 }}>
+            <div style={{ color: 'var(--texte-3)', fontSize: 12 }}>
               {t('billing.invoice.refunded', { amount: fmtCents(i.refundedCents, i.currency, lang) })}
             </div>
           )}
@@ -360,19 +360,19 @@ export function MySubscriptionsPage() {
     <BillingLayout>
       <PageTitle title={t('billing.mine.title')} sub={t('billing.mine.subtitle')} />
       <p style={{ margin: '-8px 0 22px', fontSize: 14, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <Link to={home} style={{ color: 'var(--green-700)', fontWeight: 600 }}>{t('billing.mine.backToSpace')}</Link>
-        <Link to="/offres" style={{ color: 'var(--green-700)', fontWeight: 600 }}>{t('billing.mine.seeOffers')}</Link>
+        <Link to={home} style={{ color: 'var(--accent-moyen)', fontWeight: 600 }}>{t('billing.mine.backToSpace')}</Link>
+        <Link to="/offres" style={{ color: 'var(--accent-moyen)', fontWeight: 600 }}>{t('billing.mine.seeOffers')}</Link>
       </p>
 
-      <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '0 0 12px' }}>
+      <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--accent)', margin: '0 0 12px' }}>
         {t('billing.mine.subscriptions')}
       </h2>
       {!allowed || subsQ.isLoading ? (
-        <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>
+        <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>
       ) : subsQ.isError ? (
-        <p style={{ color: 'var(--err)' }}>{billingErrMsg(subsQ.error, t)}</p>
+        <p style={{ color: 'var(--alerte)' }}>{billingErrMsg(subsQ.error, t)}</p>
       ) : subs.length === 0 ? (
-        <p style={{ color: 'var(--ink-500)' }}>{t('billing.mine.noSubscription')}</p>
+        <p style={{ color: 'var(--texte-3)' }}>{t('billing.mine.noSubscription')}</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 8 }}>
           {subs.map((s) => (
@@ -381,20 +381,20 @@ export function MySubscriptionsPage() {
         </div>
       )}
 
-      <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--green-800)', margin: '30px 0 12px' }}>
+      <h2 style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 20, color: 'var(--accent)', margin: '30px 0 12px' }}>
         {t('billing.mine.invoices')}
       </h2>
       {!allowed || invoicesQ.isLoading ? (
-        <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>
+        <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>
       ) : invoicesQ.isError ? (
-        <p style={{ color: 'var(--err)' }}>{billingErrMsg(invoicesQ.error, t)}</p>
+        <p style={{ color: 'var(--alerte)' }}>{billingErrMsg(invoicesQ.error, t)}</p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
           <Table
             columns={invoiceCols}
             rows={(invoicesQ.data ?? []).map((i) => ({ ...i, id: i.number }))}
             zebra
-            empty={<p style={{ color: 'var(--ink-500)', margin: 0, fontSize: 13.5 }}>{t('billing.mine.noInvoice')}</p>}
+            empty={<p style={{ color: 'var(--texte-3)', margin: 0, fontSize: 13.5 }}>{t('billing.mine.noInvoice')}</p>}
           />
         </div>
       )}
@@ -425,26 +425,26 @@ function SubscriptionCard({
       <div style={{ flex: '1 1 260px', display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           {/* Contrat 27/10 §5.3 : un plan s'affiche « {offerName} — {localityName} ». */}
-          <strong style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 18, color: 'var(--green-800)' }}>
+          <strong style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: 18, color: 'var(--accent)' }}>
             {sub.planCode && sub.localityName ? `${sub.offerName} — ${sub.localityName}` : sub.offerName}
           </strong>
           <StatusBadgeOf status={sub.status} />
         </div>
-        <div style={{ color: 'var(--ink-500)', fontSize: 12.5, fontFamily: 'var(--font-mono)' }}>{sub.reference}</div>
+        <div style={{ color: 'var(--texte-3)', fontSize: 12.5, fontFamily: 'var(--font-mono)' }}>{sub.reference}</div>
         {voucher ? (
-          <div style={{ color: 'var(--ink-600)', fontSize: 13 }}>
+          <div style={{ color: 'var(--texte-corps)', fontSize: 13 }}>
             {t('billing.mine.voucher')}
             {voucherEnd && <> · {t('billing.mine.voucherUntil', { date: fmtLocalDay(voucherEnd, lang) })}</>}
           </div>
         ) : (
           <div style={{ fontSize: 15 }}>
             {sub.discountPercent != null && sub.listPriceCents !== sub.priceCents && (
-              <span style={{ color: 'var(--ink-400)', textDecoration: 'line-through', marginRight: 8 }}>
+              <span style={{ color: 'var(--texte-4)', textDecoration: 'line-through', marginRight: 8 }}>
                 {fmtCents(sub.listPriceCents, sub.currency, lang)}
               </span>
             )}
             <strong>{fmtCents(sub.priceCents, sub.currency, lang)}</strong>{' '}
-            <span style={{ color: 'var(--ink-500)', fontSize: 13 }}>{t(`billing.period.${sub.billingPeriod}`)}</span>
+            <span style={{ color: 'var(--texte-3)', fontSize: 13 }}>{t(`billing.period.${sub.billingPeriod}`)}</span>
             {sub.promoCode && (
               <span style={{ marginLeft: 8 }}>
                 <Badge tone="earth">{t('billing.mine.promo', { code: sub.promoCode, percent: sub.discountPercent ?? 0 })}</Badge>
@@ -452,34 +452,34 @@ function SubscriptionCard({
             )}
           </div>
         )}
-        {sub.ministryName && <div style={{ color: 'var(--ink-600)', fontSize: 13 }}>{t('billing.mine.ministry', { name: sub.ministryName })}</div>}
+        {sub.ministryName && <div style={{ color: 'var(--texte-corps)', fontSize: 13 }}>{t('billing.mine.ministry', { name: sub.ministryName })}</div>}
         {!!sub.planCode && !sub.localityId && (
           // JP 27/10 — plan personnel : le bénéficiaire est le payeur ; lien vers la Hiérarchie.
-          <div style={{ color: 'var(--ink-600)', fontSize: 13 }}>
+          <div style={{ color: 'var(--texte-corps)', fontSize: 13 }}>
             {t('billing.plan.personal')}{' · '}
-            <Link to="/hierarchy/vie" style={{ color: 'var(--green-700)', fontWeight: 600 }}>
+            <Link to="/hierarchy/vie" style={{ color: 'var(--accent-moyen)', fontWeight: 600 }}>
               {t('billing.plan.backToHierarchy')}
             </Link>
           </div>
         )}
         {sub.planCode && sub.localityId && (
-          <div style={{ color: 'var(--ink-600)', fontSize: 13 }}>
+          <div style={{ color: 'var(--texte-corps)', fontSize: 13 }}>
             {t('billing.plan.city', { name: sub.localityName ?? '—' })}{' · '}
-            <Link to={`/study/city?localityId=${encodeURIComponent(sub.localityId)}&tab=subscription`} style={{ color: 'var(--green-700)', fontWeight: 600 }}>
+            <Link to={`/study/city?localityId=${encodeURIComponent(sub.localityId)}&tab=subscription`} style={{ color: 'var(--accent-moyen)', fontWeight: 600 }}>
               {t('billing.plan.backToCity')}
             </Link>
           </div>
         )}
         {voucher ? null : sub.cancelAtPeriodEnd && sub.status !== 'CANCELED' ? (
-          <div style={{ color: 'var(--warn)', fontSize: 13 }}>{t('billing.mine.cancelRequested', { date: fmtDay(sub.currentPeriodEnd, lang) })}</div>
+          <div style={{ color: 'var(--avertissement)', fontSize: 13 }}>{t('billing.mine.cancelRequested', { date: fmtDay(sub.currentPeriodEnd, lang) })}</div>
         ) : sub.currentPeriodEnd && (sub.status === 'ACTIVE' || sub.status === 'PAST_DUE') ? (
-          <div style={{ color: 'var(--ink-600)', fontSize: 13 }}>{t('billing.mine.nextDue', { date: fmtDay(sub.currentPeriodEnd, lang) })}</div>
+          <div style={{ color: 'var(--texte-corps)', fontSize: 13 }}>{t('billing.mine.nextDue', { date: fmtDay(sub.currentPeriodEnd, lang) })}</div>
         ) : null}
         {sub.status === 'CANCELED' && sub.canceledAt && (
-          <div style={{ color: 'var(--ink-600)', fontSize: 13 }}>{t('billing.mine.canceledOn', { date: fmtDay(sub.canceledAt, lang) })}</div>
+          <div style={{ color: 'var(--texte-corps)', fontSize: 13 }}>{t('billing.mine.canceledOn', { date: fmtDay(sub.canceledAt, lang) })}</div>
         )}
-        {sub.status === 'PAST_DUE' && <div style={{ color: 'var(--err)', fontSize: 13 }}>{t('billing.mine.pastDueHint')}</div>}
-        {sub.status === 'PENDING' && <div style={{ color: 'var(--ink-500)', fontSize: 13 }}>{t('billing.mine.pendingHint')}</div>}
+        {sub.status === 'PAST_DUE' && <div style={{ color: 'var(--alerte)', fontSize: 13 }}>{t('billing.mine.pastDueHint')}</div>}
+        {sub.status === 'PENDING' && <div style={{ color: 'var(--texte-3)', fontSize: 13 }}>{t('billing.mine.pendingHint')}</div>}
       </div>
       {portal && (
         <Button variant={sub.status === 'PAST_DUE' ? 'primary' : 'secondary'} disabled={portalPending} onClick={onPortal}>

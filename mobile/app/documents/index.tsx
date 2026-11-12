@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
@@ -7,7 +7,7 @@ import Card from '@/components/Card';
 import Field from '@/components/Field';
 import Label from '@/components/Label';
 import ErrorBanner from '@/components/ErrorBanner';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { isAttachedAccount } from '@/services/authApi';
@@ -22,6 +22,8 @@ import {
 import { buildFolderTree, folderPath, type FolderNode } from '@/utils/documentFolders';
 import { goBack } from '@/utils/navigation';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Plan 18/10 (§6.3, RG-DOC-09) — ESPACE DOCUMENTS de l'app. D-DOC-14 (JP 18/10) [HYPOTHÈSE] : une
  * tuile de l'accueil et cet écran, PAS un onglet (la barre en compte déjà jusqu'à 8).
@@ -45,6 +47,8 @@ import { goBack } from '@/utils/navigation';
  * (`/d/{slug}`).
  */
 export default function DocumentsScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const { me, hasDocuments } = useAuth();
   const active = hasDocuments && isAttachedAccount(me);
@@ -146,12 +150,12 @@ export default function DocumentsScreen() {
     <ScreenShell
       withTabBar={false}
       refreshControl={
-        active ? <RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} /> : undefined
+        active ? <RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} /> : undefined
       }
     >
       <View style={styles.headerRow}>
         <Pressable onPress={() => goBack()} hitSlop={10} accessibilityLabel={t('common.back')}>
-          <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+          <Ionicons name="chevron-back" size={22} color={c.texte2} />
         </Pressable>
       </View>
       {folderId && active ? (
@@ -168,7 +172,7 @@ export default function DocumentsScreen() {
 
       {!active ? (
         <Card variant="paper2" style={styles.empty}>
-          <Ionicons name="lock-closed-outline" size={26} color={colors.ink3} />
+          <Ionicons name="lock-closed-outline" size={26} color={c.texte3} />
           <Text style={styles.emptyText}>
             {hasDocuments ? t('documents.space.joinRequired') : t('documents.space.moduleUnavailable')}
           </Text>
@@ -195,17 +199,17 @@ export default function DocumentsScreen() {
 
           {loading ? (
             <View style={styles.loadingBox}>
-              <ActivityIndicator color={colors.moss} />
+              <ActivityIndicator color={c.accent} />
             </View>
           ) : nothing ? (
             <Card variant="paper2" style={styles.empty}>
-              <Ionicons name="library-outline" size={26} color={colors.ink3} />
+              <Ionicons name="library-outline" size={26} color={c.texte3} />
               <Text style={styles.emptyText}>{t('documents.space.empty')}</Text>
             </Card>
           ) : q ? (
             searchResults.length === 0 ? (
               <Card variant="paper2" style={styles.empty}>
-                <Ionicons name="search-outline" size={26} color={colors.ink3} />
+                <Ionicons name="search-outline" size={26} color={c.texte3} />
                 <Text style={styles.emptyText}>{t('documents.space.noMatch')}</Text>
               </Card>
             ) : (
@@ -213,7 +217,7 @@ export default function DocumentsScreen() {
             )
           ) : folderMissing || emptyFolder ? (
             <Card variant="paper2" style={styles.empty}>
-              <Ionicons name="folder-open-outline" size={26} color={colors.ink3} />
+              <Ionicons name="folder-open-outline" size={26} color={c.texte3} />
               <Text style={styles.emptyText}>{t('documents.space.folderEmpty')}</Text>
             </Card>
           ) : (
@@ -251,6 +255,8 @@ export default function DocumentsScreen() {
 let snapshot: { userId: string; docs: DocumentListItem[]; categories: DocumentCategoryItem[] } | null = null;
 
 function FolderRow({ folder, onPress }: { folder: FolderNode; onPress: () => void }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   return (
     <Pressable
@@ -259,7 +265,7 @@ function FolderRow({ folder, onPress }: { folder: FolderNode; onPress: () => voi
       style={({ pressed }) => [styles.row, { opacity: pressed ? 0.9 : 1 }]}
     >
       <View style={[styles.rowIcon, styles.folderIcon]}>
-        <Ionicons name="folder-outline" size={20} color={colors.clay} />
+        <Ionicons name="folder-outline" size={20} color={c.alerte} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.rowTitle} numberOfLines={2}>
@@ -269,7 +275,7 @@ function FolderRow({ folder, onPress }: { folder: FolderNode; onPress: () => voi
           {t('documents.space.documentCount', { count: folder.count })}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={18} color={colors.ink3} />
+      <Ionicons name="chevron-forward" size={18} color={c.texte3} />
     </Pressable>
   );
 }
@@ -287,6 +293,8 @@ function DocumentRow({
   path: string | null;
   onPress: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const meta = [doc.author, scope, t('documents.space.pages', { count: doc.pageCount })]
     .filter(Boolean)
@@ -294,7 +302,7 @@ function DocumentRow({
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.row, { opacity: pressed ? 0.9 : 1 }]}>
       <View style={styles.rowIcon}>
-        <Ionicons name="document-text-outline" size={20} color={colors.moss} />
+        <Ionicons name="document-text-outline" size={20} color={c.accent} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.rowTitle} numberOfLines={2}>
@@ -302,7 +310,7 @@ function DocumentRow({
         </Text>
         {!!path && (
           <View style={styles.pathRow}>
-            <Ionicons name="folder-outline" size={12} color={colors.ink3} />
+            <Ionicons name="folder-outline" size={12} color={c.texte3} />
             <Text style={styles.pathText} numberOfLines={1}>
               {path}
             </Text>
@@ -312,22 +320,22 @@ function DocumentRow({
           {meta}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={18} color={colors.ink3} />
+      <Ionicons name="chevron-forward" size={18} color={c.texte3} />
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   kicker: {
     marginTop: 10,
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.clay,
+    color: c.alerte,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4, marginTop: 4 },
+  title: { fontFamily: fonts.serif, fontSize: 28, color: c.texte, letterSpacing: -0.4, marginTop: 4 },
   block: { marginTop: 20, gap: 8 },
   blockLabel: { marginBottom: 0 },
   loadingBox: { marginTop: 40, alignItems: 'center' },
@@ -341,11 +349,11 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: fonts.sans,
     fontSize: 13.5,
-    color: colors.ink2,
+    color: c.texte2,
     lineHeight: 20,
     textAlign: 'center',
   },
-  link: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: colors.moss },
+  link: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: c.accent },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -353,9 +361,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: radii.md,
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: colors.hair,
+    borderColor: c.filet,
   },
   rowIcon: {
     width: 38,
@@ -363,11 +371,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
   },
-  folderIcon: { backgroundColor: colors.paper2 },
+  folderIcon: { backgroundColor: c.surfaceHaute },
   pathRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  pathText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2 },
-  rowTitle: { fontFamily: fonts.serif, fontSize: 16, color: colors.ink, letterSpacing: -0.1 },
-  rowMeta: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 2 },
-});
+  pathText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2 },
+  rowTitle: { fontFamily: fonts.serif, fontSize: 16, color: c.texte, letterSpacing: -0.1 },
+  rowMeta: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 2 },
+}));

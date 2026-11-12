@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Modal } from 'react-native';
 
 import { goBack } from '@/utils/navigation';
 import Svg, { Defs, LinearGradient, Rect, Stop, Text as SvgText, G, Line, Path, Circle } from 'react-native-svg';
@@ -11,7 +11,7 @@ import Amount from '@/components/Amount';
 import Chip from '@/components/Chip';
 import ErrorBanner from '@/components/ErrorBanner';
 import Button from '@/components/Button';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import {
   downloadExport,
   getByCategory,
@@ -30,6 +30,8 @@ import { notify } from '@/utils/dialogs';
 import { currencySymbol, fmtAmount, monthLabel } from '@/utils/format';
 import { sumByCurrency } from '@/utils/currencyTotals';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 // Recette 15/09 (JP) — « 1m » = LE MOIS EN COURS, ajouté en tête : la vue d'ensemble ne savait
 // regarder qu'à partir de trois mois, alors que la question quotidienne du trésorier est
 // « qu'a-t-on reçu CE mois-ci ». Placé en premier parce que c'est la lecture la plus fréquente.
@@ -55,6 +57,8 @@ const STATUS_FILTERS: StatusFilter[] = ['ALL', 'DECLARE', 'VERIFIE'];
  * fois — additionner £, € et $ sur un même axe n'aurait aucun sens.
  */
 export default function StatsScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   // Lot T5 — la légende nomme les rubriques d'après le référentiel du ministère ; l'apparence
   // (ton du secteur) reste locale, via `donationCategoryMeta`.
@@ -181,7 +185,7 @@ export default function StatsScreen() {
     <ScreenShell>
       <View style={styles.headerRow}>
         <Pressable onPress={() => goBack()} hitSlop={10}>
-          <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+          <Ionicons name="chevron-back" size={22} color={c.texte2} />
         </Pressable>
         <Text style={styles.headerTitle}>{t('stats.headerTitle')}</Text>
         <Pressable
@@ -189,7 +193,7 @@ export default function StatsScreen() {
           hitSlop={10}
           accessibilityLabel={t('stats.export')}
         >
-          <Ionicons name="download-outline" size={21} color={colors.mossDeep} />
+          <Ionicons name="download-outline" size={21} color={c.accentProfond} />
         </Pressable>
       </View>
 
@@ -240,14 +244,14 @@ export default function StatsScreen() {
 
       {loading ? (
         <View style={{ alignItems: 'center', marginTop: 40 }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       ) : (
         <>
           <Card style={styles.chartCard}>
             <View style={styles.chartHeader}>
               <View>
-                <Label style={{ color: colors.mossSoft }}>{t('stats.donationsReceived')}</Label>
+                <Label style={{ color: c.accentDoux }}>{t('stats.donationsReceived')}</Label>
                 {active ? (
                   <Amount value={totalWindow} currency={active} size={28} />
                 ) : (
@@ -260,7 +264,7 @@ export default function StatsScreen() {
           </Card>
 
           <Card style={styles.donutCard}>
-            <Label style={{ color: colors.mossSoft }}>{t('stats.categorySplit')}</Label>
+            <Label style={{ color: c.accentDoux }}>{t('stats.categorySplit')}</Label>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18, marginTop: 14 }}>
               <Donut segments={splits} />
               <View style={{ flex: 1, gap: 9 }}>
@@ -282,7 +286,7 @@ export default function StatsScreen() {
               d'une région en a besoin pour rendre compte nœud par nœud ; celui d'une assemblée n'y
               voit qu'une ligne, et c'est normal. */}
           <Card style={styles.donutCard}>
-            <Label style={{ color: colors.mossSoft }}>{t('stats.byUnit')}</Label>
+            <Label style={{ color: c.accentDoux }}>{t('stats.byUnit')}</Label>
             <View style={{ marginTop: 12, gap: 10 }}>
               {unitLines.length === 0 ? (
                 <Text style={styles.chartHint}>{t('leader.noDataPeriod')}</Text>
@@ -355,6 +359,7 @@ function BarChart({
   max: number;
   currency: string | null;
 }) {
+  const { couleurs: c } = useTheme();
   const W = 320, H = 160, padL = 6, padR = 0, padT = 20, padB = 26;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
@@ -364,8 +369,8 @@ function BarChart({
     <Svg viewBox={`0 0 ${W} ${H}`} width="100%" height={170} style={{ marginTop: 8 }}>
       <Defs>
         <LinearGradient id="barGrad" x1="0" x2="0" y1="0" y2="1">
-          <Stop offset="0" stopColor="#2E5142" />
-          <Stop offset="1" stopColor="#1E3A2F" />
+          <Stop offset="0" stopColor={c.accentDoux} />
+          <Stop offset="1" stopColor={c.accent} />
         </LinearGradient>
       </Defs>
       {[0, 0.25, 0.5, 0.75, 1].map((p, i) => (
@@ -375,7 +380,7 @@ function BarChart({
           y1={padT + innerH * (1 - p)}
           x2={W - padR}
           y2={padT + innerH * (1 - p)}
-          stroke="rgba(42,38,32,0.07)"
+          stroke={transparence(c.texte, 0.07)}
           strokeWidth={1}
           strokeDasharray={i === 0 ? undefined : '2 3'}
         />
@@ -392,7 +397,7 @@ function BarChart({
               y={H - 10}
               textAnchor="middle"
               fontSize={10}
-              fill={colors.ink3}
+              fill={c.texte3}
               fontFamily={fonts.sans}
             >
               {mo.label}
@@ -402,7 +407,7 @@ function BarChart({
               y={y - 6}
               textAnchor="middle"
               fontSize={10}
-              fill={colors.mossSoft}
+              fill={c.accentDoux}
               fontFamily={fonts.mono}
               fontWeight="600"
             >
@@ -424,6 +429,7 @@ function compactAmount(value: number, currency: string | null): string {
 }
 
 function Donut({ segments, size = 120 }: { segments: { key: string; pct: number }[]; size?: number }) {
+  const { couleurs: c } = useTheme();
   const cx = size / 2;
   const cy = size / 2;
   const r = size / 2 - 8;
@@ -459,48 +465,48 @@ function Donut({ segments, size = 120 }: { segments: { key: string; pct: number 
   return (
     <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       {paths}
-      <Circle cx={cx} cy={cy} r={ir - 2} fill={colors.paper} />
+      <Circle cx={cx} cy={cy} r={ir - 2} fill={c.surface} />
     </Svg>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   exportBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(20,18,14,0.55)',
     justifyContent: 'flex-end',
   },
   exportSheet: {
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 30,
   },
-  exportTitle: { fontFamily: fonts.serif, fontSize: 21, color: colors.ink, letterSpacing: -0.3 },
-  exportHint: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 6 },
-  exportCancel: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink3 },
+  exportTitle: { fontFamily: fonts.serif, fontSize: 21, color: c.texte, letterSpacing: -0.3 },
+  exportHint: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 6 },
+  exportCancel: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.texte3 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink2 },
+  headerTitle: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.texte2 },
   title: {
     fontFamily: fonts.serif,
     fontSize: 28,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.4,
     marginTop: 6,
   },
-  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 4 },
   chartCard: { paddingHorizontal: 18, paddingVertical: 18, marginTop: 18 },
   chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  chartHint: { fontFamily: fonts.sans, fontSize: 11, color: colors.ink3, marginTop: 4 },
+  chartHint: { fontFamily: fonts.sans, fontSize: 11, color: c.texte3, marginTop: 4 },
   donutCard: { paddingHorizontal: 18, paddingVertical: 18, marginTop: 14 },
-  statusHint: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 8, lineHeight: 17 },
+  statusHint: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 8, lineHeight: 17 },
   unitRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
-  unitName: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.ink2 },
-  unitAmount: { fontFamily: fonts.mono, fontSize: 12.5, color: colors.ink },
+  unitName: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: c.texte2 },
+  unitAmount: { fontFamily: fonts.mono, fontSize: 12.5, color: c.texte },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   legendDot: { width: 9, height: 9, borderRadius: 2 },
-  legendLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2 },
-  legendPct: { fontFamily: fonts.mono, fontSize: 11.5, color: colors.ink3 },
-});
+  legendLabel: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2 },
+  legendPct: { fontFamily: fonts.mono, fontSize: 11.5, color: c.texte3 },
+}));

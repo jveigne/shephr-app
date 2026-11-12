@@ -62,13 +62,13 @@ export function EventsPage() {
 
   const body = (() => {
     if (modulesQ.isLoading || (hasEvents && scopesQ.isLoading)) {
-      return <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>;
+      return <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>;
     }
     if (!hasEvents) {
       return <EventEmptyState title={t('events.moduleOff')} text={t('events.moduleOffHint')} />;
     }
     if (!scopes) {
-      return <p role="alert" style={{ color: 'var(--err)' }}>{eventErrorMessage(scopesQ.error, t)}</p>;
+      return <p role="alert" style={{ color: 'var(--alerte)' }}>{eventErrorMessage(scopesQ.error, t)}</p>;
     }
     return (
       <>
@@ -227,7 +227,7 @@ function AgendaTab({ scopes }: { scopes: EventScopes }) {
           onOpen={setOpened}
         />
       ) : (
-        <p style={{ color: 'var(--ink-500)', marginTop: 28 }}>{t('events.period.chooseValid')}</p>
+        <p style={{ color: 'var(--texte-3)', marginTop: 28 }}>{t('events.period.chooseValid')}</p>
       )}
 
       {opened && <EventDetailModal eventId={opened.id} initial={opened} onClose={() => setOpened(null)} />}
@@ -251,7 +251,7 @@ function StatsTab() {
       {bounds ? (
         <EventStatsDrill from={bounds.from} to={bounds.to} />
       ) : (
-        <p style={{ color: 'var(--ink-500)' }}>{t('events.period.chooseValid')}</p>
+        <p style={{ color: 'var(--texte-3)' }}>{t('events.period.chooseValid')}</p>
       )}
     </>
   );

@@ -63,7 +63,7 @@ export function MemberShell() {
           minHeight: '100vh',
           display: 'grid',
           placeItems: 'center',
-          color: 'var(--ink-500)',
+          color: 'var(--texte-3)',
           fontFamily: 'var(--font-sans)',
         }}
       >
@@ -189,7 +189,7 @@ export function MemberShell() {
                         fontWeight: lang === l ? 700 : 600,
                       }}
                     >
-                      <span style={{ color: lang === l ? 'var(--green-800, #14241C)' : 'inherit' }}>
+                      <span style={{ color: lang === l ? 'var(--accent, #14241C)' : 'inherit' }}>
                         {l.toUpperCase()}
                       </span>
                     </button>

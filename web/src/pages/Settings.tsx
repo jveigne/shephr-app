@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import { Button, Field, Input, Modal, Select, TopBar } from '../components/ui';
 import { GeoPicker } from '../components/GeoPicker';
+import { AppearanceCard } from '../components/AppearanceCard';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
 import { canCreateAssembly, deleteMyAccount, primaryRoleKey, type Language } from '../services/authApi';
@@ -80,11 +81,11 @@ export function SettingsPage() {
                 justifyContent: 'space-between',
                 gap: 16,
                 padding: '8px 0',
-                borderBottom: '1px solid var(--line-soft, rgba(42,38,32,0.06))',
+                borderBottom: '1px solid var(--filet-doux, color-mix(in srgb, var(--texte) 6%, transparent))',
                 fontSize: 14,
               }}
             >
-              <span style={{ color: 'var(--ink-500)' }}>{r.label}</span>
+              <span style={{ color: 'var(--texte-3)' }}>{r.label}</span>
               <strong style={{ textAlign: 'right', wordBreak: 'break-word' }}>{r.value}</strong>
             </div>
           ))}
@@ -98,7 +99,7 @@ export function SettingsPage() {
                 fontSize: 14,
               }}
             >
-              <span style={{ color: 'var(--ink-500)' }}>
+              <span style={{ color: 'var(--texte-3)' }}>
                 {t('sidebar.units', { count: me.unitNames.length })}
               </span>
               <strong style={{ textAlign: 'right' }}>{me.unitNames.join(', ')}</strong>
@@ -106,20 +107,23 @@ export function SettingsPage() {
           )}
         </div>
 
+        {/* Thème (docs/theme-plan.md §4.3, W2) — mode et accent, compte connecté seulement (D4). */}
+        <AppearanceCard />
+
         {/* RG-BQ-13 — changer d'assemblée soi-même, sans demande ni valideur. */}
         <MyAssemblyCard />
 
         {/* Zone dangereuse */}
-        <h3 style={{ margin: '0 0 10px', color: 'var(--err, #B86A4A)' }}>{t('settings.dangerZone')}</h3>
+        <h3 style={{ margin: '0 0 10px', color: 'var(--alerte, #B86A4A)' }}>{t('settings.dangerZone')}</h3>
         <div
           className="card"
           style={{
             padding: '18px 20px',
             maxWidth: 560,
-            border: '1px solid var(--err, #B86A4A)',
+            border: '1px solid var(--alerte, #B86A4A)',
           }}
         >
-          <p style={{ margin: '0 0 14px', fontSize: 13.5, lineHeight: 1.55, color: 'var(--ink-600)' }}>
+          <p style={{ margin: '0 0 14px', fontSize: 13.5, lineHeight: 1.55, color: 'var(--texte-corps)' }}>
             {t('settings.dangerZoneHint')}
           </p>
           <Button
@@ -291,12 +295,12 @@ function MyAssemblyCard() {
             padding: '0 0 10px', fontSize: 14,
           }}
         >
-          <span style={{ color: 'var(--ink-500)' }}>{t('settings.myAssemblyCurrent')}</span>
+          <span style={{ color: 'var(--texte-3)' }}>{t('settings.myAssemblyCurrent')}</span>
           <strong style={{ textAlign: 'right', wordBreak: 'break-word' }}>
             {currentLabel ?? t('settings.myAssemblyNone')}
           </strong>
         </div>
-        <p style={{ margin: '0 0 14px', fontSize: 13, lineHeight: 1.55, color: 'var(--ink-600)' }}>
+        <p style={{ margin: '0 0 14px', fontSize: 13, lineHeight: 1.55, color: 'var(--texte-corps)' }}>
           {t('settings.myAssemblyHint')}
         </p>
         <Button
@@ -336,8 +340,8 @@ function MyAssemblyCard() {
           <p
             style={{
               margin: 0, padding: '10px 14px', borderRadius: 10,
-              background: 'var(--parchment-deep, #F2EDE2)', fontSize: 13.5,
-              color: 'var(--ink-600)', lineHeight: 1.55,
+              background: 'var(--page-profonde, #F2EDE2)', fontSize: 13.5,
+              color: 'var(--texte-corps)', lineHeight: 1.55,
             }}
           >
             {t('settings.myAssemblyWarning')}
@@ -362,7 +366,7 @@ function MyAssemblyCard() {
           {cityId !== '' && canCreateAssembly(me) && (
             <div
               style={{
-                border: '1px dashed var(--line)',
+                border: '1px dashed var(--filet)',
                 borderRadius: 10,
                 padding: '12px 14px',
                 display: 'flex',
@@ -406,7 +410,7 @@ function MyAssemblyCard() {
                 </>
               ) : (
                 <>
-                  <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: 'var(--ink-600)' }}>
+                  <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: 'var(--texte-corps)' }}>
                     {t('settings.myAssemblyMissing', { city: cityName })}
                   </p>
                   <div>
@@ -426,9 +430,9 @@ function MyAssemblyCard() {
           {/* Repli : si le périmètre serveur ne renvoie aucune assemblée à ce compte, le sélecteur
               serait vide et muet — on renvoie explicitement vers le support. */}
           {noUnitListed && (
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-500)' }}>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--texte-3)' }}>
               {t('settings.myAssemblyNoneListed')}{' '}
-              <a href={contactMailto(t('settings.myAssemblySupportSubject'))} style={{ color: 'var(--green-700, #1E3A2F)' }}>
+              <a href={contactMailto(t('settings.myAssemblySupportSubject'))} style={{ color: 'var(--accent-moyen, #1E3A2F)' }}>
                 {t('settings.myAssemblyContactSupport')}
               </a>
             </p>

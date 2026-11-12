@@ -1381,7 +1381,37 @@
     "myAssemblyCreateRefused": "Creation refused",
     "myAssemblyCreateFailed": "Creation failed, please try again.",
     "myAssemblyNameExists": "That name is already taken",
-    "myAssemblyNameExistsHint": "An assembly already carries that name in {{city}}: look for it in the list above, or pick another name."
+    "myAssemblyNameExistsHint": "An assembly already carries that name in {{city}}: look for it in the list above, or pick another name.",
+    "appearance": {
+      "title": "Appearance",
+      "intro": "Choose how the ministry space looks. Your choice is saved to your account and follows you in the mobile app.",
+      "modeSection": "Mode",
+      "modes": {
+        "auto": "Automatic",
+        "autoHelp": "Follows your device's light / dark setting",
+        "clair": "Light",
+        "clairHelp": "Parchment background, the usual look",
+        "sombre": "Dark",
+        "sombreHelp": "Dark background, light text: easier at night",
+        "noirEtBlanc": "Black and white",
+        "noirEtBlancHelp": "No colour, maximum contrast"
+      },
+      "accentSection": "Accent colour",
+      "accents": {
+        "mousse": "Moss green",
+        "terre": "Earth",
+        "argile": "Clay"
+      },
+      "customAccent": "Or your own colour (hex code)",
+      "apply": "Apply",
+      "invalidHex": "Invalid code: use the #RRGGBB format.",
+      "contrastNote": "The colour is adjusted automatically if it lacks contrast.",
+      "accentIgnored": "Black and white mode does not use an accent colour.",
+      "previewSection": "Preview",
+      "previewTitle": "Goal of the year",
+      "previewMeta": "My assembly · 2026",
+      "previewButton": "Main button"
+    }
   },
   "join": {
     "title": "Join my assembly",

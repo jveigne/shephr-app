@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
@@ -9,7 +9,7 @@ import Label from '@/components/Label';
 import SelectField from '@/components/SelectField';
 import ErrorBanner from '@/components/ErrorBanner';
 import CalebAssemblyLock from '@/components/CalebAssemblyLock';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getMyMeetings,
@@ -30,6 +30,8 @@ import { hierarchyAccessDenied } from '@/services/entitlementsApi';
 import { useCalebAssemblyGate } from '@/hooks/useCalebAssemblyGate';
 import { fmtIsoDay, formatChapters } from '@/utils/meetingReport';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 type Tab = 'meetings' | 'progress';
 
 /**
@@ -57,6 +59,8 @@ type Tab = 'meetings' | 'progress';
  * « Aucune assemblée visible » (sa chaîne en contient).
  */
 export default function AssemblyIndexScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const [tab, setTab] = useState<Tab>('meetings');
   // D-ASM-18 (JP 08/10) : ouverture depuis la Hiérarchie, présélectionnée sur une assemblée.
@@ -260,7 +264,7 @@ export default function AssemblyIndexScreen() {
 
   return (
     <ScreenShell
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.moss} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.accent} />}
     >
       <Text style={styles.title}>{t('assemblyLife.title')}</Text>
       <Text style={styles.subtitle}>{t('assemblyLife.subtitle')}</Text>
@@ -269,7 +273,7 @@ export default function AssemblyIndexScreen() {
 
       {loading ? (
         <View style={{ marginTop: 50, alignItems: 'center' }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       ) : units.length === 0 && lockedLed.length === 0 ? (
         caleb.showChainLock ? (
@@ -282,7 +286,7 @@ export default function AssemblyIndexScreen() {
                 son verrou Caleb même quand aucune assemblée n'est listée. */}
             {requestedLocked && <CalebAssemblyLock compact />}
             <Card style={styles.emptyCard}>
-              <Ionicons name="home-outline" size={26} color={colors.ink3} />
+              <Ionicons name="home-outline" size={26} color={c.texte3} />
               <Text style={styles.emptyText}>{t('assemblyLife.noUnits')}</Text>
             </Card>
           </>
@@ -401,12 +405,14 @@ function MeetingsView({
   onJournal: () => void;
   t: T;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const thisYear = new Date().getFullYear();
   return (
     <>
       <View style={styles.yearRow}>
         <Pressable onPress={() => setYear(year - 1)} hitSlop={8} style={styles.yearBtn}>
-          <Ionicons name="chevron-back" size={18} color={colors.ink2} />
+          <Ionicons name="chevron-back" size={18} color={c.texte2} />
         </Pressable>
         <Text style={styles.yearText}>{year}</Text>
         <Pressable
@@ -415,13 +421,13 @@ function MeetingsView({
           hitSlop={8}
           style={[styles.yearBtn, year >= thisYear && { opacity: 0.3 }]}
         >
-          <Ionicons name="chevron-forward" size={18} color={colors.ink2} />
+          <Ionicons name="chevron-forward" size={18} color={c.texte2} />
         </Pressable>
       </View>
 
       {canWrite ? (
         <Pressable style={styles.newBtn} onPress={onNew}>
-          <Ionicons name="add" size={18} color={colors.white} />
+          <Ionicons name="add" size={18} color={c.surAccent} />
           <Text style={styles.newBtnText}>{t('assemblyLife.newReport')}</Text>
         </Pressable>
       ) : (
@@ -430,14 +436,14 @@ function MeetingsView({
 
       {!isMember && (
         <Pressable style={styles.journalBtn} onPress={onJournal}>
-          <Ionicons name="document-text-outline" size={17} color={colors.moss} />
+          <Ionicons name="document-text-outline" size={17} color={c.accent} />
           <Text style={styles.journalBtnText}>{t('assemblyLife.journal.open')}</Text>
         </Pressable>
       )}
 
       {meetings.length === 0 ? (
         <Card style={styles.emptyCard}>
-          <Ionicons name="calendar-outline" size={26} color={colors.ink3} />
+          <Ionicons name="calendar-outline" size={26} color={c.texte3} />
           <Text style={styles.emptyText}>{t('assemblyLife.noMeetings', { year })}</Text>
         </Card>
       ) : (
@@ -459,6 +465,8 @@ function MeetingRows({
   showUnit?: boolean;
   t: T;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   return (
     <Card style={{ marginTop: 14, paddingVertical: 0 }}>
       {meetings.map((m, i) => (
@@ -486,7 +494,7 @@ function MeetingRows({
               {t(m.attended ? 'assemblyLife.present' : 'assemblyLife.absent')}
             </Text>
           )}
-          <Ionicons name="chevron-forward" size={18} color={colors.ink3} />
+          <Ionicons name="chevron-forward" size={18} color={c.texte3} />
         </Pressable>
       ))}
     </Card>
@@ -495,6 +503,7 @@ function MeetingRows({
 
 /** D-ASM-17 — « Mon avancement » : chapitres lus lors des réunions où le membre était présent. */
 function MyProgressView({ progress, t }: { progress: MyProgress | null; t: T }) {
+  const styles = useStyles();
   if (!progress) return null;
   return (
     <>
@@ -516,6 +525,7 @@ function MyProgressView({ progress, t }: { progress: MyProgress | null; t: T }) 
 }
 
 function ProgressBar({ percent }: { percent: number }) {
+  const styles = useStyles();
   const w = Math.max(0, Math.min(100, percent));
   return (
     <View style={styles.barTrack}>
@@ -525,6 +535,7 @@ function ProgressBar({ percent }: { percent: number }) {
 }
 
 function ModuleProgressBlock({ mp, t }: { mp: ModuleProgress; t: T }) {
+  const styles = useStyles();
   return (
     <View style={{ gap: 6 }}>
       <View style={styles.modHead}>
@@ -556,10 +567,12 @@ function ModuleProgressBlock({ mp, t }: { mp: ModuleProgress; t: T }) {
 }
 
 function UnitProgressView({ progress, t }: { progress: UnitProgress | null; t: T }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   if (!progress || progress.modules.length === 0) {
     return (
       <Card style={styles.emptyCard}>
-        <Ionicons name="book-outline" size={26} color={colors.ink3} />
+        <Ionicons name="book-outline" size={26} color={c.texte3} />
         <Text style={styles.emptyText}>{t('assemblyLife.progress.noModules')}</Text>
       </Card>
     );
@@ -586,6 +599,7 @@ function OverviewView({
   setModuleId: (id: string | null) => void;
   t: T;
 }) {
+  const styles = useStyles();
   return (
     <>
       <Text style={styles.sectionTitle}>{t('assemblyLife.progress.overviewTitle')}</Text>
@@ -630,29 +644,29 @@ function OverviewView({
   );
 }
 
-const styles = StyleSheet.create({
-  title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4 },
-  subtitle: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, marginTop: 4, lineHeight: 19 },
-  unitName: { fontFamily: fonts.serif, fontSize: 19, color: colors.ink, marginTop: 16 },
-  unitCity: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3 },
+const useStyles = creerStyles((c) => ({
+  title: { fontFamily: fonts.serif, fontSize: 28, color: c.texte, letterSpacing: -0.4 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, marginTop: 4, lineHeight: 19 },
+  unitName: { fontFamily: fonts.serif, fontSize: 19, color: c.texte, marginTop: 16 },
+  unitCity: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 14 },
   tabRow: {
     flexDirection: 'row',
     marginTop: 18,
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
     borderRadius: 99,
     padding: 3,
   },
   tabBtn: { flex: 1, paddingVertical: 9, borderRadius: 99, alignItems: 'center' },
   tabBtnOn: {
-    backgroundColor: colors.paper,
-    shadowColor: colors.ink,
+    backgroundColor: c.surface,
+    shadowColor: c.texte,
     shadowOffset: { width: 0, height: 1 },
     shadowRadius: 3,
     shadowOpacity: 0.08,
   },
-  tabText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink3 },
-  tabTextOn: { color: colors.moss },
+  tabText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.texte3 },
+  tabTextOn: { color: c.accent },
   yearRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, marginTop: 16 },
   yearBtn: {
     width: 34,
@@ -660,58 +674,58 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
   },
-  yearText: { fontFamily: fonts.serif, fontSize: 20, color: colors.ink },
+  yearText: { fontFamily: fonts.serif, fontSize: 20, color: c.texte },
   newBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: colors.moss,
+    backgroundColor: c.accent,
     paddingVertical: 13,
     borderRadius: 14,
     marginTop: 16,
   },
-  newBtnText: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: colors.white },
+  newBtnText: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: c.surAccent },
   journalBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: colors.hairStrong,
-    backgroundColor: colors.paper2,
+    borderColor: c.filetFort,
+    backgroundColor: c.surfaceHaute,
     paddingVertical: 12,
     borderRadius: 14,
     marginTop: 10,
   },
-  journalBtnText: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: colors.moss },
-  readOnly: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 14, lineHeight: 18 },
+  journalBtnText: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: c.accent },
+  readOnly: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 14, lineHeight: 18 },
   emptyCard: { marginTop: 16, paddingVertical: 30, alignItems: 'center', gap: 10 },
   emptyText: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink3,
+    color: c.texte3,
     textAlign: 'center',
     maxWidth: 260,
     lineHeight: 19,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.hair },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: c.filet },
   presence: { fontFamily: fonts.sans, fontSize: 11, fontWeight: '600', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 99, overflow: 'hidden' },
-  presenceOn: { color: colors.moss, backgroundColor: colors.mossTint2 },
-  presenceOff: { color: colors.ink3, backgroundColor: colors.hair },
-  rowTitle: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
-  rowSub: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2, lineHeight: 16 },
+  presenceOn: { color: c.accent, backgroundColor: c.accentTeinte2 },
+  presenceOff: { color: c.texte3, backgroundColor: c.filet },
+  rowTitle: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.texte },
+  rowSub: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 2, lineHeight: 16 },
   progressCard: { marginTop: 16, paddingHorizontal: 16, paddingVertical: 16, gap: 18 },
   modHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  modName: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
-  modInactive: { fontWeight: '400', color: colors.ink3 },
-  modPct: { fontFamily: fonts.mono, fontSize: 12.5, color: colors.mossSoft },
-  modMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, lineHeight: 16 },
-  barTrack: { height: 8, borderRadius: 4, backgroundColor: colors.mossTint2, overflow: 'hidden' },
-  barFill: { height: 8, borderRadius: 4, backgroundColor: colors.moss },
-  sectionTitle: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink, marginTop: 24 },
+  modName: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.texte },
+  modInactive: { fontWeight: '400', color: c.texte3 },
+  modPct: { fontFamily: fonts.mono, fontSize: 12.5, color: c.accentDoux },
+  modMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, lineHeight: 16 },
+  barTrack: { height: 8, borderRadius: 4, backgroundColor: c.accentTeinte2, overflow: 'hidden' },
+  barFill: { height: 8, borderRadius: 4, backgroundColor: c.accent },
+  sectionTitle: { fontFamily: fonts.serif, fontSize: 18, color: c.texte, marginTop: 24 },
   ovCard: { paddingHorizontal: 16, paddingVertical: 14, gap: 8 },
-});
+}));

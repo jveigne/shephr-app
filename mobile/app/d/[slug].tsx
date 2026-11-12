@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   ActivityIndicator,
   Platform,
@@ -15,7 +14,7 @@ import * as WebBrowser from 'expo-web-browser';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import PdfReader, { isPdfReaderAvailable, type PdfSource } from '@/components/documents/PdfReader';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { isAttachedAccount } from '@/services/authApi';
@@ -44,6 +43,8 @@ import { webReaderUrl } from '@/constants/links';
 import { goBack } from '@/utils/navigation';
 import { notify } from '@/utils/dialogs';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Plan 18/10 (§6.3, lot D5) — LECTEUR d'un document partagé par lien universel
  * `https://<SHARE_DOMAIN>/d/{slug}[?r={ref}]` : expo-router fait correspondre ce chemin (Universal
@@ -125,6 +126,8 @@ function errorDetail(e: any): string {
 }
 
 function DocumentReader({ slug, refParam }: { slug: string; refParam: string | null }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const { t, language } = useLanguage();
   const { ready, isAuthenticated, me, hasDocuments } = useAuth();
@@ -388,7 +391,7 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
         <HeaderBack onPress={back} />
         <View style={styles.centered}>
           <Card variant="paper2" style={styles.stateCard}>
-            <Ionicons name="document-outline" size={30} color={colors.ink3} />
+            <Ionicons name="document-outline" size={30} color={c.texte3} />
             <Text style={styles.stateTitle}>{t('documents.reader.unavailableTitle')}</Text>
             <Text style={styles.stateBody}>{t('documents.reader.unavailableBody')}</Text>
             {showMore ? (
@@ -434,7 +437,7 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
       {/* En-tête léger : retour, titre, auteur · catégorie, indicateur de page. */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Pressable onPress={back} hitSlop={10} style={styles.headerIcon} accessibilityLabel={t('common.back')}>
-          <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+          <Ionicons name="chevron-back" size={22} color={c.texte2} />
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={styles.title} numberOfLines={1}>
@@ -454,9 +457,9 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
             accessibilityLabel={t('documents.reader.share')}
           >
             {sharing ? (
-              <ActivityIndicator size="small" color={colors.moss} />
+              <ActivityIndicator size="small" color={c.accent} />
             ) : (
-              <Ionicons name="share-outline" size={21} color={colors.moss} />
+              <Ionicons name="share-outline" size={21} color={c.accent} />
             )}
           </Pressable>
         )}
@@ -471,7 +474,7 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
       <View style={{ flex: 1 }}>
         {phase.kind === 'loading' && (
           <View style={styles.centered}>
-            <ActivityIndicator color={colors.moss} />
+            <ActivityIndicator color={c.accent} />
           </View>
         )}
         {phase.kind === 'error' && (
@@ -480,7 +483,7 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
               <Ionicons
                 name={phase.offline ? 'cloud-offline-outline' : 'alert-circle-outline'}
                 size={28}
-                color={colors.ink3}
+                color={c.texte3}
               />
               <Text style={styles.stateBody}>
                 {phase.offline ? t('documents.reader.offline') : t('documents.reader.loadFailed')}
@@ -502,7 +505,7 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
             // et le PDF reste ouvrable dans le navigateur du système.
             <View style={styles.centered}>
               <Card variant="paper2" style={styles.stateCard}>
-                <Ionicons name="download-outline" size={28} color={colors.ink3} />
+                <Ionicons name="download-outline" size={28} color={c.texte3} />
                 <Text style={styles.stateTitle}>{t('documents.reader.updateTitle')}</Text>
                 <Text style={styles.stateBody}>{t('documents.reader.updateBody')}</Text>
                 {!!phase.source.uri && (
@@ -536,7 +539,7 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
                   style={styles.wallClose}
                   accessibilityLabel={t('common.cancel')}
                 >
-                  <Ionicons name="close" size={18} color={colors.ink3} />
+                  <Ionicons name="close" size={18} color={c.texte3} />
                 </Pressable>
                 <Text style={styles.wallTitle}>{t('documents.wall.title', { title: doc.title })}</Text>
                 <Text style={styles.wallBody}>{t('documents.wall.body')}</Text>
@@ -554,7 +557,7 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
                       fullWidth
                       height={50}
                       style={{ marginTop: 12 }}
-                      iconRight={<Ionicons name="arrow-forward" size={18} color={colors.white} />}
+                      iconRight={<Ionicons name="arrow-forward" size={18} color={c.surAccent} />}
                     />
                     <Button
                       label={t('documents.wall.signup')}
@@ -574,7 +577,7 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
                       fullWidth
                       height={50}
                       style={{ marginTop: 12 }}
-                      iconRight={<Ionicons name="arrow-forward" size={18} color={colors.white} />}
+                      iconRight={<Ionicons name="arrow-forward" size={18} color={c.surAccent} />}
                     />
                   </>
                 )}
@@ -583,7 +586,7 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
           ) : (
             <View style={[styles.wallPillWrap, { bottom: showMore ? 16 : insets.bottom + 16 }]}>
               <Pressable onPress={() => setWallOpen(true)} style={styles.wallPill}>
-                <Ionicons name="lock-open-outline" size={15} color={colors.white} />
+                <Ionicons name="lock-open-outline" size={15} color={c.surAccent} />
                 <Text style={styles.wallPillText}>
                   {remaining > 0
                     ? t('documents.wall.remaining', { count: remaining })
@@ -607,7 +610,7 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
               loading={downloading}
               fullWidth
               height={46}
-              iconLeft={<Ionicons name="download-outline" size={17} color={colors.mossDeep} />}
+              iconLeft={<Ionicons name="download-outline" size={17} color={c.accentProfond} />}
             />
           )}
           {showMore && (
@@ -618,7 +621,7 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
               fullWidth
               height={46}
               style={canDownload ? { marginTop: 8 } : undefined}
-              iconLeft={<Ionicons name="library-outline" size={17} color={colors.mossDeep} />}
+              iconLeft={<Ionicons name="library-outline" size={17} color={c.accentProfond} />}
             />
           )}
         </View>
@@ -628,11 +631,12 @@ function DocumentReader({ slug, refParam }: { slug: string; refParam: string | n
 }
 
 function HeaderBack({ onPress }: { onPress: () => void }) {
+  const { couleurs: c } = useTheme();
   const { t } = useLanguage();
   return (
     <View style={{ paddingHorizontal: 20 }}>
       <Pressable onPress={onPress} hitSlop={10} accessibilityLabel={t('common.back')}>
-        <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+        <Ionicons name="chevron-back" size={22} color={c.texte2} />
       </Pressable>
     </View>
   );
@@ -648,6 +652,8 @@ function HeaderBack({ onPress }: { onPress: () => void }) {
  * journalise pas (`appPlatform()` nul, contrat §2.1).
  */
 function DocumentWebFrame({ slug, refParam }: { slug: string; refParam: string | null }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { isAuthenticated } = useAuth();
   const { t } = useLanguage();
   const [doc, setDoc] = useState<PublicDocument | null>(null);
@@ -692,9 +698,9 @@ function DocumentWebFrame({ slug, refParam }: { slug: string; refParam: string |
             accessibilityLabel={t('documents.reader.download')}
           >
             {downloading ? (
-              <ActivityIndicator size="small" color={colors.moss} />
+              <ActivityIndicator size="small" color={c.accent} />
             ) : (
-              <Ionicons name="download-outline" size={17} color={colors.moss} />
+              <Ionicons name="download-outline" size={17} color={c.accent} />
             )}
             <Text style={styles.webDownloadText}>{t('documents.reader.download')}</Text>
           </Pressable>
@@ -709,32 +715,32 @@ function DocumentWebFrame({ slug, refParam }: { slug: string; refParam: string |
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.parchment },
+const useStyles = creerStyles((c) => ({
+  root: { flex: 1, backgroundColor: c.page },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 14,
     paddingBottom: 8,
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.hair,
+    borderBottomColor: c.filet,
   },
   webDownload: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 6 },
-  webDownloadText: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.moss },
+  webDownloadText: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.accent },
   headerIcon: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
-  title: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink, letterSpacing: -0.2 },
-  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 1 },
+  title: { fontFamily: fonts.serif, fontSize: 18, color: c.texte, letterSpacing: -0.2 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 1 },
   indicatorRow: {
     paddingHorizontal: 20,
     paddingVertical: 6,
-    backgroundColor: colors.paper2,
+    backgroundColor: c.surfaceHaute,
     borderBottomWidth: 1,
-    borderBottomColor: colors.hair,
+    borderBottomColor: c.filet,
   },
-  indicator: { fontFamily: fonts.mono, fontSize: 11, color: colors.ink2, letterSpacing: 0.6 },
-  indicatorPreview: { color: colors.clay },
+  indicator: { fontFamily: fonts.mono, fontSize: 11, color: c.texte2, letterSpacing: 0.6 },
+  indicatorPreview: { color: c.alerte },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   stateCard: {
     alignSelf: 'stretch',
@@ -746,20 +752,20 @@ const styles = StyleSheet.create({
   stateTitle: {
     fontFamily: fonts.serif,
     fontSize: 20,
-    color: colors.ink,
+    color: c.texte,
     textAlign: 'center',
   },
   stateBody: {
     fontFamily: fonts.sans,
     fontSize: 13.5,
-    color: colors.ink2,
+    color: c.texte2,
     lineHeight: 20,
     textAlign: 'center',
   },
   stateDetail: {
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.ink3,
+    color: c.texte3,
     textAlign: 'center',
   },
   wallWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 14 },
@@ -768,20 +774,20 @@ const styles = StyleSheet.create({
   wallTitle: {
     fontFamily: fonts.serif,
     fontSize: 20,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.2,
     paddingRight: 24,
   },
-  wallBody: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink2, lineHeight: 20, marginTop: 8 },
+  wallBody: { fontFamily: fonts.sans, fontSize: 14, color: c.texte2, lineHeight: 20, marginTop: 8 },
   wallRemaining: {
     fontFamily: fonts.mono,
     fontSize: 11.5,
-    color: colors.clay,
+    color: c.alerte,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginTop: 10,
   },
-  wallHint: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, lineHeight: 19, marginTop: 10 },
+  wallHint: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, lineHeight: 19, marginTop: 10 },
   wallPillWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   wallPill: {
     flexDirection: 'row',
@@ -790,14 +796,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 999,
-    backgroundColor: colors.moss,
+    backgroundColor: c.accent,
   },
-  wallPillText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.white },
+  wallPillText: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.surAccent },
   bottomBar: {
     paddingHorizontal: 14,
     paddingTop: 10,
-    backgroundColor: colors.paper,
+    backgroundColor: c.surface,
     borderTopWidth: 1,
-    borderTopColor: colors.hair,
+    borderTopColor: c.filet,
   },
-});
+}));

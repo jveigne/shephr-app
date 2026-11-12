@@ -575,7 +575,7 @@ export function Pagination({
           <Icon name="chevLeft" size={12} />
         </button>
         {start > 1 && <button className="pg-btn" onClick={() => onPage(1)}>1</button>}
-        {start > 2 && <span style={{ padding: '0 4px', color: 'var(--ink-400)' }}>…</span>}
+        {start > 2 && <span style={{ padding: '0 4px', color: 'var(--texte-4)' }}>…</span>}
         {pages.map((p) => (
           <button
             key={p}
@@ -585,7 +585,7 @@ export function Pagination({
             {p}
           </button>
         ))}
-        {end < pageCount - 1 && <span style={{ padding: '0 4px', color: 'var(--ink-400)' }}>…</span>}
+        {end < pageCount - 1 && <span style={{ padding: '0 4px', color: 'var(--texte-4)' }}>…</span>}
         {end < pageCount && (
           <button className="pg-btn" onClick={() => onPage(pageCount)}>{pageCount}</button>
         )}

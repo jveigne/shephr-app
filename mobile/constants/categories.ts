@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { tonDonnee } from '@/theme/tonsDonnees';
 
 /**
  * Lot T5 (JP 14/09) — APPARENCE des rubriques de don, et elle seule.
@@ -37,6 +38,7 @@ export const DEFAULT_DONATION_CATEGORY_META: DonationCategoryMeta = {
 };
 
 export function donationCategoryMeta(code: string | null | undefined): DonationCategoryMeta {
-  if (!code) return DEFAULT_DONATION_CATEGORY_META;
-  return DONATION_CATEGORY_META[code.trim().toLowerCase()] ?? DEFAULT_DONATION_CATEGORY_META;
+  const meta = (code && DONATION_CATEGORY_META[code.trim().toLowerCase()]) || DEFAULT_DONATION_CATEGORY_META;
+  // D8 : le ton suit le thème (gris en Noir et blanc, éclairci en Sombre).
+  return { ...meta, tone: tonDonnee(meta.tone) };
 }

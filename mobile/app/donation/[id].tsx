@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { goBack } from '@/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,7 +11,7 @@ import Button from '@/components/Button';
 import HandDivider from '@/components/HandDivider';
 import ErrorBanner from '@/components/ErrorBanner';
 import DeclarationStatusPill from '@/components/DeclarationStatusPill';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useDonationCategories } from '@/hooks/useDonationCategories';
 import {
   deleteDeclaration,
@@ -24,6 +24,8 @@ import { confirmDialog, notify } from '@/utils/dialogs';
 import { declarationErrorMessage } from '@/utils/donationErrors';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Lot T7 (décision J-1, JP 14/09) — DÉTAIL D'UNE DÉCLARATION, avec sa ventilation par rubrique.
  *
@@ -36,6 +38,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
  * « CMCI-xxxx » était fabriquée côté client à partir de l'id, nom de client en dur compris.
  */
 export default function DeclarationDetailScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   // Lot T5 — libellé et apparence des rubriques, depuis le référentiel du ministère. Une rubrique
   // désactivée depuis reste lisible (repli i18n) : pas de trou dans l'historique.
@@ -86,7 +90,7 @@ export default function DeclarationDetailScreen() {
     return (
       <ScreenShell withTabBar={false}>
         <View style={{ marginTop: 60, alignItems: 'center' }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       </ScreenShell>
     );
@@ -197,14 +201,14 @@ export default function DeclarationDetailScreen() {
             <Button
               label={t('common.edit')}
               variant="ghost"
-              iconLeft={<Ionicons name="pencil" size={16} color={colors.moss} />}
+              iconLeft={<Ionicons name="pencil" size={16} color={c.accent} />}
               style={{ flex: 1 }}
               onPress={() => router.push(`/donation/edit/${declaration.id}`)}
             />
             <Button
               label={t('common.delete')}
               variant="danger"
-              iconLeft={<Ionicons name="trash-outline" size={16} color={colors.clay} />}
+              iconLeft={<Ionicons name="trash-outline" size={16} color={c.alerte} />}
               style={{ flex: 1 }}
               onPress={() => void onDelete()}
             />
@@ -213,7 +217,7 @@ export default function DeclarationDetailScreen() {
         </>
       ) : (
         <View style={styles.locked}>
-          <Ionicons name="lock-closed-outline" size={18} color={colors.mossSoft} />
+          <Ionicons name="lock-closed-outline" size={18} color={c.accentDoux} />
           <Text style={styles.lockedText}>{t('declarations.lockedHint')}</Text>
         </View>
       )}
@@ -222,10 +226,12 @@ export default function DeclarationDetailScreen() {
 }
 
 function Header({ title }: { title: string }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.headerRow}>
       <Pressable onPress={() => goBack()} hitSlop={10}>
-        <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+        <Ionicons name="chevron-back" size={22} color={c.texte2} />
       </Pressable>
       <Text style={styles.headerTitle}>{title}</Text>
       <View style={{ width: 22 }} />
@@ -251,7 +257,7 @@ async function resolveDeclaration(id: string): Promise<DeclarationResponse> {
   }
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -261,26 +267,26 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontSize: 13.5,
     fontWeight: '600',
-    color: colors.ink2,
+    color: c.texte2,
   },
   certificate: {
     marginTop: 24,
     paddingHorizontal: 26,
     paddingVertical: 28,
-    borderColor: 'rgba(42,38,32,0.10)',
+    borderColor: transparence(c.texte, 0.10),
   },
   certLabel: {
     textAlign: 'center',
     fontFamily: fonts.mono,
     fontSize: 10,
-    color: colors.ink3,
+    color: c.texte3,
     letterSpacing: 1.8,
   },
   dateLine: {
     fontFamily: fonts.serif,
     fontSize: 16,
     fontStyle: 'italic',
-    color: colors.mossSoft,
+    color: c.accentDoux,
     marginTop: 8,
   },
   lineRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
@@ -291,15 +297,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  lineLabel: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: colors.ink },
+  lineLabel: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '600', color: c.texte },
   lineNote: {
     fontFamily: fonts.serif,
     fontSize: 12.5,
     fontStyle: 'italic',
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 2,
   },
-  lineAmount: { fontFamily: fonts.mono, fontSize: 13.5, color: colors.ink },
+  lineAmount: { fontFamily: fonts.mono, fontSize: 13.5, color: c.texte },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -307,26 +313,26 @@ const styles = StyleSheet.create({
     marginTop: 6,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: colors.hair,
+    borderTopColor: c.filet,
   },
   totalLabel: {
     fontFamily: fonts.sans,
     fontSize: 12,
     letterSpacing: 0.72,
     textTransform: 'uppercase',
-    color: colors.ink3,
+    color: c.texte3,
     fontWeight: '600',
   },
-  totalValue: { fontFamily: fonts.serif, fontSize: 20, color: colors.ink },
+  totalValue: { fontFamily: fonts.serif, fontSize: 20, color: c.texte },
   metaGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 14 },
   metaItem: { width: '50%' },
-  metaValue: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink, marginTop: 3 },
-  metaSub: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginTop: 2 },
+  metaValue: { fontFamily: fonts.sans, fontSize: 14, color: c.texte, marginTop: 3 },
+  metaSub: { fontFamily: fonts.sans, fontSize: 12, color: c.texte3, marginTop: 2 },
   certFooter: {
     textAlign: 'center',
     fontFamily: fonts.sans,
     fontSize: 11,
-    color: colors.ink3,
+    color: c.texte3,
     letterSpacing: 0.4,
   },
   editableHint: {
@@ -334,7 +340,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     fontSize: 12,
     lineHeight: 18,
-    color: colors.ink3,
+    color: c.texte3,
     textAlign: 'center',
     paddingHorizontal: 16,
   },
@@ -342,10 +348,10 @@ const styles = StyleSheet.create({
     marginTop: 22,
     padding: 14,
     borderRadius: 14,
-    backgroundColor: 'rgba(42,38,32,0.04)',
+    backgroundColor: transparence(c.texte, 0.04),
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
-  lockedText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },
-});
+  lockedText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2, lineHeight: 18 },
+}));

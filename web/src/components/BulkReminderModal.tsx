@@ -121,7 +121,7 @@ export function BulkReminderModal({ open, onClose }: { open: boolean; onClose: (
         {done.sentToNames.length > 0 && (
           <div style={{ marginTop: 14 }}>
             <div style={sectionTitle}>{t('goals.remind.sentToLabel')}</div>
-            <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--ink-700)', lineHeight: 1.5 }}>
+            <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--texte-2)', lineHeight: 1.5 }}>
               {done.sentToNames.join(' · ')}
             </p>
           </div>
@@ -135,7 +135,7 @@ export function BulkReminderModal({ open, onClose }: { open: boolean; onClose: (
   // ------------------------------------------------------------------------------------------
   const footer = confirming && current ? (
     <>
-      <span style={{ flex: 1, fontSize: 13, color: 'var(--ink-700)' }}>
+      <span style={{ flex: 1, fontSize: 13, color: 'var(--texte-2)' }}>
         {t('goals.remind.confirmBody', { count: current.pending, scope: currentLabel })}
       </span>
       <Button variant="ghost" onClick={() => setConfirming(false)} disabled={sendM.isPending}>
@@ -171,12 +171,12 @@ export function BulkReminderModal({ open, onClose }: { open: boolean; onClose: (
 
   let body: ReactNode;
   if (scopesQ.isLoading) {
-    body = <p style={{ color: 'var(--ink-500)', fontSize: 13 }}>{t('common.loading')}</p>;
+    body = <p style={{ color: 'var(--texte-3)', fontSize: 13 }}>{t('common.loading')}</p>;
   } else if (scopesQ.isError) {
     const e = scopesQ.error as ApiErr;
     body = (
       <div style={{ display: 'grid', gap: 10, justifyItems: 'start' }}>
-        <p style={{ margin: 0, color: 'var(--err)', fontSize: 13 }}>
+        <p style={{ margin: 0, color: 'var(--alerte)', fontSize: 13 }}>
           {e?.response?.data?.message ?? t('goals.remind.loadError')}
         </p>
         <Button size="sm" onClick={() => scopesQ.refetch()}>
@@ -185,7 +185,7 @@ export function BulkReminderModal({ open, onClose }: { open: boolean; onClose: (
       </div>
     );
   } else if (options.length === 0) {
-    body = <p style={{ color: 'var(--ink-500)', fontSize: 13, margin: 0 }}>{t('goals.remind.empty')}</p>;
+    body = <p style={{ color: 'var(--texte-3)', fontSize: 13, margin: 0 }}>{t('goals.remind.empty')}</p>;
   } else {
     body = (
       <>
@@ -238,7 +238,7 @@ export function BulkReminderModal({ open, onClose }: { open: boolean; onClose: (
           <>
             <div
               className="card"
-              style={{ marginTop: 18, padding: '10px 14px', fontSize: 13, color: 'var(--ink-700)' }}
+              style={{ marginTop: 18, padding: '10px 14px', fontSize: 13, color: 'var(--texte-2)' }}
             >
               {current.pending > 0
                 ? t('goals.remind.preview', { count: current.pending, total: current.total })
@@ -258,7 +258,7 @@ export function BulkReminderModal({ open, onClose }: { open: boolean; onClose: (
           </>
         )}
 
-        {sendError && <p style={{ margin: '12px 0 0', color: 'var(--err)', fontSize: 13 }}>{sendError}</p>}
+        {sendError && <p style={{ margin: '12px 0 0', color: 'var(--alerte)', fontSize: 13 }}>{sendError}</p>}
         <p style={footnote}>{t('goals.remind.antispamHint')}</p>
       </>
     );
@@ -300,8 +300,8 @@ function ScopeRow({
         textAlign: 'left',
         padding: '11px 14px',
         borderRadius: 'var(--radius)',
-        border: `1px solid ${selected ? 'var(--green-700)' : 'var(--line)'}`,
-        background: selected ? 'var(--green-50)' : 'var(--ivory-card)',
+        border: `1px solid ${selected ? 'var(--accent-moyen)' : 'var(--filet)'}`,
+        background: selected ? 'var(--accent-teinte-douce)' : 'var(--surface)',
         cursor: 'pointer',
         font: 'inherit',
         color: 'inherit',
@@ -314,14 +314,14 @@ function ScopeRow({
           height: 16,
           flex: '0 0 16px',
           borderRadius: '50%',
-          border: `2px solid ${selected ? 'var(--green-700)' : 'var(--ink-300)'}`,
-          boxShadow: selected ? 'inset 0 0 0 3px var(--green-50)' : undefined,
-          background: selected ? 'var(--green-700)' : 'transparent',
+          border: `2px solid ${selected ? 'var(--accent-moyen)' : 'var(--texte-5)'}`,
+          boxShadow: selected ? 'inset 0 0 0 3px var(--accent-teinte-douce)' : undefined,
+          background: selected ? 'var(--accent-moyen)' : 'transparent',
         }}
       />
       <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: 'block', fontWeight: 600, fontSize: 14, color: 'var(--ink-900)' }}>{label}</span>
-        <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-500)', marginTop: 2 }}>{caption}</span>
+        <span style={{ display: 'block', fontWeight: 600, fontSize: 14, color: 'var(--texte)' }}>{label}</span>
+        <span style={{ display: 'block', fontSize: 12, color: 'var(--texte-3)', marginTop: 2 }}>{caption}</span>
       </span>
       <Badge tone={option.pending > 0 ? 'earth' : 'ok'}>
         {t('goals.remind.pendingOfTotal', { pending: option.pending, total: option.total })}
@@ -334,8 +334,8 @@ function ResultRow({ icon, label, value }: { icon: 'mail' | 'history' | 'check';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <Icon name={icon} size={15} />
-      <span style={{ flex: 1, fontSize: 13.5, color: 'var(--ink-700)' }}>{label}</span>
-      <strong style={{ fontFamily: 'var(--font-serif)', fontSize: 18, color: 'var(--ink-900)' }}>{value}</strong>
+      <span style={{ flex: 1, fontSize: 13.5, color: 'var(--texte-2)' }}>{label}</span>
+      <strong style={{ fontFamily: 'var(--font-serif)', fontSize: 18, color: 'var(--texte)' }}>{value}</strong>
     </div>
   );
 }
@@ -345,7 +345,7 @@ const sectionTitle = {
   fontWeight: 600,
   letterSpacing: '.4px',
   textTransform: 'uppercase' as const,
-  color: 'var(--ink-500)',
+  color: 'var(--texte-3)',
 };
-const sectionHint = { margin: '4px 0 0', fontSize: 12.5, color: 'var(--ink-500)', lineHeight: 1.45 };
-const footnote = { margin: '12px 0 0', fontSize: 11.5, color: 'var(--ink-500)', lineHeight: 1.5 };
+const sectionHint = { margin: '4px 0 0', fontSize: 12.5, color: 'var(--texte-3)', lineHeight: 1.45 };
+const footnote = { margin: '12px 0 0', fontSize: 11.5, color: 'var(--texte-3)', lineHeight: 1.5 };

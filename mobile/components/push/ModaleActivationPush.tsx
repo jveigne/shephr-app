@@ -22,19 +22,23 @@
  * boutons. Une seconde grammaire de modale n'apporterait rien.
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Modal, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import Button from '@/components/Button';
 import Card from '@/components/Card';
-import { colors, fonts } from '@/theme';
+import { fonts } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { abonnerGate, gateEstOuverte } from '@/components/push/fileNotifications';
 import { invitationDejaVue, marquerInvitationVue } from '@/components/push/preferencesPush';
 import { activerNotifications, estSupporte, lireEtatPermission } from '@/components/push/usePushNotifications';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 export default function ModaleActivationPush() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t, language } = useLanguage();
   const { ready, token, me } = useAuth();
 
@@ -108,7 +112,7 @@ export default function ModaleActivationPush() {
       <View style={styles.backdrop}>
         <Card style={styles.card}>
           <View style={styles.iconBubble}>
-            <Ionicons name="notifications-outline" size={24} color={colors.moss} />
+            <Ionicons name="notifications-outline" size={24} color={c.accent} />
           </View>
           <Text style={styles.title}>{t('push.inviteTitle')}</Text>
           <Text style={styles.message}>{t('push.inviteBody')}</Text>
@@ -135,10 +139,10 @@ export default function ModaleActivationPush() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(22,41,31,0.5)',
+    backgroundColor: c.voile,
     justifyContent: 'center',
     padding: 24,
   },
@@ -147,24 +151,24 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: colors.mossTint2,
+    backgroundColor: c.accentTeinte2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontFamily: fonts.serif,
     fontSize: 20,
-    color: colors.ink,
+    color: c.texte,
     marginTop: 14,
     textAlign: 'center',
   },
   message: {
     fontFamily: fonts.sans,
     fontSize: 13.5,
-    color: colors.ink2,
+    color: c.texte2,
     marginTop: 10,
     textAlign: 'center',
     lineHeight: 20,
   },
   actions: { flexDirection: 'row', gap: 10, marginTop: 18, alignSelf: 'stretch' },
-});
+}));

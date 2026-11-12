@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Switch } from 'react-native';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenShell from '@/components/ScreenShell';
@@ -11,7 +11,7 @@ import ErrorBanner from '@/components/ErrorBanner';
 import MeetingReportCard from '@/components/MeetingReportCard';
 import CalebAssemblyLock from '@/components/CalebAssemblyLock';
 import { DatePickerModal } from '@/components/DeclarationForm';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -46,6 +46,8 @@ function partsOf(chapters: TeachingChapter[]): TeachingPart[] {
 import { parseLocalDate, toLocalDate } from '@/utils/format';
 import { notify } from '@/utils/dialogs';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 interface Person {
   userId: string;
   name: string;
@@ -78,6 +80,8 @@ function assemblyErrorMessage(e: any, t: (k: string) => string, fallback: string
  *   → verrou Caleb à la place du formulaire, jamais un toast.
  */
 export default function MeetingFormScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const { hasStudy } = useAuth();
   const params = useLocalSearchParams<{ id?: string; unitId?: string; unitName?: string }>();
@@ -315,7 +319,7 @@ export default function MeetingFormScreen() {
     return (
       <ScreenShell>
         <View style={{ marginTop: 60, alignItems: 'center' }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       </ScreenShell>
     );
@@ -326,7 +330,7 @@ export default function MeetingFormScreen() {
       <ScreenShell>
         <View style={styles.headerRow}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+            <Ionicons name="chevron-back" size={22} color={c.texte2} />
           </Pressable>
         </View>
         <Text style={styles.title}>
@@ -342,7 +346,7 @@ export default function MeetingFormScreen() {
     <ScreenShell>
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="chevron-back" size={22} color={colors.ink2} />
+          <Ionicons name="chevron-back" size={22} color={c.texte2} />
         </Pressable>
       </View>
       <Text style={styles.title}>
@@ -356,9 +360,9 @@ export default function MeetingFormScreen() {
       <Card style={styles.card}>
         <Label style={{ marginBottom: 10 }}>{t('assemblyLife.form.date')}</Label>
         <Pressable style={styles.dateBtn} onPress={() => setDateOpen(true)}>
-          <Ionicons name="calendar-outline" size={18} color={colors.mossSoft} />
+          <Ionicons name="calendar-outline" size={18} color={c.accentDoux} />
           <Text style={styles.dateText}>{fmtIsoDay(toLocalDate(date), t)}</Text>
-          <Ionicons name="chevron-down" size={16} color={colors.ink3} />
+          <Ionicons name="chevron-down" size={16} color={c.texte3} />
         </Pressable>
       </Card>
 
@@ -395,7 +399,7 @@ export default function MeetingFormScreen() {
                 <Ionicons
                   name={on ? 'checkbox' : 'square-outline'}
                   size={20}
-                  color={on ? colors.moss : colors.ink3}
+                  color={on ? c.accent : c.texte3}
                 />
                 <Text style={styles.personName} numberOfLines={1}>
                   {p.name}
@@ -414,8 +418,8 @@ export default function MeetingFormScreen() {
           <Switch
             value={breadBreaking}
             onValueChange={setBreadBreaking}
-            trackColor={{ true: colors.moss, false: colors.hairStrong }}
-            thumbColor={colors.paper2}
+            trackColor={{ true: c.accent, false: c.filetFort }}
+            thumbColor={c.surfaceHaute}
           />
         </Pressable>
       </Card>
@@ -513,54 +517,54 @@ export default function MeetingFormScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center' },
-  title: { fontFamily: fonts.serif, fontSize: 26, color: colors.ink, letterSpacing: -0.4, marginTop: 8 },
-  subtitle: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, marginTop: 4 },
+  title: { fontFamily: fonts.serif, fontSize: 26, color: c.texte, letterSpacing: -0.4, marginTop: 8 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, marginTop: 4 },
   card: { marginTop: 14, paddingHorizontal: 16, paddingVertical: 16 },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
-  link: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: colors.moss },
-  hint: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, lineHeight: 18 },
+  link: { fontFamily: fonts.sans, fontSize: 12.5, fontWeight: '600', color: c.accent },
+  hint: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, lineHeight: 18 },
   dateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: colors.paper2,
-    borderColor: colors.hair,
+    backgroundColor: c.surfaceHaute,
+    borderColor: c.filet,
     borderWidth: 1,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 13,
   },
-  dateText: { flex: 1, fontFamily: fonts.sans, fontSize: 15, color: colors.ink },
+  dateText: { flex: 1, fontFamily: fonts.sans, fontSize: 15, color: c.texte },
   personRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
-  personName: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: colors.ink },
+  personName: { flex: 1, fontFamily: fonts.sans, fontSize: 14.5, color: c.texte },
   leaderTag: {
     fontFamily: fonts.sans,
     fontSize: 10.5,
     fontWeight: '700',
-    color: colors.earthDeep,
+    color: c.secondaireProfond,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  switchLabel: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
+  switchLabel: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.texte },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chapterGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  partHeading: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: colors.ink2, marginBottom: 8 },
+  partHeading: { fontFamily: fonts.sans, fontSize: 13, fontWeight: '600', color: c.texte2, marginBottom: 8 },
   chapterCell: {
     width: 44,
     height: 44,
     borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
     borderWidth: 1,
     borderColor: 'transparent',
   },
-  chapterCellOn: { backgroundColor: colors.moss, borderColor: colors.mossDeep },
-  chapterText: { fontFamily: fonts.mono, fontSize: 14, color: colors.ink2 },
-  chapterTextOn: { color: colors.white },
+  chapterCellOn: { backgroundColor: c.accent, borderColor: c.accentProfond },
+  chapterText: { fontFamily: fonts.mono, fontSize: 14, color: c.texte2 },
+  chapterTextOn: { color: c.surAccent },
   readDot: {
     position: 'absolute',
     top: 5,
@@ -568,7 +572,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: colors.earth,
+    backgroundColor: c.secondaire,
   },
-  readDotOn: { backgroundColor: colors.white },
-});
+  readDotOn: { backgroundColor: c.surAccent },
+}));

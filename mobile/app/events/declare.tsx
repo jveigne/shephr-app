@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   KeyboardAvoidingView,
   Platform,
@@ -23,7 +22,7 @@ import SelectField from '@/components/SelectField';
 import EventCounterFields from '@/components/EventCounterFields';
 import EventPreacherField from '@/components/EventPreacherField';
 import { DatePickerModal } from '@/components/DeclarationForm';
-import { colors, fonts, radii } from '@/theme';
+import { fonts, radii } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useEventCatalog } from '@/hooks/useEventCatalog';
@@ -48,6 +47,8 @@ import { counterDraft, filledCounters, filledPreacher, guestsExceedParticipants 
 import { notify } from '@/utils/dialogs';
 import { goBack } from '@/utils/navigation';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Plan 14/10 (§6.3, lot E6) — DÉCLARER UNE ACTION D'ÉVANGÉLISATION (spec Recensement §4.2).
  *
@@ -115,6 +116,8 @@ function openMyActions(isLeader: boolean, from: 'header' | 'success') {
 }
 
 export default function DeclareEventScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const { me, hasEvents, isLeader } = useAuth();
@@ -263,7 +266,7 @@ export default function DeclareEventScreen() {
     <View style={styles.headerRow}>
       {hasEvents ? (
         <Pressable onPress={() => openMyActions(isLeader, 'header')} hitSlop={10} style={styles.mineLink}>
-          <Ionicons name="list-outline" size={16} color={colors.moss} />
+          <Ionicons name="list-outline" size={16} color={c.accent} />
           <Text style={styles.mineLinkText}>{t('events.mine.title')}</Text>
           {/* En attente + refusées : un refus survenu en arrière-plan se signale ici, sur le
               chemin naturel de la personne, avant même qu'elle n'ouvre « Mes actions ». */}
@@ -277,7 +280,7 @@ export default function DeclareEventScreen() {
         <View />
       )}
       <Pressable onPress={() => goBack()} hitSlop={10}>
-        <Ionicons name="close" size={26} color={colors.ink2} />
+        <Ionicons name="close" size={26} color={c.texte2} />
       </Pressable>
     </View>
   );
@@ -297,7 +300,7 @@ export default function DeclareEventScreen() {
   } else if (catalog.loading) {
     blocker = (
       <View style={styles.loadingBox}>
-        <ActivityIndicator color={colors.moss} />
+        <ActivityIndicator color={c.accent} />
       </View>
     );
   } else if (catalog.error || !scopes) {
@@ -329,7 +332,7 @@ export default function DeclareEventScreen() {
 
         {catalog.stale && (
           <View style={styles.staleRow}>
-            <Ionicons name="cloud-offline-outline" size={15} color={colors.ink3} />
+            <Ionicons name="cloud-offline-outline" size={15} color={c.texte3} />
             <Text style={styles.staleText}>{t('events.declare.offlineCatalog')}</Text>
           </View>
         )}
@@ -367,12 +370,12 @@ export default function DeclareEventScreen() {
         <View style={styles.section}>
           <Label style={styles.sectionLabel}>{t('events.declare.date')}</Label>
           <Card onPress={() => setDateOpen(true)} style={styles.dateRow}>
-            <Ionicons name="calendar-outline" size={20} color={colors.mossSoft} />
+            <Ionicons name="calendar-outline" size={20} color={c.accentDoux} />
             <Text style={styles.dateText}>{fmtIsoDay(toLocalDate(date), t)}</Text>
             {toLocalDate(date) === toLocalDate(new Date()) && (
               <Text style={styles.dateChip}>{t('common.today')}</Text>
             )}
-            <Ionicons name="chevron-down" size={16} color={colors.ink3} />
+            <Ionicons name="chevron-down" size={16} color={c.texte3} />
           </Card>
         </View>
 
@@ -423,7 +426,7 @@ export default function DeclareEventScreen() {
           />
         )}
         <View style={styles.banner}>
-          <Ionicons name="location-outline" size={16} color={colors.mossSoft} />
+          <Ionicons name="location-outline" size={16} color={c.accentDoux} />
           <Text style={styles.bannerText}>
             {target
               ? t('events.declare.recordedFor', {
@@ -441,7 +444,7 @@ export default function DeclareEventScreen() {
           fullWidth
           height={58}
           style={{ marginTop: 18 }}
-          iconLeft={<Ionicons name="checkmark" size={20} color={colors.white} />}
+          iconLeft={<Ionicons name="checkmark" size={20} color={c.surAccent} />}
         />
         <Text style={styles.footnote}>{t('events.declare.footnote')}</Text>
 
@@ -468,9 +471,11 @@ function EmptyState({
   icon: React.ComponentProps<typeof Ionicons>['name'];
   text: string;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   return (
     <Card variant="paper2" style={styles.empty}>
-      <Ionicons name={icon} size={26} color={colors.ink3} />
+      <Ionicons name={icon} size={26} color={c.texte3} />
       <Text style={styles.emptyText}>{text}</Text>
     </Card>
   );
@@ -489,13 +494,15 @@ function SuccessScreen({
   scopeName: string;
   onAnother: () => void;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const { isLeader } = useAuth();
   return (
     <ScreenShell withTabBar={false} paddingTop={40}>
       <View style={{ alignItems: 'center' }}>
         <View style={[styles.checkBubble, queued && styles.checkBubbleQueued]}>
-          <Ionicons name={queued ? 'cloud-upload-outline' : 'checkmark'} size={36} color={colors.white} />
+          <Ionicons name={queued ? 'cloud-upload-outline' : 'checkmark'} size={36} color={c.surAccent} />
         </View>
         <Text style={styles.successTitle}>{t('events.declare.successTitle')}</Text>
         <Text style={styles.successHint}>
@@ -511,7 +518,7 @@ function SuccessScreen({
         onPress={onAnother}
         fullWidth
         style={{ marginTop: 28 }}
-        iconLeft={<Ionicons name="add" size={18} color={colors.moss} />}
+        iconLeft={<Ionicons name="add" size={18} color={c.accent} />}
       />
       <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
         <Button
@@ -526,7 +533,7 @@ function SuccessScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -534,51 +541,51 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   mineLink: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  mineLinkText: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.moss },
+  mineLinkText: { fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.accent },
   mineBadge: {
     minWidth: 20,
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 99,
     overflow: 'hidden',
-    backgroundColor: colors.earth,
-    color: colors.white,
+    backgroundColor: c.secondaire,
+    color: c.surAccent,
     fontFamily: fonts.sans,
     fontSize: 11.5,
     fontWeight: '700',
     textAlign: 'center',
   },
-  mineBadgeAlert: { backgroundColor: colors.clay },
+  mineBadgeAlert: { backgroundColor: c.alerte },
   kicker: {
     marginTop: 4,
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.clay,
+    color: c.alerte,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
   title: {
     fontFamily: fonts.serif,
     fontSize: 30,
-    color: colors.ink,
+    color: c.texte,
     letterSpacing: -0.5,
     marginTop: 4,
   },
   intro: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 6,
     lineHeight: 20,
     maxWidth: 320,
   },
   loadingBox: { marginTop: 48, alignItems: 'center' },
   staleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
-  staleText: { flex: 1, fontFamily: fonts.sans, fontSize: 12, color: colors.ink3 },
+  staleText: { flex: 1, fontFamily: fonts.sans, fontSize: 12, color: c.texte3 },
   section: { marginTop: 18 },
   sectionLabel: { marginBottom: 8 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  fieldHint: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12, color: colors.clay },
+  fieldHint: { marginTop: 6, fontFamily: fonts.sans, fontSize: 12, color: c.alerte },
   dateRow: {
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -586,15 +593,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  dateText: { flex: 1, fontFamily: fonts.sans, fontSize: 15, fontWeight: '500', color: colors.ink },
-  dateChip: { fontFamily: fonts.sans, fontSize: 12, color: colors.earthDeep, fontWeight: '700' },
+  dateText: { flex: 1, fontFamily: fonts.sans, fontSize: 15, fontWeight: '500', color: c.texte },
+  dateChip: { fontFamily: fonts.sans, fontSize: 12, color: c.secondaireProfond, fontWeight: '700' },
   noteHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
   },
-  counter: { fontFamily: fonts.mono, fontSize: 11, color: colors.ink3 },
+  counter: { fontFamily: fonts.mono, fontSize: 11, color: c.texte3 },
   noteField: { minHeight: 72, textAlignVertical: 'top' },
   banner: {
     marginTop: 18,
@@ -604,14 +611,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: radii.md,
-    backgroundColor: colors.mossTint,
+    backgroundColor: c.accentTeinte,
   },
-  bannerText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink2, lineHeight: 18 },
+  bannerText: { flex: 1, fontFamily: fonts.sans, fontSize: 12.5, color: c.texte2, lineHeight: 18 },
   footnote: {
     textAlign: 'center',
     marginTop: 14,
     fontSize: 12,
-    color: colors.ink3,
+    color: c.texte3,
     fontFamily: fonts.sans,
     lineHeight: 18,
     paddingHorizontal: 24,
@@ -626,7 +633,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: fonts.sans,
     fontSize: 13.5,
-    color: colors.ink2,
+    color: c.texte2,
     lineHeight: 20,
     textAlign: 'center',
   },
@@ -634,25 +641,25 @@ const styles = StyleSheet.create({
     width: 78,
     height: 78,
     borderRadius: 39,
-    backgroundColor: colors.moss,
+    backgroundColor: c.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkBubbleQueued: { backgroundColor: colors.earthDeep },
+  checkBubbleQueued: { backgroundColor: c.secondaireProfond },
   successTitle: {
     fontFamily: fonts.serif,
     fontSize: 26,
-    color: colors.ink,
+    color: c.texte,
     marginTop: 18,
     textAlign: 'center',
   },
   successHint: {
     fontFamily: fonts.sans,
     fontSize: 13,
-    color: colors.ink3,
+    color: c.texte3,
     marginTop: 6,
     textAlign: 'center',
     maxWidth: 300,
     lineHeight: 19,
   },
-});
+}));

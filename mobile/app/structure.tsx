@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   ScrollView,
   RefreshControl,
@@ -21,7 +20,7 @@ import Label from '@/components/Label';
 import Button from '@/components/Button';
 import SelectField from '@/components/SelectField';
 import Chip from '@/components/Chip';
-import { colors, fonts } from '@/theme';
+import { fonts, transparence } from '@/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { canManageStructure, isSecretariat, LANGUAGES, type Language } from '@/services/authApi';
@@ -40,6 +39,8 @@ import {
 import { fetchUnassignedUnits } from '@/services/leadersApi';
 import { fmtDate } from '@/utils/format';
 
+import { creerStyles } from '@/theme/creerStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 type Level = 'countries' | 'zones' | 'localities' | 'units';
 
 const HISTORY_PAGE_SIZE = 20;
@@ -55,6 +56,8 @@ const errMsg = (e: any, fb: string) =>
   e?.response ? e.response.data?.message ?? fb : i18n.t('errors.serverUnreachableShort');
 
 export default function StructureScreen() {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const { me } = useAuth();
   const { t } = useLanguage();
@@ -182,7 +185,7 @@ export default function StructureScreen() {
     return (
       <ScreenShell withTabBar={false}>
         <View style={{ alignItems: 'center', paddingTop: 80 }}>
-          <ActivityIndicator color={colors.moss} />
+          <ActivityIndicator color={c.accent} />
         </View>
       </ScreenShell>
     );
@@ -194,14 +197,14 @@ export default function StructureScreen() {
     <ScreenShell
       withTabBar={false}
       paddingTop={insets.top ? 4 : 16}
-      refreshControl={<RefreshControl tintColor={colors.moss} refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl tintColor={c.accent} refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={styles.headerRow}>
         {/* `back()` est un no-op silencieux quand la pile est vide (écran atteint par un lien
             direct, ou navigateur recréé) : on retombe alors sur l'accueil plutôt que sur une
             flèche morte. */}
         <Pressable onPress={() => (router.canGoBack() ? goBack() : router.replace('/(tabs)/home'))} hitSlop={10}>
-          <Ionicons name="arrow-back" size={24} color={colors.ink2} />
+          <Ionicons name="arrow-back" size={24} color={c.texte2} />
         </Pressable>
         <Text style={styles.title}>{t('structure.title')}</Text>
       </View>
@@ -236,7 +239,7 @@ export default function StructureScreen() {
         variant="soft"
         onPress={() => setEditing({ level, item: null })}
         style={{ marginTop: 16 }}
-        iconLeft={<Ionicons name="add" size={18} color={colors.mossDeep} />}
+        iconLeft={<Ionicons name="add" size={18} color={c.accentProfond} />}
       />
 
       {/* J-4 (14/09) : le rappel « des assemblées de votre périmètre attendent un dirigeant »
@@ -263,7 +266,7 @@ export default function StructureScreen() {
                 {t('structure.unitMeta', { locality: r.localityName, code: r.joinCode })}
               </Text>
             </View>
-            {canEdit && <Ionicons name="chevron-forward" size={16} color={colors.ink3} />}
+            {canEdit && <Ionicons name="chevron-forward" size={16} color={c.texte3} />}
           </Card>
         ))}
         {rows.length === 0 && <Text style={styles.empty}>{t('structure.emptyUnits')}</Text>}
@@ -275,11 +278,11 @@ export default function StructureScreen() {
         <View style={styles.historyBlock}>
           <Pressable onPress={() => setHistoryOpen((v) => !v)} style={styles.historyHeader} hitSlop={6}>
             <Text style={styles.historyTitle}>{t('structure.historyTitle')}</Text>
-            <Ionicons name={historyOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.ink3} />
+            <Ionicons name={historyOpen ? 'chevron-up' : 'chevron-down'} size={16} color={c.texte3} />
           </Pressable>
           {historyOpen && (
             <View style={{ gap: 8, marginTop: 10 }}>
-              {historyLoading && <ActivityIndicator color={colors.moss} />}
+              {historyLoading && <ActivityIndicator color={c.accent} />}
               {!historyLoading && history.length === 0 && (
                 <Text style={styles.empty}>{t('structure.historyEmpty')}</Text>
               )}
@@ -346,6 +349,8 @@ function StructureFormModal({
   onSaved: () => Promise<void>;
   onDelete: (lvl: Level, id: string, name: string) => Promise<void>;
 }) {
+  const { couleurs: c } = useTheme();
+  const styles = useStyles();
   const { t } = useLanguage();
   const contact = useContactSettings();
   const [name, setName] = useState('');
@@ -501,7 +506,7 @@ function StructureFormModal({
             </Text>
 
             <Label style={{ marginTop: 14, marginBottom: 6 }}>{t('structure.name')}</Label>
-            <TextInput value={name} onChangeText={setName} style={styles.input} placeholder={t('structure.namePlaceholder')} placeholderTextColor={colors.ink3} />
+            <TextInput value={name} onChangeText={setName} style={styles.input} placeholder={t('structure.namePlaceholder')} placeholderTextColor={c.texte3} />
 
             {/* Listes déroulantes (SelectField) et non des pastilles : le référentiel compte
                 des centaines de nations/régions/villes — une rangée de chips était illisible.
@@ -593,7 +598,7 @@ function StructureFormModal({
                     variant="soft"
                     height={44}
                     onPress={() => Linking.openURL(contact.whatsappUrl).catch(() => {})}
-                    iconLeft={<Ionicons name="logo-whatsapp" size={17} color={colors.mossDeep} />}
+                    iconLeft={<Ionicons name="logo-whatsapp" size={17} color={c.accentProfond} />}
                   />
                   <Button
                     label={t('join.contactMail')}
@@ -602,7 +607,7 @@ function StructureFormModal({
                     onPress={() =>
                       Linking.openURL(contactMailto(t('structure.contactMailSubject'))).catch(() => {})
                     }
-                    iconLeft={<Ionicons name="mail-outline" size={17} color={colors.mossDeep} />}
+                    iconLeft={<Ionicons name="mail-outline" size={17} color={c.accentProfond} />}
                   />
                 </View>
               </View>
@@ -619,7 +624,7 @@ function StructureFormModal({
                   onChangeText={(v) => { setLeaderQuery(v); setLeaderId(''); }}
                   style={styles.input}
                   placeholder={t('structure.leaderSearchPlaceholder')}
-                  placeholderTextColor={colors.ink3}
+                  placeholderTextColor={c.texte3}
                   autoCapitalize="none"
                 />
                 {leaderLoading && <Text style={styles.empty}>{t('common.loading')}</Text>}
@@ -662,48 +667,48 @@ function StructureFormModal({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = creerStyles((c) => ({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2 },
   attachCard: { paddingHorizontal: 16, paddingVertical: 14, marginTop: 14 },
-  attachTitle: { fontFamily: fonts.serif, fontSize: 17, color: colors.ink, marginBottom: 6 },
+  attachTitle: { fontFamily: fonts.serif, fontSize: 17, color: c.texte, marginBottom: 6 },
   attachRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 6 },
-  attachLabel: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, width: 90 },
-  attachNames: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: colors.ink },
-  title: { fontFamily: fonts.serif, fontSize: 28, color: colors.ink, letterSpacing: -0.4 },
-  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink3, marginTop: 4 },
+  attachLabel: { fontFamily: fonts.sans, fontSize: 12, color: c.texte3, width: 90 },
+  attachNames: { flex: 1, fontFamily: fonts.sans, fontSize: 13.5, fontWeight: '600', color: c.texte },
+  title: { fontFamily: fonts.serif, fontSize: 28, color: c.texte, letterSpacing: -0.4 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: c.texte3, marginTop: 4 },
   itemCard: { paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
   itemTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  itemName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: colors.ink },
+  itemName: { fontFamily: fonts.sans, fontSize: 14.5, fontWeight: '600', color: c.texte },
   needsLeaderPill: {
-    fontFamily: fonts.mono, fontSize: 9, color: colors.earthDeep, letterSpacing: 0.6,
+    fontFamily: fonts.mono, fontSize: 9, color: c.secondaireProfond, letterSpacing: 0.6,
     textTransform: 'uppercase', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99,
-    backgroundColor: colors.mossTint, overflow: 'hidden',
+    backgroundColor: c.accentTeinte, overflow: 'hidden',
   },
   needsLeaderHint: {
-    fontFamily: fonts.sans, fontSize: 12, color: colors.earthDeep, lineHeight: 17, marginTop: 12,
+    fontFamily: fonts.sans, fontSize: 12, color: c.secondaireProfond, lineHeight: 17, marginTop: 12,
   },
-  itemMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink3, marginTop: 2 },
-  empty: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink3, fontStyle: 'italic', marginTop: 8 },
-  historyBlock: { marginTop: 22, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.hair },
+  itemMeta: { fontFamily: fonts.sans, fontSize: 11.5, color: c.texte3, marginTop: 2 },
+  empty: { fontFamily: fonts.sans, fontSize: 13, color: c.texte3, fontStyle: 'italic', marginTop: 8 },
+  historyBlock: { marginTop: 22, paddingTop: 14, borderTopWidth: 1, borderTopColor: c.filet },
   historyHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  historyTitle: { fontFamily: fonts.serif, fontSize: 17, color: colors.ink },
-  backdrop: { flex: 1, backgroundColor: 'rgba(22,41,31,0.45)', justifyContent: 'center', padding: 20 },
+  historyTitle: { fontFamily: fonts.serif, fontSize: 17, color: c.texte },
+  backdrop: { flex: 1, backgroundColor: c.voile, justifyContent: 'center', padding: 20 },
   // maxHeight : la modale « assemblée » porte désormais trois sélecteurs — sans plafond, elle
   // dépasserait l'écran sur les petits téléphones (le contenu défile dans la carte).
   modalCard: { paddingHorizontal: 20, paddingVertical: 20, maxHeight: '88%' },
-  modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: colors.ink },
-  leaderHint: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink3, marginBottom: 6, lineHeight: 17 },
+  modalTitle: { fontFamily: fonts.serif, fontSize: 22, color: c.texte },
+  leaderHint: { fontFamily: fonts.sans, fontSize: 12, color: c.texte3, marginBottom: 6, lineHeight: 17 },
   languageRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  contactBlock: { marginTop: 18, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.hair },
+  contactBlock: { marginTop: 18, paddingTop: 14, borderTopWidth: 1, borderTopColor: c.filet },
   leaderRow: {
     paddingHorizontal: 12, paddingVertical: 10, marginTop: 6, borderRadius: 10,
-    borderWidth: 1, borderColor: 'rgba(42,38,32,0.12)', backgroundColor: colors.paper,
+    borderWidth: 1, borderColor: transparence(c.texte, 0.12), backgroundColor: c.surface,
   },
-  leaderRowActive: { borderColor: colors.moss, backgroundColor: colors.mossTint2 },
+  leaderRowActive: { borderColor: c.accent, backgroundColor: c.accentTeinte2 },
   input: {
-    fontFamily: fonts.sans, fontSize: 15, color: colors.ink,
-    borderWidth: 1, borderColor: 'rgba(42,38,32,0.15)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+    fontFamily: fonts.sans, fontSize: 15, color: c.texte,
+    borderWidth: 1, borderColor: transparence(c.texte, 0.15), borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
   },
-  deleteLink: { fontFamily: fonts.sans, fontSize: 14, color: colors.clay, fontWeight: '600' },
-  cancelLink: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink3 },
-});
+  deleteLink: { fontFamily: fonts.sans, fontSize: 14, color: c.alerte, fontWeight: '600' },
+  cancelLink: { fontFamily: fonts.sans, fontSize: 14, color: c.texte3 },
+}));

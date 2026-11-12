@@ -124,8 +124,8 @@ const fmtDate = (iso: string | null) => (iso ? formatMeetingDate(iso) : '—');
 export function ProgressBar({ percent, height = 8 }: { percent: number; height?: number }) {
   const w = Math.max(0, Math.min(100, percent));
   return (
-    <div style={{ height, borderRadius: 999, background: 'var(--line)', overflow: 'hidden', minWidth: 60 }}>
-      <div style={{ width: `${w}%`, height: '100%', borderRadius: 999, background: 'var(--green-700)' }} />
+    <div style={{ height, borderRadius: 999, background: 'var(--filet)', overflow: 'hidden', minWidth: 60 }}>
+      <div style={{ width: `${w}%`, height: '100%', borderRadius: 999, background: 'var(--accent-moyen)' }} />
     </div>
   );
 }
@@ -184,7 +184,7 @@ export function AssemblyPage() {
 
   const body = (() => {
     if (modulesQ.isLoading || (hasAssembly && unitsQ.isLoading)) {
-      return <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>;
+      return <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>;
     }
     if (!hasAssembly) {
       return <EmptyState title={t('assembly.moduleOff')} text={t('assembly.moduleOffHint')} />;
@@ -348,11 +348,11 @@ function MeetingsTab({ unit, onOpen, onLocked }: { unit: AssemblyUnit; onOpen: (
       label: t('assembly.colReading'),
       render: (m) =>
         m.chapters.length === 0 ? (
-          <span style={{ color: 'var(--ink-400)' }}>—</span>
+          <span style={{ color: 'var(--texte-4)' }}>—</span>
         ) : (
           <span>
             {m.moduleName ?? m.bookTitle}
-            <span style={{ color: 'var(--ink-500)' }}> · {formatChapters(m.chapters, tr)}</span>
+            <span style={{ color: 'var(--texte-3)' }}> · {formatChapters(m.chapters, tr)}</span>
           </span>
         ),
     },
@@ -373,7 +373,7 @@ function MeetingsTab({ unit, onOpen, onLocked }: { unit: AssemblyUnit; onOpen: (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
         <YearPicker years={years} value={year} onChange={setYear} />
-        <span style={{ color: 'var(--ink-500)', fontSize: 13 }}>
+        <span style={{ color: 'var(--texte-3)', fontSize: 13 }}>
           {t('assembly.meetingCount', { count: rows.length })}
         </span>
         {!unit.member && (
@@ -389,7 +389,7 @@ function MeetingsTab({ unit, onOpen, onLocked }: { unit: AssemblyUnit; onOpen: (
       </div>
       {!unit.member && journalOpen && <UnitJournalModal unit={unit} onClose={() => setJournalOpen(false)} onLocked={onLocked} />}
       {meetingsQ.isLoading ? (
-        <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>
+        <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>
       ) : (
         <Table
           columns={cols}
@@ -406,7 +406,7 @@ function MeetingsTab({ unit, onOpen, onLocked }: { unit: AssemblyUnit; onOpen: (
       )}
       {elsewhere.length > 0 && (
         <div style={{ marginTop: 28 }}>
-          <h3 style={{ margin: '0 0 12px', fontSize: 16, fontFamily: 'var(--font-serif)', color: 'var(--green-800)', fontWeight: 500 }}>
+          <h3 style={{ margin: '0 0 12px', fontSize: 16, fontFamily: 'var(--font-serif)', color: 'var(--accent)', fontWeight: 500 }}>
             {t('assembly.otherMeetingsTitle')}
           </h3>
           <Table columns={elsewhereCols} rows={elsewhere} zebra onRowClick={(m) => onOpen(m.id)} />
@@ -540,7 +540,7 @@ function UnitJournalModal({ unit, onClose, onLocked }: { unit: AssemblyUnit; onC
             fontFamily: 'var(--font-serif)',
             fontWeight: 500,
             fontSize: 18,
-            color: 'var(--ink-900)',
+            color: 'var(--texte)',
           }}
         >
           {capitalize(periodLabel(period, tr))}
@@ -554,7 +554,7 @@ function UnitJournalModal({ unit, onClose, onLocked }: { unit: AssemblyUnit; onC
         />
       </div>
 
-      <p style={{ textAlign: 'center', margin: '12px 0 0', fontSize: 13.5, color: 'var(--ink-700)', minHeight: 20 }}>
+      <p style={{ textAlign: 'center', margin: '12px 0 0', fontSize: 13.5, color: 'var(--texte-2)', minHeight: 20 }}>
         {yearQ.isLoading
           ? t('common.loading')
           : yearQ.isError
@@ -568,11 +568,11 @@ function UnitJournalModal({ unit, onClose, onLocked }: { unit: AssemblyUnit; onC
           onChange={setIncludeAttendees}
           label={t('assembly.journal.includeAttendees')}
         />
-        <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--ink-500)', lineHeight: 1.45 }}>
+        <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--texte-3)', lineHeight: 1.45 }}>
           {t('assembly.journal.includeAttendeesHint')}
         </p>
       </div>
-      <p style={{ margin: '12px 0 0', fontSize: 12, color: 'var(--ink-500)', lineHeight: 1.5 }}>
+      <p style={{ margin: '12px 0 0', fontSize: 12, color: 'var(--texte-3)', lineHeight: 1.5 }}>
         {t('assembly.journal.contentHint')}
       </p>
     </Modal>
@@ -873,7 +873,7 @@ function MeetingEditor({
         }
       >
         {loading ? (
-          <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>
+          <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
             {/* ---- Saisie ---- */}
@@ -900,9 +900,9 @@ function MeetingEditor({
                   )}
                 </div>
                 {!readOnly && rosterQ.isLoading ? (
-                  <p style={{ color: 'var(--ink-500)', margin: 0 }}>{t('common.loading')}</p>
+                  <p style={{ color: 'var(--texte-3)', margin: 0 }}>{t('common.loading')}</p>
                 ) : people.length === 0 ? (
-                  <p style={{ color: 'var(--ink-400)', margin: 0, fontSize: 13 }}>{t('assembly.noRoster')}</p>
+                  <p style={{ color: 'var(--texte-4)', margin: 0, fontSize: 13 }}>{t('assembly.noRoster')}</p>
                 ) : readOnly ? (
                   <div style={{ fontSize: 13.5, lineHeight: 1.6 }}>{people.map((p) => p.name).join(', ')}</div>
                 ) : (
@@ -930,7 +930,7 @@ function MeetingEditor({
                           onChange={() => setAttendeeIds((ids) => toggleId(ids, p.id))}
                         />
                         <span>{p.name}</span>
-                        {p.leader && <span style={{ color: 'var(--ink-400)', fontSize: 11.5 }}>{t('assembly.leaderTag')}</span>}
+                        {p.leader && <span style={{ color: 'var(--texte-4)', fontSize: 11.5 }}>{t('assembly.leaderTag')}</span>}
                       </label>
                     ))}
                   </div>
@@ -960,7 +960,7 @@ function MeetingEditor({
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
                     <strong style={{ fontSize: 13 }}>{t('assembly.chapters')}</strong>
-                    <span style={{ color: 'var(--ink-500)', fontSize: 12 }}>
+                    <span style={{ color: 'var(--texte-3)', fontSize: 12 }}>
                       <Icon name="check" size={11} /> {t('assembly.alreadyRead')}
                     </span>
                     {suggestionShown && !readOnly && (
@@ -975,9 +975,9 @@ function MeetingEditor({
                   ).map(({ part, chapters }) => (
                     <div key={part?.id ?? 'all'} style={{ marginBottom: part ? 10 : 0 }}>
                       {part && (
-                        <div style={{ fontSize: 12.5, color: 'var(--ink-600)', fontWeight: 600, marginBottom: 4 }}>
+                        <div style={{ fontSize: 12.5, color: 'var(--texte-corps)', fontWeight: 600, marginBottom: 4 }}>
                           {t('assembly.partHeading', { n: part.number })}
-                          {part.title && <span style={{ fontWeight: 400, color: 'var(--ink-500)' }}> · {part.title}</span>}
+                          {part.title && <span style={{ fontWeight: 400, color: 'var(--texte-3)' }}> · {part.title}</span>}
                         </div>
                       )}
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -1004,9 +1004,9 @@ function MeetingEditor({
                                 justifyContent: 'center',
                                 gap: 4,
                                 cursor: readOnly ? 'default' : 'pointer',
-                                border: `1px solid ${on ? 'var(--green-700)' : 'var(--line)'}`,
-                                background: on ? 'var(--green-700)' : 'transparent',
-                                color: on ? 'var(--ivory)' : read ? 'var(--ink-500)' : 'var(--ink-800)',
+                                border: `1px solid ${on ? 'var(--accent-moyen)' : 'var(--filet)'}`,
+                                background: on ? 'var(--accent-moyen)' : 'transparent',
+                                color: on ? 'var(--surface-basse)' : read ? 'var(--texte-3)' : 'var(--texte-corps)',
                                 fontWeight: on ? 600 : 500,
                               }}
                             >
@@ -1040,14 +1040,14 @@ function MeetingEditor({
                   margin: 0,
                   padding: '12px 14px',
                   borderRadius: 10,
-                  border: '1px solid var(--line)',
-                  background: 'var(--parchment)',
+                  border: '1px solid var(--filet)',
+                  background: 'var(--page)',
                   fontFamily: 'var(--font-sans)',
                   fontSize: 13,
                   lineHeight: 1.5,
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
-                  color: 'var(--ink-800)',
+                  color: 'var(--texte-corps)',
                 }}
               >
                 {reportText}
@@ -1086,15 +1086,15 @@ function ModuleProgressCard({ p }: { p: ModuleProgress }) {
   return (
     <div className="card" style={{ padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-        <h3 style={{ margin: 0, fontSize: 15.5, fontFamily: 'var(--font-serif)', color: 'var(--green-800)', fontWeight: 500 }}>
+        <h3 style={{ margin: 0, fontSize: 15.5, fontFamily: 'var(--font-serif)', color: 'var(--accent)', fontWeight: 500 }}>
           {p.moduleName}
         </h3>
         {!p.active && <Badge tone="gray">{t('assembly.moduleInactive')}</Badge>}
         <span style={{ marginLeft: 'auto', fontWeight: 600 }}>{p.percent} %</span>
       </div>
-      <div style={{ color: 'var(--ink-500)', fontSize: 12.5, margin: '2px 0 10px' }}>{p.bookTitle}</div>
+      <div style={{ color: 'var(--texte-3)', fontSize: 12.5, margin: '2px 0 10px' }}>{p.bookTitle}</div>
       <ProgressBar percent={p.percent} />
-      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12.5, color: 'var(--ink-500)', marginTop: 8 }}>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12.5, color: 'var(--texte-3)', marginTop: 8 }}>
         <span>{t('assembly.readOf', { read: p.readCount, total: p.totalCount })}</span>
         {p.lastChapterNumber != null && (
           <span>
@@ -1141,7 +1141,7 @@ function ProgressTab({ unit, showOverview, onLocked }: { unit: AssemblyUnit; sho
       render: (r) => (
         <div>
           <div style={{ fontWeight: 500 }}>{r.unit.unitName}</div>
-          {r.unit.cityName && <div style={{ color: 'var(--ink-500)', fontSize: 12 }}>{r.unit.cityName}</div>}
+          {r.unit.cityName && <div style={{ color: 'var(--texte-3)', fontSize: 12 }}>{r.unit.cityName}</div>}
         </div>
       ),
     },
@@ -1158,7 +1158,7 @@ function ProgressTab({ unit, showOverview, onLocked }: { unit: AssemblyUnit; sho
             </span>
           </div>
         ) : (
-          <span style={{ color: 'var(--ink-400)' }}>—</span>
+          <span style={{ color: 'var(--texte-4)' }}>—</span>
         ),
     },
     {
@@ -1175,7 +1175,7 @@ function ProgressTab({ unit, showOverview, onLocked }: { unit: AssemblyUnit; sho
     },
     {
       label: t('assembly.colLastMeeting'),
-      render: (r) => <span style={{ color: 'var(--ink-500)' }}>{fmtDate(r.unit.lastMeetingDate)}</span>,
+      render: (r) => <span style={{ color: 'var(--texte-3)' }}>{fmtDate(r.unit.lastMeetingDate)}</span>,
     },
   ];
 
@@ -1204,7 +1204,7 @@ function ProgressTab({ unit, showOverview, onLocked }: { unit: AssemblyUnit; sho
             </div>
           </div>
           {mineQ.isLoading ? (
-            <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>
+            <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>
           ) : (
             mine &&
             mine.attendedCount > 0 && (
@@ -1224,7 +1224,7 @@ function ProgressTab({ unit, showOverview, onLocked }: { unit: AssemblyUnit; sho
         </div>
       </div>
       {unitQ.isLoading ? (
-        <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>
+        <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>
       ) : unitModules.length === 0 ? (
         <EmptyState title={t('assembly.noModule')} text={t('assembly.noModuleHint')} />
       ) : (
@@ -1237,7 +1237,7 @@ function ProgressTab({ unit, showOverview, onLocked }: { unit: AssemblyUnit; sho
         <div style={{ marginTop: 28 }}>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: 16, fontFamily: 'var(--font-serif)', color: 'var(--green-800)', fontWeight: 500 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontFamily: 'var(--font-serif)', color: 'var(--accent)', fontWeight: 500 }}>
                 {t('assembly.overview')}
               </h3>
               <div className="section-sub" style={{ margin: '2px 0 0' }}>{t('assembly.overviewSub')}</div>
@@ -1255,7 +1255,7 @@ function ProgressTab({ unit, showOverview, onLocked }: { unit: AssemblyUnit; sho
             </Field>
           </div>
           {allQ.isLoading ? (
-            <p style={{ color: 'var(--ink-500)' }}>{t('common.loading')}</p>
+            <p style={{ color: 'var(--texte-3)' }}>{t('common.loading')}</p>
           ) : (
             <Table columns={cols} rows={rows} zebra />
           )}
