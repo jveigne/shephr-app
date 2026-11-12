@@ -19,7 +19,7 @@ Reprendre le travail fait sur CMFIPraise (PR #14) pour l'application Shephr, ave
 
 L'utilisateur connecté choisit, dans l'écran **Apparence** :
 - un **mode** : Automatique (suit le système), Clair, Sombre, Noir et blanc ;
-- une **couleur d'accent** : 6 pastilles proposées ou un code hexa libre.
+- une **couleur d'accent** : 3 pastilles proposées (mousse, terre, argile) ou un code hexa libre.
 
 La **luminosité** est prise en compte : le mode Automatique suit le réglage clair / sombre du
 téléphone ou du navigateur, et tout accent est ajusté pour rester lisible (contraste WCAG).
@@ -56,7 +56,7 @@ téléphone ou du navigateur, et tout accent est ajusté pour rester lisible (co
 | # | Question | Décision | Statut |
 |---|---|---|---|
 | D1 | Les modes proposés | **Automatique, Clair, Sombre, Noir et blanc**, comme CMFIPraise. Clair reste le défaut. | à valider |
-| D2 | Accent : défaut, pastilles, portée | Défaut : **vert mousse Shephr** (`#1E3A2F`). Pastilles : mousse, terre (`#A7754B`), argile (`#B86A4A`), bleu (`#1F5A8A`), violet (`#6B3FD4`), framboise (`#B4245E`), plus un hexa libre. **L'accent remplace seulement la famille verte** (moss / `--green-*`) ; la couleur **terre** reste la couleur secondaire, quel que soit l'accent. | **tranché (B4)** |
+| D2 | Accent : défaut, pastilles, portée | Défaut : **vert mousse Shephr** (`#1E3A2F`). Pastilles : mousse, terre (`#A7754B`), argile (`#B86A4A`), plus un hexa libre (bleu, violet et framboise retirés le 12/11, JP). **L'accent remplace seulement la famille verte** (moss / `--green-*`) ; la couleur **terre** reste la couleur secondaire, quel que soit l'accent. | **tranché (B4)** |
 | D3 | Qu'est-ce qui est synchronisé ? | **Le mode et l'accent**, liés au **compte**. Les deux surfaces affichent donc le même thème. | à valider |
 | D3b | Forme de la table `user_preference` | **(1) une colonne par préférence** (`theme_mode`, `theme_accent`…), une ligne par utilisateur : simple, typée, valeurs contrôlées par la base, mais une migration par nouvelle préférence ; **(2) clé / valeur** (`user_id`, `cle`, `valeur`) : aucune migration pour en ajouter, mais valeurs non typées. **Proposition : (1)**, plus lisible et plus sûre tant que seules les préférences de thème sont connues. | à valider |
 | D4 | Utilisateur non connecté (login, inscription, pages publiques) | **Ni sélecteur ni envoi au compte.** Les pages publiques affichent le **dernier thème de l'appareil**, sinon le thème par défaut. Un compte **sans préférence** affiche le thème par défaut, jamais celui laissé sur l'appareil. **Seule une action dans l'écran Apparence envoie un `PUT`** : jamais la connexion, jamais un rafraîchissement. | **tranché (B2)** |
@@ -479,6 +479,10 @@ Noir et blanc, et comparaison **au pixel** du Clair avant / après sur le web (R
   `Localites`, `Events`, `Exports`, `Placeholder`.
 - **Couleur de statut du Suivi pastoral** (`pages/MemberCare.tsx`, couleur choisie au back-office) :
   même règle que le mobile, par `tonDonnee` de `theme/palettes.ts`.
+
+**Après implémentation (JP 12/11)** : les pastilles **bleu, violet et framboise sont retirées**
+(mobile et web) ; restent mousse, terre et argile, plus l'hexa libre. Un compte qui avait choisi
+l'une d'elles la garde : elle s'affiche comme une couleur libre.
 
 **Bugs existants trouvés en route**
 - `--ink-600` était utilisé (une cinquantaine de fois) sans **jamais avoir été défini** : le navigateur ignorait la

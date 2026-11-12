@@ -76,14 +76,15 @@ export type PaletteTheme = {
 /** Accent par défaut : le vert mousse Shephr. */
 export const ACCENT_DEFAUT = colors.moss;
 
-/** Pastilles proposées dans l'écran Apparence (D2). L'utilisateur peut aussi saisir un hex libre. */
+/**
+ * Pastilles proposées dans l'écran Apparence (D2) : les seuls tons de la marque. Bleu, violet et
+ * framboise retirés (JP 12/11). L'utilisateur peut toujours saisir un hex libre ; un accent déjà
+ * enregistré hors pastilles reste valable (il s'affiche comme couleur libre).
+ */
 export const ACCENTS_PREDEFINIS: { id: string; valeur: string }[] = [
   { id: 'mousse', valeur: colors.moss },
   { id: 'terre', valeur: colors.earthDeep },
   { id: 'argile', valeur: colors.clay },
-  { id: 'bleu', valeur: '#1F5A8A' },
-  { id: 'violet', valeur: '#6B3FD4' },
-  { id: 'framboise', valeur: '#B4245E' },
 ];
 
 /** Le Clair d'aujourd'hui, valeur pour valeur (non-régression, R2). */

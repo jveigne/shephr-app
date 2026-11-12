@@ -1400,10 +1400,7 @@
       "accents": {
         "mousse": "Moss green",
         "terre": "Earth",
-        "argile": "Clay",
-        "bleu": "Blue",
-        "violet": "Purple",
-        "framboise": "Raspberry"
+        "argile": "Clay"
       },
       "customAccent": "Or your own colour (hex code)",
       "apply": "Apply",

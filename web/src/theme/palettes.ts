@@ -30,14 +30,15 @@ export const MODES: ModeTheme[] = ['auto', 'clair', 'sombre', 'noirEtBlanc'];
 /** Accent par défaut : le vert mousse Shephr (`--green-800`). */
 export const ACCENT_DEFAUT = '#1E3A2F';
 
-/** Pastilles proposées (D2), identiques au mobile. L'utilisateur peut aussi saisir un hex libre. */
+/**
+ * Pastilles proposées (D2), identiques au mobile : les seuls tons de la marque. Bleu, violet et
+ * framboise retirés (JP 12/11). L'utilisateur peut toujours saisir un hex libre ; un accent déjà
+ * enregistré hors pastilles reste valable (il s'affiche comme couleur libre).
+ */
 export const ACCENTS_PREDEFINIS: { id: string; valeur: string }[] = [
   { id: 'mousse', valeur: ACCENT_DEFAUT },
   { id: 'terre', valeur: '#A7754B' },
   { id: 'argile', valeur: '#B86A4A' },
-  { id: 'bleu', valeur: '#1F5A8A' },
-  { id: 'violet', valeur: '#6B3FD4' },
-  { id: 'framboise', valeur: '#B4245E' },
 ];
 
 /** Fonds sur lesquels l'accent doit rester lisible, par mode (valeurs de `styles.css`). */

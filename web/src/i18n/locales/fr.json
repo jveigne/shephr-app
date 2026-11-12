@@ -1400,10 +1400,7 @@
       "accents": {
         "mousse": "Vert mousse",
         "terre": "Terre",
-        "argile": "Argile",
-        "bleu": "Bleu",
-        "violet": "Violet",
-        "framboise": "Framboise"
+        "argile": "Argile"
       },
       "customAccent": "Ou votre couleur (code hexadécimal)",
       "apply": "Appliquer",
